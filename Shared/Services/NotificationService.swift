@@ -22,7 +22,7 @@ class NotificationService: NSObject, ObservableObject {
     
     private let center = UNUserNotificationCenter.current()
     private var cancellables = Set<AnyCancellable>()
-    private let cloudKitService = CloudKitManager.shared
+    private var apiService: APIService?
     
     // Notification categories for interactive notifications
     private let notificationCategories: Set<UNNotificationCategory> = {
@@ -97,6 +97,12 @@ class NotificationService: NSObject, ObservableObject {
         $notifications
             .map { $0.unreadCount }
             .assign(to: &$unreadCount)
+    }
+    
+    // MARK: - Configuration
+    
+    func configure(apiService: APIService) {
+        self.apiService = apiService
     }
     
     // MARK: - Authorization

@@ -7,7 +7,6 @@
 //
 
 import Foundation
-import CloudKit
 import Combine
 import Network
 
@@ -59,7 +58,7 @@ class SocialService: ObservableObject {
     
     // MARK: - Private Properties
     
-    private let cloudKitManager: CloudKitManager
+    private let apiService: APIService
     private let healthManager: HealthManager
     private var cancellables = Set<AnyCancellable>()
     private let networkMonitor = NWPathMonitor()
@@ -76,8 +75,8 @@ class SocialService: ObservableObject {
     
     // MARK: - Initialization
     
-    init(cloudKitManager: CloudKitManager, healthManager: HealthManager) {
-        self.cloudKitManager = cloudKitManager
+    init(apiService: APIService, healthManager: HealthManager) {
+        self.apiService = apiService
         self.healthManager = healthManager
         
         setupNetworkMonitoring()
@@ -148,10 +147,14 @@ class SocialService: ObservableObject {
     
     func createUserProfile(username: String, displayName: String) async throws {
         let profile = UserProfile(username: username, displayName: displayName)
-        currentUserProfile = profile
         
-        try await saveUserProfile(profile)
-        await loadInitialSocialData()
+        do {
+            let response = try await apiService.createUserProfile(profile)
+            currentUserProfile = response.user
+            await loadInitialSocialData()
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     func updateUserProfile(_ updates: [String: Any]) async throws {
@@ -176,8 +179,12 @@ class SocialService: ObservableObject {
             profile.isPrivate = isPrivate
         }
         
-        currentUserProfile = profile
-        try await saveUserProfile(profile)
+        do {
+            let response = try await apiService.updateUserProfile(profile)
+            currentUserProfile = response.user
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     func loadUserProfile(_ userId: UUID) async throws -> UserProfile {
@@ -186,22 +193,13 @@ class SocialService: ObservableObject {
             return cachedProfile
         }
         
-        // Load from CloudKit
-        let predicate = NSPredicate(format: "recordName == %@", userId.uuidString)
-        let query = CKQuery(recordType: "UserProfile", predicate: predicate)
-        
         do {
-            let records = try await cloudKitManager.performQuery(query)
-            guard let record = records.first else {
-                throw SocialError.userNotFound
-            }
-            
-            let profile = try parseUserProfile(from: record)
+            let response = try await apiService.getUserProfile(userId: userId)
+            let profile = response.user
             profileCache[userId] = profile
             return profile
-            
         } catch {
-            throw SocialError.loadError(error.localizedDescription)
+            throw SocialError.userNotFound
         }
     }
     
@@ -212,28 +210,24 @@ class SocialService: ObservableObject {
             throw SocialError.noUserProfile
         }
         
-        // Create follow relationship
-        let follow = FollowRelationship(
-            id: UUID(),
-            followerId: currentUser.id,
-            followingId: userId,
-            createdDate: Date()
-        )
-        
-        try await saveFollowRelationship(follow)
-        
-        // Update counts
-        currentUserProfile?.followingCount += 1
-        
-        // Send notification to followed user
-        await sendNotification(
-            to: userId,
-            type: .follow,
-            message: "\(currentUser.displayName) started following you"
-        )
-        
-        // Refresh followed users
-        await loadFollowedUsers()
+        do {
+            let response = try await apiService.followUser(userId: userId)
+            
+            // Update local state
+            currentUserProfile?.followingCount += 1
+            
+            // Reload followed users to get updated list
+            await loadFollowedUsers()
+            
+            // Send notification through API
+            try await apiService.sendNotification(
+                to: userId,
+                type: .follow,
+                message: "\(currentUser.displayName) started following you"
+            )
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     func unfollowUser(_ userId: UUID) async throws {
@@ -241,28 +235,32 @@ class SocialService: ObservableObject {
             throw SocialError.noUserProfile
         }
         
-        // Remove follow relationship
-        try await removeFollowRelationship(followerId: currentUser.id, followingId: userId)
-        
-        // Update counts
-        currentUserProfile?.followingCount -= 1
-        
-        // Remove from followed users
-        followedUsers.removeAll { $0.id == userId }
+        do {
+            try await apiService.unfollowUser(userId: userId)
+            
+            // Update local state
+            currentUserProfile?.followingCount -= 1
+            followedUsers.removeAll { $0.id == userId }
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     func blockUser(_ userId: UUID) async throws {
-        // Add to blocked users
-        blockedUsers.append(userId)
-        
-        // Remove from followers and following
-        try await unfollowUser(userId)
-        
-        // Hide posts from this user
-        feedPosts.removeAll { $0.authorId == userId }
-        
-        // Save blocked status
-        try await saveBlockedUsers()
+        do {
+            try await apiService.blockUser(userId: userId)
+            
+            // Add to blocked users locally
+            blockedUsers.append(userId)
+            
+            // Remove from followers and following
+            try await unfollowUser(userId)
+            
+            // Hide posts from this user
+            feedPosts.removeAll { $0.authorId == userId }
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     // MARK: - Feed Management
@@ -271,24 +269,14 @@ class SocialService: ObservableObject {
         isLoadingFeed = true
         defer { isLoadingFeed = false }
         
-        // Load posts from followed users and public posts
-        let predicate = NSPredicate(format: "visibility == %@ OR authorId IN %@", 
-                                   PostVisibility.public_.rawValue,
-                                   followedUsers.map { $0.id.uuidString })
-        
-        let query = CKQuery(recordType: "FeedPost", predicate: predicate)
-        query.sortDescriptors = [NSSortDescriptor(key: "timestamp", ascending: false)]
-        
         do {
-            let records = try await cloudKitManager.performQuery(query)
-            let posts = try records.compactMap { try parseFeedPost(from: $0) }
+            let response = try await apiService.getFeed(page: offset / limit, limit: limit)
             
             if offset == 0 {
-                feedPosts = posts
+                feedPosts = response.posts
             } else {
-                feedPosts.append(contentsOf: posts)
+                feedPosts.append(contentsOf: response.posts)
             }
-            
         } catch {
             throw SocialError.loadError(error.localizedDescription)
         }
@@ -312,15 +300,19 @@ class SocialService: ObservableObject {
         updatedPost.visibility = visibility
         updatedPost.userLevel = currentUser.level
         
-        try await saveFeedPost(updatedPost)
-        
-        // Add to local feed if visible
-        if visibility == .public_ || visibility == .followers {
-            feedPosts.insert(updatedPost, at: 0)
+        do {
+            let response = try await apiService.createPost(updatedPost)
+            
+            // Add to local feed if visible
+            if visibility == .public_ || visibility == .followers {
+                feedPosts.insert(response.post, at: 0)
+            }
+            
+            // Update user stats
+            currentUserProfile?.postsCount += 1
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
         }
-        
-        // Update user stats
-        currentUserProfile?.postsCount += 1
     }
     
     func likePost(_ postId: UUID) async throws {
@@ -328,42 +320,29 @@ class SocialService: ObservableObject {
             throw SocialError.postNotFound
         }
         
-        feedPosts[index].isLiked.toggle()
-        if feedPosts[index].isLiked {
-            feedPosts[index].likesCount += 1
-        } else {
-            feedPosts[index].likesCount -= 1
+        let wasLiked = feedPosts[index].isLiked
+        
+        do {
+            if wasLiked {
+                try await apiService.unlikePost(postId: postId)
+                feedPosts[index].isLiked = false
+                feedPosts[index].likesCount -= 1
+            } else {
+                try await apiService.likePost(postId: postId)
+                feedPosts[index].isLiked = true
+                feedPosts[index].likesCount += 1
+                
+                // Send notification if liked
+                try await apiService.sendNotification(
+                    to: feedPosts[index].authorId,
+                    type: .like,
+                    entityId: postId,
+                    message: "liked your post"
+                )
+            }
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
         }
-        
-        // Save like status to CloudKit
-        try await saveLikeStatus(postId: postId, isLiked: feedPosts[index].isLiked)
-        
-        // Send notification if liked
-        if feedPosts[index].isLiked {
-            await sendNotification(
-                to: feedPosts[index].authorId,
-                type: .like,
-                entityId: postId,
-                message: "liked your post"
-            )
-        }
-    }
-    
-    func savePost(_ postId: UUID) async throws {
-        guard let index = feedPosts.firstIndex(where: { $0.id == postId }) else {
-            throw SocialError.postNotFound
-        }
-        
-        feedPosts[index].isSaved.toggle()
-        
-        if feedPosts[index].isSaved {
-            savedPosts.append(feedPosts[index])
-        } else {
-            savedPosts.removeAll { $0.id == postId }
-        }
-        
-        // Save to CloudKit
-        try await saveSavedPostStatus(postId: postId, isSaved: feedPosts[index].isSaved)
     }
     
     // MARK: - Challenge Management
@@ -372,9 +351,13 @@ class SocialService: ObservableObject {
         var newChallenge = challenge
         newChallenge.participantCount = 1 // Creator auto-joins
         
-        try await saveChallenge(newChallenge)
-        challenges.append(newChallenge)
-        activeChallenges.append(newChallenge)
+        do {
+            let response = try await apiService.createChallenge(newChallenge)
+            challenges.append(response.challenge)
+            activeChallenges.append(response.challenge)
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     func joinChallenge(_ challengeId: UUID) async throws {
@@ -382,27 +365,19 @@ class SocialService: ObservableObject {
             throw SocialError.challengeNotFound
         }
         
-        challenges[index].participantCount += 1
-        
-        // Create progress tracking
-        let progress = ChallengeProgress(
-            userId: currentUserProfile?.id ?? UUID(),
-            challengeId: challengeId,
-            currentValue: 0.0,
-            completedSessions: 0,
-            lastUpdateDate: Date(),
-            isCompleted: false,
-            completionDate: nil,
-            ranking: nil
-        )
-        
-        challenges[index].myProgress = progress
-        
-        if !activeChallenges.contains(where: { $0.id == challengeId }) {
-            activeChallenges.append(challenges[index])
+        do {
+            let response = try await apiService.joinChallenge(challengeId: challengeId)
+            
+            // Update local state
+            challenges[index].participantCount += 1
+            challenges[index].myProgress = response.progress
+            
+            if !activeChallenges.contains(where: { $0.id == challengeId }) {
+                activeChallenges.append(challenges[index])
+            }
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
         }
-        
-        try await saveChallengeProgress(progress)
     }
     
     func updateChallengeProgress(_ challengeId: UUID, value: Double) async throws {
@@ -431,10 +406,14 @@ class SocialService: ObservableObject {
             await awardChallengeCompletion(challenge)
         }
         
-        activeChallenges[challengeIndex].myProgress = progress
-        activeChallenges[challengeIndex].progress = progressPercent
-        
-        try await saveChallengeProgress(progress)
+        do {
+            let response = try await apiService.updateChallengeProgress(challengeId: challengeId, progress: progress)
+            
+            activeChallenges[challengeIndex].myProgress = response.progress
+            activeChallenges[challengeIndex].progress = progressPercent
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     // MARK: - Team Management
@@ -443,9 +422,13 @@ class SocialService: ObservableObject {
         var newTeam = team
         newTeam.memberCount = 1 // Creator is first member
         
-        try await saveTeam(newTeam)
-        teams.append(newTeam)
-        myTeams.append(newTeam)
+        do {
+            let response = try await apiService.createTeam(newTeam)
+            teams.append(response.team)
+            myTeams.append(response.team)
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     func joinTeam(_ teamId: UUID) async throws {
@@ -453,56 +436,32 @@ class SocialService: ObservableObject {
             throw SocialError.teamNotFound
         }
         
-        var team = discoveredTeams[index]
-        team.memberCount += 1
-        
-        // Create team membership
-        let membership = TeamMember(
-            id: UUID(),
-            userId: currentUserProfile?.id ?? UUID(),
-            teamId: teamId,
-            username: currentUserProfile?.username ?? "",
-            displayName: currentUserProfile?.displayName ?? "",
-            avatarURL: currentUserProfile?.avatarURL,
-            joinDate: Date(),
-            role: .member,
-            isActive: true,
-            teamWorkouts: 0,
-            teamDistance: 0.0,
-            teamCalories: 0.0,
-            contributionScore: 0.0,
-            lastActiveDate: Date()
-        )
-        
-        try await saveTeamMembership(membership)
-        
-        // Move to my teams
-        discoveredTeams.remove(at: index)
-        myTeams.append(team)
+        do {
+            let response = try await apiService.joinTeam(teamId: teamId)
+            
+            // Update local state
+            var team = discoveredTeams[index]
+            team.memberCount += 1
+            
+            // Move to my teams
+            discoveredTeams.remove(at: index)
+            myTeams.append(team)
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
     }
     
     // MARK: - Notification Management
     
     func sendNotification(to userId: UUID, type: NotificationType, 
                          entityId: UUID? = nil, message: String) async {
-        guard let currentUser = currentUserProfile else { return }
-        
-        let notification = SocialNotification(
-            id: UUID(),
-            userId: userId,
-            actorId: currentUser.id,
-            actorName: currentUser.displayName,
-            actorAvatarURL: currentUser.avatarURL ?? "",
-            type: type,
-            entityId: entityId,
-            message: message,
-            timestamp: Date(),
-            isRead: false,
-            actionURL: nil
-        )
-        
         do {
-            try await saveNotification(notification)
+            try await apiService.sendNotification(
+                to: userId,
+                                type: type,
+                entityId: entityId,
+                message: message
+            )
         } catch {
             print("Failed to send notification: \(error)")
         }
@@ -516,7 +475,7 @@ class SocialService: ObservableObject {
         notifications[index].isRead = true
         unreadNotificationCount = max(0, unreadNotificationCount - 1)
         
-        try await updateNotificationReadStatus(notificationId, isRead: true)
+        try await apiService.markNotificationAsRead(notificationId: notificationId)
     }
     
     func markAllNotificationsAsRead() async throws {
@@ -528,7 +487,87 @@ class SocialService: ObservableObject {
         
         unreadNotificationCount = 0
         
-        try await updateAllNotificationsReadStatus()
+        try await apiService.markAllNotificationsAsRead()
+    }
+    
+    func savePost(_ postId: UUID) async throws {
+        guard let index = feedPosts.firstIndex(where: { $0.id == postId }) else {
+            throw SocialError.postNotFound
+        }
+        
+        let wasSaved = feedPosts[index].isSaved
+        
+        do {
+            if wasSaved {
+                try await apiService.unsavePost(postId: postId)
+                feedPosts[index].isSaved = false
+                savedPosts.removeAll { $0.id == postId }
+            } else {
+                try await apiService.savePost(postId: postId)
+                feedPosts[index].isSaved = true
+                savedPosts.append(feedPosts[index])
+            }
+        } catch {
+            throw SocialError.saveError(error.localizedDescription)
+        }
+    }
+    
+    // MARK: - Leaderboard Management
+    
+    func loadGlobalLeaderboard() async throws {
+        let response = try await apiService.getGlobalLeaderboard()
+        globalLeaderboard = response.entries
+    }
+    
+    func loadFriendsLeaderboard() async throws {
+        let response = try await apiService.getFriendsLeaderboard()
+        friendsLeaderboard = response.entries
+    }
+    
+    func loadTeamLeaderboard(_ teamId: UUID) async throws {
+        let response = try await apiService.getTeamLeaderboard(teamId: teamId)
+        teamLeaderboard = response.entries
+    }
+    
+    func loadUserPosts(userId: UUID) async throws {
+        let response = try await apiService.getUserPosts(userId: userId)
+        if userId == currentUserProfile?.id {
+            userPosts = response.posts
+        }
+    }
+    
+    func loadSavedPosts() async throws {
+        let response = try await apiService.getSavedPosts()
+        savedPosts = response.posts
+    }
+    
+    func searchUsers(query: String) async throws -> [UserProfile] {
+        let response = try await apiService.searchUsers(query: query)
+        return response.users
+    }
+    
+    func searchTeams(query: String) async throws -> [Team] {
+        let response = try await apiService.searchTeams(query: query)
+        return response.teams
+    }
+    
+    func searchChallenges(query: String) async throws -> [Challenge] {
+        let response = try await apiService.searchChallenges(query: query)
+        return response.challenges
+    }
+    
+    func addComment(to postId: UUID, content: String) async throws {
+        guard let postIndex = feedPosts.firstIndex(where: { $0.id == postId }) else {
+            throw SocialError.postNotFound
+        }
+        
+        let response = try await apiService.addComment(postId: postId, content: content)
+        feedPosts[postIndex].commentsCount += 1
+    }
+    
+    func getComments(for postId: UUID) async throws -> [PostComment] {
+        let response = try await apiService.getComments(postId: postId)
+        return response.comments
     }
     
     // MARK: - Real-time Sync
@@ -644,7 +683,12 @@ class SocialService: ObservableObject {
             
             earnedBadges.append(levelBadge)
             
-            try? await saveUserProfile(profile)
+            do {
+                let response = try await apiService.updateUserProfile(profile)
+                currentUserProfile = response.user
+            } catch {
+                print("Failed to save level up: \(error)")
+            }
         }
     }
     
@@ -662,31 +706,61 @@ class SocialService: ObservableObject {
     }
     
     private func loadFollowedUsers() async {
-        // Implementation for loading followed users
+        do {
+            let response = try await apiService.getFollowedUsers()
+            followedUsers = response.users
+        } catch {
+            print("Failed to load followed users: \(error)")
+        }
     }
     
     private func loadBadges() async {
-        // Implementation for loading available and earned badges
+        do {
+            let response = try await apiService.getUserBadges()
+            availableBadges = response.available
+            earnedBadges = response.earned
+        } catch {
+            print("Failed to load badges: \(error)")
+        }
     }
     
     private func loadNotifications() async throws {
-        // Implementation for loading user notifications
+        let response = try await apiService.getNotifications()
+        notifications = response.notifications
+        unreadNotificationCount = notifications.filter { !$0.isRead }.count
     }
     
     private func loadChallenges() async throws {
-        // Implementation for loading challenges
+        let response = try await apiService.getChallenges()
+        challenges = response.challenges
+        activeChallenges = challenges.filter { challenge in
+            challenge.myProgress?.isCompleted == false
+        }
     }
     
     private func loadTeams() async throws {
-        // Implementation for loading teams
+        async let myTeamsTask = apiService.getMyTeams()
+        async let discoveredTeamsTask = apiService.getDiscoverableTeams()
+        
+        let (myTeamsResponse, discoveredTeamsResponse) = try await (myTeamsTask, discoveredTeamsTask)
+        
+        myTeams = myTeamsResponse.teams
+        discoveredTeams = discoveredTeamsResponse.teams
+        teams = myTeams + discoveredTeams
     }
     
     private func loadConversations() async throws {
-        // Implementation for loading conversations
+        let response = try await apiService.getConversations()
+        conversations = response.conversations
+        unreadMessageCount = conversations.reduce(0) { $0 + $1.unreadCount }
     }
     
     private func updateOnlineStatus() async {
-        // Update last seen timestamp
+        do {
+            try await apiService.updateLastSeen()
+        } catch {
+            print("Failed to update online status: \(error)")
+        }
     }
     
     private func updateUserStats(with metrics: HealthMetrics) async {
@@ -700,7 +774,13 @@ class SocialService: ObservableObject {
         }
         
         currentUserProfile = profile
-        try? await saveUserProfile(profile)
+        
+        do {
+            let response = try await apiService.updateUserProfile(profile)
+            currentUserProfile = response.user
+        } catch {
+            print("Failed to update user stats: \(error)")
+        }
     }
     
     private func handleWorkoutCompletion(_ workout: TrainingSession) async {
@@ -772,148 +852,7 @@ class SocialService: ObservableObject {
         }
     }
     
-    // MARK: - CloudKit Save Methods
-    
-    private func saveUserProfile(_ profile: UserProfile) async throws {
-        let record = profile.toCKRecord()
-        try await cloudKitManager.save(record)
-        profileCache[profile.id] = profile
-    }
-    
-    private func saveFeedPost(_ post: FeedPost) async throws {
-        let record = post.toCKRecord()
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveChallenge(_ challenge: Challenge) async throws {
-        let record = challenge.toCKRecord()
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveTeam(_ team: Team) async throws {
-        let record = team.toCKRecord()
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveFollowRelationship(_ follow: FollowRelationship) async throws {
-        let record = CKRecord(recordType: "FollowRelationship", recordID: CKRecord.ID(recordName: follow.id.uuidString))
-        record["followerId"] = follow.followerId.uuidString
-        record["followingId"] = follow.followingId.uuidString
-        record["createdDate"] = follow.createdDate
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveChallengeProgress(_ progress: ChallengeProgress) async throws {
-        let record = CKRecord(recordType: "ChallengeProgress", recordID: CKRecord.ID(recordName: progress.userId.uuidString + "_" + progress.challengeId.uuidString))
-        record["userId"] = progress.userId.uuidString
-        record["challengeId"] = progress.challengeId.uuidString
-        record["currentValue"] = progress.currentValue
-        record["completedSessions"] = progress.completedSessions
-        record["lastUpdateDate"] = progress.lastUpdateDate
-        record["isCompleted"] = progress.isCompleted
-        if let completionDate = progress.completionDate {
-            record["completionDate"] = completionDate
-        }
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveTeamMembership(_ membership: TeamMember) async throws {
-        let record = CKRecord(recordType: "TeamMember", recordID: CKRecord.ID(recordName: membership.id.uuidString))
-        record["userId"] = membership.userId.uuidString
-        record["teamId"] = membership.teamId.uuidString
-        record["username"] = membership.username
-        record["displayName"] = membership.displayName
-        record["joinDate"] = membership.joinDate
-        record["role"] = membership.role.rawValue
-        record["isActive"] = membership.isActive
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveNotification(_ notification: SocialNotification) async throws {
-        let record = CKRecord(recordType: "SocialNotification", recordID: CKRecord.ID(recordName: notification.id.uuidString))
-        record["userId"] = notification.userId.uuidString
-        record["actorId"] = notification.actorId.uuidString
-        record["type"] = notification.type.rawValue
-        record["message"] = notification.message
-        record["timestamp"] = notification.timestamp
-        record["isRead"] = notification.isRead
-        try await cloudKitManager.save(record)
-    }
-    
-    private func saveLikeStatus(postId: UUID, isLiked: Bool) async throws {
-        // Implementation for saving like status
-    }
-    
-    private func saveSavedPostStatus(postId: UUID, isSaved: Bool) async throws {
-        // Implementation for saving saved post status
-    }
-    
-    private func saveBlockedUsers() async throws {
-        // Implementation for saving blocked users list
-    }
-    
-    private func removeFollowRelationship(followerId: UUID, followingId: UUID) async throws {
-        // Implementation for removing follow relationship
-    }
-    
-    private func updateNotificationReadStatus(_ notificationId: UUID, isRead: Bool) async throws {
-        // Implementation for updating notification read status
-    }
-    
-    private func updateAllNotificationsReadStatus() async throws {
-        // Implementation for marking all notifications as read
-    }
-    
-    // MARK: - CloudKit Parse Methods
-    
-    private func parseUserProfile(from record: CKRecord) throws -> UserProfile {
-        let id = UUID(uuidString: record.recordID.recordName) ?? UUID()
-        var profile = UserProfile(
-            username: record["username"] as? String ?? "",
-            displayName: record["displayName"] as? String ?? ""
-        )
-        profile.id = id
-        profile.bio = record["bio"] as? String ?? ""
-        profile.location = record["location"] as? String ?? ""
-        profile.joinDate = record["joinDate"] as? Date ?? Date()
-        profile.isPrivate = record["isPrivate"] as? Bool ?? false
-        profile.totalWorkouts = record["totalWorkouts"] as? Int ?? 0
-        profile.totalDistance = record["totalDistance"] as? Double ?? 0
-        profile.totalCalories = record["totalCalories"] as? Double ?? 0
-        profile.currentStreak = record["currentStreak"] as? Int ?? 0
-        profile.longestStreak = record["longestStreak"] as? Int ?? 0
-        
-        if let levelString = record["level"] as? String {
-            profile.level = UserLevel(rawValue: levelString) ?? .beginner
-        }
-        
-        profile.followersCount = record["followersCount"] as? Int ?? 0
-        profile.followingCount = record["followingCount"] as? Int ?? 0
-        profile.postsCount = record["postsCount"] as? Int ?? 0
-        
-        return profile
-    }
-    
-    private func parseFeedPost(from record: CKRecord) throws -> FeedPost {
-        let id = UUID(uuidString: record.recordID.recordName) ?? UUID()
-        let authorId = UUID(uuidString: record["authorId"] as? String ?? "") ?? UUID()
-        
-        var post = FeedPost(
-            authorId: authorId,
-            userName: record["userName"] as? String ?? "",
-            content: record["content"] as? String ?? ""
-        )
-        post.id = id
-        post.timestamp = record["timestamp"] as? Date ?? Date()
-        post.likesCount = record["likesCount"] as? Int ?? 0
-        post.commentsCount = record["commentsCount"] as? Int ?? 0
-        
-        if let visibilityString = record["visibility"] as? String {
-            post.visibility = PostVisibility(rawValue: visibilityString) ?? .public_
-        }
-        
-        return post
-    }
+    // MARK: - Helper Methods (Legacy CloudKit methods removed - now using APIService)
 }
 
 // MARK: - Error Types

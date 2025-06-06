@@ -80,7 +80,7 @@ struct SettingsView: View {
 
 struct ProfileSection: View {
     @StateObject private var settingsService = SettingsService.shared
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     
     var body: some View {
         Section("Profile") {

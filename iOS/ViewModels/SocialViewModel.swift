@@ -57,7 +57,7 @@ class SocialViewModel: ObservableObject {
     }
     
     var currentUserRank: LeaderboardEntry? {
-        leaderboardEntries.first { $0.userId == SocialService.shared.currentUser?.id }
+        leaderboardEntries.first { $0.userId == socialService.currentUser?.id }
     }
     
     var nextRankThreshold: Double? {
@@ -70,11 +70,12 @@ class SocialViewModel: ObservableObject {
     }
     
     // MARK: - Services
-    private let socialService = SocialService.shared
+    private let socialService: SocialService
     private var cancellables = Set<AnyCancellable>()
     
     // MARK: - Initialization
-    init() {
+    init(socialService: SocialService) {
+        self.socialService = socialService
         setupObservers()
         bindToSocialService()
     }

@@ -11,7 +11,7 @@ import SwiftUI
 struct MainMenuView: View {
     @StateObject private var settingsService = SettingsService.shared
     @StateObject private var notificationService = NotificationService.shared
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     @StateObject private var messagingService = MessagingService.shared
     @StateObject private var healthManager = HealthManager.shared
     
@@ -214,7 +214,7 @@ struct WorkoutMenuView: View {
 }
 
 struct ProfileButton: View {
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     
     var body: some View {
         Button(action: {}) {

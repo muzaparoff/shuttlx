@@ -10,7 +10,7 @@ import SwiftUI
 
 struct NotificationsView: View {
     @StateObject private var notificationService = NotificationService.shared
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     @State private var selectedFilter: NotificationFilter = .all
     @State private var showingSettings = false
     @Environment(\.presentationMode) var presentationMode

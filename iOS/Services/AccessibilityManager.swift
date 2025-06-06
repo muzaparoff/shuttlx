@@ -495,3 +495,296 @@ extension View {
         self.animation(manager.shouldReduceAnimations() ? .none : .default, value: UUID())
     }
 }
+
+// MARK: - Social Accessibility Announcements
+enum SocialAccessibilityAnnouncement {
+    case messageReceived(from: String, preview: String)
+    case challengeInvitation(title: String, from: String)
+    case teamInvitation(teamName: String, from: String)
+    case achievementEarned(title: String)
+    case badgeEarned(title: String)
+    case levelUp(level: Int)
+    case streakMilestone(days: Int)
+    case leaderboardPosition(rank: Int, category: String)
+    case challengeProgress(challenge: String, progress: Int, total: Int)
+    case teamUpdate(action: String, teamName: String)
+    case friendOnline(name: String)
+    case workoutBuddyJoined(name: String)
+    case socialInteraction(type: String, from: String)
+    
+    var priority: AccessibilityAnnouncementPriority {
+        switch self {
+        case .challengeInvitation, .teamInvitation: return .high
+        case .messageReceived: return .medium
+        case .achievementEarned, .badgeEarned, .levelUp: return .medium
+        case .streakMilestone, .leaderboardPosition: return .low
+        case .challengeProgress, .teamUpdate: return .low
+        case .friendOnline, .workoutBuddyJoined: return .low
+        case .socialInteraction: return .low
+        }
+    }
+    
+    var announcement: String {
+        switch self {
+        case .messageReceived(let from, let preview):
+            return "New message from \(from): \(preview)"
+        case .challengeInvitation(let title, let from):
+            return "Challenge invitation: \(title) from \(from)"
+        case .teamInvitation(let teamName, let from):
+            return "Team invitation to join \(teamName) from \(from)"
+        case .achievementEarned(let title):
+            return "Achievement earned: \(title)"
+        case .badgeEarned(let title):
+            return "Badge earned: \(title)"
+        case .levelUp(let level):
+            return "Level up! You are now level \(level)"
+        case .streakMilestone(let days):
+            return "Streak milestone reached: \(days) days"
+        case .leaderboardPosition(let rank, let category):
+            return "Leaderboard position: Rank \(rank) in \(category)"
+        case .challengeProgress(let challenge, let progress, let total):
+            return "Challenge progress: \(challenge), \(progress) of \(total) completed"
+        case .teamUpdate(let action, let teamName):
+            return "Team update: \(action) in \(teamName)"
+        case .friendOnline(let name):
+            return "\(name) is now online"
+        case .workoutBuddyJoined(let name):
+            return "\(name) joined your workout"
+        case .socialInteraction(let type, let from):
+            return "\(type) from \(from)"
+        }
+    }
+}
+
+// MARK: - Enhanced Social Accessibility Methods
+extension AccessibilityManager {
+    
+    func announceSocialUpdate(_ announcement: SocialAccessibilityAnnouncement, force: Bool = false) {
+        guard settings.enableAudioDescriptions || force else { return }
+        
+        // Convert to main accessibility announcement
+        let accessibilityAnnouncement: AccessibilityAnnouncement
+        
+        switch announcement {
+        case .achievementEarned(let title):
+            accessibilityAnnouncement = .achievement(title: title)
+        case .messageReceived, .challengeInvitation, .teamInvitation:
+            // Handle as navigation instruction for high priority
+            accessibilityAnnouncement = .navigation(instruction: announcement.announcement)
+        default:
+            // Handle as general navigation instruction
+            accessibilityAnnouncement = .navigation(instruction: announcement.announcement)
+        }
+        
+        announce(accessibilityAnnouncement, force: force)
+    }
+    
+    func configureViewForAccessibility(_ view: UIView, 
+                                     label: String, 
+                                     hint: String? = nil, 
+                                     traits: UIAccessibilityTraits = []) {
+        view.isAccessibilityElement = true
+        view.accessibilityLabel = label
+        view.accessibilityHint = hint
+        view.accessibilityTraits = traits
+        
+        // Apply high contrast if enabled
+        if settings.isHighContrastMode {
+            applyHighContrastStyling(to: view)
+        }
+        
+        // Apply large text scaling if needed
+        if settings.enableLargeTextMode {
+            applyLargeTextStyling(to: view)
+        }
+    }
+    
+    func createAccessibilityCustomAction(name: String, 
+                                       target: Any, 
+                                       selector: Selector) -> UIAccessibilityCustomAction {
+        return UIAccessibilityCustomAction(name: name, target: target, selector: selector)
+    }
+    
+    func announcePageChange(to pageName: String) {
+        if isVoiceOverActive {
+            UIAccessibility.post(notification: .screenChanged, argument: "Navigated to \(pageName)")
+        }
+    }
+    
+    func announceLayoutChange(description: String) {
+        if isVoiceOverActive {
+            UIAccessibility.post(notification: .layoutChanged, argument: description)
+        }
+    }
+    
+    func focusOnElement(_ element: Any) {
+        if isVoiceOverActive {
+            UIAccessibility.post(notification: .layoutChanged, argument: element)
+        }
+    }
+    
+    // MARK: - Social UI Accessibility Helpers
+    
+    func makeChallengeRowAccessible(_ view: UIView, challenge: Challenge, userProgress: Double) {
+        let progressText = String(format: "%.0f%% complete", userProgress * 100)
+        let label = "\(challenge.title), \(challenge.description), \(progressText)"
+        let hint = "Double tap to view challenge details"
+        
+        configureViewForAccessibility(view, label: label, hint: hint, traits: .button)
+    }
+    
+    func makeTeamMemberRowAccessible(_ view: UIView, member: User, role: String, isOnline: Bool) {
+        let onlineStatus = isOnline ? "online" : "offline"
+        let label = "\(member.displayName), \(role), \(onlineStatus)"
+        let hint = "Double tap to view member profile"
+        
+        configureViewForAccessibility(view, label: label, hint: hint, traits: .button)
+    }
+    
+    func makeLeaderboardRowAccessible(_ view: UIView, rank: Int, user: User, value: String, category: String) {
+        let label = "Rank \(rank), \(user.displayName), \(value) \(category)"
+        let hint = "Double tap to view user profile"
+        
+        configureViewForAccessibility(view, label: label, hint: hint, traits: .button)
+    }
+    
+    func makeMessageRowAccessible(_ view: UIView, message: Message, sender: User, timestamp: Date) {
+        let timeString = formatTimeForAccessibility(timestamp)
+        let messagePreview = getMessagePreview(message)
+        let label = "Message from \(sender.displayName), \(timeString), \(messagePreview)"
+        let hint = "Double tap to view full message"
+        
+        configureViewForAccessibility(view, label: label, hint: hint, traits: .button)
+    }
+    
+    func makeBadgeAccessible(_ view: UIView, badge: Badge) {
+        let earnedDate = formatDateForAccessibility(badge.earnedAt)
+        let label = "\(badge.title) badge, earned \(earnedDate), \(badge.description)"
+        let hint = "Badge earned for achievement"
+        
+        configureViewForAccessibility(view, label: label, hint: hint, traits: .image)
+    }
+    
+    func makeWorkoutStatsAccessible(_ view: UIView, stats: [String: Any]) {
+        var statsText = "Workout statistics: "
+        for (key, value) in stats {
+            statsText += "\(key): \(value), "
+        }
+        statsText = String(statsText.dropLast(2)) // Remove last comma and space
+        
+        configureViewForAccessibility(view, label: statsText, hint: nil, traits: .staticText)
+    }
+    
+    // MARK: - Accessibility Styling
+    
+    private func applyHighContrastStyling(to view: UIView) {
+        // Apply high contrast colors and borders
+        view.layer.borderWidth = 2.0
+        view.layer.borderColor = UIColor.label.cgColor
+        
+        if let button = view as? UIButton {
+            button.setTitleColor(.label, for: .normal)
+            button.backgroundColor = .systemBackground
+        }
+    }
+    
+    private func applyLargeTextStyling(to view: UIView) {
+        // Scale fonts for better readability
+        if let label = view as? UILabel {
+            let currentFont = label.font ?? UIFont.systemFont(ofSize: 17)
+            label.font = currentFont.withSize(currentFont.pointSize * 1.3)
+            label.adjustsFontForContentSizeCategory = true
+        }
+        
+        if let button = view as? UIButton {
+            if let currentFont = button.titleLabel?.font {
+                button.titleLabel?.font = currentFont.withSize(currentFont.pointSize * 1.3)
+            }
+        }
+    }
+    
+    // MARK: - Accessibility Helpers
+    
+    private func formatTimeForAccessibility(_ date: Date) -> String {
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return formatter.localizedString(for: date, relativeTo: Date())
+    }
+    
+    private func formatDateForAccessibility(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+    
+    private func getMessagePreview(_ message: Message) -> String {
+        switch message.content {
+        case .text(let text):
+            return String(text.prefix(50)) + (text.count > 50 ? "..." : "")
+        case .workout(let workout):
+            return "Shared workout: \(workout.name)"
+        case .media(let media):
+            switch media.type {
+            case .image: return "Shared an image"
+            case .video: return "Shared a video"
+            case .audio: return "Shared an audio message"
+            case .file: return "Shared a file"
+            }
+        case .achievement(let achievement):
+            return "Shared achievement: \(achievement.title)"
+        case .challenge(let challenge):
+            return "Shared challenge: \(challenge.title)"
+        case .system(let systemMessage):
+            return systemMessage.message
+        }
+    }
+    
+    // MARK: - VoiceOver Navigation Gestures
+    
+    func setupCustomVoiceOverGestures(for view: UIView) {
+        // Set up custom gestures for enhanced navigation
+        let swipeUpAction = UIAccessibilityCustomAction(
+            name: "Show more options",
+            target: self,
+            selector: #selector(handleSwipeUpGesture)
+        )
+        
+        let swipeDownAction = UIAccessibilityCustomAction(
+            name: "Hide options",
+            target: self,
+            selector: #selector(handleSwipeDownGesture)
+        )
+        
+        view.accessibilityCustomActions = [swipeUpAction, swipeDownAction]
+    }
+    
+    @objc private func handleSwipeUpGesture() -> Bool {
+        // Handle custom swipe up gesture
+        announceLayoutChange(description: "More options available")
+        return true
+    }
+    
+    @objc private func handleSwipeDownGesture() -> Bool {
+        // Handle custom swipe down gesture
+        announceLayoutChange(description: "Options hidden")
+        return true
+    }
+    
+    // MARK: - Accessibility Testing Support
+    
+    func generateAccessibilityReport() -> [String: Any] {
+        return [
+            "voiceOverEnabled": isVoiceOverActive,
+            "reduceMotionEnabled": isReduceMotionActive,
+            "contentSizeCategory": contentSizeCategory.rawValue,
+            "highContrastMode": isHighContrastMode,
+            "simplifiedInterface": isSimplifiedInterface,
+            "customSettings": [
+                "hapticNavigation": settings.enableHapticNavigation,
+                "audioDescriptions": settings.enableAudioDescriptions,
+                "announcementFrequency": settings.workoutAnnouncementFrequency.rawValue
+            ]
+        ]
+    }
+}

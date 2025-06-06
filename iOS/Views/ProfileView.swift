@@ -10,7 +10,7 @@ import SwiftUI
 import HealthKit
 
 struct ProfileView: View {
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     @StateObject private var healthManager = HealthManager.shared
     @StateObject private var settingsService = SettingsService.shared
     @StateObject private var notificationService = NotificationService.shared

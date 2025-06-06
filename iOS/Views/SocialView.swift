@@ -9,12 +9,16 @@
 import SwiftUI
 
 struct SocialView: View {
-    @StateObject private var viewModel = SocialViewModel()
-    @StateObject private var socialService = SocialService.shared
+    @StateObject private var viewModel: SocialViewModel
+    @EnvironmentObject var socialService: SocialService
     @State private var selectedTab: SocialTab = .feed
     @State private var showingProfile = false
     @State private var showingNotifications = false
     @State private var showingMessages = false
+    
+    init(socialService: SocialService) {
+        _viewModel = StateObject(wrappedValue: SocialViewModel(socialService: socialService))
+    }
     
     var body: some View {
         NavigationView {

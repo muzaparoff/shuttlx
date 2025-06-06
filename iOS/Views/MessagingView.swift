@@ -10,7 +10,7 @@ import SwiftUI
 
 struct MessagingView: View {
     @StateObject private var messagingService = MessagingService.shared
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     @State private var showingNewConversation = false
     @State private var searchText = ""
     @Environment(\.presentationMode) var presentationMode
@@ -521,7 +521,7 @@ struct EmptyMessagingView: View {
 // MARK: - New Conversation View
 
 struct NewConversationView: View {
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     @StateObject private var messagingService = MessagingService.shared
     @Environment(\.presentationMode) var presentationMode
     @State private var searchText = ""
@@ -591,7 +591,7 @@ struct UsersList: View {
     @Binding var selectedUsers: Set<UUID>
     let maxSelection: Int
     
-    @StateObject private var socialService = SocialService.shared
+    @EnvironmentObject var socialService: SocialService
     
     var body: some View {
         ScrollView {

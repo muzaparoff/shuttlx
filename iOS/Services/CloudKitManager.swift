@@ -8,6 +8,7 @@
 import Foundation
 import CloudKit
 import Combine
+import UIKit
 
 // MARK: - CloudKit Record Types
 enum RecordType: String {
@@ -113,6 +114,7 @@ class CloudKitManager: ObservableObject {
     private let privateDatabase: CKDatabase
     private let publicDatabase: CKDatabase
     private var cancellables = Set<AnyCancellable>()
+    private var apiService: APIService?
     
     // MARK: - Initialization
     init() {
@@ -122,6 +124,11 @@ class CloudKitManager: ObservableObject {
         
         checkAccountStatus()
         loadLastSyncDate()
+    }
+    
+    // MARK: - Configuration
+    func configure(apiService: APIService) {
+        self.apiService = apiService
     }
     
     // MARK: - Account Management
@@ -559,4 +566,182 @@ extension LocationDataPoint: Codable {
         altitude = try container.decode(Double.self, forKey: .altitude)
         speed = try container.decode(Double.self, forKey: .speed)
     }
+}
+
+// MARK: - API Synchronization
+    
+    /// Sync data between CloudKit and the backend API
+    func syncWithAPI() async {
+        guard let apiService = apiService else {
+            errorMessage = "API service not configured"
+            return
+        }
+        
+        syncStatus = .syncing
+        
+        do {
+            // Push local CloudKit data to API
+            try await pushDataToAPI()
+            
+            // Pull data from API to CloudKit
+            try await pullDataFromAPI()
+            
+            lastSyncDate = Date()
+            saveLastSyncDate()
+            syncStatus = .success
+            
+            print("✅ API sync completed successfully")
+            
+        } catch {
+            syncStatus = .failed(error)
+            errorMessage = error.localizedDescription
+            print("❌ API sync failed: \(error)")
+        }
+    }
+    
+    private func pushDataToAPI() async throws {
+        guard let apiService = apiService else { return }
+        
+        // Push workout sessions to API
+        let localWorkouts = try await fetchWorkoutsFromCloud()
+        for workout in localWorkouts {
+            try await apiService.syncWorkoutSession(workout)
+        }
+        
+        // Push user profile to API
+        if let userProfile = try await fetchUserProfileFromCloud() {
+            try await apiService.syncUserProfile(userProfile)
+        }
+        
+        // Push achievements to API
+        let achievements = try await fetchAchievementsFromCloud()
+        for achievement in achievements {
+            try await apiService.syncAchievement(achievement)
+        }
+    }
+    
+    private func pullDataFromAPI() async throws {
+        guard let apiService = apiService else { return }
+        
+        // Pull workout sessions from API
+        let remoteWorkouts = try await apiService.fetchWorkoutSessions()
+        for workout in remoteWorkouts {
+            try await saveWorkoutToCloud(workout)
+        }
+        
+        // Pull user profile from API
+        if let remoteProfile = try await apiService.fetchUserProfile() {
+            try await saveUserProfileToCloud(remoteProfile)
+        }
+        
+        // Pull achievements from API
+        let remoteAchievements = try await apiService.fetchAchievements()
+        for achievement in remoteAchievements {
+            try await saveAchievementToCloud(achievement)
+        }
+    }
+    
+    /// Enable automatic sync between CloudKit and API
+    func enableAutoSync() {
+        // Set up periodic sync every hour
+        Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+            Task {
+                await self?.syncWithAPI()
+            }
+        }
+    }
+    
+    /// Sync specific workout session to API
+    func syncWorkoutToAPI(_ session: WorkoutSession) async throws {
+        guard let apiService = apiService else { return }
+        
+        let cloudSession = CloudWorkoutSession(from: session)
+        try await apiService.syncWorkoutSession(cloudSession)
+        
+        // Also save to CloudKit for local backup
+        try await saveWorkoutToCloud(cloudSession)
+    }
+    
+    /// Sync user profile changes to API
+    func syncUserProfileToAPI(_ profile: UserProfile) async throws {
+        guard let apiService = apiService else { return }
+        
+        let cloudProfile = CloudUserProfile(from: profile)
+        try await apiService.syncUserProfile(cloudProfile)
+        
+        // Also save to CloudKit for local backup
+        try await saveUserProfileToCloud(cloudProfile)
+    }
+}
+
+// MARK: - API Service Extensions
+
+extension APIService {
+    // Add workout session sync methods
+    func syncWorkoutSession(_ session: CloudWorkoutSession) async throws {
+        let request = APIRequest(
+            endpoint: Endpoints.syncWorkout,
+            method: .POST,
+            body: session
+        )
+        let _: EmptyResponse = try await performRequest(request)
+    }
+    
+    func fetchWorkoutSessions() async throws -> [CloudWorkoutSession] {
+        let request = APIRequest(
+            endpoint: Endpoints.workouts,
+            method: .GET
+        )
+        let response: [CloudWorkoutSession] = try await performRequest(request)
+        return response
+    }
+    
+    func syncUserProfile(_ profile: CloudUserProfile) async throws {
+        let request = APIRequest(
+            endpoint: Endpoints.syncProfile,
+            method: .POST,
+            body: profile
+        )
+        let _: EmptyResponse = try await performRequest(request)
+    }
+    
+    func fetchUserProfile() async throws -> CloudUserProfile? {
+        let request = APIRequest(
+            endpoint: Endpoints.profile,
+            method: .GET
+        )
+        let response: CloudUserProfile? = try await performRequest(request)
+        return response
+    }
+    
+    func syncAchievement(_ achievement: CloudAchievement) async throws {
+        let request = APIRequest(
+            endpoint: Endpoints.syncAchievement,
+            method: .POST,
+            body: achievement
+        )
+        let _: EmptyResponse = try await performRequest(request)
+    }
+    
+    func fetchAchievements() async throws -> [CloudAchievement] {
+        let request = APIRequest(
+            endpoint: Endpoints.achievements,
+            method: .GET
+        )
+        let response: [CloudAchievement] = try await performRequest(request)
+        return response
+    }
+}
+
+// MARK: - Additional Cloud Models
+
+struct CloudAchievement: Codable {
+    let id: String
+    let title: String
+    let description: String
+    let iconName: String
+    let unlockedDate: Date?
+    let progress: Double
+    let isUnlocked: Bool
+    let category: String
 }

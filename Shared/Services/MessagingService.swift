@@ -21,7 +21,7 @@ class MessagingService: ObservableObject {
     @Published var isLoading = false
     @Published var connectionStatus: ConnectionStatus = .disconnected
     
-    private let cloudKitService = CloudKitManager.shared
+    private var apiService: APIService?
     private let notificationService = NotificationService.shared
     private var cancellables = Set<AnyCancellable>()
     private var currentUserID: UUID?
@@ -55,6 +55,12 @@ class MessagingService: ObservableObject {
     deinit {
         messageUpdateTimer?.invalidate()
         typingTimer?.invalidate()
+    }
+    
+    // MARK: - Configuration
+    
+    func configure(apiService: APIService) {
+        self.apiService = apiService
     }
     
     // MARK: - User Management
