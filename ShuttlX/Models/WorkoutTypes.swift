@@ -100,6 +100,17 @@ enum SimpleWorkoutType: String, CaseIterable {
         case .custom: return "Custom"
         }
     }
+    
+    var usesGPS: Bool {
+        switch self {
+        case .shuttleRun: return true
+        case .hiit: return false
+        case .tabata: return false
+        case .pyramid: return true
+        case .runWalk: return true
+        case .custom: return true
+        }
+    }
 }
 
 // MARK: - Simple Workout Interval

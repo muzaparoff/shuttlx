@@ -21,7 +21,7 @@ class HealthManager: ObservableObject {
     @Published var activeEnergyBurned: Double = 0
     @Published var distanceCovered: Double = 0
     @Published var currentHealthMetrics: HealthMetrics = .empty
-    @Published var recoveryMetrics: RecoveryMetrics?
+    @Published var recoveryMetrics: HealthRecoveryMetrics?
     @Published var workoutStatistics: WorkoutStatistics?
     @Published var injuryRiskAssessment: InjuryRiskAssessment?
     
@@ -502,7 +502,7 @@ class HealthManager: ObservableObject {
     private func loadRecoveryMetrics() async {
         // Mock implementation - in real app would analyze sleep, HRV, etc.
         await MainActor.run {
-            self.recoveryMetrics = RecoveryMetrics(
+            self.recoveryMetrics = HealthRecoveryMetrics(
                 readinessScore: Double.random(in: 60...95),
                 sleepQuality: .good,
                 stressLevel: .moderate,
@@ -601,9 +601,6 @@ class HealthManager: ObservableObject {
     
     func isHeartRateInZone(_ zone: HeartRateZone) -> Bool {
         return currentHeartRateZone == zone
-    }
-        
-        healthStore.execute(query)
     }
     
     // MARK: - Save Workout Data

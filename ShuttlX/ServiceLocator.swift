@@ -19,8 +19,18 @@ class ServiceLocator: ObservableObject {
     @Published var servicesLoaded: [String] = []
     @Published var initializationErrors: [String] = []
     
-    // Service instances will be added incrementally
-    // TODO: Add actual service instances as they're integrated
+    // Service instances
+    private(set) var apiService: APIService!
+    private(set) var healthManager: HealthManager!
+    private(set) var cloudKitManager: CloudKitManager!
+    private(set) var socialService: SocialService!
+    private(set) var messagingService: MessagingService!
+    private(set) var notificationService: NotificationService!
+    private(set) var settingsService: SettingsService!
+    private(set) var gamificationManager: GamificationManager!
+    private(set) var hapticFeedbackManager: HapticFeedbackManager!
+    private(set) var watchConnectivityManager: WatchConnectivityManager!
+    private(set) var realTimeMessagingService: RealTimeMessagingService!
     
     private init() {
         setupServices()
@@ -33,30 +43,71 @@ class ServiceLocator: ObservableObject {
     }
     
     private func initializeServices() async {
-        // For now, simulate service initialization
-        // Real services will be added incrementally
-        let mockServices = [
-            "APIService",
-            "HealthManager", 
-            "CloudKitManager",
-            "SocialService",
-            "MessagingService",
-            "NotificationService",
-            "SettingsService",
-            "GamificationManager"
-        ]
-        
-        // Simulate initialization
-        for serviceName in mockServices {
-            await MainActor.run {
-                servicesLoaded.append(serviceName)
-            }
-        }
-        
-        await MainActor.run {
+        do {
+            // Initialize core services first
+            healthManager = HealthManager()
+            await recordServiceInitialization("HealthManager")
+            
+            cloudKitManager = CloudKitManager.shared
+            await recordServiceInitialization("CloudKitManager")
+            
+            apiService = APIService.shared
+            await recordServiceInitialization("APIService")
+            
+            // Initialize services that depend on core services
+            socialService = SocialService(apiService: apiService, healthManager: healthManager)
+            await recordServiceInitialization("SocialService")
+            
+            messagingService = MessagingService.shared
+            await recordServiceInitialization("MessagingService")
+            
+            realTimeMessagingService = RealTimeMessagingService.shared
+            await recordServiceInitialization("RealTimeMessagingService")
+            
+            notificationService = NotificationService.shared
+            await recordServiceInitialization("NotificationService")
+            
+            settingsService = SettingsService.shared
+            await recordServiceInitialization("SettingsService")
+            
+            gamificationManager = GamificationManager.shared
+            await recordServiceInitialization("GamificationManager")
+            
+            hapticFeedbackManager = HapticFeedbackManager.shared
+            await recordServiceInitialization("HapticFeedbackManager")
+            
+            watchConnectivityManager = WatchConnectivityManager()
+            await recordServiceInitialization("WatchConnectivityManager")
+            
+            // Configure services that need dependencies
+            gamificationManager.configure(socialService: socialService)
+            
+            // Request HealthKit permissions
+            await healthManager.requestPermissions()
+            
             isInitialized = true
+            print("✅ ServiceLocator: All services initialized successfully")
+            
+        } catch {
+            await recordServiceError("Failed to initialize services: \(error.localizedDescription)")
+            print("❌ ServiceLocator initialization failed: \(error)")
         }
     }
+    
+    private func recordServiceInitialization(_ serviceName: String) async {
+        await MainActor.run {
+            servicesLoaded.append(serviceName)
+            print("✅ \(serviceName) initialized")
+        }
+    }
+    
+    private func recordServiceError(_ error: String) async {
+        await MainActor.run {
+            initializationErrors.append(error)
+            print("❌ ServiceLocator error: \(error)")
+        }
+    }
+    
     
     // Service status methods
     func getServiceStatus() -> String {
@@ -78,17 +129,48 @@ class ServiceLocator: ObservableObject {
         return initializationErrors
     }
     
-    // Placeholder methods for service access
-    // These will be replaced with actual service instances
-    func getAPIService() -> String {
-        return "APIService placeholder - ready for integration"
+    // Service access methods
+    func getAPIService() -> APIService {
+        return apiService
     }
     
-    func getHealthManager() -> String {
-        return "HealthManager placeholder - ready for integration"
+    func getHealthManager() -> HealthManager {
+        return healthManager
     }
     
-    func getCloudKitManager() -> String {
-        return "CloudKitManager placeholder - ready for integration"
+    func getCloudKitManager() -> CloudKitManager {
+        return cloudKitManager
+    }
+    
+    func getSocialService() -> SocialService {
+        return socialService
+    }
+    
+    func getMessagingService() -> MessagingService {
+        return messagingService
+    }
+    
+    func getNotificationService() -> NotificationService {
+        return notificationService
+    }
+    
+    func getSettingsService() -> SettingsService {
+        return settingsService
+    }
+    
+    func getGamificationManager() -> GamificationManager {
+        return gamificationManager
+    }
+    
+    func getHapticFeedbackManager() -> HapticFeedbackManager {
+        return hapticFeedbackManager
+    }
+    
+    func getWatchConnectivityManager() -> WatchConnectivityManager {
+        return watchConnectivityManager
+    }
+    
+    func getRealTimeMessagingService() -> RealTimeMessagingService {
+        return realTimeMessagingService
     }
 }

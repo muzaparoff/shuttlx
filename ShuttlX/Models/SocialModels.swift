@@ -1213,14 +1213,15 @@ extension ActivityLevel {
     }
 }
 
-// Workout Type Extensions
-extension WorkoutType {
+// Simple Workout Type Extensions
+extension SimpleWorkoutType {
     var iconName: String {
         switch self {
         case .shuttleRun: return "figure.run"
-        case .intervalTraining: return "timer"
-        case .endurance: return "heart.fill"
-        case .speed: return "bolt.fill"
+        case .hiit: return "timer"
+        case .tabata: return "bolt.fill"
+        case .pyramid: return "triangle.fill"
+        case .runWalk: return "figure.walk"
         case .custom: return "gear"
         }
     }
@@ -1228,20 +1229,11 @@ extension WorkoutType {
     var color: Color {
         switch self {
         case .shuttleRun: return .orange
-        case .intervalTraining: return .blue
-        case .endurance: return .red
-        case .speed: return .yellow
+        case .hiit: return .blue
+        case .tabata: return .red
+        case .pyramid: return .green
+        case .runWalk: return .yellow
         case .custom: return .purple
-        }
-    }
-    
-    var displayName: String {
-        switch self {
-        case .shuttleRun: return "Shuttle Run"
-        case .intervalTraining: return "Interval Training"
-        case .endurance: return "Endurance"
-        case .speed: return "Speed Training"
-        case .custom: return "Custom Workout"
         }
     }
 }

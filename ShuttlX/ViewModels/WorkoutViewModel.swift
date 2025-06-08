@@ -93,36 +93,7 @@ struct RoutePoint: Identifiable {
 }
 
 // MARK: - Simple Workout Types for View Model
-enum SimpleWorkoutType: String, CaseIterable {
-    case shuttleRun = "shuttle_run"
-    case hiit = "hiit"
-    case tabata = "tabata"
-    case pyramid = "pyramid"
-    case runWalk = "run_walk"
-    case custom = "custom"
-    
-    var displayName: String {
-        switch self {
-        case .shuttleRun: return "Shuttle Run"
-        case .hiit: return "HIIT"
-        case .tabata: return "Tabata"
-        case .pyramid: return "Pyramid"
-        case .runWalk: return "Run/Walk"
-        case .custom: return "Custom"
-        }
-    }
-    
-    var usesGPS: Bool {
-        switch self {
-        case .shuttleRun: return true
-        case .hiit: return false
-        case .tabata: return false
-        case .pyramid: return true
-        case .runWalk: return true
-        case .custom: return true
-        }
-    }
-}
+// Note: SimpleWorkoutType is defined in WorkoutTypes.swift
 
 // MARK: - Workout Session for real-time tracking
 struct WorkoutSession: Identifiable {

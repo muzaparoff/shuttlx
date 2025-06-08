@@ -204,23 +204,7 @@ enum HeartRateZone: String, CaseIterable, Codable {
 }
 
 // MARK: - Audio Coaching Settings
-struct AudioCoachingSettings: Codable {
-    let enabled: Bool
-    let voiceType: VoiceType
-    let encouragementLevel: EncouragementLevel
-    let techniqueTips: Bool
-    let intervalAnnouncements: Bool
-    let heartRateAnnouncements: Bool
-    let paceGuidance: Bool
-    
-    enum VoiceType: String, CaseIterable, Codable {
-        case male, female, neutral
-    }
-    
-    enum EncouragementLevel: String, CaseIterable, Codable {
-        case minimal, moderate, motivational, intense
-    }
-}
+// Note: AudioCoachingSettings is defined in AudioCoachingManager.swift
 
 // MARK: - Haptic Feedback Settings
 struct HapticFeedbackSettings: Codable {

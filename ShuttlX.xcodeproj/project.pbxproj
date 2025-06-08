@@ -15,7 +15,7 @@
 		AF8D4D75 /* FormAnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE26A9AA /* FormAnalysisManager.swift */; };
 		67FB015A /* WeatherManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A51E983 /* WeatherManager.swift */; };
 		2E75A97D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E5E4AE /* NotificationService.swift */; };
-		3B407956 /* MLModelManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3782DA16 /* MLModelManager.swift */; };
+		3B407956 /* MLModelManager_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3782DA16 /* MLModelManager_iOS.swift */; };
 		A14ACF2F /* GamificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59BB175A /* GamificationManager.swift */; };
 		2FB4C74B /* MessagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCB6588 /* MessagingService.swift */; };
 		AFCE18F4 /* HealthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAB32B1 /* HealthManager.swift */; };
@@ -50,7 +50,7 @@
 		BE26A9AA /* FormAnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormAnalysisManager.swift; sourceTree = "<group>"; };
 		5A51E983 /* WeatherManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherManager.swift; sourceTree = "<group>"; };
 		59E5E4AE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
-		3782DA16 /* MLModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLModelManager.swift; sourceTree = "<group>"; };
+		3782DA16 /* MLModelManager_iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLModelManager_iOS.swift; sourceTree = "<group>"; };
 		59BB175A /* GamificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationManager.swift; sourceTree = "<group>"; };
 		7BCB6588 /* MessagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagingService.swift; sourceTree = "<group>"; };
 		6FAB32B1 /* HealthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthManager.swift; sourceTree = "<group>"; };
@@ -123,7 +123,7 @@
 				BE26A9AA /* FormAnalysisManager.swift */,
 				5A51E983 /* WeatherManager.swift */,
 				59E5E4AE /* NotificationService.swift */,
-				3782DA16 /* MLModelManager.swift */,
+				3782DA16 /* MLModelManager_iOS.swift */,
 				59BB175A /* GamificationManager.swift */,
 				7BCB6588 /* MessagingService.swift */,
 				6FAB32B1 /* HealthManager.swift */,
@@ -235,7 +235,7 @@
 				AF8D4D75 /* FormAnalysisManager.swift in Sources */,
 				67FB015A /* WeatherManager.swift in Sources */,
 				2E75A97D /* NotificationService.swift in Sources */,
-				3B407956 /* MLModelManager.swift in Sources */,
+				3B407956 /* MLModelManager_iOS.swift in Sources */,
 				A14ACF2F /* GamificationManager.swift in Sources */,
 				2FB4C74B /* MessagingService.swift in Sources */,
 				AFCE18F4 /* HealthManager.swift in Sources */,
