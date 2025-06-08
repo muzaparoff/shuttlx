@@ -319,11 +319,6 @@ class HealthManager: ObservableObject {
             print("Failed to start workout session: \(error.localizedDescription)")
         }
     }
-            
-        } catch {
-            print("Failed to start workout session: \(error.localizedDescription)")
-        }
-    }
     
     func pauseWorkout() {
         workoutSession?.pause()

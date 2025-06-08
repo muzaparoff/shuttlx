@@ -131,6 +131,49 @@ struct LocationDataPoint {
     let speed: Double
 }
 
+// MARK: - LocationDataPoint Codable Extension
+extension LocationDataPoint: Codable {
+    enum CodingKeys: String, CodingKey {
+        case timestamp, coordinate, altitude, speed
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(timestamp, forKey: .timestamp)
+        try container.encode(coordinate, forKey: .coordinate)
+        try container.encode(altitude, forKey: .altitude)
+        try container.encode(speed, forKey: .speed)
+    }
+    
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        timestamp = try container.decode(Date.self, forKey: .timestamp)
+        coordinate = try container.decode(CLLocationCoordinate2D.self, forKey: .coordinate)
+        altitude = try container.decode(Double.self, forKey: .altitude)
+        speed = try container.decode(Double.self, forKey: .speed)
+    }
+}
+
+// MARK: - CLLocationCoordinate2D Codable Extension
+extension CLLocationCoordinate2D: Codable {
+    enum CodingKeys: String, CodingKey {
+        case latitude, longitude
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(latitude, forKey: .latitude)
+        try container.encode(longitude, forKey: .longitude)
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let latitude = try container.decode(Double.self, forKey: .latitude)
+        let longitude = try container.decode(Double.self, forKey: .longitude)
+        self.init(latitude: latitude, longitude: longitude)
+    }
+}
+
 // MARK: - Route Point Model
 struct RoutePoint: Identifiable {
     let id = UUID()

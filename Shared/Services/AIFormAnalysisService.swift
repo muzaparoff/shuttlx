@@ -11,7 +11,9 @@ import CoreML
 import Vision
 import AVFoundation
 import Combine
+#if canImport(UIKit)
 import UIKit
+#endif
 import CoreLocation
 
 /// AI-powered form analysis service for real-time shuttle run form evaluation

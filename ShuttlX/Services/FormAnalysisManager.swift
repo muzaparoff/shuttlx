@@ -3,6 +3,7 @@ import CoreML
 import Vision
 import AVFoundation
 import Combine
+import SwiftUI
 
 class FormAnalysisManager: NSObject, ObservableObject {
     @Published var isAnalyzing = false

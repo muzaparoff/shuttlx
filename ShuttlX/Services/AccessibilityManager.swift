@@ -11,46 +11,8 @@ import SwiftUI
 import Combine
 
 // MARK: - Accessibility Configuration
-struct AccessibilitySettings: Codable {
-    var isVoiceOverEnabled: Bool = UIAccessibility.isVoiceOverRunning
-    var isReduceMotionEnabled: Bool = UIAccessibility.isReduceMotionEnabled
-    var isReduceTransparencyEnabled: Bool = UIAccessibility.isReduceTransparencyEnabled
-    var isIncreaseContrastEnabled: Bool = UIAccessibility.isDarkerSystemColorsEnabled
-    var isDifferentiateWithoutColorEnabled: Bool = UIAccessibility.shouldDifferentiateWithoutColor
-    var isAssistiveTouchEnabled: Bool = UIAccessibility.isAssistiveTouchRunning
-    var isInvertColorsEnabled: Bool = UIAccessibility.isInvertColorsEnabled
-    var preferredContentSizeCategory: String = UIApplication.shared.preferredContentSizeCategory.rawValue
-    
-    // Custom accessibility features
-    var enableHapticNavigation: Bool = true
-    var enableAudioDescriptions: Bool = true
-    var enableSimplifiedInterface: Bool = false
-    var enableLargeTextMode: Bool = false
-    var enableHighContrastMode: Bool = false
-    var workoutAnnouncementFrequency: AnnouncementFrequency = .normal
-    
-    enum AnnouncementFrequency: String, Codable, CaseIterable {
-        case minimal, normal, frequent, verbose
-        
-        var displayName: String {
-            switch self {
-            case .minimal: return "Minimal"
-            case .normal: return "Normal"
-            case .frequent: return "Frequent"
-            case .verbose: return "Verbose"
-            }
-        }
-        
-        var interval: TimeInterval {
-            switch self {
-            case .minimal: return 60 // Every minute
-            case .normal: return 30  // Every 30 seconds
-            case .frequent: return 15 // Every 15 seconds
-            case .verbose: return 5   // Every 5 seconds
-            }
-        }
-    }
-}
+// AccessibilitySettings struct definition is in Models/SettingsModels.swift
+// AnnouncementFrequency enum definition is in Models/SettingsModels.swift
 
 // MARK: - Accessibility Announcement Types
 enum AccessibilityAnnouncement {
@@ -82,7 +44,7 @@ enum AccessibilityAnnouncement {
 @MainActor
 class AccessibilityManager: NSObject, ObservableObject {
     // MARK: - Published Properties
-    @Published var settings = AccessibilitySettings()
+    @Published var settings = AccessibilitySettings.default
     @Published var isVoiceOverActive: Bool = UIAccessibility.isVoiceOverRunning
     @Published var isReduceMotionActive: Bool = UIAccessibility.isReduceMotionEnabled
     @Published var contentSizeCategory: ContentSizeCategory = .large
@@ -376,7 +338,7 @@ class AccessibilityManager: NSObject, ObservableObject {
             UIAccessibility.post(notification: .announcement, argument: message)
         } else {
             // Fallback to speech synthesis (would integrate with AudioCoachingManager)
-            print("🔊 Accessibility: \\(message)")
+            print("🔊 Accessibility: \(message)")
         }
         
         // Process next announcement after delay
@@ -389,35 +351,35 @@ class AccessibilityManager: NSObject, ObservableObject {
     private func generateAnnouncementMessage(for announcement: AccessibilityAnnouncement) -> String {
         switch announcement {
         case .workoutStart(let type):
-            return "Starting \\(type) workout. Get ready!"
+            return "Starting \(type) workout. Get ready!"
         case .workoutEnd(let duration):
-            return "Workout completed in \\(duration). Great job!"
+            return "Workout completed in \(duration). Great job!"
         case .intervalChange(let current, let next):
-            var message = "Now: \\(current)"
+            var message = "Now: \(current)"
             if let next = next {
-                message += ". Next: \\(next)"
+                message += ". Next: \(next)"
             }
             return message
         case .progress(let completed, let total, let timeRemaining):
-            return "Completed \\(completed) of \\(total) intervals. \\(timeRemaining) remaining."
+            return "Completed \(completed) of \(total) intervals. \(timeRemaining) remaining."
         case .heartRate(let current, let zone):
-            return "Heart rate: \\(current) beats per minute. \\(zone) zone."
+            return "Heart rate: \(current) beats per minute. \(zone) zone."
         case .pace(let current, let target):
-            var message = "Current pace: \\(current)"
+            var message = "Current pace: \(current)"
             if let target = target {
-                message += ". Target: \\(target)"
+                message += ". Target: \(target)"
             }
             return message
         case .distance(let current, let total):
-            return "Distance: \\(current) of \\(total)"
+            return "Distance: \(current) of \(total)"
         case .navigation(let instruction):
             return instruction
         case .achievement(let title):
-            return "Achievement unlocked: \\(title)"
+            return "Achievement unlocked: \(title)"
         case .warning(let message):
-            return "Warning: \\(message)"
+            return "Warning: \(message)"
         case .error(let message):
-            return "Error: \\(message)"
+            return "Error: \(message)"
         }
     }
     

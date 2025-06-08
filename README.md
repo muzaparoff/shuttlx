@@ -2,6 +2,13 @@
 
 A comprehensive iOS and Apple Watch app for shuttle run and interval training with AI-powered coaching, adaptive training programs, and advanced analytics.
 
+## 🎯 Project Status: v1.1.0-cleaned (June 8, 2025)
+
+**✅ Workspace Cleanup Complete**
+- Removed duplicate folders and files
+- Consolidated architecture with clear separation of concerns
+- Ready for development and testing
+
 ## Features
 
 ### Core Functionality
@@ -43,20 +50,55 @@ A comprehensive iOS and Apple Watch app for shuttle run and interval training wi
 ## Project Structure
 
 ```
-ShuttlX/
-├── iOS App/
-│   ├── Views/
-│   ├── ViewModels/
-│   ├── Models/
-│   ├── Services/
-│   └── Resources/
-├── watchOS App/
+ShuttlX/ (Root Project)
+├── ShuttlX/ (iOS App - Main Xcode Project)
+│   ├── ShuttlXApp.swift
+│   ├── ContentView.swift
+│   ├── ServiceLocator.swift
+│   ├── Views/ (38 SwiftUI Views)
+│   ├── ViewModels/ (18 ViewModels with Dependency Injection)
+│   └── Services/ (Platform-specific iOS Services)
+│       ├── AccessibilityManager.swift
+│       ├── AudioCoachingManager.swift
+│       ├── CloudKitManager.swift
+│       ├── FormAnalysisManager.swift
+│       ├── LocationManager.swift
+│       ├── WeatherManager.swift
+│       └── MLModelManager_iOS.swift
+├── Shared/ (Cross-platform Code)
+│   ├── Models/ (8 Data Models)
+│   │   ├── UserModels.swift
+│   │   ├── SocialModels.swift
+│   │   ├── WorkoutModels.swift
+│   │   ├── HealthModels.swift
+│   │   ├── MessagingModels.swift
+│   │   ├── NotificationModels.swift
+│   │   ├── SettingsModels.swift
+│   │   └── WorkoutTypes.swift
+│   └── Services/ (12 Core Services)
+│       ├── APIService.swift
+│       ├── SocialService.swift
+│       ├── HealthManager.swift
+│       ├── NotificationService.swift
+│       ├── MessagingService.swift
+│       ├── GamificationManager.swift
+│       ├── SettingsService.swift
+│       ├── RealTimeMessagingService.swift
+│       ├── AIFormAnalysisService.swift
+│       ├── WatchConnectivityManager.swift
+│       ├── HapticFeedbackManager.swift
+│       └── MLModelManager.swift
+├── WatchApp/ (Apple Watch App)
+│   ├── ShuttlXWatchApp.swift
+│   ├── WatchConnectivityManager.swift
+│   ├── WatchWorkoutManager.swift
 │   ├── Views/
 │   ├── ViewModels/
 │   └── Complications/
-├── Shared/
-│   ├── Models/
-│   ├── Services/
+├── Tests/ (Unit Tests)
+├── shuttlx_icon_set/ (App Icons)
+└── versions/releases/ (Release Documentation)
+```
 │   └── Extensions/
 └── Tests/
 ```

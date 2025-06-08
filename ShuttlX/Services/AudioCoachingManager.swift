@@ -201,7 +201,7 @@ class AudioCoachingManager: NSObject, ObservableObject {
             try audioSession.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
             try audioSession.setActive(true)
         } catch {
-            print("❌ Failed to setup audio session: \\(error)")
+            print("❌ Failed to setup audio session: \(error)")
         }
     }
     
@@ -261,7 +261,7 @@ class AudioCoachingManager: NSObject, ObservableObject {
         case .halfwayPoint:
             return "You're halfway through! Keep pushing!"
         case .progress(let completed, let total):
-            return "Completed \\(completed) of \\(total) intervals. You're doing great!"
+            return "Completed \(completed) of \(total) intervals. You're doing great!"
         case .heartRateZone(let zone):
             return generateHeartRateMessage(zone: zone)
         case .paceAdjustment(let instruction):
@@ -269,11 +269,11 @@ class AudioCoachingManager: NSObject, ObservableObject {
         case .motivation(let phase):
             return generateMotivationalMessage(for: phase)
         case .form(let tip):
-            return "Form tip: \\(tip)"
+            return "Form tip: \(tip)"
         case .countdown(let seconds):
-            return seconds > 1 ? "\\(seconds)" : "Go!"
+            return seconds > 1 ? "\(seconds)" : "Go!"
         case .achievement(let type):
-            return "Achievement unlocked: \\(type)!"
+            return "Achievement unlocked: \(type)!"
         }
     }
     
@@ -304,20 +304,20 @@ class AudioCoachingManager: NSObject, ObservableObject {
         let seconds = duration % 60
         
         let timeString = minutes > 0 
-            ? "\\(minutes) minute\\(minutes == 1 ? "" : "s")" + (seconds > 0 ? " and \\(seconds) seconds" : "")
-            : "\\(seconds) seconds"
+            ? "\(minutes) minute\(minutes == 1 ? "" : "s")" + (seconds > 0 ? " and \(seconds) seconds" : "")
+            : "\(seconds) seconds"
         
         switch type.lowercased() {
         case "work":
-            return "\\(type) interval starting. \\(timeString) of high intensity. Give it everything!"
+            return "\(type) interval starting. \(timeString) of high intensity. Give it everything!"
         case "rest":
-            return "Rest period. \\(timeString) to recover. Breathe and prepare for the next round."
+            return "Rest period. \(timeString) to recover. Breathe and prepare for the next round."
         case "warmup":
-            return "Warm up time. \\(timeString) to prepare your body. Start easy and build up."
+            return "Warm up time. \(timeString) to prepare your body. Start easy and build up."
         case "cooldown":
-            return "Cool down period. \\(timeString) to let your heart rate come down."
+            return "Cool down period. \(timeString) to let your heart rate come down."
         default:
-            return "\\(type) interval. \\(timeString). Stay focused!"
+            return "\(type) interval. \(timeString). Stay focused!"
         }
     }
     
@@ -332,7 +332,7 @@ class AudioCoachingManager: NSObject, ObservableObject {
         case "anaerobic":
             return "Anaerobic zone! Maximum effort!"
         default:
-            return "Heart rate in \\(zone) zone."
+            return "Heart rate in \(zone) zone."
         }
     }
     
