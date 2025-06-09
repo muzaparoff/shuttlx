@@ -18,8 +18,16 @@
 	<string>1.0</string>
 	<key>CFBundleVersion</key>
 	<string>1</string>
+	<key>INIntentsSupported</key>
+	<array>
+		<string>Intent</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>ShuttlX uses HealthKit to save your workout data and fitness activities to keep your health information up to date across all your devices.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
@@ -44,9 +52,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>NSHealthShareUsageDescription</key>
-	<string>ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress.</string>
-	<key>NSHealthUpdateUsageDescription</key>
-	<string>ShuttlX uses HealthKit to save your workout data and fitness activities to keep your health information up to date across all your devices.</string>
 </dict>
 </plist>

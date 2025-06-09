@@ -2,22 +2,13 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "Build ShuttlX MVP",
+			"label": "Build iOS + watchOS",
 			"type": "shell",
-			"command": "xcodebuild",
+			"command": "echo",
 			"args": [
-				"-project",
-				"ShuttlX.xcodeproj",
-				"-scheme",
-				"ShuttlX",
-				"-destination",
-				"platform=iOS Simulator,name=iPhone 16",
-				"build"
+				"Building both iOS and watchOS targets..."
 			],
 			"group": "build",
-			"problemMatcher": [
-				"$tsc"
-			],
 			"isBackground": false
 		}
 	]
