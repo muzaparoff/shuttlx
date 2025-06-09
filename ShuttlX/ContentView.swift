@@ -15,13 +15,21 @@ struct ContentView: View {
                 }
                 .tag(0)
             
+            // Training Programs Tab
+            ProgramsView()
+                .tabItem {
+                    Image(systemName: "list.bullet.clipboard")
+                    Text("Programs")
+                }
+                .tag(1)
+            
             // Statistics Tab
             StatsView()
                 .tabItem {
                     Image(systemName: "chart.bar.fill")
                     Text("Stats")
                 }
-                .tag(1)
+                .tag(2)
             
             // Profile Tab
             ProfileView()
@@ -29,7 +37,7 @@ struct ContentView: View {
                     Image(systemName: "person.crop.circle.fill")
                     Text("Profile")
                 }
-                .tag(2)
+                .tag(3)
         }
         .onAppear {
             print("📱 Run-Walk MVP ContentView appeared")

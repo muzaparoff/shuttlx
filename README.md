@@ -1,16 +1,86 @@
 # ShuttlX - Intelligent Shuttle Run & Interval Training
 
-A comprehensive iOS and Apple Watch app for shuttle run and interval training with AI-powered coaching, adaptive training programs, and advanced analytics.
+A comprehensive iOS and Apple Watch app for shuttle run and interval training with AI-powered coaching, custom training programs, and seamless dual-platform development workflow.
 
-## 🎯 Project Status: v1.1.1 (June 8, 2025)
+## 🎯 Project Status: v1.2.0 (June 9, 2025)
 
-**✅ Build Verification Complete**
-- iOS app builds successfully on iPhone 16 simulator
-- Xcode project file references fixed and verified
-- Platform compatibility confirmed for iOS 17.0+ and watchOS 10.0+
-- Ready for active development and testing
+**✅ Dual-Platform Development Ready**
+- ✅ iOS app builds and launches on iPhone 16 iOS 18.4
+- ✅ watchOS app builds and installs on Apple Watch Series 10 watchOS 11.5
+- ✅ Automated build and deployment scripts
+- ✅ Complete development environment setup
+- 🎯 **Next:** Custom training programs and watch app enhancements
+
+## 🚀 Quick Start
+
+### Development Environment Setup
+
+The project includes automated scripts for seamless dual-platform development:
+
+#### Main Automation Script
+```bash
+# Full automation workflow (recommended)
+./build_and_test_both_platforms.sh full
+
+# Build both platforms
+./build_and_test_both_platforms.sh build-all
+
+# Launch both apps
+./build_and_test_both_platforms.sh launch-both
+
+# Individual platform builds
+./build_and_test_both_platforms.sh build-ios
+./build_and_test_both_platforms.sh build-watchos
+
+# Individual platform launches
+./build_and_test_both_platforms.sh launch-ios
+./build_and_test_both_platforms.sh launch-watchos
+
+# Show available simulators
+./build_and_test_both_platforms.sh show-sims
+
+# Setup watch pairing
+./build_and_test_both_platforms.sh setup-watch
+
+# Run watchOS setup guide
+./build_and_test_both_platforms.sh setup-watchos
+
+# Show help
+./build_and_test_both_platforms.sh help
+```
+
+#### watchOS Target Setup
+If you need to set up the watchOS target from scratch:
+```bash
+./setup_watchos_target.sh
+```
+
+### Device Configuration
+The automation scripts are configured for:
+- **iOS**: iPhone 16 iOS 18.4
+- **watchOS**: Apple Watch Series 10 (46mm) watchOS 11.5
 
 ## Features
+
+### Current iOS App Features
+- ✅ Complete onboarding flow with user profile setup
+- ✅ Health permissions and HealthKit integration
+- ✅ Physical information input (height, weight, fitness level)
+- ✅ Fitness goals selection
+- ✅ Modern SwiftUI interface with orange/red theme
+- 🎯 **Coming Next**: Custom training program builder
+
+### Current watchOS App Features
+- ✅ Basic watchOS app structure
+- ✅ Builds and installs successfully
+- 🎯 **Coming Next**: Training program display and workout controls
+
+### Planned Features
+- 🎯 Custom training program builder (iOS)
+- 🎯 Training program sync to Apple Watch
+- 🎯 Workout execution on Apple Watch
+- 🎯 Real-time heart rate monitoring
+- 🎯 Progress tracking and analytics
 
 ### Core Functionality
 - Intelligent shuttle run trainer with customizable distance intervals

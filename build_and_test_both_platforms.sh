@@ -5,6 +5,10 @@
 
 set -e
 
+# Clean up any existing log files
+echo "🧹 Cleaning up old log files..."
+rm -f *.log
+
 echo "🚀 ShuttlX Multi-Platform Build & Test Script"
 echo "============================================="
 

@@ -35,10 +35,16 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     
     func sendWorkoutData(_ data: [String: Any]) {
         #if os(iOS)
-        guard WCSession.default.activationState == .activated else { return }
+        guard WCSession.default.activationState == .activated else { 
+            print("WCSession not activated, state: \(WCSession.default.activationState.rawValue)")
+            return 
+        }
+        
+        print("Sending workout data to watch: \(data.keys)")
         
         do {
             try WCSession.default.updateApplicationContext(data)
+            print("Successfully updated application context")
         } catch {
             print("Error updating application context: \(error.localizedDescription)")
         }

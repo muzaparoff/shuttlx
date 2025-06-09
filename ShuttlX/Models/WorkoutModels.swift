@@ -8,6 +8,7 @@
 import Foundation
 import CoreLocation
 import HealthKit
+import SwiftUI
 
 // MARK: - Workout Types
 enum WorkoutType: String, CaseIterable, Codable {
@@ -192,13 +193,13 @@ enum HeartRateZone: String, CaseIterable, Codable {
         }
     }
     
-    var color: String {
+    var color: Color {
         switch self {
-        case .zone1: return "gray"
-        case .zone2: return "blue"
-        case .zone3: return "green"
-        case .zone4: return "yellow"
-        case .zone5: return "red"
+        case .zone1: return .gray
+        case .zone2: return .blue
+        case .zone3: return .green
+        case .zone4: return .yellow
+        case .zone5: return .red
         }
     }
     

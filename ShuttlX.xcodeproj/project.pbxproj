@@ -33,6 +33,7 @@
 		ADE12960 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8DAE01 /* WatchConnectivityManager.swift */; };
 		AFCE18F4 /* HealthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAB32B1 /* HealthManager.swift */; };
 		BD65EDD9 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E5779F /* SettingsService.swift */; };
+		DDCCBBAA /* ProgramsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDD /* ProgramsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -105,6 +106,7 @@
 		D5027DB6 /* HapticFeedbackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedbackManager.swift; sourceTree = "<group>"; };
 		EB21EC92 /* NotificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationModels.swift; sourceTree = "<group>"; };
 		F5E5779F /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		AABBCCDD /* ProgramsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -230,6 +232,7 @@
 				88776655 /* OnboardingView.swift */,
 				99887766 /* SettingsView.swift */,
 				00998877 /* NotificationsView.swift */,
+				AABBCCDD /* ProgramsView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -465,6 +468,7 @@
 				99001122 /* AppViewModel.swift in Sources */,
 				00112233 /* OnboardingViewModel.swift in Sources */,
 				11223355 /* ProfileViewModel.swift in Sources */,
+				DDCCBBAA /* ProgramsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

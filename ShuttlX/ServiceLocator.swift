@@ -18,6 +18,8 @@ class ServiceLocator: ObservableObject {
     lazy var watchManager = WatchConnectivityManager()
     lazy var settingsService = SettingsService()
     lazy var notificationService = NotificationService()
+    // TODO: Re-enable when TrainingProgramManager is properly added to target
+    // lazy var trainingProgramManager = TrainingProgramManager.shared
     
     // Temporary inline services until files are added to Xcode target
     lazy var intervalTimer = TemporaryIntervalTimer()
