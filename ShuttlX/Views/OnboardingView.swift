@@ -752,5 +752,5 @@ extension FitnessGoal {
 #Preview {
     OnboardingView()
         .environmentObject(AppViewModel())
-        .environmentObject(HealthManager())
+        .environmentObject(ServiceLocator.shared)
 }

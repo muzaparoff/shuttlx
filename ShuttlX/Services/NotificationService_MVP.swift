@@ -154,39 +154,15 @@ class NotificationService: NSObject, ObservableObject {
     
     private func updateAppBadge() {
         if settings.badgeEnabled {
-            if #available(iOS 17.0, *) {
-                UNUserNotificationCenter.current().setBadgeCount(unreadCount) { error in
-                    if let error = error {
-                        print("Failed to set badge count: \(error)")
-                    }
-                }
-            } else {
-                UIApplication.shared.applicationIconBadgeNumber = unreadCount
-            }
+            UIApplication.shared.applicationIconBadgeNumber = unreadCount
         } else {
-            if #available(iOS 17.0, *) {
-                UNUserNotificationCenter.current().setBadgeCount(0) { error in
-                    if let error = error {
-                        print("Failed to clear badge count: \(error)")
-                    }
-                }
-            } else {
-                UIApplication.shared.applicationIconBadgeNumber = 0
-            }
+            UIApplication.shared.applicationIconBadgeNumber = 0
         }
     }
     
     func clearBadge() {
         unreadCount = 0
-        if #available(iOS 17.0, *) {
-            UNUserNotificationCenter.current().setBadgeCount(0) { error in
-                if let error = error {
-                    print("Failed to clear badge count: \(error)")
-                }
-            }
-        } else {
-            UIApplication.shared.applicationIconBadgeNumber = 0
-        }
+        UIApplication.shared.applicationIconBadgeNumber = 0
     }
     
     // MARK: - Settings Management
@@ -236,13 +212,13 @@ class NotificationService: NSObject, ObservableObject {
 
 // MARK: - UNUserNotificationCenterDelegate
 
-extension NotificationService: @preconcurrency UNUserNotificationCenterDelegate {
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+extension NotificationService: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         // Show notification even when app is in foreground
-        completionHandler([.banner, .badge, .sound])
+        completionHandler([.alert, .badge, .sound])
     }
     
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
         let actionIdentifier = response.actionIdentifier
         
         switch actionIdentifier {

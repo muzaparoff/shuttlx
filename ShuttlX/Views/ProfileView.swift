@@ -1,66 +1,43 @@
 //
 //  ProfileView.swift
-//  ShuttlX
+//  ShuttlX MVP
 //
-//  Enhanced comprehensive user profile with social integration
-//  Created by ShuttlX on 6/5/25.
+//  Created by ShuttlX on 6/8/25.
 //
 
 import SwiftUI
 import HealthKit
 
 struct ProfileView: View {
-    @EnvironmentObject var socialService: SocialService
-    @StateObject private var healthManager = HealthManager.shared
-    @StateObject private var settingsService = SettingsService.shared
-    @StateObject private var notificationService = NotificationService.shared
     @StateObject private var viewModel = ProfileViewModel()
+    @EnvironmentObject var serviceLocator: ServiceLocator
     @State private var showingEditProfile = false
     @State private var showingSettings = false
     @State private var showingHealthPermissions = false
-    @State private var showingAchievements = false
-    @State private var showingWorkoutHistory = false
-    @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
         NavigationView {
             ScrollView {
-                LazyVStack(spacing: 20) {
+                VStack(spacing: 24) {
                     // Profile Header
                     profileHeaderSection
                     
-                    // Statistics Overview
-                    statisticsSection
-                    
-                    // Today's Activity
-                    todaysActivitySection
-                    
-                    // Recent Achievements
-                    achievementsSection
-                    
-                    // Recent Workouts
-                    recentWorkoutsSection
-                    
-                    // Social Stats
-                    socialStatsSection
-                    
-                    // Health & Fitness Integration
-                    healthIntegrationSection
+                    // Health Stats Cards
+                    healthStatsSection
                     
                     // Quick Actions
                     quickActionsSection
+                    
+                    // Settings Section
+                    settingsSection
+                    
+                    Spacer(minLength: 100)
                 }
-                .padding(.horizontal)
+                .padding()
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Close") {
-                        presentationMode.wrappedValue.dismiss()
-                    }
-                }
-                
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Edit") {
                         showingEditProfile = true
@@ -81,12 +58,6 @@ struct ProfileView: View {
         .sheet(isPresented: $showingHealthPermissions) {
             HealthKitPermissionsView()
         }
-        .sheet(isPresented: $showingAchievements) {
-            AchievementsView()
-        }
-        .sheet(isPresented: $showingWorkoutHistory) {
-            WorkoutHistoryView()
-        }
         .onAppear {
             Task {
                 await viewModel.loadProfileData()
@@ -100,559 +71,196 @@ struct ProfileView: View {
             // Profile Picture and Basic Info
             HStack(spacing: 16) {
                 Button(action: { showingEditProfile = true }) {
-                    AsyncImage(url: URL(string: socialService.currentUserProfile?.avatarURL ?? "")) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        ZStack {
-                            Circle()
-                                .fill(LinearGradient(
-                                    colors: [.accentColor, .accentColor.opacity(0.7)],
-                                    startPoint: .topLeading,
-                                    endPoint: .bottomTrailing
-                                ))
-                                .frame(width: 80, height: 80)
-                            
-                            if let profile = socialService.currentUserProfile {
-                                Text(profile.displayName.prefix(1).uppercased())
-                                    .font(.title)
-                                    .fontWeight(.bold)
-                                    .foregroundColor(.white)
-                            } else {
-                                Image(systemName: "person.fill")
-                                    .font(.title)
-                                    .foregroundColor(.white)
-                            }
-                        }
-                    }
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
-                    .overlay(
-                        Circle()
-                            .stroke(Color(.systemBackground), lineWidth: 3)
-                    )
+                    Image(systemName: "person.circle.fill")
+                        .font(.system(size: 80))
+                        .foregroundColor(.gray)
+                        .background(Color(.systemGray6))
+                        .clipShape(Circle())
                 }
-                .buttonStyle(PlainButtonStyle())
                 
-                VStack(alignment: .leading, spacing: 4) {
-                    if let profile = socialService.currentUserProfile {
-                        Text(profile.displayName)
+                VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(viewModel.userName)
                             .font(.title2)
                             .fontWeight(.bold)
                         
-                        Text("@\(profile.username)")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        
-                        if let location = profile.location {
-                            HStack(spacing: 4) {
-                                Image(systemName: "location")
-                                    .foregroundColor(.secondary)
-                                    .font(.caption)
-                                Text(location)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                        }
-                        
-                        if let memberSince = profile.joinDate {
-                            Text("Member since \(memberSince, formatter: yearFormatter)")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    } else {
-                        Text("User Profile")
-                            .font(.title2)
-                            .fontWeight(.bold)
-                        
-                        Text("Loading...")
+                        Text("Fitness Enthusiast")
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
                     
-                    Spacer()
-                }
-                
-                Spacer()
-            }
-            
-            // Bio
-            if let profile = socialService.currentUserProfile, !profile.bio.isEmpty {
-                Text(profile.bio)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            
-            // Social Stats
-            HStack(spacing: 24) {
-                ProfileSocialStat(
-                    title: "Following",
-                    count: socialService.followingCount
-                )
-                
-                ProfileSocialStat(
-                    title: "Followers",
-                    count: socialService.followersCount
-                )
-                
-                ProfileSocialStat(
-                    title: "Posts",
-                    count: socialService.userPostsCount
-                )
-                
-                ProfileSocialStat(
-                    title: "Challenges",
-                    count: socialService.activeChallengesCount
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-    
-    private var statisticsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("This Month")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 12) {
-                ProfileStatCard(
-                    title: "Workouts",
-                    value: "\(viewModel.monthlyWorkouts)",
-                    subtitle: "+\(viewModel.workoutGrowth)% vs last month",
-                    icon: "figure.run",
-                    color: .blue
-                )
-                
-                ProfileStatCard(
-                    title: "Hours Trained",
-                    value: String(format: "%.1f", viewModel.monthlyHours),
-                    subtitle: "\(Int(viewModel.monthlyHours * 60)) minutes",
-                    icon: "clock.fill",
-                    color: .green
-                )
-                
-                ProfileStatCard(
-                    title: "Calories Burned",
-                    value: "\(viewModel.monthlyCalories)",
-                    subtitle: "Avg: \(viewModel.avgCaloriesPerWorkout) per workout",
-                    icon: "flame.fill",
-                    color: .orange
-                )
-                
-                ProfileStatCard(
-                    title: "Distance",
-                    value: String(format: "%.1f km", viewModel.monthlyDistance),
-                    subtitle: "Best: \(String(format: "%.1f", viewModel.longestDistance)) km",
-                    icon: "location",
-                    color: .purple
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-    
-    private var todaysActivitySection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Today's Activity")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            if let todaysStats = healthManager.todaysStats {
-                HStack(spacing: 16) {
-                    TodayActivityItem(
-                        title: "Steps",
-                        value: "\(Int(todaysStats.steps))",
-                        goal: settingsService.settings.workout.dailyGoal.steps,
-                        color: .blue,
-                        icon: "figure.walk"
-                    )
-                    
-                    TodayActivityItem(
-                        title: "Calories",
-                        value: "\(Int(todaysStats.caloriesBurned))",
-                        goal: settingsService.settings.workout.dailyGoal.calories,
-                        color: .orange,
-                        icon: "flame.fill"
-                    )
-                }
-                
-                if let currentHeartRate = healthManager.currentHeartRate {
-                    HStack(spacing: 12) {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
-                            .font(.title3)
+                    // Quick Stats
+                    HStack(spacing: 20) {
+                        StatView(
+                            title: "Workouts",
+                            value: "\(viewModel.totalWorkouts)"
+                        )
                         
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Current Heart Rate")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
-                            Text("\(Int(currentHeartRate)) BPM")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(.red)
-                        }
-                        
-                        Spacer()
-                        
-                        if let zone = healthManager.getCurrentHeartRateZone() {
-                            Text(zone.name)
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    Capsule()
-                                        .fill(zone.color)
-                                )
-                        }
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.red.opacity(0.1))
-                    )
-                }
-            } else {
-                Text("No activity data available")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 20)
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-    
-    private var achievementsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent Achievements")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Button("View All") {
-                    showingAchievements = true
-                }
-                .font(.subheadline)
-                .foregroundColor(.accentColor)
-            }
-            
-            if viewModel.recentAchievements.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "medal")
-                        .font(.system(size: 32))
-                        .foregroundColor(.secondary)
-                    
-                    Text("Complete workouts to earn achievements!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 12) {
-                        ForEach(viewModel.recentAchievements.prefix(5)) { achievement in
-                            AchievementBadge(achievement: achievement)
-                        }
-                    }
-                    .padding(.horizontal, 1)
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-    
-    private var recentWorkoutsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Recent Workouts")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                
-                Spacer()
-                
-                Button("View All") {
-                    showingWorkoutHistory = true
-                }
-                .font(.subheadline)
-                .foregroundColor(.accentColor)
-            }
-            
-            if viewModel.recentWorkouts.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "figure.run")
-                        .font(.system(size: 32))
-                        .foregroundColor(.secondary)
-                    
-                    Text("Start your first workout to see activity here!")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 20)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(viewModel.recentWorkouts.prefix(3)) { workout in
-                        RecentWorkoutCard(workout: workout)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-    
-    private var socialStatsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Social Activity")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            HStack(spacing: 16) {
-                SocialStatCard(
-                    title: "Challenges Completed",
-                    value: "\(socialService.completedChallengesCount)",
-                    icon: "trophy.fill",
-                    color: .yellow
-                )
-                
-                SocialStatCard(
-                    title: "Team Activities",
-                    value: "\(socialService.teamActivitiesCount)",
-                    icon: "person.3.fill",
-                    color: .blue
-                )
-            }
-            
-            HStack(spacing: 16) {
-                SocialStatCard(
-                    title: "Workout Streak",
-                    value: "\(viewModel.currentStreak) days",
-                    icon: "flame.fill",
-                    color: .orange
-                )
-                
-                SocialStatCard(
-                    title: "Total Likes",
-                    value: "\(socialService.totalLikesReceived)",
-                    icon: "heart.fill",
-                    color: .red
-                )
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
-    }
-    
-    private var healthIntegrationSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Health Integration")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            VStack(spacing: 12) {
-                // HealthKit Status
-                HealthIntegrationRow(
-                    title: "HealthKit",
-                    subtitle: healthManager.isAuthorized ? "Connected" : "Not Connected",
-                    icon: "heart.fill",
-                    isConnected: healthManager.isAuthorized
-                ) {
-                    if !healthManager.isAuthorized {
-                        showingHealthPermissions = true
-                    }
-                }
-                
-                // Recovery Status
-                if let recoveryData = healthManager.recoveryAnalysis {
-                    HStack(spacing: 12) {
-                        Image(systemName: "bed.double.fill")
-                            .foregroundColor(.blue)
-                            .font(.title3)
-                            .frame(width: 30)
-                        
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Recovery Score")
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                            
-                            Text("\(Int(recoveryData.readinessScore))%")
-                                .font(.title3)
-                                .fontWeight(.bold)
-                                .foregroundColor(recoveryData.readinessScore > 70 ? .green : recoveryData.readinessScore > 40 ? .orange : .red)
-                        }
-                        
-                        Spacer()
-                        
-                        RecoveryStatusBadge(score: recoveryData.readinessScore)
-                    }
-                    .padding()
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(.blue.opacity(0.1))
-                    )
-                }
-                
-                // Heart Rate Zones
-                if !healthManager.heartRateZones.isEmpty {
-                    NavigationLink(destination: HeartRateZonesDetailView()) {
-                        HStack(spacing: 12) {
-                            Image(systemName: "heart.circle.fill")
-                                .foregroundColor(.red)
-                                .font(.title3)
-                                .frame(width: 30)
-                            
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Heart Rate Zones")
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                
-                                Text("\(healthManager.heartRateZones.count) zones configured")
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            
-                            Spacer()
-                            
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.secondary)
-                                .font(.caption)
-                        }
-                        .padding()
-                        .background(
-                            RoundedRectangle(cornerRadius: 12)
-                                .fill(.red.opacity(0.1))
+                        StatView(
+                            title: "This Week",
+                            value: "\(viewModel.weeklyWorkouts)"
                         )
                     }
-                    .buttonStyle(PlainButtonStyle())
                 }
+                
+                Spacer()
+            }
+            .padding()
+            .background(Color(.systemGray6))
+            .cornerRadius(16)
+        }
+    }
+    
+    private var healthStatsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Health Overview")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
+                HealthStatCard(
+                    icon: "heart.fill",
+                    title: "Avg Heart Rate",
+                    value: "\(Int(viewModel.averageHeartRate)) BPM",
+                    color: .red
+                )
+                
+                HealthStatCard(
+                    icon: "flame.fill",
+                    title: "Calories Burned",
+                    value: "\(Int(viewModel.totalCalories))",
+                    color: .orange
+                )
+                
+                HealthStatCard(
+                    icon: "figure.run",
+                    title: "Total Distance",
+                    value: String(format: "%.1f km", viewModel.totalDistance),
+                    color: .blue
+                )
+                
+                HealthStatCard(
+                    icon: "clock.fill",
+                    title: "Active Time",
+                    value: formatDuration(viewModel.totalActiveTime),
+                    color: .green
+                )
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
     }
     
     private var quickActionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("Quick Actions")
                 .font(.headline)
                 .fontWeight(.semibold)
             
             VStack(spacing: 12) {
-                HStack(spacing: 12) {
-                    QuickActionButton(
-                        title: "Settings",
-                        icon: "gearshape.fill",
-                        color: .gray
-                    ) {
-                        showingSettings = true
-                    }
-                    
-                    QuickActionButton(
-                        title: "Share Profile",
-                        icon: "square.and.arrow.up",
-                        color: .blue
-                    ) {
-                        shareProfile()
-                    }
+                QuickActionRow(
+                    icon: "heart.text.square",
+                    title: "Health Permissions",
+                    subtitle: serviceLocator.healthManager.hasHealthKitPermission ? "Authorized" : "Not Authorized"
+                ) {
+                    showingHealthPermissions = true
                 }
                 
-                HStack(spacing: 12) {
-                    QuickActionButton(
-                        title: "Export Data",
-                        icon: "square.and.arrow.down",
-                        color: .green
-                    ) {
-                        exportUserData()
-                    }
-                    
-                    QuickActionButton(
-                        title: "Support",
-                        icon: "questionmark.circle.fill",
-                        color: .orange
-                    ) {
-                        openSupport()
-                    }
+                QuickActionRow(
+                    icon: "chart.bar.fill",
+                    title: "Export Health Data",
+                    subtitle: "Export your workout data"
+                ) {
+                    exportHealthData()
+                }
+                
+                QuickActionRow(
+                    icon: "applewatch",
+                    title: "Watch Settings",
+                    subtitle: "Configure Apple Watch connection"
+                ) {
+                    // Navigate to watch settings
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(.ultraThinMaterial)
-        )
     }
     
-    // MARK: - Helper Methods
-    
-    private func refreshProfileData() async {
-        await socialService.refreshUserProfile()
-        await healthManager.fetchTodaysHealthData()
-        await viewModel.loadProfileData()
-    }
-    
-    private func shareProfile() {
-        // Implement profile sharing
-        if let profile = socialService.currentUserProfile {
-            let shareText = "Check out my ShuttlX profile: @\(profile.username)"
-            // Use system share sheet
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            Text("Settings")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            VStack(spacing: 12) {
+                QuickActionRow(
+                    icon: "gearshape.fill",
+                    title: "App Settings",
+                    subtitle: "Notifications, privacy, and more"
+                ) {
+                    showingSettings = true
+                }
+                
+                QuickActionRow(
+                    icon: "questionmark.circle.fill",
+                    title: "Help & Support",
+                    subtitle: "Get help using ShuttlX"
+                ) {
+                    // Show help
+                }
+                
+                QuickActionRow(
+                    icon: "info.circle.fill",
+                    title: "About",
+                    subtitle: "Version 1.0.0"
+                ) {
+                    // Show about
+                }
+            }
         }
     }
     
-    private func exportUserData() {
-        // Implement data export
-        // This could trigger the data export functionality from SettingsView
+    private func refreshProfileData() async {
+        await viewModel.loadProfileData()
+        serviceLocator.healthManager.requestHealthKitPermissions()
     }
     
-    private func openSupport() {
-        // Open support/help
-        // This could open a web view or email
+    private func exportHealthData() {
+        // Implementation for exporting health data
+        print("Exporting health data...")
+    }
+    
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let hours = Int(duration) / 3600
+        let minutes = (Int(duration) % 3600) / 60
+        
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        } else {
+            return "\(minutes)m"
+        }
     }
 }
 
 // MARK: - Supporting Views
 
-struct ProfileStatCard: View {
+struct StatView: View {
     let title: String
     let value: String
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(value)
+                .font(.headline)
+                .fontWeight(.bold)
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+struct HealthStatCard: View {
     let icon: String
+    let title: String
+    let value: String
     let color: Color
     
     var body: some View {
@@ -668,189 +276,32 @@ struct ProfileStatCard: View {
             Text(title)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 80)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
-        )
-    }
-}
-
-struct AchievementBadge: View {
-    let achievement: Achievement
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            ZStack {
-                Circle()
-                    .fill(.orange.opacity(0.1))
-                    .frame(width: 60, height: 60)
-                
-                Image(systemName: achievement.iconName)
-                    .font(.title2)
-                    .foregroundColor(.orange)
-            }
-            
-            Text(achievement.title)
-                .font(.caption)
-                .fontWeight(.medium)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-        }
-        .frame(width: 80)
-    }
-}
-
-struct RecentWorkoutCard: View {
-    let workout: TrainingSession
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Workout Icon
-            Image(systemName: workout.workoutType.iconName)
-                .font(.title2)
-                .foregroundColor(.orange)
-                .frame(width: 40, height: 40)
-                .background(
-                    Circle()
-                        .fill(.orange.opacity(0.1))
-                )
-            
-            // Workout Info
-            VStack(alignment: .leading, spacing: 4) {
-                Text(workout.workoutType.displayName)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Text(workout.startTime, style: .relative)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            // Duration & Calories
-            VStack(alignment: .trailing, spacing: 4) {
-                Text("\(Int(workout.duration / 60)):\(String(format: "%02d", Int(workout.duration) % 60))")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                if let calories = workout.caloriesBurned {
-                    Text("\(Int(calories)) cal")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-        }
         .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
-        )
+        .background(Color(.systemGray6))
+        .cornerRadius(12)
     }
 }
 
-struct HealthIntegrationRow: View {
+struct QuickActionRow: View {
+    let icon: String
     let title: String
     let subtitle: String
-    let icon: String
-    let isConnected: Bool
     let action: () -> Void
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: 16) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundColor(isConnected ? .green : .gray)
-                    .frame(width: 30)
+                    .foregroundColor(.accentColor)
+                    .frame(width: 24)
                 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                    
-                    Text(subtitle)
-                        .font(.caption)
-                        .foregroundColor(isConnected ? .green : .secondary)
-                }
-                
-                Spacer()
-                
-                if !isConnected {
-                    Text("Connect")
-                        .font(.caption)
-                        .foregroundColor(.orange)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(.orange.opacity(0.1))
-                        )
-                }
-            }
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
-            )
-        }
-        .buttonStyle(PlainButtonStyle())
-    }
-}
-
-struct ProfileInfoRow: View {
-    let title: String
-    let value: String
-    let icon: String
-    let color: Color
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(color)
-                .frame(width: 30)
-            
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.medium)
-            
-            Spacer()
-            
-            Text(value)
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundColor(.secondary)
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
-        )
-    }
-}
-
-struct SettingsRow: View {
-    let title: String
-    let subtitle: String
-    let icon: String
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundColor(.gray)
-                    .frame(width: 30)
-                
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline)
+                        .font(.body)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
                     
@@ -866,129 +317,98 @@ struct SettingsRow: View {
                     .foregroundColor(.secondary)
             }
             .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
-            )
+            .background(Color(.systemGray6))
+            .cornerRadius(12)
         }
         .buttonStyle(PlainButtonStyle())
     }
 }
 
-// MARK: - Placeholder Views
+// MARK: - Sheet Views
 
 struct EditProfileView: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var name = "John Doe"
+    @State private var bio = "Fitness enthusiast who loves running and cycling"
     
     var body: some View {
         NavigationView {
-            Text("Edit Profile")
-            // TODO: Implement edit profile functionality
-                .navigationTitle("Edit Profile")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Cancel") {
-                            dismiss()
-                        }
-                    }
-                    
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Button("Save") {
-                            dismiss()
-                        }
-                        .fontWeight(.semibold)
+            Form {
+                Section("Personal Information") {
+                    TextField("Name", text: $name)
+                    TextField("Bio", text: $bio, axis: .vertical)
+                        .lineLimit(3...6)
+                }
+            }
+            .navigationTitle("Edit Profile")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button("Cancel") {
+                        dismiss()
                     }
                 }
+                
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button("Save") {
+                        // Save profile changes
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
         }
     }
 }
 
-struct SettingsView: View {
+struct HealthKitPermissionsView: View {
     @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            Text("Settings")
-            // TODO: Implement settings functionality
-                .navigationTitle("Settings")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarLeading) {
-                        Button("Done") {
-                            dismiss()
-                        }
-                    }
-                }
-        }
-    }
-}
-
-struct HealthPermissionsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var healthManager: HealthManager
+    @EnvironmentObject var serviceLocator: ServiceLocator
     
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
-                Image(systemName: "heart.fill")
+                Image(systemName: "heart.circle.fill")
                     .font(.system(size: 80))
                     .foregroundColor(.red)
                 
                 VStack(spacing: 16) {
-                    Text("Connect to Health")
+                    Text("Health Data Access")
                         .font(.title2)
                         .fontWeight(.bold)
+                        .multilineTextAlignment(.center)
                     
-                    Text("ShuttlX would like to access your health data to provide personalized workout recommendations and track your fitness progress.")
-                        .font(.body)
+                    Text("ShuttlX needs access to your Health data to track workouts and provide insights.")
                         .multilineTextAlignment(.center)
                         .foregroundColor(.secondary)
+                        .padding(.horizontal)
                 }
                 
                 VStack(spacing: 12) {
-                    PermissionItem(
-                        icon: "heart.fill",
-                        title: "Heart Rate",
-                        description: "Monitor workout intensity"
-                    )
-                    
-                    PermissionItem(
-                        icon: "figure.run",
-                        title: "Workouts",
-                        description: "Save and track your activities"
-                    )
-                    
-                    PermissionItem(
-                        icon: "flame.fill",
-                        title: "Active Energy",
-                        description: "Track calories burned"
-                    )
+                    PermissionRow(icon: "heart.fill", title: "Heart Rate", isGranted: serviceLocator.healthManager.hasHealthKitPermission)
+                    PermissionRow(icon: "figure.run", title: "Workouts", isGranted: serviceLocator.healthManager.hasHealthKitPermission)
+                    PermissionRow(icon: "flame.fill", title: "Active Energy", isGranted: serviceLocator.healthManager.hasHealthKitPermission)
+                    PermissionRow(icon: "location.fill", title: "Location", isGranted: true)
                 }
+                .padding(.horizontal)
                 
                 Spacer()
                 
-                VStack(spacing: 12) {
-                    Button("Allow Access") {
-                        Task {
-                            await healthManager.requestAuthorization()
-                            dismiss()
-                        }
-                    }
-                    .buttonStyle(PrimaryButtonStyle())
-                    
-                    Button("Not Now") {
+                if !serviceLocator.healthManager.hasHealthKitPermission {
+                    Button("Request Health Permissions") {
+                        serviceLocator.healthManager.requestHealthKitPermissions()
                         dismiss()
                     }
-                    .foregroundColor(.secondary)
+                    .buttonStyle(.borderedProminent)
+                    .padding(.horizontal)
                 }
             }
             .padding()
-            .navigationTitle("Health Access")
+            .navigationTitle("Health Permissions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Skip") {
+                    Button("Done") {
                         dismiss()
                     }
                 }
@@ -997,67 +417,32 @@ struct HealthPermissionsView: View {
     }
 }
 
-struct PermissionItem: View {
+struct PermissionRow: View {
     let icon: String
     let title: String
-    let description: String
+    let isGranted: Bool
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack {
             Image(systemName: icon)
                 .font(.title3)
-                .foregroundColor(.orange)
-                .frame(width: 30)
+                .foregroundColor(isGranted ? .green : .gray)
+                .frame(width: 24)
             
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                
-                Text(description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
+            Text(title)
+                .font(.body)
             
             Spacer()
+            
+            Image(systemName: isGranted ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(isGranted ? .green : .gray)
         }
+        .padding(.vertical, 4)
     }
 }
-
-struct AchievementsView: View {
-    var body: some View {
-        Text("Achievements View")
-        // TODO: Implement full achievements view
-            .navigationTitle("Achievements")
-            .navigationBarTitleDisplayMode(.large)
-    }
-}
-
-struct PrimaryButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.headline)
-            .foregroundColor(.white)
-            .frame(maxWidth: .infinity)
-            .frame(height: 50)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(.orange)
-                    .opacity(configuration.isPressed ? 0.8 : 1.0)
-            )
-    }
-}
-
-// MARK: - Formatters
-
-private let yearFormatter: DateFormatter = {
-    let formatter = DateFormatter()
-    formatter.dateFormat = "yyyy"
-    return formatter
-}()
 
 #Preview {
     ProfileView()
         .environmentObject(AppViewModel())
-        .environmentObject(HealthManager())
+        .environmentObject(ServiceLocator.shared)
 }

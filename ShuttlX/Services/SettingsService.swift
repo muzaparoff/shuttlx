@@ -8,7 +8,8 @@
 
 import Foundation
 import Combine
-import CloudKit
+import UIKit
+import HealthKit
 
 @MainActor
 class SettingsService: ObservableObject {
@@ -16,10 +17,8 @@ class SettingsService: ObservableObject {
     
     @Published var settings: AppSettings = .default
     @Published var isLoading = false
-    @Published var isSyncing = false
     @Published var lastError: SettingsError?
     
-    private let cloudKitService = CloudKitManager.shared
     private var cancellables = Set<AnyCancellable>()
     private let settingsKey = "app_settings"
     private let encoder = JSONEncoder()
@@ -50,13 +49,6 @@ class SettingsService: ObservableObject {
         do {
             let data = try encoder.encode(settings)
             UserDefaults.standard.set(data, forKey: settingsKey)
-            
-            // Sync to CloudKit if enabled
-            if settings.sync.cloudSyncEnabled {
-                Task {
-                    await syncSettingsToCloud()
-                }
-            }
         } catch {
             lastError = .saveFailed(error.localizedDescription)
         }
@@ -265,109 +257,6 @@ class SettingsService: ObservableObject {
         saveSettings()
     }
     
-    // MARK: - Cloud Sync
-    
-    func syncSettingsToCloud() async {
-        guard settings.sync.cloudSyncEnabled else { return }
-        
-        isSyncing = true
-        settings.sync.syncStatus = .syncing
-        
-        do {
-            // Create CloudKit record
-            let record = CKRecord(recordType: "UserSettings")
-            record["userId"] = CKRecord.Reference(recordID: CKRecord.ID(recordName: "current_user"), action: .none)
-            record["settingsData"] = try encoder.encode(settings)
-            record["lastModified"] = Date()
-            
-            _ = try await cloudKitService.save(record: record)
-            
-            settings.sync.syncStatus = .success
-            settings.sync.lastSyncDate = Date()
-            
-        } catch {
-            settings.sync.syncStatus = .failed
-            lastError = .syncFailed(error.localizedDescription)
-        }
-        
-        isSyncing = false
-        saveSettings()
-    }
-    
-    func syncSettingsFromCloud() async {
-        guard settings.sync.cloudSyncEnabled else { return }
-        
-        isSyncing = true
-        settings.sync.syncStatus = .syncing
-        
-        do {
-            // Fetch settings from CloudKit
-            let predicate = NSPredicate(format: "userId == %@", CKRecord.Reference(recordID: CKRecord.ID(recordName: "current_user"), action: .none))
-            let query = CKQuery(recordType: "UserSettings", predicate: predicate)
-            
-            let (matchResults, _) = try await cloudKitService.database.records(matching: query)
-            
-            if let record = matchResults.first?.1 {
-                if let settingsData = record["settingsData"] as? Data {
-                    let cloudSettings = try decoder.decode(AppSettings.self, from: settingsData)
-                    
-                    // Handle conflict resolution
-                    let mergedSettings = await resolveSettingsConflict(local: settings, cloud: cloudSettings)
-                    settings = mergedSettings
-                    
-                    settings.sync.syncStatus = .success
-                    settings.sync.lastSyncDate = Date()
-                }
-            }
-            
-        } catch {
-            settings.sync.syncStatus = .failed
-            lastError = .syncFailed(error.localizedDescription)
-        }
-        
-        isSyncing = false
-        saveSettings()
-    }
-    
-    private func resolveSettingsConflict(local: AppSettings, cloud: AppSettings) async -> AppSettings {
-        switch settings.sync.conflictResolution {
-        case .latest:
-            // Use cloud settings (assuming they're newer)
-            return cloud
-        case .merge:
-            // Merge settings intelligently
-            return mergeSettings(local: local, cloud: cloud)
-        case .manual:
-            // Present conflict resolution UI to user
-            settings.sync.syncStatus = .conflict
-            return local
-        }
-    }
-    
-    private func mergeSettings(local: AppSettings, cloud: AppSettings) -> AppSettings {
-        var merged = local
-        
-        // Merge user preferences (prefer cloud for profile data)
-        merged.user.preferredName = cloud.user.preferredName.isEmpty ? local.user.preferredName : cloud.user.preferredName
-        merged.user.units = cloud.user.units
-        merged.user.language = cloud.user.language
-        merged.user.theme = cloud.user.theme
-        
-        // Merge workout settings (prefer local for device-specific settings)
-        merged.workout.defaultWorkoutType = cloud.workout.defaultWorkoutType
-        merged.workout.weeklyGoal = cloud.workout.weeklyGoal
-        merged.workout.dailyGoal = cloud.workout.dailyGoal
-        
-        // Merge notification settings (prefer local for device-specific)
-        merged.notifications = local.notifications
-        
-        // Merge privacy settings (prefer most restrictive)
-        merged.privacy.dataCollection = [local.privacy.dataCollection, cloud.privacy.dataCollection].min() ?? .minimal
-        merged.privacy.locationSharing = [local.privacy.locationSharing, cloud.privacy.locationSharing].min() ?? .never
-        
-        return merged
-    }
-    
     // MARK: - Watch Connectivity
     
     func syncSettingsToWatch() async {
@@ -396,9 +285,6 @@ class SettingsService: ObservableObject {
     // MARK: - Settings Application
     
     private func applyWorkoutSettings(_ workoutSettings: WorkoutSettings) {
-        // Configure GPS accuracy
-        LocationManager.shared.updateAccuracy(workoutSettings.gpsAccuracy)
-        
         // Configure screen timeout
         UIApplication.shared.isIdleTimerDisabled = workoutSettings.screenTimeoutDisabled
         

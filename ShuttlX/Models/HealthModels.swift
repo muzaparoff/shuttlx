@@ -290,3 +290,186 @@ struct HealthExportData: Codable {
         let context: String // workout, rest, etc.
     }
 }
+
+// MARK: - Workout Statistics
+struct WorkoutStatistics: Codable {
+    let totalWorkouts: Int
+    let totalDuration: TimeInterval
+    let totalDistance: Double
+    let totalCalories: Double
+    let averageHeartRate: Double?
+    let maxHeartRate: Double?
+    let workoutFrequency: Double // workouts per week
+    let favoriteWorkoutType: String?
+    let personalBests: [String: Double] // key: metric name, value: best value
+    let progressTrend: ProgressTrend
+    let bestWorkout: TrainingSession?
+    let currentStreak: Int
+    let longestStreak: Int
+    let weeklyProgress: [Double]
+    let monthlyProgress: [Double]
+    let improvements: [ImprovementArea]
+    
+    enum ProgressTrend: String, CaseIterable, Codable {
+        case improving, stable, declining
+        
+        var description: String {
+            switch self {
+            case .improving: return "Improving"
+            case .stable: return "Stable"
+            case .declining: return "Declining"
+            }
+        }
+        
+        var color: String {
+            switch self {
+            case .improving: return "green"
+            case .stable: return "blue"
+            case .declining: return "orange"
+            }
+        }
+    }
+    
+    enum ImprovementArea: String, CaseIterable, Codable {
+        case endurance, strength, speed, flexibility, recovery
+        
+        var description: String {
+            switch self {
+            case .endurance: return "Endurance"
+            case .strength: return "Strength"  
+            case .speed: return "Speed"
+            case .flexibility: return "Flexibility"
+            case .recovery: return "Recovery"
+            }
+        }
+        
+        var recommendation: String {
+            switch self {
+            case .endurance: return "Focus on longer duration workouts"
+            case .strength: return "Incorporate resistance training"
+            case .speed: return "Add interval training sessions"
+            case .flexibility: return "Include stretching and yoga"
+            case .recovery: return "Prioritize rest and sleep"
+            }
+        }
+    }
+    
+    // Improvement data structure for UI display
+    struct ImprovementData: Codable {
+        let name: String
+        let percentageChange: Double
+        let isImprovement: Bool
+        
+        var icon: String {
+            switch name.lowercased() {
+            case "endurance": return "lungs"
+            case "strength": return "dumbbell"
+            case "speed": return "bolt"
+            case "flexibility": return "figure.flexibility"
+            case "recovery": return "heart.circle"
+            case "consistency": return "calendar"
+            default: return "chart.line.uptrend.xyaxis"
+            }
+        }
+        
+        var color: String {
+            return isImprovement ? "green" : "red"
+        }
+    }
+    
+    static let empty = WorkoutStatistics(
+        totalWorkouts: 0,
+        totalDuration: 0,
+        totalDistance: 0,
+        totalCalories: 0,
+        averageHeartRate: nil,
+        maxHeartRate: nil,
+        workoutFrequency: 0,
+        favoriteWorkoutType: nil,
+        personalBests: [:],
+        progressTrend: .stable,
+        bestWorkout: nil,
+        currentStreak: 0,
+        longestStreak: 0,
+        weeklyProgress: [],
+        monthlyProgress: [],
+        improvements: []
+    )
+}
+
+// MARK: - Injury Risk Assessment
+struct InjuryRiskAssessment: Codable {
+    let riskLevel: RiskLevel
+    let riskFactors: [RiskFactor]
+    let recommendations: [String]
+    let assessmentDate: Date
+    let nextAssessmentDate: Date
+    
+    enum RiskLevel: String, CaseIterable, Codable {
+        case low, moderate, high, critical
+        
+        var description: String {
+            switch self {
+            case .low: return "Low Risk"
+            case .moderate: return "Moderate Risk"  
+            case .high: return "High Risk"
+            case .critical: return "Critical Risk"
+            }
+        }
+        
+        var color: String {
+            switch self {
+            case .low: return "green"
+            case .moderate: return "yellow"
+            case .high: return "orange"
+            case .critical: return "red"
+            }
+        }
+        
+        var percentage: Double {
+            switch self {
+            case .low: return 0.15
+            case .moderate: return 0.35
+            case .high: return 0.65
+            case .critical: return 0.85
+            }
+        }
+    }
+    
+    enum RiskFactor: String, CaseIterable, Codable {
+        case overtraining, insufficientRecovery, rapidProgressionIncrease
+        case previousInjury, muscleImbalance, poorForm
+        case inadequateWarmup, dehydration, fatigue
+        
+        var description: String {
+            switch self {
+            case .overtraining: return "Overtraining detected"
+            case .insufficientRecovery: return "Insufficient recovery time"
+            case .rapidProgressionIncrease: return "Too rapid progression increase"
+            case .previousInjury: return "Previous injury concerns"
+            case .muscleImbalance: return "Muscle imbalance detected"
+            case .poorForm: return "Poor exercise form"
+            case .inadequateWarmup: return "Inadequate warm-up"
+            case .dehydration: return "Dehydration risk"
+            case .fatigue: return "High fatigue levels"
+            }
+        }
+        
+        var severity: Double {
+            switch self {
+            case .overtraining, .previousInjury: return 0.8
+            case .insufficientRecovery, .rapidProgressionIncrease: return 0.7
+            case .muscleImbalance, .poorForm: return 0.6
+            case .inadequateWarmup, .dehydration, .fatigue: return 0.4
+            }
+        }
+    }
+    
+    static let empty = InjuryRiskAssessment(
+        riskLevel: .low,
+        riskFactors: [],
+        recommendations: [],
+        assessmentDate: Date(),
+        nextAssessmentDate: Calendar.current.date(byAdding: .weekOfYear, value: 1, to: Date()) ?? Date()
+    )
+}

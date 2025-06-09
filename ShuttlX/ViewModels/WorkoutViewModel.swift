@@ -1,130 +1,10 @@
-//
-//  WorkoutViewModel.swift
-//  ShuttlX
-//
-//  Created by ShuttlX on 6/5/25.
-//
-
 import Foundation
 import SwiftUI
 import MapKit
 import CoreLocation
 import Combine
-
-// Import our WorkoutModels to access WorkoutType, WorkoutConfiguration, etc.
-// Note: Since WorkoutModels.swift is in Shared/Models, we need to reference it properly
-
-enum WorkoutState: String, CaseIterable {
-    case preparing, active, paused, completed
-    
-    var displayName: String {
-        switch self {
-        case .preparing: return "Preparing"
-        case .active: return "Active"
-        case .paused: return "Paused"
-        case .completed: return "Completed"
-        }
-    }
-}
-
-// MARK: - ExerciseIntensity (used by WorkoutView)
-enum ExerciseIntensity: String, CaseIterable, Codable {
-    case veryLight, light, moderate, vigorous, maximal
-    
-    var displayName: String {
-        switch self {
-        case .veryLight: return "Very Light"
-        case .light: return "Light"
-        case .moderate: return "Moderate"
-        case .vigorous: return "Vigorous"
-        case .maximal: return "Maximal"
-        }
-    }
-}
-
-// MARK: - IntervalType (used by WorkoutView)
-enum IntervalType: String, CaseIterable, Codable {
-    case warmup, work, rest, cooldown
-    
-    var displayName: String {
-        switch self {
-        case .warmup: return "Warm Up"
-        case .work: return "Work"
-        case .rest: return "Rest"
-        case .cooldown: return "Cool Down"
-        }
-    }
-}
-
-// MARK: - Simple Workout Interval for real-time tracking
-struct SimpleWorkoutInterval: Identifiable, Codable {
-    let id = UUID()
-    let type: IntervalType
-    let duration: TimeInterval
-    let intensity: ExerciseIntensity
-    let instructions: String?
-    
-    init(type: IntervalType, duration: TimeInterval, intensity: ExerciseIntensity, instructions: String? = nil) {
-        self.type = type
-        self.duration = duration
-        self.intensity = intensity
-        self.instructions = instructions
-    }
-}
-
-// MARK: - Supporting Data Models
-struct HeartRateDataPoint: Codable {
-    let timestamp: Date
-    let heartRate: Double
-}
-
-struct LocationDataPoint {
-    let timestamp: Date
-    let coordinate: CLLocationCoordinate2D
-    let altitude: Double
-    let speed: Double
-}
-
-// MARK: - Route Point Model (from WorkoutView)
-struct RoutePoint: Identifiable {
-    let id = UUID()
-    let coordinate: CLLocationCoordinate2D
-    let timestamp: Date
-}
-
-// MARK: - Simple Workout Types for View Model
-// Note: SimpleWorkoutType is defined in WorkoutTypes.swift
-
-// MARK: - Workout Session for real-time tracking
-struct WorkoutSession: Identifiable {
-    let id = UUID()
-    let workoutType: SimpleWorkoutType
-    let startTime: Date
-    var endTime: Date?
-    var actualDuration: TimeInterval = 0
-    var intervals: [SimpleWorkoutInterval] = []
-    var heartRateData: [HeartRateDataPoint] = []
-    var locationData: [LocationDataPoint] = []
-    var caloriesBurned: Double = 0
-    var totalDistance: Double = 0
-    var averageHeartRate: Double = 0
-    var maxHeartRate: Double = 0
-    var notes: String = ""
-    
-    init(workoutType: SimpleWorkoutType, startTime: Date, intervals: [SimpleWorkoutInterval] = []) {
-        self.workoutType = workoutType
-        self.startTime = startTime
-        self.intervals = intervals
-    }
-    
-    var duration: TimeInterval {
-        if let endTime = endTime {
-            return endTime.timeIntervalSince(startTime)
-        } else {
-            return Date().timeIntervalSince(startTime)
-        }
-    }
-}
+import HealthKit
+import WatchConnectivity
 
 // MARK: - WorkoutViewModel
 @MainActor
@@ -144,12 +24,6 @@ class WorkoutViewModel: NSObject, ObservableObject {
         span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01)
     )
     @Published var routePoints: [RoutePoint] = []
-    
-    // MARK: - Service Managers
-    private let audioCoachingManager = AudioCoachingManager()
-    private let accessibilityManager = AccessibilityManager()
-    private let weatherManager = WeatherManager()
-    private let cloudKitManager = CloudKitManager()
     
     // MARK: - Computed Properties for UI
     var currentTimeText: String {
@@ -263,10 +137,6 @@ class WorkoutViewModel: NSObject, ObservableObject {
         accessibilityManager.announceWorkoutEnd(duration: elapsedTimeText)
         accessibilityManager.provideHapticFeedback(for: .workoutComplete)
         
-        // Sync to CloudKit
-        Task {
-            await cloudKitManager.syncAllData()
-        }
         
         print("🏁 Workout completed: \(elapsedTimeText)")
     }
@@ -528,8 +398,6 @@ class WorkoutViewModel: NSObject, ObservableObject {
     // MARK: - Public Access to Services
     var audioCoaching: AudioCoachingManager { audioCoachingManager }
     var accessibility: AccessibilityManager { accessibilityManager }
-    var weather: WeatherManager { weatherManager }
-    var cloudSync: CloudKitManager { cloudKitManager }
 }
 
 // MARK: - CLLocationManagerDelegate

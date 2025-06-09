@@ -9,9 +9,7 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @StateObject private var settingsService = SettingsService.shared
-    @StateObject private var healthManager = HealthManager.shared
-    @StateObject private var notificationService = NotificationService.shared
+    @EnvironmentObject var serviceLocator: ServiceLocator
     @Environment(\.presentationMode) var presentationMode
     
     @State private var showingHealthKitPermissions = false
@@ -177,8 +175,7 @@ struct WorkoutSettingsSection: View {
 // MARK: - Health Settings Section
 
 struct HealthSettingsSection: View {
-    @StateObject private var settingsService = SettingsService.shared
-    @StateObject private var healthManager = HealthManager.shared
+    @EnvironmentObject var serviceLocator: ServiceLocator
     @Binding var showingHealthKitPermissions: Bool
     @State private var healthSettings: HealthSettings
     
@@ -193,7 +190,7 @@ struct HealthSettingsSection: View {
                 .onChange(of: healthSettings.healthKitEnabled) { enabled in
                     if enabled {
                         Task {
-                            await healthManager.requestComprehensiveAuthorization()
+                            await serviceLocator.healthManager.requestHealthPermissions()
                         }
                     }
                 }
@@ -743,7 +740,7 @@ struct HeartRateZonesView: View {
 }
 
 struct HealthKitPermissionsView: View {
-    @StateObject private var healthManager = HealthManager.shared
+    @EnvironmentObject var serviceLocator: ServiceLocator
     @Environment(\.presentationMode) var presentationMode
     
     var body: some View {
@@ -777,7 +774,7 @@ struct HealthKitPermissionsView: View {
                 VStack(spacing: 12) {
                     Button("Grant Permissions") {
                         Task {
-                            await healthManager.requestComprehensiveAuthorization()
+                            await serviceLocator.healthManager.requestHealthPermissions()
                             presentationMode.wrappedValue.dismiss()
                         }
                     }

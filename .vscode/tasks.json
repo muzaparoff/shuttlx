@@ -1,0 +1,24 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build ShuttlX MVP",
+			"type": "shell",
+			"command": "xcodebuild",
+			"args": [
+				"-project",
+				"ShuttlX.xcodeproj",
+				"-scheme",
+				"ShuttlX",
+				"-destination",
+				"platform=iOS Simulator,name=iPhone 16",
+				"build"
+			],
+			"group": "build",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"isBackground": false
+		}
+	]
+}

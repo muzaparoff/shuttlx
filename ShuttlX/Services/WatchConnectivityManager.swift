@@ -246,7 +246,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     
     private func handleWorkoutStateUpdate(data: Data) {
         do {
-            let state = try JSONDecoder().decode(WorkoutState.self, from: data)
+            let state = try JSONDecoder().decode(WatchWorkoutState.self, from: data)
             NotificationCenter.default.post(
                 name: .workoutStateUpdated,
                 object: state
@@ -306,7 +306,7 @@ struct WorkoutUpdate: Codable {
     let distance: Double?
 }
 
-struct WorkoutCommand: Codable {
+struct WatchWorkoutCommand: Codable {
     let type: CommandType
     let timestamp: Date
     
@@ -315,7 +315,7 @@ struct WorkoutCommand: Codable {
     }
 }
 
-struct WorkoutState: Codable {
+struct WatchWorkoutState: Codable {
     let isActive: Bool
     let isPaused: Bool
     let currentInterval: Int
@@ -332,7 +332,7 @@ struct WatchPreferences: Codable {
 
 struct WatchWorkoutData: Codable {
     let workoutId: UUID
-    let heartRateData: [HeartRateDataPoint]
+    let heartRateData: [WatchHeartRateDataPoint]
     let workoutMetrics: WorkoutMetrics
 }
 
@@ -343,7 +343,7 @@ struct WatchHealthData: Codable {
     let steps: Int?
 }
 
-struct HeartRateDataPoint: Codable {
+struct WatchHeartRateDataPoint: Codable {
     let timestamp: Date
     let heartRate: Double
 }

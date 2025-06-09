@@ -10,7 +10,9 @@ import HealthKit
 import Combine
 import CoreLocation
 
-class HealthManager: ObservableObject {
+class HealthManager: NSObject, ObservableObject {
+    static let shared = HealthManager()
+    
     private let healthStore = HKHealthStore()
     
     @Published var isHealthDataAvailable: Bool = false
@@ -57,7 +59,7 @@ class HealthManager: ObservableObject {
     
     private var heartRateQuery: HKQuery?
     private var workoutSession: HKWorkoutSession?
-    private var workoutBuilder: HKLiveWorkoutBuilder?
+    private var workoutBuilder: HKWorkoutBuilder?
     private var zoneTimer: Timer?
     private var workoutStartTime: Date?
     private var userMaxHeartRate: Double = 190 // Default, should be calculated based on age
@@ -66,7 +68,7 @@ class HealthManager: ObservableObject {
     private var heartRateHistory: [HeartRateData] = []
     private var workoutHistory: [TrainingSession] = []
     
-    init() {
+    override init() {
         isHealthDataAvailable = HKHealthStore.isHealthDataAvailable()
         updatePermissionStatus()
         calculateMaxHeartRate()

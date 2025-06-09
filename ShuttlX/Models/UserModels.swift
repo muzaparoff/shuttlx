@@ -7,6 +7,7 @@
 
 import Foundation
 import HealthKit
+import CoreLocation
 
 // MARK: - User Profile
 struct UserProfile: Codable {
@@ -143,63 +144,6 @@ struct UserPreferences: Codable {
             case .imperial: return "lbs"
             }
         }
-    }
-}
-
-// MARK: - Notification Settings
-struct NotificationSettings: Codable {
-    var workoutReminders: Bool
-    var achievementAlerts: Bool
-    var socialUpdates: Bool
-    var healthTips: Bool
-    var weeklyReports: Bool
-    var reminderTime: Date
-    var quietHoursEnabled: Bool
-    var quietHoursStart: Date
-    var quietHoursEnd: Date
-}
-
-// MARK: - Privacy Settings
-struct PrivacySettings: Codable {
-    var shareWorkouts: Bool
-    var shareAchievements: Bool
-    var allowFriendRequests: Bool
-    var showOnLeaderboard: Bool
-    var shareHealthData: Bool
-    var anonymousAnalytics: Bool
-}
-
-// MARK: - Accessibility Settings
-struct AccessibilitySettings: Codable {
-    var voiceOverEnabled: Bool
-    var largeTextEnabled: Bool
-    var highContrastEnabled: Bool
-    var reduceMotionEnabled: Bool
-    var hapticFeedbackLevel: HapticLevel
-    var audioAnnouncementLevel: AudioLevel
-    
-    enum HapticLevel: String, CaseIterable, Codable {
-        case off, light, medium, strong
-    }
-    
-    enum AudioLevel: String, CaseIterable, Codable {
-        case off, essential, detailed, verbose
-    }
-}
-
-// MARK: - Appearance Settings
-struct AppearanceSettings: Codable {
-    var colorScheme: ColorScheme
-    var accentColor: String
-    var fontSize: FontSize
-    var autoLockDisabled: Bool
-    
-    enum ColorScheme: String, CaseIterable, Codable {
-        case light, dark, automatic
-    }
-    
-    enum FontSize: String, CaseIterable, Codable {
-        case small, medium, large, extraLarge
     }
 }
 

@@ -74,8 +74,8 @@ struct WorkoutConfiguration: Codable, Identifiable {
     let restPeriods: [RestPeriod]
     let difficulty: Difficulty
     let targetHeartRateZone: HeartRateZone?
-    let audioCoaching: AudioCoachingSettings
-    let hapticFeedback: HapticFeedbackSettings
+    let audioCoachingEnabled: Bool
+    let hapticFeedbackEnabled: Bool
     
     var estimatedCalories: Int {
         // Simple estimation based on duration and intensity
@@ -199,6 +199,19 @@ enum HeartRateZone: String, CaseIterable, Codable {
         case .zone3: return "green"
         case .zone4: return "yellow"
         case .zone5: return "red"
+        }
+    }
+    
+    // Determine heart rate zone based on current HR and max HR
+    static func zone(for heartRate: Double, maxHeartRate: Double) -> HeartRateZone {
+        let percentage = (heartRate / maxHeartRate) * 100
+        
+        switch percentage {
+        case 50...60: return .zone1
+        case 60...70: return .zone2
+        case 70...80: return .zone3
+        case 80...90: return .zone4
+        default: return .zone5
         }
     }
 }

@@ -115,7 +115,7 @@ enum SimpleWorkoutType: String, CaseIterable {
 
 // MARK: - Simple Workout Interval
 struct SimpleWorkoutInterval: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let type: IntervalType
     let duration: TimeInterval
     let intensity: ExerciseIntensity

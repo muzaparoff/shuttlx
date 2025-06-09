@@ -1,37 +1,46 @@
-//
-//  ContentView.swift
-//  ShuttlX
-//
-//  Created by ShuttlX on 6/5/25.
-//
-
 import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject private var serviceLocator: ServiceLocator
+    @State private var selectedTab = 0
     
     var body: some View {
-        NavigationView {
-            VStack {
-                Image(systemName: "figure.run")
-                    .imageScale(.large)
-                    .foregroundColor(.accentColor)
-                
-                Text("ShuttlX")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                
-                Text("Your Ultimate Training Companion")
-                    .font(.subheadline)
-                    .foregroundColor(.secondary)
-                
-                Spacer()
-            }
-            .padding()
-            .navigationTitle("ShuttlX")
+        TabView(selection: $selectedTab) {
+            // Workouts Tab
+            WorkoutDashboardView()
+                .tabItem {
+                    Image(systemName: "figure.run")
+                    Text("Workouts")
+                }
+                .tag(0)
+            
+            // Statistics Tab
+            StatsView()
+                .tabItem {
+                    Image(systemName: "chart.bar.fill")
+                    Text("Stats")
+                }
+                .tag(1)
+            
+            // Profile Tab
+            ProfileView()
+                .tabItem {
+                    Image(systemName: "person.crop.circle.fill")
+                    Text("Profile")
+                }
+                .tag(2)
         }
         .onAppear {
-            print("📱 ContentView appeared")
+            print("📱 MVP ContentView appeared")
+            setupHealthKitIfNeeded()
+        }
+    }
+    
+    private func setupHealthKitIfNeeded() {
+        Task {
+            if healthManager.permissionStatus == .notDetermined {
+                await healthManager.requestPermissions()
+            }
         }
     }
 }
