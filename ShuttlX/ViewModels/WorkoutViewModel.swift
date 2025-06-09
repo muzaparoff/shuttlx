@@ -100,9 +100,9 @@ class WorkoutViewModel: NSObject, ObservableObject {
         startLocationTracking()
         
         // Audio coaching and accessibility announcements
-        audioCoachingManager.startWorkoutCoaching()
-        accessibilityManager.announceWorkoutStart(type: workoutType.displayName)
-        accessibilityManager.provideHapticFeedback(for: .intervalStart)
+        // audioCoachingManager.startWorkoutCoaching()
+        // accessibilityManager.announceWorkoutStart(type: workoutType.displayName)
+        // accessibilityManager.provideHapticFeedback(for: .intervalStart)
         
         print("🏃‍♂️ Workout started: \(workoutType.displayName)")
     }
@@ -133,9 +133,9 @@ class WorkoutViewModel: NSObject, ObservableObject {
         currentSession?.endTime = Date()
         
         // Audio coaching and accessibility announcements
-        audioCoachingManager.endWorkoutCoaching()
-        accessibilityManager.announceWorkoutEnd(duration: elapsedTimeText)
-        accessibilityManager.provideHapticFeedback(for: .workoutComplete)
+        // audioCoachingManager.endWorkoutCoaching()
+        // accessibilityManager.announceWorkoutEnd(duration: elapsedTimeText)
+        // accessibilityManager.provideHapticFeedback(for: .workoutComplete)
         
         
         print("🏁 Workout completed: \(elapsedTimeText)")
@@ -222,23 +222,23 @@ class WorkoutViewModel: NSObject, ObservableObject {
             let remainingTime = totalDuration - elapsedDuration
             let timeRemaining = formatTime(remainingTime)
             
-            audioCoachingManager.announceProgress(
-                completed: currentIntervalIndex + 1,
-                total: session.intervals.count
-            )
+            // audioCoachingManager.announceProgress(
+            //     completed: currentIntervalIndex + 1,
+            //     total: session.intervals.count
+            // )
             
-            accessibilityManager.announceProgress(
-                completed: currentIntervalIndex + 1,
-                total: session.intervals.count,
-                timeRemaining: timeRemaining
-            )
+            // accessibilityManager.announceProgress(
+            //     completed: currentIntervalIndex + 1,
+            //     total: session.intervals.count,
+            //     timeRemaining: timeRemaining
+            // )
         }
         
         // Heart rate zone announcements
         if let avgHeartRate = averageHeartRate, Int(elapsedDuration) % 180 == 0 { // Every 3 minutes
             let zone = getHeartRateZone(heartRate: avgHeartRate)
-            audioCoachingManager.announceHeartRate(zone: zone)
-            accessibilityManager.announceHeartRate(current: Int(avgHeartRate), zone: zone)
+            // audioCoachingManager.announceHeartRate(zone: zone)
+            // accessibilityManager.announceHeartRate(current: Int(avgHeartRate), zone: zone)
         }
     }
     
@@ -259,7 +259,7 @@ class WorkoutViewModel: NSObject, ObservableObject {
         
         // Announce interval completion
         if let currentInterval = currentInterval {
-            accessibilityManager.provideHapticFeedback(for: .intervalEnd)
+            // accessibilityManager.provideHapticFeedback(for: .intervalEnd)
         }
         
         // Move to next interval
@@ -273,26 +273,26 @@ class WorkoutViewModel: NSObject, ObservableObject {
             
             // Announce new interval
             if let interval = currentInterval {
-                audioCoachingManager.announceInterval(
-                    type: interval.type.displayName,
-                    duration: Int(interval.duration)
-                )
+                // audioCoachingManager.announceInterval(
+                //     type: interval.type.displayName,
+                //     duration: Int(interval.duration)
+                // )
                 
                 let nextIntervalText = nextInterval?.type.displayName
-                accessibilityManager.announceIntervalChange(
-                    current: interval.type.displayName,
-                    next: nextIntervalText
-                )
+                // accessibilityManager.announceIntervalChange(
+                //     current: interval.type.displayName,
+                //     next: nextIntervalText
+                // )
                 
-                accessibilityManager.provideHapticFeedback(for: .intervalStart)
+                // accessibilityManager.provideHapticFeedback(for: .intervalStart)
                 
                 // Provide motivational coaching based on workout phase
                 if currentIntervalIndex == 1 {
-                    audioCoachingManager.provideMotivation(for: .start)
+                    // audioCoachingManager.provideMotivation(for: .start)
                 } else if currentIntervalIndex > session.intervals.count / 2 {
-                    audioCoachingManager.provideMotivation(for: .finish)
+                    // audioCoachingManager.provideMotivation(for: .finish)
                 } else {
-                    audioCoachingManager.provideMotivation(for: .middle)
+                    // audioCoachingManager.provideMotivation(for: .middle)
                 }
             }
         } else {
@@ -395,9 +395,15 @@ class WorkoutViewModel: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Public Access to Services
-    var audioCoaching: AudioCoachingManager { audioCoachingManager }
-    var accessibility: AccessibilityManager { accessibilityManager }
+    // MARK: - Placeholder for Future Services
+    // Note: These will be implemented in future versions
+    private func getAudioCoachingFeedback() -> String {
+        return "Great job! Keep it up!"
+    }
+    
+    private func checkAccessibilitySettings() -> Bool {
+        return true
+    }
 }
 
 // MARK: - CLLocationManagerDelegate

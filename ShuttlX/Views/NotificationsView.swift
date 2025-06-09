@@ -10,10 +10,10 @@ import SwiftUI
 
 struct NotificationsView: View {
     @StateObject private var notificationService = NotificationService.shared
-    @EnvironmentObject var socialService: SocialService
     @State private var selectedFilter: NotificationFilter = .all
     @State private var showingSettings = false
     @Environment(\.presentationMode) var presentationMode
+    @State private var notifications: [NotificationModel] = []
     
     var body: some View {
         NavigationView {
@@ -25,7 +25,7 @@ struct NotificationsView: View {
                 if filteredNotifications.isEmpty {
                     EmptyNotificationsView(filter: selectedFilter)
                 } else {
-                    NotificationsList(
+                    SimpleNotificationsList(
                         notifications: filteredNotifications,
                         onNotificationTap: handleNotificationTap,
                         onMarkAsRead: markNotificationAsRead,
@@ -44,11 +44,9 @@ struct NotificationsView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     HStack(spacing: 16) {
-                        if notificationService.unreadCount > 0 {
+                        if unreadCount > 0 {
                             Button("Mark All Read") {
-                                Task {
-                                    await notificationService.markAllAsRead()
-                                }
+                                markAllAsRead()
                             }
                             .font(.subheadline)
                         }
@@ -62,66 +60,76 @@ struct NotificationsView: View {
             .sheet(isPresented: $showingSettings) {
                 NotificationSettingsView()
             }
+            .onAppear {
+                loadNotifications()
+            }
         }
     }
     
     private var filteredNotifications: [NotificationModel] {
         switch selectedFilter {
         case .all:
-            return notificationService.notifications
+            return notifications
         case .unread:
-            return notificationService.notifications.filter { !$0.isRead }
-        case .social:
-            return notificationService.getNotifications(for: [
-                .newFollower, .followAccepted, .postLiked, .postCommented, .userMentioned
-            ])
-        case .challenges:
-            return notificationService.getNotifications(for: [
-                .challengeInvite, .challengeStarted, .challengeCompleted, .challengeWon
-            ])
+            return notifications.filter { !$0.isRead }
+        case .workout:
+            return notifications.filter { $0.category == .workout }
+        case .health:
+            return notifications.filter { $0.category == .health }
         case .achievements:
-            return notificationService.getNotifications(for: [
-                .achievementUnlocked, .badgeEarned, .levelUp, .personalRecord
-            ])
-        case .fitness:
-            return notificationService.getNotifications(for: [
-                .workoutReminder, .goalAchieved, .recoveryAlert, .heartRateAlert
-            ])
+            return notifications.filter { $0.category == .achievement }
+        case .goals:
+            return notifications.filter { $0.category == .goal }
         }
+    }
+    
+    private var unreadCount: Int {
+        notifications.filter { !$0.isRead }.count
+    }
+    
+    private func loadNotifications() {
+        // Create some sample notifications for MVP
+        notifications = [
+            NotificationModel(title: "Workout Reminder", body: "Time for your morning run!", category: .workout),
+            NotificationModel(title: "Health Check", body: "Remember to stay hydrated", category: .health),
+            NotificationModel(title: "Goal Achievement", body: "You've reached your daily step goal!", category: .goal),
+            NotificationModel(title: "New Achievement", body: "Congratulations! You've unlocked a new badge", category: .achievement)
+        ]
     }
     
     private func handleNotificationTap(_ notification: NotificationModel) {
-        Task {
-            await markNotificationAsRead(notification)
-            
-            // Handle navigation based on notification type
-            switch notification.type {
-            case .postLiked, .postCommented, .userMentioned:
-                // Navigate to social feed
-                break
-            case .challengeInvite:
-                // Navigate to challenge details
-                break
-            case .achievementUnlocked:
-                // Navigate to achievements
-                break
-            case .workoutReminder:
-                // Navigate to workout
-                break
-            default:
-                break
-            }
+        markNotificationAsRead(notification)
+        // Handle navigation based on notification category
+        switch notification.category {
+        case .workout:
+            // Navigate to workout dashboard
+            break
+        case .achievement:
+            // Navigate to achievements
+            break
+        case .health:
+            // Navigate to health stats
+            break
+        case .goal:
+            // Navigate to goals
+            break
         }
     }
     
-    private func markNotificationAsRead(_ notification: NotificationModel) async {
-        await notificationService.markAsRead(notification.id)
+    private func markNotificationAsRead(_ notification: NotificationModel) {
+        if let index = notifications.firstIndex(where: { $0.id == notification.id }) {
+            notifications[index].isRead = true
+        }
+    }
+    
+    private func markAllAsRead() {
+        for index in notifications.indices {
+            notifications[index].isRead = true
+        }
     }
     
     private func deleteNotification(_ notification: NotificationModel) {
-        Task {
-            await notificationService.deleteNotification(notification.id)
-        }
+        notifications.removeAll { $0.id == notification.id }
     }
 }
 
@@ -170,57 +178,42 @@ struct FilterChip: View {
     }
 }
 
-// MARK: - Notifications List
+// MARK: - Simple Notifications List
 
-struct NotificationsList: View {
+struct SimpleNotificationsList: View {
     let notifications: [NotificationModel]
     let onNotificationTap: (NotificationModel) -> Void
-    let onMarkAsRead: (NotificationModel) async -> Void
+    let onMarkAsRead: (NotificationModel) -> Void
     let onDelete: (NotificationModel) -> Void
     
     var body: some View {
         ScrollView {
             LazyVStack(spacing: 0) {
-                ForEach(groupedNotifications, id: \.id) { group in
-                    if group.notifications.count > 1 {
-                        GroupedNotificationCard(
-                            group: group,
-                            onTap: { notification in
-                                onNotificationTap(notification)
-                            },
-                            onMarkAsRead: onMarkAsRead,
-                            onDelete: onDelete
-                        )
-                    } else if let notification = group.notifications.first {
-                        NotificationCard(
-                            notification: notification,
-                            onTap: { onNotificationTap(notification) },
-                            onMarkAsRead: { await onMarkAsRead(notification) },
-                            onDelete: { onDelete(notification) }
-                        )
-                    }
+                ForEach(notifications, id: \.id) { notification in
+                    SimpleNotificationCard(
+                        notification: notification,
+                        onTap: { onNotificationTap(notification) },
+                        onMarkAsRead: { onMarkAsRead(notification) },
+                        onDelete: { onDelete(notification) }
+                    )
                     
-                    Divider()
-                        .padding(.leading, 68)
+                    if notification.id != notifications.last?.id {
+                        Divider()
+                            .padding(.leading, 68)
+                    }
                 }
             }
         }
     }
-    
-    private var groupedNotifications: [NotificationGroup] {
-        return notifications.grouped()
-    }
 }
 
-// MARK: - Notification Cards
+// MARK: - Simple Notification Card
 
-struct NotificationCard: View {
+struct SimpleNotificationCard: View {
     let notification: NotificationModel
     let onTap: () -> Void
-    let onMarkAsRead: () async -> Void
+    let onMarkAsRead: () -> Void
     let onDelete: () -> Void
-    
-    @State private var showingActions = false
     
     var body: some View {
         Button(action: onTap) {
@@ -228,11 +221,11 @@ struct NotificationCard: View {
                 // Icon
                 ZStack {
                     Circle()
-                        .fill(Color(notification.type.color).opacity(0.1))
+                        .fill(Color(notification.category.icon.isEmpty ? "blue" : "blue").opacity(0.1))
                         .frame(width: 44, height: 44)
                     
-                    Image(systemName: notification.type.iconName)
-                        .foregroundColor(Color(notification.type.color))
+                    Image(systemName: notification.category.icon)
+                        .foregroundColor(.blue)
                         .font(.title3)
                 }
                 
@@ -247,12 +240,12 @@ struct NotificationCard: View {
                         
                         Spacer()
                         
-                        Text(notification.timeAgo)
+                        Text(notification.timestamp.timeAgoShort)
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
                     
-                    Text(notification.message)
+                    Text(notification.body)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -269,7 +262,7 @@ struct NotificationCard: View {
             .padding()
             .background(notification.isRead ? Color.clear : Color(.secondarySystemBackground))
             .contextMenu {
-                Button(action: { Task { await onMarkAsRead() } }) {
+                Button(action: onMarkAsRead) {
                     Label(notification.isRead ? "Mark as Unread" : "Mark as Read", systemImage: "eye")
                 }
                 
@@ -281,84 +274,7 @@ struct NotificationCard: View {
         .buttonStyle(PlainButtonStyle())
     }
 }
-
-struct GroupedNotificationCard: View {
-    let group: NotificationGroup
-    let onTap: (NotificationModel) -> Void
-    let onMarkAsRead: (NotificationModel) async -> Void
-    let onDelete: (NotificationModel) -> Void
-    
-    @State private var isExpanded = false
-    
-    var body: some View {
-        VStack(spacing: 0) {
-            // Group header
-            Button(action: { withAnimation(.easeInOut(duration: 0.2)) { isExpanded.toggle() } }) {
-                HStack(spacing: 12) {
-                    // Icon
-                    ZStack {
-                        Circle()
-                            .fill(Color(group.type.color).opacity(0.1))
-                            .frame(width: 44, height: 44)
-                        
-                        Image(systemName: group.type.iconName)
-                            .foregroundColor(Color(group.type.color))
-                            .font(.title3)
-                    }
-                    
-                    // Content
-                    VStack(alignment: .leading, spacing: 4) {
-                        HStack {
-                            Text(group.title)
-                                .font(.subheadline)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.primary)
-                            
-                            Spacer()
-                            
-                            Text(group.latestTimestamp.timeAgoShort)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        
-                        Text(group.summary)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                    
-                    // Expand arrow
-                    Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        .foregroundColor(.secondary)
-                        .font(.caption)
-                }
-                .padding()
-                .background(Color(.secondarySystemBackground))
-            }
-            .buttonStyle(PlainButtonStyle())
-            
-            // Expanded notifications
-            if isExpanded {
-                ForEach(group.notifications, id: \.id) { notification in
-                    NotificationCard(
-                        notification: notification,
-                        onTap: { onTap(notification) },
-                        onMarkAsRead: { await onMarkAsRead(notification) },
-                        onDelete: { onDelete(notification) }
-                    )
-                    .padding(.leading, 20)
-                    
-                    if notification.id != group.notifications.last?.id {
-                        Divider()
-                            .padding(.leading, 88)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// MARK: - Empty State
+            // MARK: - Empty State
 
 struct EmptyNotificationsView: View {
     let filter: NotificationFilter
@@ -391,10 +307,10 @@ struct EmptyNotificationsView: View {
     private var emptyStateIcon: String {
         switch filter {
         case .all, .unread: return "bell.slash"
-        case .social: return "person.3"
-        case .challenges: return "flag"
+        case .workout: return "figure.run"
+        case .health: return "heart"
         case .achievements: return "medal"
-        case .fitness: return "heart"
+        case .goals: return "target"
         }
     }
     
@@ -402,10 +318,10 @@ struct EmptyNotificationsView: View {
         switch filter {
         case .all: return "No Notifications"
         case .unread: return "All Caught Up!"
-        case .social: return "No Social Activity"
-        case .challenges: return "No Challenge Updates"
+        case .workout: return "No Workout Notifications"
+        case .health: return "No Health Notifications"
         case .achievements: return "No New Achievements"
-        case .fitness: return "No Fitness Alerts"
+        case .goals: return "No Goal Updates"
         }
     }
     
@@ -413,10 +329,10 @@ struct EmptyNotificationsView: View {
         switch filter {
         case .all: return "You'll see notifications here when you have new activity."
         case .unread: return "You're up to date with all your notifications."
-        case .social: return "Follow friends and join the community to see social notifications."
-        case .challenges: return "Join challenges to receive updates and progress notifications."
+        case .workout: return "Your workout reminders and fitness notifications will appear here."
+        case .health: return "Your health reminders and alerts will appear here."
         case .achievements: return "Complete workouts and reach goals to unlock achievements."
-        case .fitness: return "Your fitness reminders and health alerts will appear here."
+        case .goals: return "Your goal progress and completion notifications will appear here."
         }
     }
 }
@@ -441,36 +357,34 @@ struct NotificationSettingsView: View {
                     if settings.isEnabled {
                         Toggle("Sound", isOn: $settings.soundEnabled)
                         Toggle("Badge Count", isOn: $settings.badgeEnabled)
-                        Toggle("Show Previews", isOn: $settings.previewEnabled)
                     }
                 }
                 
                 if settings.isEnabled {
                     Section("Categories") {
-                        Toggle("Social", isOn: $settings.socialNotifications)
-                        Toggle("Challenges", isOn: $settings.challengeNotifications)
-                        Toggle("Teams", isOn: $settings.teamNotifications)
+                        Toggle("Workout Reminders", isOn: $settings.workoutReminders)
+                        Toggle("Health Reminders", isOn: $settings.healthReminders)
+                        Toggle("Goal Notifications", isOn: $settings.goalNotifications)
                         Toggle("Achievements", isOn: $settings.achievementNotifications)
-                        Toggle("Fitness", isOn: $settings.fitnessNotifications)
-                        Toggle("System", isOn: $settings.systemNotifications)
                     }
                     
                     Section("Quiet Hours") {
                         Toggle("Enable Quiet Hours", isOn: $settings.quietHoursEnabled)
                         
                         if settings.quietHoursEnabled {
-                            DatePicker("Start Time", selection: $settings.quietHoursStart, displayedComponents: .hourAndMinute)
-                            DatePicker("End Time", selection: $settings.quietHoursEnd, displayedComponents: .hourAndMinute)
-                        }
-                    }
-                    
-                    Section {
-                        Button("Clear All Notifications") {
-                            Task {
-                                await notificationService.clearAllNotifications()
+                            HStack {
+                                Text("Start Time")
+                                Spacer()
+                                Text(settings.quietStartTime)
+                                    .foregroundColor(.secondary)
+                            }
+                            HStack {
+                                Text("End Time")
+                                Spacer()
+                                Text(settings.quietEndTime)
+                                    .foregroundColor(.secondary)
                             }
                         }
-                        .foregroundColor(.red)
                     }
                 }
             }
@@ -485,10 +399,8 @@ struct NotificationSettingsView: View {
                 
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Save") {
-                        Task {
-                            await notificationService.updateSettings(settings)
-                            presentationMode.wrappedValue.dismiss()
-                        }
+                        notificationService.settings = settings
+                        presentationMode.wrappedValue.dismiss()
                     }
                 }
             }
@@ -501,19 +413,19 @@ struct NotificationSettingsView: View {
 enum NotificationFilter: CaseIterable {
     case all
     case unread
-    case social
-    case challenges
+    case workout
+    case health
     case achievements
-    case fitness
+    case goals
     
     var displayName: String {
         switch self {
         case .all: return "All"
         case .unread: return "Unread"
-        case .social: return "Social"
-        case .challenges: return "Challenges"
+        case .workout: return "Workout"
+        case .health: return "Health"
         case .achievements: return "Achievements"
-        case .fitness: return "Fitness"
+        case .goals: return "Goals"
         }
     }
 }

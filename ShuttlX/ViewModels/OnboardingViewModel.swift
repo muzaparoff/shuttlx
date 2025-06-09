@@ -41,20 +41,13 @@ class OnboardingViewModel: ObservableObject {
     
     func createUserProfile() async {
         // Create user profile with collected information
-        let userProfile = UserProfile(
-            firstName: firstName,
-            lastName: lastName,
-            email: email,
-            dateOfBirth: dateOfBirth,
-            height: height,
-            weight: weight,
-            fitnessLevel: fitnessLevel,
-            goals: Array(selectedGoals),
-            preferences: createDefaultPreferences(),
-            achievements: [],
-            createdAt: Date(),
-            lastActiveAt: Date()
-        )
+        var userProfile = UserProfile()
+        userProfile.name = "\(firstName) \(lastName)"
+        userProfile.age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year
+        userProfile.height = height * 100 // Convert meters to centimeters
+        userProfile.weight = weight
+        userProfile.fitnessLevel = fitnessLevel
+        userProfile.goals = selectedGoals
         
         // In a real app, save this to Core Data or send to backend
         // For now, we'll just simulate the creation
@@ -80,28 +73,7 @@ class OnboardingViewModel: ObservableObject {
     }
     
     private func createDefaultPreferences() -> UserPreferences {
-        return UserPreferences(
-            units: .metric,
-            voiceCoaching: true,
-            autoStartWorkouts: false,
-            privacySettings: PrivacySettings(
-                shareWorkouts: false,
-                shareAchievements: true,
-                shareProgress: false
-            ),
-            notificationSettings: NotificationSettings(
-                workoutReminders: true,
-                achievementAlerts: true,
-                socialUpdates: true,
-                weeklyReports: true
-            ),
-            workoutSettings: WorkoutSettings(
-                defaultRestBetweenSets: 60,
-                autoExtendWorkouts: false,
-                countdownDuration: 3,
-                hapticFeedback: true
-            )
-        )
+        return UserPreferences()
     }
     
     private func simulateProfileCreation(_ profile: UserProfile) async {
@@ -114,7 +86,7 @@ class OnboardingViewModel: ObservableObject {
         // 3. Set up HealthKit integration
         // 4. Initialize user session
         
-        print("User profile created: \(profile.fullName)")
+        print("User profile created: \(profile.name)")
     }
     
     private func generateMockAssessmentResults() -> AssessmentResults {

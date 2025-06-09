@@ -1,8 +1,8 @@
 //
 //  WorkoutSelectionView.swift
-//  ShuttlX MVP
+//  ShuttlX
 //
-//  Created by ShuttlX on 6/8/25.
+//  Created by ShuttlX MVP on 6/9/25.
 //
 
 import SwiftUI
@@ -11,34 +11,38 @@ import HealthKit
 struct WorkoutSelectionView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var serviceLocator: ServiceLocator
-    @State private var selectedWorkoutType: SimpleWorkoutType = .running
+    @State private var selectedWorkout: String = "Beginner"
     
-    private let workoutTypes: [SimpleWorkoutType] = [.running, .walking, .cycling, .hiit]
+    private let presetWorkouts = [
+        "Beginner",
+        "Intermediate", 
+        "Advanced"
+    ]
     
     var body: some View {
         NavigationView {
             VStack(spacing: 24) {
                 // Header
                 VStack(spacing: 8) {
-                    Text("Select Workout")
+                    Text("Run-Walk Intervals")
                         .font(.title2)
                         .fontWeight(.bold)
                     
-                    Text("Choose your workout type and start training")
+                    Text("Choose your interval training level")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
                 .padding(.top)
                 
-                // Workout Type Selection
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
-                    ForEach(workoutTypes, id: \.self) { workoutType in
-                        WorkoutTypeCard(
-                            workoutType: workoutType,
-                            isSelected: selectedWorkoutType == workoutType
+                // Workout Options
+                VStack(spacing: 16) {
+                    ForEach(presetWorkouts, id: \.self) { workout in
+                        WorkoutCard(
+                            workout: workout,
+                            isSelected: selectedWorkout == workout
                         ) {
-                            selectedWorkoutType = workoutType
+                            selectedWorkout = workout
                         }
                     }
                 }
@@ -46,25 +50,26 @@ struct WorkoutSelectionView: View {
                 
                 Spacer()
                 
-                // Start Workout Button
+                // Start Button
                 Button(action: startWorkout) {
                     HStack {
                         Image(systemName: "play.fill")
-                        Text("Start \(selectedWorkoutType.displayName)")
+                        Text("Start Workout")
                             .fontWeight(.semibold)
                     }
+                    .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 50)
-                    .background(Color.orange)
-                    .foregroundColor(.white)
-                    .cornerRadius(25)
+                    .background(Color.blue)
+                    .cornerRadius(12)
                 }
                 .padding(.horizontal)
                 .padding(.bottom)
             }
             .navigationBarTitleDisplayMode(.inline)
+            .navigationBarBackButtonHidden(true)
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
+                ToolbarItem(placement: .navigationBarLeading) {
                     Button("Cancel") {
                         dismiss()
                     }
@@ -74,94 +79,87 @@ struct WorkoutSelectionView: View {
     }
     
     private func startWorkout() {
-        Task {
-            // Start workout on iOS
-            await startWorkoutSession()
-            
-            // Start workout on Watch if connected
-            if serviceLocator.watchManager.isWatchConnected {
-                serviceLocator.watchManager.sendWorkoutCommand("start")
-            }
-            
-            dismiss()
-        }
-    }
-    
-    private func startWorkoutSession() async {
-        // Create basic workout configuration
-        let configuration = WorkoutConfiguration(
-            type: mapToWorkoutType(selectedWorkoutType),
-            name: selectedWorkoutType.displayName,
-            description: "Quick workout session",
-            duration: 0, // Open-ended
-            intervals: [],
-            restPeriods: [],
-            difficulty: .intermediate,
-            targetHeartRateZone: nil,
-            audioCoaching: AudioCoachingSettings(),
-            hapticFeedback: HapticFeedbackSettings()
-        )
-        
-        // Start the workout
+        // Start the selected workout
         serviceLocator.healthManager.startWorkout(type: .running)
-    }
-    
-    private func mapToWorkoutType(_ simpleType: SimpleWorkoutType) -> WorkoutType {
-        switch simpleType {
-        case .running: return .runWalk
-        case .walking: return .runWalk
-        case .cycling: return .runWalk // For now, map to runWalk
-        case .hiit: return .hiit
-        default: return .runWalk
-        }
+        dismiss()
     }
 }
 
-// MARK: - Workout Type Card
-struct WorkoutTypeCard: View {
-    let workoutType: SimpleWorkoutType
+struct WorkoutCard: View {
+    let workout: String
     let isSelected: Bool
     let onTap: () -> Void
     
     var body: some View {
         Button(action: onTap) {
             VStack(spacing: 12) {
-                Image(systemName: workoutType.icon)
-                    .font(.title)
-                    .foregroundColor(isSelected ? .white : .orange)
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(workout)
+                            .font(.headline)
+                            .fontWeight(.semibold)
+                        
+                        Text(getWorkoutDescription(workout))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                    
+                    if isSelected {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundColor(.blue)
+                            .font(.title2)
+                    }
+                }
                 
-                Text(workoutType.displayName)
-                    .font(.headline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(isSelected ? .white : .primary)
-                
-                Text(workoutType.description)
-                    .font(.caption)
-                    .foregroundColor(isSelected ? .white.opacity(0.8) : .secondary)
-                    .multilineTextAlignment(.center)
+                HStack {
+                    Label("\(getWorkoutDuration(workout)) min", systemImage: "clock")
+                    Spacer()
+                    Label("\(getWorkoutIntervals(workout)) intervals", systemImage: "repeat")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: 140)
-            .background(isSelected ? Color.orange : Color(.systemGray6))
-            .cornerRadius(16)
+            .padding()
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.blue.opacity(0.1) : Color.gray.opacity(0.1))
+                    .stroke(isSelected ? Color.blue : Color.clear, lineWidth: 2)
+            )
         }
         .buttonStyle(PlainButtonStyle())
     }
-}
-
-// MARK: - Workout Command Helper
-// Note: Workout commands are now handled through SimpleWatchManager in ServiceLocator
-
-enum WorkoutCommand: String {
-    case start = "start"
-    case pause = "pause"
-    case resume = "resume"
-    case stop = "stop"
-}
-
-// MARK: - Preview
-struct WorkoutSelectionView_Previews: PreviewProvider {
-    static var previews: some View {
-        WorkoutSelectionView()
+    
+    private func getWorkoutDescription(_ workout: String) -> String {
+        switch workout {
+        case "Beginner": return "2min run / 3min walk"
+        case "Intermediate": return "3min run / 2min walk"
+        case "Advanced": return "5min run / 1min walk"
+        default: return "Custom workout"
+        }
     }
+    
+    private func getWorkoutDuration(_ workout: String) -> Int {
+        switch workout {
+        case "Beginner": return 25  // 5 intervals of 5 minutes each
+        case "Intermediate": return 25  // 5 intervals of 5 minutes each
+        case "Advanced": return 30  // 5 intervals of 6 minutes each
+        default: return 20
+        }
+    }
+    
+    private func getWorkoutIntervals(_ workout: String) -> Int {
+        switch workout {
+        case "Beginner": return 5
+        case "Intermediate": return 5
+        case "Advanced": return 5
+        default: return 4
+        }
+    }
+}
+
+#Preview {
+    WorkoutSelectionView()
+        .environmentObject(ServiceLocator.shared)
 }

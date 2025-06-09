@@ -8,7 +8,7 @@ struct ContentView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // Interval Training Tab (Main focus)
-            WorkoutDashboardView()
+            IntervalWorkoutView()
                 .tabItem {
                     Image(systemName: "timer")
                     Text("Intervals")

@@ -291,6 +291,91 @@ struct HealthExportData: Codable {
     }
 }
 
+// MARK: - Training Session
+struct TrainingSession: Codable, Identifiable {
+    let id = UUID()
+    let startTime: Date
+    let endTime: Date
+    let workoutType: String
+    let duration: TimeInterval
+    let distance: Double
+    let calories: Double
+    let averageHeartRate: Double?
+    let maxHeartRate: Double?
+    let steps: Int?
+    let notes: String?
+    
+    var formattedDuration: String {
+        let formatter = DateComponentsFormatter()
+        formatter.allowedUnits = [.hour, .minute, .second]
+        formatter.unitsStyle = .positional
+        return formatter.string(from: duration) ?? "0:00"
+    }
+    
+    static let sample = TrainingSession(
+        startTime: Date().addingTimeInterval(-3600),
+        endTime: Date(),
+        workoutType: "Run-Walk Interval",
+        duration: 3600,
+        distance: 5.0,
+        calories: 350,
+        averageHeartRate: 140,
+        maxHeartRate: 165,
+        steps: 6500,
+        notes: "Great workout!"
+    )
+}
+
+// MARK: - Achievement System
+struct Achievement: Codable, Identifiable {
+    let id = UUID()
+    let title: String
+    let description: String
+    let iconName: String
+    let unlockedDate: Date?
+    let isUnlocked: Bool
+    let category: AchievementCategory
+    
+    enum AchievementCategory: String, Codable, CaseIterable {
+        case distance = "distance"
+        case duration = "duration"
+        case frequency = "frequency"
+        case streak = "streak"
+        case heartRate = "heart_rate"
+        case improvement = "improvement"
+        
+        var displayName: String {
+            switch self {
+            case .distance: return "Distance"
+            case .duration: return "Duration"
+            case .frequency: return "Frequency"
+            case .streak: return "Streak"
+            case .heartRate: return "Heart Rate"
+            case .improvement: return "Improvement"
+            }
+        }
+    }
+    
+    static let sampleAchievements: [Achievement] = [
+        Achievement(
+            title: "First Steps",
+            description: "Complete your first workout",
+            iconName: "figure.walk",
+            unlockedDate: Date(),
+            isUnlocked: true,
+            category: .frequency
+        ),
+        Achievement(
+            title: "5K Runner",
+            description: "Complete a 5 kilometer workout",
+            iconName: "figure.run",
+            unlockedDate: nil,
+            isUnlocked: false,
+            category: .distance
+        )
+    ]
+}
+
 // MARK: - Workout Statistics
 struct WorkoutStatistics: Codable {
     let totalWorkouts: Int

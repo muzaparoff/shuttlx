@@ -36,7 +36,7 @@ struct WorkoutDashboardView: View {
             }
             
             // Recent Activity
-            if !healthManager.recentWorkouts.isEmpty {
+            if !serviceLocator.healthManager.recentWorkouts.isEmpty {
                 recentActivitySection
             }
             
@@ -54,7 +54,7 @@ struct WorkoutDashboardView: View {
                 .font(.headline)
             
             LazyVStack(spacing: 8) {
-                ForEach(healthManager.recentWorkouts.prefix(3), id: \.uuid) { workout in
+                ForEach(serviceLocator.healthManager.recentWorkouts.prefix(3), id: \.uuid) { workout in
                     RecentWorkoutRow(workout: workout)
                 }
             }

@@ -13,11 +13,10 @@ struct ProfileView: View {
     @EnvironmentObject var serviceLocator: ServiceLocator
     @State private var showingEditProfile = false
     @State private var showingSettings = false
-    @State private var showingHealthPermissions = false
     
     var body: some View {
         NavigationView {
-            ScrollView {
+            ScrollView(.vertical) {
                 VStack(spacing: 24) {
                     // Profile Header
                     profileHeaderSection
@@ -55,12 +54,9 @@ struct ProfileView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .sheet(isPresented: $showingHealthPermissions) {
-            HealthKitPermissionsView()
-        }
         .onAppear {
             Task {
-                await viewModel.loadProfileData()
+                viewModel.loadProfileData()
                 await refreshProfileData()
             }
         }
@@ -119,30 +115,34 @@ struct ProfileView: View {
             
             LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
                 HealthStatCard(
-                    icon: "heart.fill",
                     title: "Avg Heart Rate",
-                    value: "\(Int(viewModel.averageHeartRate)) BPM",
+                    value: "\(Int(viewModel.averageHeartRate))",
+                    unit: "BPM",
+                    icon: "heart.fill",
                     color: .red
                 )
                 
                 HealthStatCard(
-                    icon: "flame.fill",
                     title: "Calories Burned",
                     value: "\(Int(viewModel.totalCalories))",
+                    unit: "CAL",
+                    icon: "flame.fill",
                     color: .orange
                 )
                 
                 HealthStatCard(
-                    icon: "figure.run",
                     title: "Total Distance",
-                    value: String(format: "%.1f km", viewModel.totalDistance),
+                    value: String(format: "%.1f", viewModel.totalDistance),
+                    unit: "KM",
+                    icon: "figure.run",
                     color: .blue
                 )
                 
                 HealthStatCard(
-                    icon: "clock.fill",
                     title: "Active Time",
                     value: formatDuration(viewModel.totalActiveTime),
+                    unit: "TIME",
+                    icon: "clock.fill",
                     color: .green
                 )
             }
@@ -161,7 +161,9 @@ struct ProfileView: View {
                     title: "Health Permissions",
                     subtitle: serviceLocator.healthManager.hasHealthKitPermission ? "Authorized" : "Not Authorized"
                 ) {
-                    showingHealthPermissions = true
+                    Task {
+                        await serviceLocator.healthManager.requestHealthPermissions()
+                    }
                 }
                 
                 QuickActionRow(
@@ -218,7 +220,7 @@ struct ProfileView: View {
     }
     
     private func refreshProfileData() async {
-        await viewModel.loadProfileData()
+        viewModel.loadProfileData()
         serviceLocator.healthManager.requestHealthKitPermissions()
     }
     
@@ -254,34 +256,6 @@ struct StatView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
-    }
-}
-
-struct HealthStatCard: View {
-    let icon: String
-    let title: String
-    let value: String
-    let color: Color
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(color)
-            
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-            
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color(.systemGray6))
-        .cornerRadius(12)
     }
 }
 
@@ -358,86 +332,6 @@ struct EditProfileView: View {
                 }
             }
         }
-    }
-}
-
-struct HealthKitPermissionsView: View {
-    @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject var serviceLocator: ServiceLocator
-    
-    var body: some View {
-        NavigationView {
-            VStack(spacing: 24) {
-                Image(systemName: "heart.circle.fill")
-                    .font(.system(size: 80))
-                    .foregroundColor(.red)
-                
-                VStack(spacing: 16) {
-                    Text("Health Data Access")
-                        .font(.title2)
-                        .fontWeight(.bold)
-                        .multilineTextAlignment(.center)
-                    
-                    Text("ShuttlX needs access to your Health data to track workouts and provide insights.")
-                        .multilineTextAlignment(.center)
-                        .foregroundColor(.secondary)
-                        .padding(.horizontal)
-                }
-                
-                VStack(spacing: 12) {
-                    PermissionRow(icon: "heart.fill", title: "Heart Rate", isGranted: serviceLocator.healthManager.hasHealthKitPermission)
-                    PermissionRow(icon: "figure.run", title: "Workouts", isGranted: serviceLocator.healthManager.hasHealthKitPermission)
-                    PermissionRow(icon: "flame.fill", title: "Active Energy", isGranted: serviceLocator.healthManager.hasHealthKitPermission)
-                    PermissionRow(icon: "location.fill", title: "Location", isGranted: true)
-                }
-                .padding(.horizontal)
-                
-                Spacer()
-                
-                if !serviceLocator.healthManager.hasHealthKitPermission {
-                    Button("Request Health Permissions") {
-                        serviceLocator.healthManager.requestHealthKitPermissions()
-                        dismiss()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .padding(.horizontal)
-                }
-            }
-            .padding()
-            .navigationTitle("Health Permissions")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-}
-
-struct PermissionRow: View {
-    let icon: String
-    let title: String
-    let isGranted: Bool
-    
-    var body: some View {
-        HStack {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundColor(isGranted ? .green : .gray)
-                .frame(width: 24)
-            
-            Text(title)
-                .font(.body)
-            
-            Spacer()
-            
-            Image(systemName: isGranted ? "checkmark.circle.fill" : "circle")
-                .foregroundColor(isGranted ? .green : .gray)
-        }
-        .padding(.vertical, 4)
     }
 }
 

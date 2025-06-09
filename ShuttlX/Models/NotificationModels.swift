@@ -83,3 +83,20 @@ enum NotificationCategory: String, CaseIterable, Codable {
         }
     }
 }
+
+// MARK: - Type Aliases and Groups for View Compatibility
+
+typealias NotificationModel = SimpleNotification
+
+struct NotificationGroup: Identifiable {
+    let id = UUID()
+    let title: String
+    let notifications: [NotificationModel]
+    let date: Date
+    
+    init(title: String, notifications: [NotificationModel]) {
+        self.title = title
+        self.notifications = notifications
+        self.date = notifications.first?.timestamp ?? Date()
+    }
+}

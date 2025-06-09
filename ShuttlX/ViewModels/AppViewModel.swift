@@ -54,41 +54,14 @@ class AppViewModel: ObservableObject {
     }
     
     private func createSampleUser() -> UserProfile {
-        return UserProfile(
-            firstName: "John",
-            lastName: "Doe",
-            email: "john.doe@example.com",
-            dateOfBirth: Calendar.current.date(byAdding: .year, value: -28, to: Date()) ?? Date(),
-            height: 1.78,
-            weight: 75.0,
-            fitnessLevel: .moderatelyActive,
-            goals: [.generalFitness, .enduranceImprovement],
-            preferences: UserPreferences(
-                units: .metric,
-                voiceCoaching: true,
-                autoStartWorkouts: false,
-                privacySettings: PrivacySettings(
-                    shareWorkouts: false,
-                    shareAchievements: true,
-                    shareProgress: false
-                ),
-                notificationSettings: NotificationSettings(
-                    workoutReminders: true,
-                    achievementAlerts: true,
-                    socialUpdates: true,
-                    weeklyReports: true
-                ),
-                workoutSettings: WorkoutSettings(
-                    defaultRestBetweenSets: 60,
-                    autoExtendWorkouts: false,
-                    countdownDuration: 3,
-                    hapticFeedback: true
-                )
-            ),
-            achievements: [],
-            createdAt: Date().addingTimeInterval(-2592000), // 30 days ago
-            lastActiveAt: Date()
-        )
+        var user = UserProfile()
+        user.name = "John Doe"
+        user.age = 28
+        user.height = 178.0 // in centimeters
+        user.weight = 75.0  // in kilograms
+        user.fitnessLevel = .moderatelyActive
+        user.goals = [.generalFitness, .enduranceImprovement]
+        return user
     }
     
     private func setupNotificationObservers() {
@@ -111,15 +84,8 @@ class AppViewModel: ObservableObject {
            let user = try? JSONDecoder().decode(UserProfile.self, from: userData) {
             currentUser = user
             
-            // Apply appearance preferences
-            switch user.preferences.appearance.colorScheme {
-            case .light:
-                colorScheme = .light
-            case .dark:
-                colorScheme = .dark
-            case .automatic:
-                colorScheme = nil
-            }
+            // For MVP, we'll use system appearance preference
+            colorScheme = nil
         }
     }
     
@@ -140,7 +106,7 @@ class AppViewModel: ObservableObject {
     }
     
     private func handleWorkoutCommand(_ command: WorkoutCommand) {
-        switch command.type {
+        switch command.action {
         case .start:
             startWorkout()
         case .stop:
@@ -157,5 +123,6 @@ class AppViewModel: ObservableObject {
 
 // MARK: - Additional Notification Names
 extension Notification.Name {
+    static let workoutCommandReceived = Notification.Name("workoutCommandReceived")
     static let workoutCommandForwarded = Notification.Name("workoutCommandForwarded")
 }

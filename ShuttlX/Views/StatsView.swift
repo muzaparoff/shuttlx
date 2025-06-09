@@ -126,10 +126,10 @@ struct HeartRateZonesCard: View {
                 ForEach(Array(HeartRateZone.allCases.enumerated()), id: \.offset) { index, zone in
                     HStack {
                         Circle()
-                            .fill(zone.color)
+                            .fill(Color(zone.color))
                             .frame(width: 12, height: 12)
                         
-                        Text(zone.name)
+                        Text(zone.displayName)
                             .font(.subheadline)
                         
                         Spacer()
@@ -200,7 +200,7 @@ struct WorkoutRowView: View {
                 .frame(width: 24)
             
             VStack(alignment: .leading, spacing: 4) {
-                Text(workout.workoutConfiguration.name)
+                Text(workout.workoutType)
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
@@ -216,11 +216,9 @@ struct WorkoutRowView: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                if let calories = workout.caloriesBurned {
-                    Text("\(Int(calories)) cal")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+                Text("\(Int(workout.calories)) cal")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
         }
         .padding(.vertical, 8)

@@ -85,13 +85,13 @@ struct OnboardingView: View {
                                 currentStep = min(totalSteps - 1, currentStep + 1)
                             }
                         }
-                        .buttonStyle(PrimaryButtonStyle())
+                        .buttonStyle(.borderedProminent)
                         .disabled(!viewModel.canProceedFromStep(currentStep))
                     } else {
                         Button("Get Started") {
                             completeOnboarding()
                         }
-                        .buttonStyle(PrimaryButtonStyle())
+                        .buttonStyle(.borderedProminent)
                         .disabled(!viewModel.canCompleteOnboarding())
                     }
                 }
@@ -145,25 +145,25 @@ struct WelcomeStep: View {
             }
             
             VStack(spacing: 12) {
-                FeatureRow(
+                OnboardingFeatureRow(
                     icon: "brain.head.profile",
                     title: "AI-Powered Coaching",
                     description: "Personalized workouts that adapt to your fitness level"
                 )
                 
-                FeatureRow(
+                OnboardingFeatureRow(
                     icon: "applewatch",
                     title: "Apple Watch Integration",
                     description: "Seamless tracking across all your devices"
                 )
                 
-                FeatureRow(
+                OnboardingFeatureRow(
                     icon: "chart.line.uptrend.xyaxis",
                     title: "Advanced Analytics",
                     description: "Detailed insights into your performance and progress"
                 )
                 
-                FeatureRow(
+                OnboardingFeatureRow(
                     icon: "person.2.fill",
                     title: "Social Features",
                     description: "Connect with friends and join challenges"
@@ -238,93 +238,8 @@ struct PhysicalInfoStep: View {
     
     var body: some View {
         VStack(spacing: 24) {
-            VStack(spacing: 16) {
-                Text("Physical Information")
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
-                    .multilineTextAlignment(.center)
-                
-                Text("This helps us calculate accurate metrics")
-                    .font(.title3)
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-            }
-            
-            VStack(spacing: 24) {
-                // Height
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Height")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    HStack {
-                        Text("\(Int(heightCm)) cm")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .foregroundColor(.orange)
-                        
-                        Spacer()
-                    }
-                    
-                    Slider(value: $heightCm, in: 120...220, step: 1)
-                        .tint(.orange)
-                }
-                
-                // Weight
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Weight")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    HStack {
-                        Text("\(Int(weightKg)) kg")
-                            .font(.title3)
-                            .fontWeight(.medium)
-                            .foregroundColor(.orange)
-                        
-                        Spacer()
-                    }
-                    
-                    Slider(value: $weightKg, in: 30...200, step: 1)
-                        .tint(.orange)
-                }
-                
-                // Fitness Level
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Current Fitness Level")
-                        .font(.headline)
-                        .fontWeight(.semibold)
-                    
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 1), spacing: 8) {
-                        ForEach(FitnessLevel.allCases, id: \.self) { level in
-                            Button(action: {
-                                fitnessLevel = level
-                            }) {
-                                HStack {
-                                    Text(level.displayName)
-                                        .font(.subheadline)
-                                        .fontWeight(.medium)
-                                        .foregroundColor(fitnessLevel == level ? .white : .primary)
-                                    
-                                    Spacer()
-                                    
-                                    if fitnessLevel == level {
-                                        Image(systemName: "checkmark")
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .padding()
-                                .background(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .fill(fitnessLevel == level ? .orange : .ultraThinMaterial)
-                                )
-                            }
-                            .buttonStyle(PlainButtonStyle())
-                        }
-                    }
-                }
-            }
-            
+            headerSection
+            contentSection
             Spacer()
         }
         .padding()
@@ -337,6 +252,109 @@ struct PhysicalInfoStep: View {
         .onAppear {
             heightCm = height * 100 // Convert from meters
             weightKg = weight
+        }
+    }
+    
+    private var headerSection: some View {
+        VStack(spacing: 16) {
+            Text("Physical Information")
+                .font(.largeTitle)
+                .fontWeight(.bold)
+                .multilineTextAlignment(.center)
+            
+            Text("This helps us calculate accurate metrics")
+                .font(.title3)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+    }
+    
+    private var contentSection: some View {
+        VStack(spacing: 24) {
+            heightSection
+            weightSection
+            fitnessLevelSection
+        }
+    }
+    
+    private var heightSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Height")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            HStack {
+                Text("\(Int(heightCm)) cm")
+                    .font(.title3)
+                    .fontWeight(.medium)
+                    .foregroundColor(.orange)
+                
+                Spacer()
+            }
+            
+            Slider(value: $heightCm, in: 120...220, step: 1)
+                .tint(.orange)
+        }
+    }
+    
+    private var weightSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Weight")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            HStack {
+                Text("\(Int(weightKg)) kg")
+                    .font(.title3)
+                    .fontWeight(.medium)
+                    .foregroundColor(.orange)
+                
+                Spacer()
+            }
+            
+            Slider(value: $weightKg, in: 30...200, step: 1)
+                .tint(.orange)
+        }
+    }
+    
+    private var fitnessLevelSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Current Fitness Level")
+                .font(.headline)
+                .fontWeight(.semibold)
+            
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 1), spacing: 8) {
+                ForEach(FitnessLevel.allCases, id: \.self) { level in
+                    Button(action: {
+                        fitnessLevel = level
+                    }) {
+                        HStack {
+                            Text(level.displayName)
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                                .foregroundColor(fitnessLevel == level ? .white : .primary)
+                            
+                            Spacer()
+                            
+                            if fitnessLevel == level {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.white)
+                            }
+                        }
+                        .padding()
+                        .background(
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(fitnessLevel == level ? Color.orange : Color.clear)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .fill(Material.ultraThinMaterial)
+                                        .opacity(fitnessLevel == level ? 0 : 1)
+                                )
+                        )
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
         }
     }
 }
@@ -442,12 +460,10 @@ struct HealthPermissionsStep: View {
             
             if !hasRequestedPermissions {
                 Button("Allow Health Access") {
-                    Task {
-                        await healthManager.requestAuthorization()
-                        hasRequestedPermissions = true
-                    }
+                    healthManager.requestHealthKitPermissions()
+                    hasRequestedPermissions = true
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(.borderedProminent)
             } else {
                 VStack(spacing: 8) {
                     HStack {
@@ -521,7 +537,7 @@ struct FitnessAssessmentStep: View {
                 Button("Start Assessment") {
                     showingAssessment = true
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(.borderedProminent)
                 
                 Button("Skip Assessment") {
                     viewModel.skipAssessment()
@@ -540,19 +556,19 @@ struct FitnessAssessmentStep: View {
 
 // MARK: - Supporting Views
 
-struct FeatureRow: View {
+struct OnboardingFeatureRow: View {
     let icon: String
     let title: String
     let description: String
     
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 16) {
             Image(systemName: icon)
                 .font(.title2)
                 .foregroundColor(.orange)
                 .frame(width: 30)
             
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -564,6 +580,7 @@ struct FeatureRow: View {
             
             Spacer()
         }
+        .padding(.horizontal, 4)
     }
 }
 
@@ -575,7 +592,7 @@ struct GoalCard: View {
     var body: some View {
         Button(action: action) {
             VStack(spacing: 8) {
-                Image(systemName: goal.iconName)
+                Image(systemName: goal.icon)
                     .font(.title2)
                     .foregroundColor(isSelected ? .white : .orange)
                 
@@ -589,7 +606,12 @@ struct GoalCard: View {
             .frame(height: 100)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? .orange : .ultraThinMaterial)
+                    .fill(isSelected ? Color.orange : Color.clear)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Material.ultraThinMaterial)
+                            .opacity(isSelected ? 0 : 1)
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -669,7 +691,7 @@ struct AssessmentCard: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(.ultraThinMaterial)
+                .fill(Material.ultraThinMaterial)
         )
     }
 }
@@ -680,7 +702,7 @@ struct OnboardingTextFieldStyle: TextFieldStyle {
             .padding()
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(.ultraThinMaterial)
+                    .fill(Material.ultraThinMaterial)
             )
     }
 }
@@ -707,7 +729,7 @@ struct FitnessAssessmentView: View {
                     viewModel.completeAssessment()
                     dismiss()
                 }
-                .buttonStyle(PrimaryButtonStyle())
+                .buttonStyle(.borderedProminent)
                 .padding()
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -724,30 +746,6 @@ struct FitnessAssessmentView: View {
 }
 
 // MARK: - Extensions
-
-extension FitnessGoal {
-    var iconName: String {
-        switch self {
-        case .weightLoss: return "scale.3d"
-        case .strengthBuilding: return "dumbbell.fill"
-        case .enduranceImprovement: return "lungs.fill"
-        case .flexibilityMobility: return "figure.yoga"
-        case .stressRelief: return "brain.head.profile"
-        case .generalFitness: return "heart.fill"
-        }
-    }
-    
-    var displayName: String {
-        switch self {
-        case .weightLoss: return "Weight Loss"
-        case .strengthBuilding: return "Strength Building"
-        case .enduranceImprovement: return "Endurance"
-        case .flexibilityMobility: return "Flexibility"
-        case .stressRelief: return "Stress Relief"
-        case .generalFitness: return "General Fitness"
-        }
-    }
-}
 
 #Preview {
     OnboardingView()
