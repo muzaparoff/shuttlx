@@ -20,7 +20,10 @@ class OnboardingViewModel: ObservableObject {
     @Published var selectedGoals: Set<FitnessGoal> = []
     @Published var hasCompletedAssessment: Bool = false
     @Published var assessmentResults: AssessmentResults?
+    @Published var isCreatingProfile: Bool = false
+    @Published var profileCreationError: String?
     
+    private let userProfileService = UserProfileService.shared
     private var cancellables = Set<AnyCancellable>()
     
     func canProceedFromStep(_ step: Int) -> Bool {
@@ -40,18 +43,40 @@ class OnboardingViewModel: ObservableObject {
     }
     
     func createUserProfile() async {
-        // Create user profile with collected information
-        var userProfile = UserProfile()
-        userProfile.name = "\(firstName) \(lastName)"
-        userProfile.age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year
-        userProfile.height = height * 100 // Convert meters to centimeters
-        userProfile.weight = weight
-        userProfile.fitnessLevel = fitnessLevel
-        userProfile.goals = selectedGoals
+        isCreatingProfile = true
+        profileCreationError = nil
         
-        // In a real app, save this to Core Data or send to backend
-        // For now, we'll just simulate the creation
-        await simulateProfileCreation(userProfile)
+        do {
+            // Create user profile with collected information
+            var userProfile = UserProfile()
+            userProfile.name = "\(firstName) \(lastName)"
+            userProfile.email = email
+            userProfile.age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year ?? 25
+            userProfile.height = height * 100 // Convert meters to centimeters
+            userProfile.weight = weight
+            userProfile.fitnessLevel = fitnessLevel
+            userProfile.goals = selectedGoals
+            
+            // Add assessment results if available
+            if let assessment = assessmentResults {
+                userProfile.restingHeartRate = Int(assessment.restingHeartRate)
+                userProfile.estimatedVO2Max = assessment.estimatedVO2Max
+            }
+            
+            // Save the profile using UserProfileService
+            try await userProfileService.saveProfile(userProfile)
+            
+            // Mark onboarding as complete
+            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+            
+            print("User profile created successfully: \(userProfile.name)")
+            
+        } catch {
+            profileCreationError = "Failed to create profile: \(error.localizedDescription)"
+            print("Error creating user profile: \(error)")
+        }
+        
+        isCreatingProfile = false
     }
     
     func skipAssessment() {
@@ -62,6 +87,11 @@ class OnboardingViewModel: ObservableObject {
     func completeAssessment() {
         hasCompletedAssessment = true
         assessmentResults = generateMockAssessmentResults()
+        
+        // Update profile with assessment data if user already created profile
+        Task {
+            await updateProfileWithAssessment()
+        }
     }
     
     // MARK: - Private Methods
@@ -76,17 +106,20 @@ class OnboardingViewModel: ObservableObject {
         return UserPreferences()
     }
     
-    private func simulateProfileCreation(_ profile: UserProfile) async {
-        // Simulate network delay
-        try? await Task.sleep(nanoseconds: 1_000_000_000) // 1 second
+    func updateProfileWithAssessment() async {
+        guard let assessment = assessmentResults else { return }
         
-        // In a real app, this would:
-        // 1. Save to Core Data
-        // 2. Send to backend API
-        // 3. Set up HealthKit integration
-        // 4. Initialize user session
-        
-        print("User profile created: \(profile.name)")
+        do {
+            var currentProfile = try await userProfileService.getCurrentProfile()
+            currentProfile.restingHeartRate = Int(assessment.restingHeartRate)
+            currentProfile.estimatedVO2Max = assessment.estimatedVO2Max
+            currentProfile.fitnessLevel = assessment.recommendedStartingLevel
+            
+            try await userProfileService.saveProfile(currentProfile)
+            print("Profile updated with assessment results")
+        } catch {
+            print("Error updating profile with assessment: \(error)")
+        }
     }
     
     private func generateMockAssessmentResults() -> AssessmentResults {

@@ -26,19 +26,45 @@ class ProfileViewModel: ObservableObject {
     @Published var totalDistance: Double = 0
     @Published var totalActiveTime: TimeInterval = 0
     
+    // User profile integration
+    @Published var userProfile: UserProfile? = nil
+    @Published var isProfileComplete: Bool = false
+    @Published var profileCompletionMessage: String = ""
+    
     private var cancellables = Set<AnyCancellable>()
+    private let userProfileService = UserProfileService.shared
     
     func loadProfileData() {
         isLoading = true
         
         Task {
             await withTaskGroup(of: Void.self) { group in
+                group.addTask { await self.loadUserProfile() }
                 group.addTask { await self.loadMonthlyStats() }
                 group.addTask { await self.loadRecentAchievements() }
                 group.addTask { await self.loadRecentWorkouts() }
             }
             
             isLoading = false
+        }
+    }
+    
+    private func loadUserProfile() async {
+        do {
+            let profile = try await userProfileService.getCurrentProfile()
+            await MainActor.run {
+                self.userProfile = profile
+                self.userName = profile.name
+                self.isProfileComplete = userProfileService.isProfileComplete()
+                self.profileCompletionMessage = self.generateProfileCompletionMessage()
+            }
+        } catch {
+            print("Error loading user profile: \(error)")
+            await MainActor.run {
+                self.userName = "User"
+                self.isProfileComplete = false
+                self.profileCompletionMessage = "Please complete your profile setup"
+            }
         }
     }
     
@@ -55,11 +81,20 @@ class ProfileViewModel: ObservableObject {
             monthlyHours = Double.random(in: 6.0...40.0)
             monthlyCalories = Int.random(in: 2000...8000)
             
-            // Populate additional properties
-            userName = "Fitness User"
+            // Populate additional properties, using user profile data if available
+            if let profile = userProfile {
+                userName = profile.name
+                // Use actual BMI and heart rate zones if available
+                if let restingHR = profile.restingHeartRate {
+                    averageHeartRate = Double(restingHR + 50) // Rough estimate
+                }
+            } else {
+                userName = "Fitness User"
+                averageHeartRate = Double.random(in: 130...160)
+            }
+            
             totalWorkouts = Int.random(in: 15...80)
             weeklyWorkouts = Int.random(in: 2...7)
-            averageHeartRate = Double.random(in: 130...160)
             totalCalories = Double.random(in: 5000...15000)
             totalDistance = Double.random(in: 25...150)
             totalActiveTime = TimeInterval.random(in: 7200...36000) // 2-10 hours
@@ -141,6 +176,19 @@ class ProfileViewModel: ObservableObject {
                 steps: Int.random(in: 1000...8000),
                 notes: nil
             )
+        }
+    }
+    
+    private func generateProfileCompletionMessage() -> String {
+        guard let profile = userProfile else {
+            return "Please complete your profile setup"
+        }
+        
+        let missingFields = userProfileService.getMissingProfileFields()
+        if missingFields.isEmpty {
+            return "Profile complete!"
+        } else {
+            return "Missing: \(missingFields.joined(separator: ", "))"
         }
     }
 }

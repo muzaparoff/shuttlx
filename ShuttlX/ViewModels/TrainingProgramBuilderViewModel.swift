@@ -15,7 +15,7 @@ class TrainingProgramBuilderViewModel: ObservableObject {
     @Published var distance: Double = 5.0
     @Published var runInterval: Double = 2.0
     @Published var walkInterval: Double = 1.0
-    @Published var difficulty: TrainingDifficulty = .moderate
+    @Published var difficulty: TrainingDifficulty = .intermediate
     @Published var targetHeartRateZone: HeartRateZone = .moderate
     
     private let trainingProgramManager = TrainingProgramManager.shared
@@ -32,10 +32,20 @@ class TrainingProgramBuilderViewModel: ObservableObject {
     }
     
     var estimatedCalories: Int {
-        // Basic calorie estimation (can be improved with user weight, etc.)
-        let baseCaloriesPerKm = 60
-        let difficultyMultiplier = difficulty.calorieMultiplier
-        return Int(distance * Double(baseCaloriesPerKm) * difficultyMultiplier)
+        // Get current user profile from UserDefaults or AppViewModel
+        let userProfile = getCurrentUserProfile()
+        return CalorieCalculationService.shared.calculateCalories(
+            for: buildProgram(),
+            userProfile: userProfile
+        )
+    }
+    
+    private func getCurrentUserProfile() -> UserProfile? {
+        guard let userData = UserDefaults.standard.data(forKey: "userProfile"),
+              let profile = try? JSONDecoder().decode(UserProfile.self, from: userData) else {
+            return nil
+        }
+        return profile
     }
     
     var isFormValid: Bool {
@@ -71,29 +81,22 @@ class TrainingProgramBuilderViewModel: ObservableObject {
 extension TrainingDifficulty {
     var icon: String {
         switch self {
-        case .easy: return "leaf.fill"
-        case .moderate: return "flame.fill"
-        case .hard: return "bolt.fill"
-        case .extreme: return "hurricane"
+        case .beginner: return "leaf.fill"
+        case .intermediate: return "flame.fill"
+        case .advanced: return "bolt.fill"
         }
     }
     
     var color: Color {
         switch self {
-        case .easy: return .green
-        case .moderate: return .orange
-        case .hard: return .red
-        case .extreme: return .purple
+        case .beginner: return .green
+        case .intermediate: return .orange
+        case .advanced: return .red
         }
     }
     
     var calorieMultiplier: Double {
-        switch self {
-        case .easy: return 0.8
-        case .moderate: return 1.0
-        case .hard: return 1.3
-        case .extreme: return 1.6
-        }
+        return CalorieCalculationService.shared.getTrainingDifficultyMultiplier(self)
     }
 }
 

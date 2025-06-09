@@ -14,19 +14,52 @@ class ServiceLocator: ObservableObject {
     static let shared = ServiceLocator()
     
     // Core MVP Services that are included in project
-    lazy var healthManager = HealthManager()
-    lazy var watchManager = WatchConnectivityManager()
-    lazy var settingsService = SettingsService()
-    lazy var notificationService = NotificationService()
+    lazy var healthManager: HealthManager = {
+        print("🔧 [SERVICE] Initializing HealthManager...")
+        return HealthManager()
+    }()
+    
+    lazy var watchManager: WatchConnectivityManager = {
+        print("🔧 [SERVICE] Initializing WatchConnectivityManager...")
+        return WatchConnectivityManager()
+    }()
+    
+    lazy var settingsService: SettingsService = {
+        print("🔧 [SERVICE] Initializing SettingsService...")
+        return SettingsService()
+    }()
+    
+    lazy var notificationService: NotificationService = {
+        print("🔧 [SERVICE] Initializing NotificationService...")
+        return NotificationService()
+    }()
+    
     // TODO: Re-enable when TrainingProgramManager is properly added to target
     // lazy var trainingProgramManager = TrainingProgramManager.shared
     
     // Temporary inline services until files are added to Xcode target
-    lazy var intervalTimer = TemporaryIntervalTimer()
-    lazy var hapticManager = TemporaryHapticManager()
-    lazy var socialService = TemporarySocialService()
+    lazy var intervalTimer: TemporaryIntervalTimer = {
+        print("🔧 [SERVICE] Initializing TemporaryIntervalTimer...")
+        return TemporaryIntervalTimer()
+    }()
     
-    private init() {}
+    lazy var hapticManager: TemporaryHapticManager = {
+        print("🔧 [SERVICE] Initializing TemporaryHapticManager...")
+        return TemporaryHapticManager()
+    }()
+    
+    lazy var socialService: TemporarySocialService = {
+        print("🔧 [SERVICE] Initializing TemporarySocialService...")
+        return TemporarySocialService()
+    }()
+    
+    private init() {
+        print("🔧 [SERVICE] ServiceLocator singleton created")
+    }
+    
+    var description: String {
+        return "ServiceLocator with \(Mirror(reflecting: self).children.count) services initialized"
+    }
 }
 
 // MARK: - Temporary Services (until files added to Xcode target)

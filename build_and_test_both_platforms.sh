@@ -48,6 +48,31 @@ echo_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
+# Function to monitor logs for app startup
+monitor_app_logs() {
+    local device_id="$1"
+    local app_name="$2"
+    local duration="${3:-15}"
+    
+    echo_status "Monitoring $app_name logs for $duration seconds..."
+    
+    # Start log monitoring in background
+    timeout "$duration" xcrun simctl spawn "$device_id" log stream --predicate 'processImagePath contains "ShuttlX" OR subsystem contains "shuttlx" OR messageText contains "STARTUP" OR messageText contains "WATCH-STARTUP"' --info 2>/dev/null | while read -r line; do
+        if echo "$line" | grep -qE "(STARTUP|ERROR|LAUNCH|🚀|⌚)"; then
+            echo_status "LOG: $line"
+        fi
+    done &
+    
+    local log_pid=$!
+    sleep "$duration"
+    
+    # Kill the log monitoring if still running
+    kill $log_pid 2>/dev/null || true
+    wait $log_pid 2>/dev/null || true
+    
+    echo_status "Log monitoring completed"
+}
+
 # Function to detect watchOS scheme
 detect_watch_scheme() {
     echo_status "Auto-detecting watchOS scheme..."
@@ -225,22 +250,69 @@ launch_ios() {
     if [ "$sim_state" = "(Shutdown)" ]; then
         echo_status "Starting iOS simulator..."
         xcrun simctl boot "$ios_device_id"
-        sleep 3
+        sleep 5
     fi
     
-    local app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "ShuttlX.app" -path "*/Debug-iphonesimulator/*" | head -1)
+    # Find iOS app bundle, excluding Index.noindex directories which contain incomplete builds
+    local app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "ShuttlX.app" -path "*/Debug-iphonesimulator/*" -not -path "*/Index.noindex/*" | head -1)
     
     if [ -z "$app_path" ]; then
-        echo_error "Could not find iOS app bundle"
+        echo_error "Could not find iOS app bundle in Build/Products"
+        echo_status "Searching for app bundles in DerivedData (excluding Index.noindex)..."
+        find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Debug-iphonesimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null | head -5
+        
+        # If still not found, show what's actually there
+        if [ -z "$(find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Debug-iphonesimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null)" ]; then
+            echo_status "No app bundles found in proper Build/Products location. All available bundles:"
+            find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Debug-iphonesimulator/*" 2>/dev/null | head -5
+        fi
         return 1
     fi
 
-    # Install and launch
-    xcrun simctl install "$ios_device_id" "$app_path"
-    xcrun simctl launch "$ios_device_id" "com.shuttlx.ShuttlX"
+    echo_status "Found app bundle: $app_path"
     
-    echo_success "iOS app launched successfully"
-    echo_status "iOS Simulator Device ID: $ios_device_id"
+    # Extract bundle ID from Info.plist
+    local bundle_id=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$app_path/Info.plist" 2>/dev/null)
+    if [ -z "$bundle_id" ]; then
+        echo_warning "Could not extract bundle ID from Info.plist, using default"
+        bundle_id="com.shuttlx.ShuttlX"
+    fi
+    
+    echo_status "Bundle ID: $bundle_id"
+    
+    # Verify app bundle has valid structure
+    if [ ! -f "$app_path/Info.plist" ]; then
+        echo_error "App bundle is missing Info.plist"
+        return 1
+    fi
+    
+    # Uninstall previous version if exists
+    echo_status "Uninstalling previous version (if exists)..."
+    xcrun simctl uninstall "$ios_device_id" "$bundle_id" 2>/dev/null || true
+    
+    # Install and launch with better error handling
+    echo_status "Installing app..."
+    if xcrun simctl install "$ios_device_id" "$app_path"; then
+        echo_success "App installed successfully"
+        
+        echo_status "Launching app..."
+        if xcrun simctl launch "$ios_device_id" "$bundle_id"; then
+            echo_success "iOS app launched successfully"
+            echo_status "iOS Simulator Device ID: $ios_device_id"
+            
+            # Wait a moment and check if app is running
+            sleep 3
+            echo_status "Checking app status and logs..."
+            xcrun simctl spawn "$ios_device_id" log show --predicate 'subsystem contains "com.shuttlx" OR processImagePath contains "ShuttlX"' --info --last 10s 2>/dev/null | grep -E "(STARTUP|ERROR|LAUNCH)" || echo_status "No startup logs found yet"
+            
+        else
+            echo_error "Failed to launch app"
+            return 1
+        fi
+    else
+        echo_error "Failed to install app"
+        return 1
+    fi
 }
 
 # Function to install and launch watchOS app
@@ -265,7 +337,7 @@ launch_watchos() {
     if [ "$sim_state" = "(Shutdown)" ]; then
         echo_status "Starting watchOS simulator..."
         xcrun simctl boot "$watch_device_id"
-        sleep 3
+        sleep 5
     fi
     
     echo_status "Building and installing watchOS app directly..."
@@ -282,15 +354,38 @@ launch_watchos() {
     if [ ${PIPESTATUS[0]} -eq 0 ]; then
         echo_success "watchOS app installed successfully"
         
-        # Try to launch the app
+        # Find the watch app bundle and extract bundle ID, excluding Index.noindex
+        local watch_app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "*.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" | head -1)
+        local watch_bundle_id=""
+        
+        if [ -n "$watch_app_path" ]; then
+            watch_bundle_id=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$watch_app_path/Info.plist" 2>/dev/null)
+            echo_status "Found watch app at: $watch_app_path"
+            echo_status "Watch Bundle ID: $watch_bundle_id"
+        fi
+        
+        # Try to launch the app with detected bundle ID
         echo_status "Launching watchOS app..."
-        xcrun simctl launch "$watch_device_id" "com.shuttlx.ShuttlX.watchkitapp" || {
-            echo_warning "Direct launch failed, trying alternative bundle ID..."
+        if [ -n "$watch_bundle_id" ]; then
+            if xcrun simctl launch "$watch_device_id" "$watch_bundle_id"; then
+                echo_success "watchOS app launched successfully"
+                
+                # Check for logs
+                sleep 3
+                echo_status "Checking watch app logs..."
+                xcrun simctl spawn "$watch_device_id" log show --predicate 'processImagePath contains "ShuttlX" OR subsystem contains "watch"' --info --last 10s 2>/dev/null | grep -E "(WATCH-STARTUP|ERROR|LAUNCH)" || echo_status "No watch startup logs found yet"
+                
+            else
+                echo_warning "Could not launch watchOS app with bundle ID: $watch_bundle_id"
+            fi
+        else
+            # Try common bundle IDs
+            xcrun simctl launch "$watch_device_id" "com.shuttlx.ShuttlX.watchkitapp" || \
             xcrun simctl launch "$watch_device_id" "com.shuttlx.watch.watchkitapp" || {
                 echo_warning "Could not launch watchOS app automatically"
                 echo_status "App should be installed on the watch simulator. You can launch it manually."
             }
-        }
+        fi
         
         echo_success "watchOS app setup completed"
         echo_status "watchOS Simulator Device ID: $watch_device_id"

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 import WatchConnectivity
 
 extension WatchConnectivityManager {
@@ -16,13 +17,18 @@ extension WatchConnectivityManager {
         guard WCSession.default.isReachable else {
             print("⌚ Watch not reachable, queuing programs for later sync")
             queueProgramsForSync(programs)
+            scheduleRetrySync()
             return
         }
         
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(programs)
-            let message = ["training_programs": data]
+            let message = [
+                "training_programs": data,
+                "timestamp": Date().timeIntervalSince1970,
+                "version": "1.0"
+            ] as [String : Any]
             
             WCSession.default.sendMessage(message, replyHandler: { reply in
                 DispatchQueue.main.async {
@@ -30,15 +36,21 @@ extension WatchConnectivityManager {
                     if let status = reply["status"] as? String {
                         print("⌚ Watch response: \(status)")
                     }
+                    // Clear any queued programs on successful sync
+                    UserDefaults.standard.removeObject(forKey: "queued_training_programs")
+                    NotificationCenter.default.post(name: .trainingProgramsSynced, object: programs)
                 }
             }, errorHandler: { error in
                 DispatchQueue.main.async {
                     print("❌ Failed to send training programs to watch: \(error.localizedDescription)")
                     self.queueProgramsForSync(programs)
+                    self.scheduleRetrySync()
+                    NotificationCenter.default.post(name: .trainingProgramsSyncFailed, object: error)
                 }
             })
         } catch {
             print("❌ Failed to encode training programs: \(error.localizedDescription)")
+            queueProgramsForSync(programs)
         }
     }
     
@@ -46,6 +58,7 @@ extension WatchConnectivityManager {
         guard WCSession.default.isReachable else {
             print("⌚ Watch not reachable, storing selected program for later sync")
             UserDefaults.standard.set(program.id.uuidString, forKey: "pending_selected_program")
+            scheduleRetrySync()
             return
         }
         
@@ -54,21 +67,47 @@ extension WatchConnectivityManager {
             let data = try encoder.encode(program)
             let message = [
                 "selected_program": data,
-                "action": "start_workout"
-            ]
+                "action": "start_workout",
+                "timestamp": Date().timeIntervalSince1970
+            ] as [String : Any]
             
             WCSession.default.sendMessage(message, replyHandler: { reply in
                 DispatchQueue.main.async {
                     print("✅ Selected program sent to watch successfully")
+                    UserDefaults.standard.removeObject(forKey: "pending_selected_program")
+                    NotificationCenter.default.post(name: .selectedProgramSynced, object: program)
                 }
             }, errorHandler: { error in
                 DispatchQueue.main.async {
                     print("❌ Failed to send selected program to watch: \(error.localizedDescription)")
+                    UserDefaults.standard.set(program.id.uuidString, forKey: "pending_selected_program")
+                    self.scheduleRetrySync()
+                    NotificationCenter.default.post(name: .selectedProgramSyncFailed, object: error)
                 }
             })
         } catch {
             print("❌ Failed to encode selected program: \(error.localizedDescription)")
         }
+    }
+    
+    // MARK: - Sync Management
+    
+    private func scheduleRetrySync() {
+        // Schedule retry sync after a delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 30) {
+            self.syncQueuedPrograms()
+        }
+    }
+    
+    private func validateSyncData(_ programs: [TrainingProgram]) -> Bool {
+        // Validate program data before syncing
+        for program in programs {
+            if program.name.isEmpty || program.distance <= 0 || program.runInterval <= 0 || program.walkInterval <= 0 {
+                print("❌ Invalid program data detected: \(program.name)")
+                return false
+            }
+        }
+        return true
     }
     
     private func queueProgramsForSync(_ programs: [TrainingProgram]) {
@@ -81,18 +120,29 @@ extension WatchConnectivityManager {
         }
     }
     
+    @MainActor
     func syncQueuedPrograms() {
-        guard WCSession.default.isReachable else { return }
+        guard WCSession.default.isReachable else { 
+            print("⌚ Watch not reachable, skipping queued sync")
+            return 
+        }
         
         // Sync queued programs
         if let data = UserDefaults.standard.data(forKey: "queued_training_programs") {
             do {
                 let decoder = JSONDecoder()
                 let programs = try decoder.decode([TrainingProgram].self, from: data)
-                sendTrainingPrograms(programs)
-                UserDefaults.standard.removeObject(forKey: "queued_training_programs")
+                
+                // Validate data before sending
+                if validateSyncData(programs) {
+                    sendTrainingPrograms(programs)
+                } else {
+                    print("❌ Invalid queued program data, clearing queue")
+                    UserDefaults.standard.removeObject(forKey: "queued_training_programs")
+                }
             } catch {
                 print("❌ Failed to decode queued programs: \(error.localizedDescription)")
+                UserDefaults.standard.removeObject(forKey: "queued_training_programs")
             }
         }
         
@@ -102,6 +152,8 @@ extension WatchConnectivityManager {
             let allPrograms = TrainingProgramManager.shared.allPrograms
             if let program = allPrograms.first(where: { $0.id == uuid }) {
                 sendSelectedProgram(program)
+            } else {
+                print("❌ Pending selected program not found, clearing")
                 UserDefaults.standard.removeObject(forKey: "pending_selected_program")
             }
         }
@@ -119,7 +171,9 @@ extension WatchConnectivityManager {
         }
         
         if let action = message["action"] as? String {
-            handleTrainingAction(action, message: message)
+            Task { @MainActor in
+                handleTrainingAction(action, message: message)
+            }
         }
     }
     
@@ -159,6 +213,7 @@ extension WatchConnectivityManager {
         }
     }
     
+    @MainActor
     private func handleTrainingAction(_ action: String, message: [String: Any]) {
         switch action {
         case "start_workout":
@@ -187,6 +242,10 @@ extension Notification.Name {
     static let selectedProgramReceived = Notification.Name("selectedProgramReceived")
     static let watchWorkoutStarted = Notification.Name("watchWorkoutStarted")
     static let watchWorkoutEnded = Notification.Name("watchWorkoutEnded")
+    static let trainingProgramsSynced = Notification.Name("trainingProgramsSynced")
+    static let trainingProgramsSyncFailed = Notification.Name("trainingProgramsSyncFailed")
+    static let selectedProgramSynced = Notification.Name("selectedProgramSynced")
+    static let selectedProgramSyncFailed = Notification.Name("selectedProgramSyncFailed")
 }
 
 // MARK: - TrainingProgramManager Watch Integration

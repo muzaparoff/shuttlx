@@ -12,12 +12,15 @@ import Foundation
 struct UserProfile: Codable {
     let id: UUID = UUID()
     var name: String = ""
+    var email: String = ""
     var age: Int?
     var height: Double? // in centimeters
     var weight: Double? // in kilograms  
     var fitnessLevel: FitnessLevel = .beginner
     var goals: Set<FitnessGoal> = []
     var joinDate: Date = Date()
+    var restingHeartRate: Int?
+    var estimatedVO2Max: Double?
     
     static let `default` = UserProfile()
 }

@@ -77,11 +77,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     
     // MARK: - Workout Management
     func startWorkout(with intervals: [WorkoutInterval]) {
-        guard !isWorkoutActive else { return }
+        guard !isWorkoutActive else { 
+            print("❌ Workout already active")
+            return 
+        }
+        
+        guard !intervals.isEmpty else {
+            print("❌ Cannot start workout with empty intervals")
+            return
+        }
         
         self.intervals = intervals
         self.currentIntervalIndex = 0
         self.workoutPhase = .warming
+        
+        // Reset all metrics
+        resetMetrics()
         
         let configuration = HKWorkoutConfiguration()
         configuration.activityType = .functionalStrengthTraining
@@ -102,30 +113,43 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 DispatchQueue.main.async {
                     if success {
                         self?.isWorkoutActive = true
+                        self?.isWorkoutPaused = false
                         self?.startDate = Date()
                         self?.startWorkoutTimer()
                         self?.startIntervalTimer()
                         self?.playHapticFeedback(.start)
+                        print("✅ Workout started successfully")
+                    } else {
+                        print("❌ Failed to start workout collection: \(error?.localizedDescription ?? "Unknown error")")
+                        self?.finalizeWorkout()
                     }
                 }
             }
         } catch {
-            print("Failed to start workout: \(error)")
+            print("❌ Failed to start workout: \(error)")
+            finalizeWorkout()
         }
     }
     
     func pauseWorkout() {
-        guard isWorkoutActive, !isWorkoutPaused else { return }
+        guard isWorkoutActive, !isWorkoutPaused else { 
+            print("❌ Cannot pause: workout not active or already paused")
+            return 
+        }
         
         currentWorkout?.pause()
         isWorkoutPaused = true
         workoutPhase = .paused
         stopTimers()
         playHapticFeedback(.notification)
+        print("⏸ Workout paused")
     }
     
     func resumeWorkout() {
-        guard isWorkoutActive, isWorkoutPaused else { return }
+        guard isWorkoutActive, isWorkoutPaused else { 
+            print("❌ Cannot resume: workout not active or not paused")
+            return 
+        }
         
         currentWorkout?.resume()
         isWorkoutPaused = false
@@ -133,21 +157,41 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutTimer()
         startIntervalTimer()
         playHapticFeedback(.start)
+        print("▶️ Workout resumed")
     }
     
     func endWorkout() {
-        guard isWorkoutActive else { return }
+        guard isWorkoutActive else { 
+            print("❌ Cannot end workout: no active workout")
+            return 
+        }
         
+        print("🛑 Ending workout...")
+        
+        // Stop timers immediately
+        stopTimers()
+        
+        // End the workout session
         currentWorkout?.end()
         
+        // End data collection
         currentBuilder?.endCollection(withEnd: Date()) { [weak self] success, error in
             DispatchQueue.main.async {
+                if let error = error {
+                    print("❌ Error ending workout collection: \(error.localizedDescription)")
+                }
                 self?.finalizeWorkout()
             }
         }
     }
     
     private func finalizeWorkout() {
+        print("🏁 Finalizing workout...")
+        
+        // Save workout data before resetting
+        saveWorkoutData()
+        
+        // Reset state
         isWorkoutActive = false
         isWorkoutPaused = false
         workoutPhase = .completed
@@ -158,14 +202,51 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopTimers()
         resetMetrics()
         playHapticFeedback(.success)
+        
+        print("✅ Workout finalized")
+    }
+    
+    private func saveWorkoutData() {
+        // Save workout results for syncing back to iPhone
+        let results = WorkoutResults(
+            workoutId: UUID(),
+            startDate: startDate ?? Date(),
+            endDate: Date(),
+            totalDuration: elapsedTime,
+            activeCalories: activeCalories,
+            heartRate: heartRate,
+            distance: distance,
+            completedIntervals: currentIntervalIndex,
+            averageHeartRate: heartRate, // TODO: Calculate actual average
+            maxHeartRate: heartRate // TODO: Track actual max
+        )
+        
+        // Store for later sync to iPhone
+        if let data = try? JSONEncoder().encode(results) {
+            UserDefaults.standard.set(data, forKey: "lastWorkoutResults")
+        }
     }
     
     // MARK: - Interval Management
     private func startIntervalTimer() {
-        guard currentIntervalIndex < intervals.count else { return }
+        guard currentIntervalIndex < intervals.count else { 
+            print("❌ Cannot start interval timer: index out of bounds")
+            return 
+        }
+        
+        // Stop any existing interval timer
+        intervalTimer?.invalidate()
         
         currentInterval = intervals[currentIntervalIndex]
         remainingIntervalTime = currentInterval?.duration ?? 0
+        
+        guard remainingIntervalTime > 0 else {
+            print("❌ Invalid interval duration: \(remainingIntervalTime)")
+            completeCurrentInterval()
+            return
+        }
+        
+        print("⏱ Starting interval \(currentIntervalIndex + 1)/\(intervals.count) - \(currentInterval?.type.displayName ?? "Unknown") for \(remainingIntervalTime)s")
         
         intervalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.updateInterval()
@@ -178,26 +259,35 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Interval completion
         if remainingIntervalTime <= 0 {
             completeCurrentInterval()
+            return
         }
         
-        // Warning haptics
-        if remainingIntervalTime == 3 {
+        // Warning haptics at 3, 2, 1 seconds remaining
+        if remainingIntervalTime <= 3 && remainingIntervalTime > 0 {
             playHapticFeedback(.notification)
         }
     }
     
     private func completeCurrentInterval() {
         intervalTimer?.invalidate()
+        intervalTimer = nil
+        
         playHapticFeedback(.directionUp)
+        print("✅ Completed interval \(currentIntervalIndex + 1)")
         
         currentIntervalIndex += 1
         
         if currentIntervalIndex < intervals.count {
             // Move to next interval
             workoutPhase = getCurrentPhase()
-            startIntervalTimer()
+            
+            // Small delay between intervals
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                self.startIntervalTimer()
+            }
         } else {
             // Workout complete
+            print("🎉 All intervals completed!")
             endWorkout()
         }
     }
@@ -211,11 +301,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         case .work: return .working
         case .rest: return .resting
         case .cooldown: return .cooling
+        default: return .working
         }
     }
     
     // MARK: - Timer Management
     private func startWorkoutTimer() {
+        // Stop any existing timer
+        workoutTimer?.invalidate()
+        
         workoutTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
             self?.updateElapsedTime()
         }
@@ -231,6 +325,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         intervalTimer?.invalidate()
         workoutTimer = nil
         intervalTimer = nil
+        print("⏹ Timers stopped")
     }
     
     private func resetMetrics() {
@@ -239,6 +334,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         distance = 0
         elapsedTime = 0
         remainingIntervalTime = 0
+        print("🔄 Metrics reset")
     }
     
     // MARK: - Haptic Feedback
