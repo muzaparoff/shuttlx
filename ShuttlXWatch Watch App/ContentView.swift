@@ -7,6 +7,7 @@
 
 import SwiftUI
 import WatchConnectivity
+import HealthKit
 
 // MARK: - Shared Training Models for watchOS
 
@@ -122,44 +123,6 @@ enum HeartRateZone: String, CaseIterable, Codable {
         case .moderate: return "70-80%"
         case .hard: return "80-90%"
         case .maximum: return "90-100%"
-        }
-    }
-}
-
-enum WorkoutPhase: String, CaseIterable {
-    case warmup = "warmup"
-    case running = "running"
-    case walking = "walking"
-    case cooldown = "cooldown"
-    case rest = "rest"
-    
-    var displayName: String {
-        switch self {
-        case .warmup: return "Warm Up"
-        case .running: return "Running"
-        case .walking: return "Walking"
-        case .cooldown: return "Cool Down"
-        case .rest: return "Rest"
-        }
-    }
-    
-    var color: Color {
-        switch self {
-        case .warmup: return .yellow
-        case .running: return .red
-        case .walking: return .blue
-        case .cooldown: return .purple
-        case .rest: return .gray
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .warmup: return "thermometer.medium"
-        case .running: return "hare.fill"
-        case .walking: return "tortoise.fill"
-        case .cooldown: return "snowflake"
-        case .rest: return "pause.circle.fill"
         }
     }
 }
@@ -534,7 +497,9 @@ struct TrainingDetailView: View {
                 
                 // Start Workout Button
                 Button(action: {
+                    print("🔥 Start Workout button pressed for program: \(program.name)")
                     isWorkoutActive = true
+                    print("🔥 Setting isWorkoutActive to true, will show WorkoutView sheet")
                 }) {
                     HStack {
                         Image(systemName: "play.fill")
@@ -554,6 +519,9 @@ struct TrainingDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isWorkoutActive) {
             WorkoutView(program: program)
+                .onAppear {
+                    print("🎬 WorkoutView sheet appeared for program: \(program.name)")
+                }
         }
     }
 }
@@ -585,63 +553,357 @@ struct StatsRow: View {
 struct WorkoutView: View {
     let program: TrainingProgram
     @Environment(\.dismiss) private var dismiss
-    @State private var currentPhase: WorkoutPhase = .running
-    @State private var timeRemaining: TimeInterval = 180 // 3 minutes
-    @State private var isActive = false
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @State private var selectedTab = 0
     
     var body: some View {
-        VStack(spacing: 20) {
+        TabView(selection: $selectedTab) {
+            // Main workout display
+            WorkoutMetricsView(program: program)
+                .tag(0)
+            
+            // Controls
+            WorkoutControlsView(program: program)
+                .tag(1)
+            
+            // Progress
+            WorkoutProgressView()
+                .tag(2)
+        }
+        .tabViewStyle(PageTabViewStyle())
+        .navigationBarHidden(true)
+        .onAppear {
+            print("🎯 WorkoutView onAppear - about to start workout with program: \(program.name)")
+            print("📱 WorkoutManager state before start: isActive=\(workoutManager.isWorkoutActive)")
+            
+            // Start the workout automatically with the selected program
+            workoutManager.startWorkout(from: program)
+            
+            print("📱 WorkoutManager state after start call: isActive=\(workoutManager.isWorkoutActive)")
+        }
+        .onDisappear {
+            // Clean up if needed when view disappears
+            if workoutManager.isWorkoutActive && workoutManager.workoutPhase != .completed {
+                // Optionally pause workout when view disappears
+                // workoutManager.pauseWorkout()
+            }
+        }
+    }
+}
+
+struct WorkoutMetricsView: View {
+    let program: TrainingProgram
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    
+    var body: some View {
+        VStack(spacing: 8) {
             // Program Name
             Text(program.name)
                 .font(.headline)
                 .foregroundColor(.orange)
+                .multilineTextAlignment(.center)
             
-            // Current Phase
-            VStack(spacing: 8) {
-                Text(currentPhase.rawValue.uppercased())
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(currentPhase.color)
-                
-                Text(formatTime(timeRemaining))
-                    .font(.largeTitle)
-                    .fontWeight(.bold)
+            // Timer
+            VStack {
+                Text(workoutManager.formattedElapsedTime)
+                    .font(.title)
                     .foregroundColor(.primary)
+                Text("ELAPSED TIME")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
             
-            // Controls
-            HStack(spacing: 20) {
-                Button(action: {
-                    isActive.toggle()
-                }) {
-                    Image(systemName: isActive ? "pause.fill" : "play.fill")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
-                        .background(Color.orange)
-                        .clipShape(Circle())
-                }
+            Divider()
+            
+            // Main metrics
+            HStack {
+                MetricView(
+                    value: "\(Int(workoutManager.heartRate))",
+                    unit: "BPM",
+                    label: "HEART RATE",
+                    color: .red
+                )
                 
-                Button(action: {
-                    dismiss()
-                }) {
-                    Image(systemName: "stop.fill")
-                        .font(.title2)
-                        .foregroundColor(.white)
-                        .frame(width: 50, height: 50)
-                        .background(Color.red)
-                        .clipShape(Circle())
+                MetricView(
+                    value: "\(Int(workoutManager.activeCalories))",
+                    unit: "CAL",
+                    label: "CALORIES",
+                    color: .orange
+                )
+            }
+            
+            // Distance (if available)
+            if workoutManager.distance > 0 {
+                MetricView(
+                    value: String(format: "%.2f", workoutManager.distance),
+                    unit: "KM",
+                    label: "DISTANCE",
+                    color: .green
+                )
+            }
+            
+            // Current interval info
+            if let currentInterval = workoutManager.currentInterval {
+                VStack(spacing: 4) {
+                    HStack {
+                        Image(systemName: currentInterval.type.icon)
+                            .foregroundColor(currentInterval.type.color)
+                        Text(currentInterval.type.displayName)
+                            .font(.headline)
+                            .foregroundColor(currentInterval.type.color)
+                    }
+                    
+                    HStack {
+                        Text("Interval \(workoutManager.currentIntervalIndex + 1) of \(workoutManager.totalIntervals)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Text(workoutManager.formattedIntervalTime)
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                    }
+                    
+                    ProgressView(value: workoutManager.intervalProgress)
+                        .progressViewStyle(LinearProgressViewStyle(tint: currentInterval.type.color))
+                }
+                .padding(.top, 8)
+            }
+        }
+        .padding()
+    }
+}
+
+struct MetricView: View {
+    let value: String
+    let unit: String
+    let label: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 2) {
+                Text(value)
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .foregroundColor(color)
+                
+                Text(unit)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            Text(label)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+    }
+}
+
+struct WorkoutControlsView: View {
+    let program: TrainingProgram
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(\.dismiss) private var dismiss
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Program info
+            Text(program.name)
+                .font(.headline)
+                .foregroundColor(.orange)
+                .multilineTextAlignment(.center)
+            
+            // Primary control button
+            Button(action: {
+                if workoutManager.isWorkoutActive {
+                    if workoutManager.isWorkoutPaused {
+                        workoutManager.resumeWorkout()
+                    } else {
+                        workoutManager.pauseWorkout()
+                    }
+                }
+            }) {
+                HStack {
+                    Image(systemName: workoutManager.isWorkoutPaused ? "play.fill" : "pause.fill")
+                    Text(workoutManager.isWorkoutPaused ? "Resume" : "Pause")
+                }
+                .font(.headline)
+                .foregroundColor(.white)
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(workoutManager.isWorkoutPaused ? .green : .orange)
+                .cornerRadius(25)
+            }
+            .buttonStyle(PlainButtonStyle())
+            .disabled(!workoutManager.isWorkoutActive)
+            
+            // Secondary controls
+            if workoutManager.isWorkoutActive {
+                HStack(spacing: 12) {
+                    // Skip interval
+                    Button(action: {
+                        workoutManager.skipToNextInterval()
+                    }) {
+                        VStack(spacing: 2) {
+                            Image(systemName: "forward.fill")
+                                .font(.title3)
+                            Text("Skip")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.blue)
+                        .frame(width: 60, height: 50)
+                        .background(Color.blue.opacity(0.2))
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // End workout
+                    Button(action: {
+                        workoutManager.endWorkout()
+                        dismiss()
+                    }) {
+                        VStack(spacing: 2) {
+                            Image(systemName: "stop.fill")
+                                .font(.title3)
+                            Text("End")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.red)
+                        .frame(width: 60, height: 50)
+                        .background(Color.red.opacity(0.2))
+                        .cornerRadius(12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                }
+            }
+            
+            // Workout completion handling
+            if workoutManager.workoutPhase == .completed {
+                VStack(spacing: 12) {
+                    Text("Workout Complete!")
+                        .font(.headline)
+                        .foregroundColor(.green)
+                    
+                    Button(action: {
+                        dismiss()
+                    }) {
+                        Text("Done")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding()
+                            .background(Color.green)
+                            .cornerRadius(25)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
         }
         .padding()
-        .navigationBarHidden(true)
     }
+}
+
+struct WorkoutProgressView: View {
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
     
-    private func formatTime(_ time: TimeInterval) -> String {
-        let minutes = Int(time) / 60
-        let seconds = Int(time) % 60
-        return String(format: "%02d:%02d", minutes, seconds)
+    var body: some View {
+        VStack(spacing: 16) {
+            // Overall progress
+            VStack(spacing: 8) {
+                Text("Workout Progress")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                CircularProgressView(
+                    progress: workoutManager.overallProgress,
+                    color: .blue
+                )
+                .frame(width: 80, height: 80)
+                
+                Text("\(Int(workoutManager.overallProgress * 100))% Complete")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Interval breakdown
+            if workoutManager.totalIntervals > 0 {
+                VStack(spacing: 8) {
+                    Text("Intervals")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                    
+                    HStack {
+                        Text("Completed")
+                        Spacer()
+                        Text("\(workoutManager.currentIntervalIndex) / \(workoutManager.totalIntervals)")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    
+                    // Progress bar
+                    ProgressView(value: Double(workoutManager.currentIntervalIndex) / Double(workoutManager.totalIntervals))
+                        .progressViewStyle(LinearProgressViewStyle(tint: .green))
+                }
+            }
+            
+            // Performance metrics
+            VStack(spacing: 6) {
+                Text("Performance")
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                
+                HStack {
+                    Text("Avg HR")
+                    Spacer()
+                    Text("\(Int(workoutManager.averageHeartRate)) BPM")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                
+                HStack {
+                    Text("Max HR")
+                    Spacer()
+                    Text("\(Int(workoutManager.maxHeartRate)) BPM")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+                
+                if workoutManager.distance > 0 {
+                    HStack {
+                        Text("Pace")
+                        Spacer()
+                        Text(workoutManager.formattedPace)
+                    }
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding()
+    }
+}
+
+struct CircularProgressView: View {
+    let progress: Double
+    let color: Color
+    
+    var body: some View {
+        ZStack {
+            Circle()
+                .stroke(color.opacity(0.2), lineWidth: 8)
+            
+            Circle()
+                .trim(from: 0, to: progress)
+                .stroke(color, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .animation(.easeInOut(duration: 0.3), value: progress)
+            
+            Text("\(Int(progress * 100))%")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(color)
+        }
     }
 }
 

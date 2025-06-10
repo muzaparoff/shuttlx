@@ -132,13 +132,70 @@ class WorkoutViewModel: NSObject, ObservableObject {
         
         currentSession?.endTime = Date()
         
+        // Save workout data
+        saveWorkoutSession()
+        
         // Audio coaching and accessibility announcements
         // audioCoachingManager.endWorkoutCoaching()
         // accessibilityManager.announceWorkoutEnd(duration: elapsedTimeText)
         // accessibilityManager.provideHapticFeedback(for: .workoutComplete)
         
-        
         print("🏁 Workout completed: \(elapsedTimeText)")
+    }
+    
+    private func saveWorkoutSession() {
+        guard let session = currentSession else {
+            print("❌ Cannot save workout: no session data")
+            return
+        }
+        
+        print("💾 Saving iOS workout session...")
+        
+        // Create workout results
+        let results = WorkoutResults(
+            workoutId: UUID(),
+            startDate: session.startTime,
+            endDate: session.endTime ?? Date(),
+            totalDuration: session.duration,
+            activeCalories: estimatedCalories,
+            heartRate: averageHeartRate ?? 0,
+            distance: totalDistance ?? 0,
+            completedIntervals: currentIntervalIndex,
+            averageHeartRate: averageHeartRate ?? 0,
+            maxHeartRate: averageHeartRate ?? 0 // TODO: Track actual max
+        )
+        
+        do {
+            // Save to UserDefaults for persistence
+            let data = try JSONEncoder().encode(results)
+            UserDefaults.standard.set(data, forKey: "lastWorkoutResults_iOS")
+            
+            // Also save to a list of all completed workouts
+            var allWorkouts: [WorkoutResults] = []
+            if let existingData = UserDefaults.standard.data(forKey: "completedWorkouts_iOS"),
+               let existing = try? JSONDecoder().decode([WorkoutResults].self, from: existingData) {
+                allWorkouts = existing
+            }
+            allWorkouts.append(results)
+            
+            // Keep only last 50 workouts to prevent excessive storage
+            if allWorkouts.count > 50 {
+                allWorkouts = Array(allWorkouts.suffix(50))
+            }
+            
+            let allWorkoutsData = try JSONEncoder().encode(allWorkouts)
+            UserDefaults.standard.set(allWorkoutsData, forKey: "completedWorkouts_iOS")
+            
+            print("✅ iOS workout data saved successfully")
+            print("   - Duration: \(session.duration)s")
+            print("   - Estimated Calories: \(estimatedCalories)")
+            print("   - Intervals completed: \(currentIntervalIndex)/\(session.intervals.count)")
+            print("   - Distance: \(totalDistance ?? 0)km")
+            print("   - Location points: \(routePoints.count)")
+            
+        } catch {
+            print("❌ Failed to save iOS workout data: \(error.localizedDescription)")
+        }
     }
     
     func skipInterval() {

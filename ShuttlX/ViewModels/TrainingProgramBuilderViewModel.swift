@@ -12,11 +12,21 @@ import SwiftUI
 class TrainingProgramBuilderViewModel: ObservableObject {
     @Published var programName: String = ""
     @Published var description: String = ""
-    @Published var distance: Double = 5.0
-    @Published var runInterval: Double = 2.0
-    @Published var walkInterval: Double = 1.0
-    @Published var difficulty: TrainingDifficulty = .intermediate
-    @Published var targetHeartRateZone: HeartRateZone = .moderate
+    @Published var distance: Double = 5.0 {
+        didSet { updateEstimatedCalories() }
+    }
+    @Published var runInterval: Double = 2.0 {
+        didSet { updateEstimatedCalories() }
+    }
+    @Published var walkInterval: Double = 1.0 {
+        didSet { updateEstimatedCalories() }
+    }
+    @Published var difficulty: TrainingDifficulty = .intermediate {
+        didSet { updateEstimatedCalories() }
+    }
+    @Published var targetHeartRateZone: HeartRateZone = .moderate {
+        didSet { updateEstimatedCalories() }
+    }
     
     private let trainingProgramManager = TrainingProgramManager.shared
     
@@ -38,6 +48,11 @@ class TrainingProgramBuilderViewModel: ObservableObject {
             for: buildProgram(),
             userProfile: userProfile
         )
+    }
+    
+    func updateEstimatedCalories() {
+        // Force UI update when calories need to be recalculated
+        objectWillChange.send()
     }
     
     private func getCurrentUserProfile() -> UserProfile? {
@@ -71,8 +86,13 @@ class TrainingProgramBuilderViewModel: ObservableObject {
     }
     
     func saveProgram() {
+        // Update calories one final time before saving
+        updateEstimatedCalories()
+        
         let program = buildProgram()
         trainingProgramManager.saveCustomProgram(program)
+        
+        print("✅ Saved custom training program: \(program.name) with \(program.estimatedCalories) estimated calories")
     }
 }
 

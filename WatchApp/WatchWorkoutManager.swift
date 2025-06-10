@@ -207,10 +207,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
     
     private func saveWorkoutData() {
+        print("💾 Saving workout data...")
+        
+        guard let startDate = startDate else {
+            print("❌ Cannot save workout: no start date")
+            return
+        }
+        
         // Save workout results for syncing back to iPhone
         let results = WorkoutResults(
             workoutId: UUID(),
-            startDate: startDate ?? Date(),
+            startDate: startDate,
             endDate: Date(),
             totalDuration: elapsedTime,
             activeCalories: activeCalories,
@@ -221,24 +228,72 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             maxHeartRate: heartRate // TODO: Track actual max
         )
         
-        // Store for later sync to iPhone
-        if let data = try? JSONEncoder().encode(results) {
+        do {
+            // Store for later sync to iPhone
+            let data = try JSONEncoder().encode(results)
             UserDefaults.standard.set(data, forKey: "lastWorkoutResults")
+            
+            // Also save to a list of all completed workouts
+            var allWorkouts: [WorkoutResults] = []
+            if let existingData = UserDefaults.standard.data(forKey: "completedWorkouts"),
+               let existing = try? JSONDecoder().decode([WorkoutResults].self, from: existingData) {
+                allWorkouts = existing
+            }
+            allWorkouts.append(results)
+            
+            // Keep only last 50 workouts to prevent excessive storage
+            if allWorkouts.count > 50 {
+                allWorkouts = Array(allWorkouts.suffix(50))
+            }
+            
+            let allWorkoutsData = try JSONEncoder().encode(allWorkouts)
+            UserDefaults.standard.set(allWorkoutsData, forKey: "completedWorkouts")
+            
+            // Try to save to HealthKit if we have a workout builder
+            if let builder = currentBuilder {
+                builder.finishWorkout { [weak self] (workout, error) in
+                    DispatchQueue.main.async {
+                        if let error = error {
+                            print("❌ Failed to save workout to HealthKit: \(error.localizedDescription)")
+                        } else if let workout = workout {
+                            print("✅ Workout saved to HealthKit successfully")
+                            print("   - Duration: \(workout.duration)s")
+                            print("   - Calories: \(self?.activeCalories ?? 0)")
+                            print("   - Distance: \(self?.distance ?? 0)m")
+                        }
+                    }
+                }
+            }
+            
+            print("✅ Workout data saved successfully")
+            print("   - Duration: \(elapsedTime)s")
+            print("   - Calories: \(activeCalories)")
+            print("   - Intervals completed: \(currentIntervalIndex)/\(intervals.count)")
+            print("   - Distance: \(distance)m")
+            
+        } catch {
+            print("❌ Failed to save workout data: \(error.localizedDescription)")
         }
     }
     
     // MARK: - Interval Management
     private func startIntervalTimer() {
         guard currentIntervalIndex < intervals.count else { 
-            print("❌ Cannot start interval timer: index out of bounds")
+            print("❌ Cannot start interval timer: index out of bounds (\(currentIntervalIndex) >= \(intervals.count))")
             return 
         }
         
         // Stop any existing interval timer
         intervalTimer?.invalidate()
+        intervalTimer = nil
         
         currentInterval = intervals[currentIntervalIndex]
-        remainingIntervalTime = currentInterval?.duration ?? 0
+        guard let interval = currentInterval else {
+            print("❌ Current interval is nil")
+            return
+        }
+        
+        remainingIntervalTime = interval.duration
         
         guard remainingIntervalTime > 0 else {
             print("❌ Invalid interval duration: \(remainingIntervalTime)")
@@ -246,10 +301,34 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
         
-        print("⏱ Starting interval \(currentIntervalIndex + 1)/\(intervals.count) - \(currentInterval?.type.displayName ?? "Unknown") for \(remainingIntervalTime)s")
+        print("⏱ Starting interval \(currentIntervalIndex + 1)/\(intervals.count) - \(interval.type.displayName) for \(remainingIntervalTime)s")
         
-        intervalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.updateInterval()
+        // Ensure timer runs on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.intervalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                
+                if self.isWorkoutActive && !self.isWorkoutPaused {
+                    self.updateInterval()
+                } else {
+                    print("⚠️ Timer running but workout not active/paused - stopping timer")
+                    timer.invalidate()
+                    self.intervalTimer = nil
+                }
+            }
+            
+            // Add timer to run loop to ensure it fires consistently
+            if let timer = self.intervalTimer {
+                RunLoop.current.add(timer, forMode: .common)
+                print("✅ Interval timer started successfully")
+            } else {
+                print("❌ Failed to create interval timer")
+            }
         }
     }
     
@@ -309,9 +388,36 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private func startWorkoutTimer() {
         // Stop any existing timer
         workoutTimer?.invalidate()
+        workoutTimer = nil
         
-        workoutTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            self?.updateElapsedTime()
+        print("⏱ Starting workout timer...")
+        
+        // Ensure timer runs on main thread
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            
+            self.workoutTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+                guard let self = self else {
+                    timer.invalidate()
+                    return
+                }
+                
+                if self.isWorkoutActive {
+                    self.updateElapsedTime()
+                } else {
+                    print("⚠️ Workout timer running but workout not active - stopping timer")
+                    timer.invalidate()
+                    self.workoutTimer = nil
+                }
+            }
+            
+            // Add timer to run loop to ensure it fires consistently
+            if let timer = self.workoutTimer {
+                RunLoop.current.add(timer, forMode: .common)
+                print("✅ Workout timer started successfully")
+            } else {
+                print("❌ Failed to create workout timer")
+            }
         }
     }
     

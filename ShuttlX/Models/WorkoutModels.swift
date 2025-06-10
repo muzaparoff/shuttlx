@@ -220,6 +220,20 @@ enum HeartRateZone: String, CaseIterable, Codable {
 // MARK: - Audio Coaching Settings
 // Note: AudioCoachingSettings is defined in AudioCoachingManager.swift
 
+// MARK: - Workout Results for Data Sync
+struct WorkoutResults: Codable {
+    let workoutId: UUID
+    let startDate: Date
+    let endDate: Date
+    let totalDuration: TimeInterval
+    let activeCalories: Double
+    let heartRate: Double
+    let distance: Double
+    let completedIntervals: Int
+    let averageHeartRate: Double
+    let maxHeartRate: Double
+}
+
 // MARK: - Haptic Feedback Settings
 struct HapticFeedbackSettings: Codable {
     let enabled: Bool
