@@ -506,6 +506,25 @@ struct TrainingDetailView: View {
                     StatsRow(icon: "figure.walk", label: "Walk Interval", value: "\(Int(program.walkInterval)) min")
                 }
                 
+                // TIMER DEBUG TEST BUTTON
+                Button(action: {
+                    print("🧪 [DEBUG-UI] Quick Timer Test button pressed")
+                    workoutManager.startQuickTest()
+                    isWorkoutActive = true
+                    print("🧪 [DEBUG-UI] Quick test started - showing WorkoutView")
+                }) {
+                    HStack {
+                        Image(systemName: "timer")
+                        Text("Quick Timer Test")
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                }
+                .padding(.horizontal)
+                
                 // Start Workout Button
                 Button(action: {
                     print("🔴 [UI-DEBUG] Start Workout button pressed for program: \(program.name)")

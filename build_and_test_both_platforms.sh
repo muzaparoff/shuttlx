@@ -652,13 +652,27 @@ build_and_deploy_watchos() {
             echo_success "App installation verified"
             echo_status "Launching watchOS app..."
             
+            # Try to add to dock for easier access
+            add_to_watch_dock "$watch_device_id" "com.shuttlx.ShuttlX.watchkitapp"
+            
             # Attempt to launch the app
             if xcrun simctl launch "$watch_device_id" com.shuttlx.ShuttlX.watchkitapp; then
                 echo_success "watchOS app launched successfully"
+                echo_status "📱 The app is now running on your Watch simulator!"
+                echo_status "💡 Note: watchOS apps don't appear on the main watch face by default"
+                echo_status "   To access the app later:"
+                echo_status "   1. Press the Digital Crown on the Watch"
+                echo_status "   2. Look for 'ShuttlXWatch' in the app grid"
+                echo_status "   3. Tap the app icon to open it"
                 return 0
             else
                 echo_warning "App installed but launch failed (this may be normal for watchOS)"
-                echo_status "You can manually launch the app in the Watch Simulator"
+                echo_status "🔧 Troubleshooting: The app is installed but didn't launch automatically"
+                echo_status "   Manual access steps:"
+                echo_status "   1. Press the Digital Crown on the Watch simulator"
+                echo_status "   2. Look for 'ShuttlXWatch' in the app grid"
+                echo_status "   3. Tap the app icon to open it"
+                echo_status "   4. Or try: xcrun simctl launch $watch_device_id com.shuttlx.ShuttlX.watchkitapp"
                 return 0  # Still consider this a success since the app is installed
             fi
         else
@@ -949,6 +963,27 @@ launch_watchos() {
         echo_error "watchOS app installation failed"
         return 1
     fi
+}
+
+# Function to try to add app to Watch dock (experimental)
+add_to_watch_dock() {
+    local watch_device_id="$1"
+    local bundle_id="$2"
+    
+    echo_status "Attempting to add app to Watch dock for easier access..."
+    
+    # Try to open the app in the background to make it recently used
+    xcrun simctl launch "$watch_device_id" "$bundle_id" > /dev/null 2>&1 || true
+    
+    # Small delay to let the app register
+    sleep 2
+    
+    # Kill the app so it's in "recently used" state
+    xcrun simctl terminate "$watch_device_id" "$bundle_id" > /dev/null 2>&1 || true
+    
+    echo_status "✨ App should now be accessible via:"
+    echo_status "   • Digital Crown → App Grid → ShuttlXWatch"
+    echo_status "   • Side Button (if recently used apps are shown)"
 }
 
 # MARK: - Watch Pairing Functions
