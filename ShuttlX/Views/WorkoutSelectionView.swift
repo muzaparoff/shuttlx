@@ -50,19 +50,22 @@ struct WorkoutSelectionView: View {
                 
                 Spacer()
                 
-                // Start Button
-                Button(action: startWorkout) {
-                    HStack {
-                        Image(systemName: "play.fill")
-                        Text("Start Workout")
-                            .fontWeight(.semibold)
-                    }
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.blue)
-                    .cornerRadius(12)
+                // Training Note
+                VStack(spacing: 8) {
+                    Text("Training Available on Apple Watch")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                        .foregroundColor(.secondary)
+                    
+                    Text("Use your Apple Watch to start and control workouts")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
                 }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(12)
                 .padding(.horizontal)
                 .padding(.bottom)
             }

@@ -46,35 +46,29 @@ class OnboardingViewModel: ObservableObject {
         isCreatingProfile = true
         profileCreationError = nil
         
-        do {
-            // Create user profile with collected information
-            var userProfile = UserProfile()
-            userProfile.name = "\(firstName) \(lastName)"
-            userProfile.email = email
-            userProfile.age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year ?? 25
-            userProfile.height = height * 100 // Convert meters to centimeters
-            userProfile.weight = weight
-            userProfile.fitnessLevel = fitnessLevel
-            userProfile.goals = selectedGoals
-            
-            // Add assessment results if available
-            if let assessment = assessmentResults {
-                userProfile.restingHeartRate = Int(assessment.restingHeartRate)
-                userProfile.estimatedVO2Max = assessment.estimatedVO2Max
-            }
-            
-            // Save the profile using UserProfileService
-            try await userProfileService.saveProfile(userProfile)
-            
-            // Mark onboarding as complete
-            UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
-            
-            print("User profile created successfully: \(userProfile.name)")
-            
-        } catch {
-            profileCreationError = "Failed to create profile: \(error.localizedDescription)"
-            print("Error creating user profile: \(error)")
+        // Create user profile with collected information
+        var userProfile = UserProfile()
+        userProfile.name = "\(firstName) \(lastName)"
+        userProfile.email = email
+        userProfile.age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year ?? 25
+        userProfile.height = height * 100 // Convert meters to centimeters
+        userProfile.weight = weight
+        userProfile.fitnessLevel = fitnessLevel
+        userProfile.goals = selectedGoals
+        
+        // Add assessment results if available
+        if let assessment = assessmentResults {
+            userProfile.restingHeartRate = Int(assessment.restingHeartRate)
+            userProfile.estimatedVO2Max = assessment.estimatedVO2Max
         }
+        
+        // Save the profile using UserProfileService
+        userProfileService.saveProfile(userProfile)
+        
+        // Mark onboarding as complete
+        UserDefaults.standard.set(true, forKey: "hasCompletedOnboarding")
+        
+        print("User profile created successfully: \(userProfile.name)")
         
         isCreatingProfile = false
     }
@@ -115,7 +109,7 @@ class OnboardingViewModel: ObservableObject {
             currentProfile.estimatedVO2Max = assessment.estimatedVO2Max
             currentProfile.fitnessLevel = assessment.recommendedStartingLevel
             
-            try await userProfileService.saveProfile(currentProfile)
+            userProfileService.saveProfile(currentProfile)
             print("Profile updated with assessment results")
         } catch {
             print("Error updating profile with assessment: \(error)")
@@ -153,12 +147,8 @@ struct AssessmentResults: Codable {
         // This is a simplified calculation
         let baseAge = 25
         let vo2Factor = (estimatedVO2Max - 40) / 2 // Adjust based on VO2 max
-        let heartRateFactor = (75 - restingHeartRate) / 5 // Adjust based on resting HR
+        let _ = (75 - restingHeartRate) / 5 // Adjust based on resting HR
         
-        return max(18, min(65, baseAge - Int(vo2Factor) - Int(heartRateFactory)))
-    }
-    
-    private var heartRateFactory: Double {
-        return (75 - restingHeartRate) / 5
+        return max(18, min(65, baseAge - Int(vo2Factor)))
     }
 }

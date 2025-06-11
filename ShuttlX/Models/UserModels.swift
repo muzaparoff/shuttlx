@@ -10,7 +10,7 @@ import Foundation
 // MARK: - User Profile for MVP
 
 struct UserProfile: Codable {
-    let id: UUID = UUID()
+    var id: UUID = UUID()
     var name: String = ""
     var email: String = ""
     var age: Int?
@@ -121,7 +121,7 @@ enum PrivacyLevel: String, Codable {
 // Workout command for user interactions
 struct WorkoutCommand: Codable {
     let action: WorkoutAction
-    let timestamp: Date = Date()
+    var timestamp: Date = Date()
 }
 
 enum WorkoutAction: String, Codable {

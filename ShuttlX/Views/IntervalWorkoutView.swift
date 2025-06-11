@@ -196,10 +196,22 @@ struct WorkoutSetupView: View {
             
             Spacer()
             
-            Button("Start Workout") {
-                serviceLocator.intervalTimer.startWorkout(selectedWorkout)
+            // Training Note
+            VStack(spacing: 8) {
+                Text("Training Available on Apple Watch")
+                    .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
+                
+                Text("Use your Apple Watch to start interval workouts")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            .buttonStyle(PrimaryButtonStyle(color: .blue))
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.gray.opacity(0.1))
+            .cornerRadius(12)
             .padding(.horizontal)
         }
         .padding()

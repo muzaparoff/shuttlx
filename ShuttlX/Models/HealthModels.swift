@@ -293,7 +293,7 @@ struct HealthExportData: Codable {
 
 // MARK: - Training Session
 struct TrainingSession: Codable, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let startTime: Date
     let endTime: Date
     let workoutType: String
@@ -328,7 +328,7 @@ struct TrainingSession: Codable, Identifiable {
 
 // MARK: - Achievement System
 struct Achievement: Codable, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let title: String
     let description: String
     let iconName: String

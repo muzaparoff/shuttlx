@@ -66,7 +66,7 @@ enum WorkoutType: String, CaseIterable, Codable {
 
 // MARK: - Workout Configuration
 struct WorkoutConfiguration: Codable, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let type: WorkoutType
     let name: String
     let description: String
@@ -88,7 +88,7 @@ struct WorkoutConfiguration: Codable, Identifiable {
 
 // MARK: - Workout Interval
 struct WorkoutInterval: Codable, Identifiable {
-    let id = UUID()
+    var id = UUID()
     let type: IntervalType
     let duration: TimeInterval
     let intensity: Intensity

@@ -7,11 +7,11 @@ struct ContentView: View {
     
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Interval Training Tab (Main focus)
-            WorkoutDashboardView()
+            // Statistics Tab (NEW HOME - was 2, now 0)
+            StatsView()
                 .tabItem {
-                    Image(systemName: "timer")
-                    Text("Intervals")
+                    Image(systemName: "chart.bar.fill")
+                    Text("Home")
                 }
                 .tag(0)
             
@@ -23,11 +23,11 @@ struct ContentView: View {
                 }
                 .tag(1)
             
-            // Statistics Tab
-            StatsView()
+            // Interval Training Tab 
+            WorkoutDashboardView()
                 .tabItem {
-                    Image(systemName: "chart.bar.fill")
-                    Text("Stats")
+                    Image(systemName: "timer")
+                    Text("Intervals")
                 }
                 .tag(2)
             

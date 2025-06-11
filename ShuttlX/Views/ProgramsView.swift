@@ -10,7 +10,7 @@ import SwiftUI
 // MARK: - Training Program Model for iOS
 
 struct TrainingProgram: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     var name: String
     var distance: Double // in kilometers
     var runInterval: Double // in minutes
@@ -487,23 +487,22 @@ struct ProgramDetailView: View {
                         StatCard(icon: "heart", title: "HR Zone", value: program.targetHeartRateZone.rawValue.capitalized, color: program.targetHeartRateZone.color)
                     }
                     
-                    // Start Workout Button
-                    Button(action: {
-                        // Start workout with this program
-                        dismiss()
-                        // TODO: Navigate to workout view with this program
-                    }) {
-                        HStack {
-                            Image(systemName: "play.fill")
-                            Text("Start Workout")
-                                .fontWeight(.semibold)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding()
-                        .background(Color.orange)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
+                    // Training Note
+                    VStack(spacing: 8) {
+                        Text("Training Available on Apple Watch")
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.secondary)
+                        
+                        Text("Use your Apple Watch to start this workout")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding()
+                    .background(Color.gray.opacity(0.1))
+                    .cornerRadius(12)
                     .padding(.top)
                 }
                 .padding()

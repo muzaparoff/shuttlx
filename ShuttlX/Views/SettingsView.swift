@@ -165,7 +165,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .onChange(of: settings) { newSettings in
+        .onChange(of: settings) { _, newSettings in
             SettingsService.shared.updateSettings(newSettings)
         }
     }

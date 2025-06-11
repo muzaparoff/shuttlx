@@ -17,23 +17,26 @@ struct WorkoutDashboardView: View {
             // Today's Summary Card
             TodaySummaryCard()
             
-            // Quick Start Workout Button
-            Button(action: {
-                showingWorkoutSelection = true
-            }) {
+            // Training Note
+            VStack(spacing: 8) {
                 HStack {
-                    Image(systemName: "play.circle.fill")
+                    Image(systemName: "applewatch")
                         .font(.title2)
-                    Text("Start Workout")
+                        .foregroundColor(.blue)
+                    Text("Training Available on Apple Watch")
                         .font(.headline)
                         .fontWeight(.semibold)
                 }
-                .frame(maxWidth: .infinity)
-                .padding()
-                .background(Color.blue)
-                .foregroundColor(.white)
-                .cornerRadius(12)
+                
+                Text("Use your Apple Watch to start and control workouts with real-time metrics")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
             }
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(Color.blue.opacity(0.1))
+            .cornerRadius(12)
             
             // Recent Activity
             if !serviceLocator.healthManager.recentWorkouts.isEmpty {

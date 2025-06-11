@@ -16,6 +16,9 @@ struct StatsView: View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
+                    // Today's Summary Section (NEW)
+                    todaysSummarySection
+                    
                     // Timeframe Picker
                     Picker("Timeframe", selection: $selectedTimeframe) {
                         Text("Week").tag(TimeFrame.week)
@@ -61,6 +64,9 @@ struct StatsView: View {
                     }
                     .padding(.horizontal)
                     
+                    // Training Programs Overview (NEW)
+                    trainingProgramsOverview
+                    
                     // Heart Rate Zones
                     HeartRateZonesCard()
                         .padding(.horizontal)
@@ -72,8 +78,110 @@ struct StatsView: View {
                     Spacer(minLength: 100)
                 }
             }
-            .navigationTitle("Statistics")
+            .navigationTitle("ShuttlX Home")
         }
+    }
+    
+    // MARK: - Today's Summary Section
+    private var todaysSummarySection: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Today's Activity")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                Spacer()
+                Text(Date().formatted(date: .abbreviated, time: .omitted))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Quick Today Stats
+            HStack(spacing: 20) {
+                TodayStatView(
+                    title: "Steps",
+                    value: "\(Int(serviceLocator.healthManager.todaySteps))",
+                    icon: "figure.walk",
+                    color: .blue,
+                    target: "10,000"
+                )
+                
+                TodayStatView(
+                    title: "Calories",
+                    value: "\(Int(serviceLocator.healthManager.todayCalories))",
+                    icon: "flame.fill",
+                    color: .orange,
+                    target: "500"
+                )
+                
+                TodayStatView(
+                    title: "Distance",
+                    value: String(format: "%.1f", serviceLocator.healthManager.todayDistance / 1000),
+                    icon: "location.fill",
+                    color: .green,
+                    target: "5.0 km"
+                )
+            }
+            
+            // Apple Watch Training Reminder
+            if serviceLocator.healthManager.todaySteps < 5000 {
+                HStack {
+                    Image(systemName: "applewatch")
+                        .foregroundColor(.blue)
+                    Text("Ready for a workout? Start training on your Apple Watch!")
+                        .font(.subheadline)
+                        .foregroundColor(.blue)
+                }
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(12)
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+        .padding(.horizontal)
+    }
+    
+    // MARK: - Training Programs Overview
+    private var trainingProgramsOverview: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text("Training Programs")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                Spacer()
+                NavigationLink("View All", destination: ProgramsView())
+                    .font(.subheadline)
+                    .foregroundColor(.blue)
+            }
+            
+            HStack(spacing: 20) {
+                ProgramStatBubble(
+                    title: "Available",
+                    value: "6", // TODO: Get from actual program manager
+                    icon: "list.bullet.circle.fill",
+                    color: .orange
+                )
+                
+                ProgramStatBubble(
+                    title: "Custom",
+                    value: "0", // TODO: Get from actual program manager
+                    icon: "star.circle.fill",
+                    color: .purple
+                )
+                
+                ProgramStatBubble(
+                    title: "Completed",
+                    value: "0", // TODO: Get from workout history
+                    icon: "checkmark.circle.fill",
+                    color: .green
+                )
+            }
+        }
+        .padding()
+        .background(.ultraThinMaterial)
+        .cornerRadius(16)
+        .padding(.horizontal)
     }
 }
 
@@ -248,5 +356,67 @@ enum TimeFrame: CaseIterable {
 struct StatsView_Previews: PreviewProvider {
     static var previews: some View {
         StatsView()
+    }
+}
+
+// MARK: - Today Stat View
+struct TodayStatView: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    let target: String
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            
+            VStack(spacing: 2) {
+                Text(value)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                
+                Text(title)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Text("/ \(target)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+// MARK: - Program Stat Bubble
+struct ProgramStatBubble: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.title2)
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.primary)
+            
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding()
+        .background(color.opacity(0.1))
+        .cornerRadius(12)
     }
 }

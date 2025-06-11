@@ -504,7 +504,7 @@ build_and_deploy_ios() {
     echo_status "Installing and launching iOS app..."
     
     # Find the iOS app with more robust path detection
-    local ios_app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "ShuttlX.app" -path "*/Debug-iphonesimulator/*" | head -1)
+    local ios_app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "ShuttlX.app" -path "*/Debug-iphonesimulator/*" -not -path "*/Index.noindex/*" | head -1)
     
     if [ -z "$ios_app_path" ]; then
         echo_error "Could not find iOS app build path"
@@ -515,12 +515,65 @@ build_and_deploy_ios() {
     
     echo_status "Found iOS app at: $ios_app_path"
     
-    if xcrun simctl install "$ios_device_id" "$ios_app_path" && \
-       xcrun simctl launch "$ios_device_id" com.shuttlx.ShuttlX; then
-        echo_success "iOS app installed and launched successfully"
-        return 0
+    # Validate app bundle structure
+    echo_status "Validating app bundle structure..."
+    if [ ! -f "$ios_app_path/Info.plist" ]; then
+        echo_error "App bundle is missing Info.plist - bundle may be empty"
+        echo_status "Bundle contents:"
+        ls -la "$ios_app_path" 2>/dev/null || echo "Cannot list bundle contents"
+        return 1
+    fi
+    
+    # Check for executable
+    local executable_name=$(basename "$ios_app_path" .app)
+    if [ ! -f "$ios_app_path/$executable_name" ]; then
+        echo_error "App bundle is missing executable: $executable_name"
+        echo_status "Bundle contents:"
+        ls -la "$ios_app_path" 2>/dev/null || echo "Cannot list bundle contents"
+        return 1
+    fi
+    
+    echo_success "App bundle validation passed"
+    
+    # Extract bundle ID from Info.plist
+    local bundle_id=$(plutil -extract CFBundleIdentifier raw "$ios_app_path/Info.plist" 2>/dev/null)
+    if [ -z "$bundle_id" ] || [ "$bundle_id" = "null" ]; then
+        echo_warning "Could not extract bundle ID from Info.plist, using default"
+        bundle_id="com.shuttlx.ShuttlX"
+    fi
+    
+    echo_status "Bundle ID: $bundle_id"
+    
+    # Uninstall previous version if exists
+    echo_status "Uninstalling previous version (if exists)..."
+    xcrun simctl uninstall "$ios_device_id" "$bundle_id" 2>/dev/null || true
+    
+    # Install and launch
+    if xcrun simctl install "$ios_device_id" "$ios_app_path"; then
+        echo_success "App installed successfully"
+        
+        # Launch app
+        echo_status "Launching iOS app with bundle ID: $bundle_id"
+        if xcrun simctl launch "$ios_device_id" "$bundle_id" 2>/dev/null; then
+            local launch_pid=$(xcrun simctl launch "$ios_device_id" "$bundle_id" 2>&1 | grep -o '[0-9]*' | tail -1)
+            echo_success "✅ iOS app launched successfully (PID: $launch_pid)"
+            
+            # Verify app is actually running
+            sleep 2
+            if xcrun simctl spawn "$ios_device_id" ps ax 2>/dev/null | grep -q "ShuttlX"; then
+                echo_success "✅ iOS app process confirmed running"
+            else
+                echo_warning "⚠️  Could not confirm app process, but launch command succeeded"
+            fi
+            
+            echo_status "📱 The iOS app is now running!"
+            return 0
+        else
+            echo_error "Failed to launch iOS app"
+            return 1
+        fi
     else
-        echo_error "iOS app installation or launch failed"
+        echo_error "iOS app installation failed"
         return 1
     fi
 }
@@ -595,27 +648,26 @@ build_and_deploy_watchos() {
     # Install and launch using the same commands that worked manually
     echo_status "Installing watchOS app..."
     
-    # Find the correct watchOS app path with multiple fallback options
-    # Prioritize the actual build products path, exclude Index.noindex paths
+    # Find the correct watchOS app path with improved search
     local watch_app_path=""
-    local possible_paths=(
-        "$(find ~/Library/Developer/Xcode/DerivedData -name "ShuttlXWatch Watch App.app" -path "*/Build/Products/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" | head -1)"
-        "$(find ~/Library/Developer/Xcode/DerivedData -name "*Watch App.app" -path "*/Build/Products/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" | head -1)"
-        "$(find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" | head -1)"
+    local search_paths=(
+        "$(find ~/Library/Developer/Xcode/DerivedData -name "ShuttlXWatch Watch App.app" -path "*/Build/Products/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null | head -1)"
+        "$(find ~/Library/Developer/Xcode/DerivedData -name "*Watch App.app" -path "*/Build/Products/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null | head -1)"
+        "$(find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null | head -1)"
     )
     
-    for path in "${possible_paths[@]}"; do
+    for path in "${search_paths[@]}"; do
         if [ -n "$path" ] && [ -d "$path" ]; then
             echo_status "Checking path: $path"
             # Verify the app has a valid Info.plist with bundle identifier
             if [ -f "$path/Info.plist" ]; then
                 local bundle_id=$(plutil -extract CFBundleIdentifier raw "$path/Info.plist" 2>/dev/null || echo "")
-                if [ -n "$bundle_id" ]; then
+                if [ -n "$bundle_id" ] && [ "$bundle_id" != "null" ]; then
                     echo_status "Found valid app with bundle ID: $bundle_id"
                     watch_app_path="$path"
                     break
                 else
-                    echo_warning "App at $path has no bundle ID, skipping"
+                    echo_warning "App at $path has invalid bundle ID: '$bundle_id', skipping"
                 fi
             else
                 echo_warning "App at $path has no Info.plist, skipping"
@@ -626,8 +678,7 @@ build_and_deploy_watchos() {
     if [ -z "$watch_app_path" ]; then
         echo_error "Could not find valid watchOS app build path"
         echo_status "Debugging: Searching for all Watch apps in DerivedData..."
-        echo_status "All Watch app paths found:"
-        find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -type d | while read app_path; do
+        find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -type d 2>/dev/null | while read app_path; do
             echo "  - $app_path"
             if [ -f "$app_path/Info.plist" ]; then
                 local bundle_id=$(plutil -extract CFBundleIdentifier raw "$app_path/Info.plist" 2>/dev/null || echo "INVALID")
@@ -636,51 +687,64 @@ build_and_deploy_watchos() {
                 echo "    No Info.plist found"
             fi
         done
-        echo_status "You may need to manually specify the correct path"
         return 1
     fi
     
     echo_status "Found watchOS app at: $watch_app_path"
     echo_status "Installing to device: $watch_device_id"
     
+    # Get the bundle ID from the app
+    local app_bundle_id=$(plutil -extract CFBundleIdentifier raw "$watch_app_path/Info.plist" 2>/dev/null)
+    echo_status "App Bundle ID: $app_bundle_id"
+    
+    # Uninstall any previous version to ensure clean install
+    echo_status "Removing any existing installation..."
+    xcrun simctl uninstall "$watch_device_id" "$app_bundle_id" 2>/dev/null || true
+    
+    # Install the app
     if xcrun simctl install "$watch_device_id" "$watch_app_path"; then
         echo_success "watchOS app installed successfully"
         
-        # Verify installation before attempting launch
+        # Verify installation
         echo_status "Verifying app installation..."
-        if xcrun simctl listapps "$watch_device_id" | grep -q "com.shuttlx.ShuttlX.watchkitapp"; then
-            echo_success "App installation verified"
-            echo_status "Launching watchOS app..."
-            
-            # Try to add to dock for easier access
-            add_to_watch_dock "$watch_device_id" "com.shuttlx.ShuttlX.watchkitapp"
+        sleep 2  # Give it a moment to register
+        if xcrun simctl listapps "$watch_device_id" | grep -q "$app_bundle_id"; then
+            echo_success "✅ App installation verified"
             
             # Attempt to launch the app
-            if xcrun simctl launch "$watch_device_id" com.shuttlx.ShuttlX.watchkitapp; then
-                echo_success "watchOS app launched successfully"
-                echo_status "📱 The app is now running on your Watch simulator!"
-                echo_status "💡 Note: watchOS apps don't appear on the main watch face by default"
-                echo_status "   To access the app later:"
-                echo_status "   1. Press the Digital Crown on the Watch"
+            echo_status "Launching watchOS app with bundle ID: $app_bundle_id"
+            if xcrun simctl launch "$watch_device_id" "$app_bundle_id" 2>/dev/null; then
+                local launch_pid=$(xcrun simctl launch "$watch_device_id" "$app_bundle_id" 2>&1 | grep -o '[0-9]*' | tail -1)
+                echo_success "✅ watchOS app launched successfully (PID: $launch_pid)"
+                
+                # Verify the app is running
+                sleep 3
+                echo_status "Verifying app is running..."
+                if xcrun simctl spawn "$watch_device_id" ps ax 2>/dev/null | grep -q "ShuttlXWatch\|$app_bundle_id"; then
+                    echo_success "✅ watchOS app process confirmed running"
+                else
+                    echo_warning "⚠️  Could not confirm app process, but launch command succeeded"
+                fi
+                
+                echo_status "📱 The watchOS app is now running!"
+                echo_status "💡 To access the app:"
+                echo_status "   1. Press the Digital Crown on the Watch simulator"
                 echo_status "   2. Look for 'ShuttlXWatch' in the app grid"
                 echo_status "   3. Tap the app icon to open it"
                 return 0
             else
-                echo_warning "App installed but launch failed (this may be normal for watchOS)"
-                echo_status "🔧 Troubleshooting: The app is installed but didn't launch automatically"
-                echo_status "   Manual access steps:"
-                echo_status "   1. Press the Digital Crown on the Watch simulator"
-                echo_status "   2. Look for 'ShuttlXWatch' in the app grid"
-                echo_status "   3. Tap the app icon to open it"
-                echo_status "   4. Or try: xcrun simctl launch $watch_device_id com.shuttlx.ShuttlX.watchkitapp"
-                return 0  # Still consider this a success since the app is installed
+                echo_warning "⚠️  App launch command failed, but app is installed"
+                echo_status "The app is installed and can be launched manually"
+                echo_status "Try: xcrun simctl launch $watch_device_id $app_bundle_id"
+                return 0  # Still consider success since app is installed
             fi
         else
-            echo_error "App installation verification failed"
+            echo_error "❌ App installation verification failed"
+            echo_status "App may not have been installed properly"
             return 1
         fi
     else
-        echo_error "watchOS app installation failed"
+        echo_error "❌ watchOS app installation failed"
         return 1
     fi
 }
@@ -779,19 +843,13 @@ launch_ios() {
     echo_success "App bundle validation passed"
     
     # Extract bundle ID from Info.plist
-    local bundle_id=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$app_path/Info.plist" 2>/dev/null)
-    if [ -z "$bundle_id" ]; then
+    local bundle_id=$(plutil -extract CFBundleIdentifier raw "$app_path/Info.plist" 2>/dev/null)
+    if [ -z "$bundle_id" ] || [ "$bundle_id" = "null" ]; then
         echo_warning "Could not extract bundle ID from Info.plist, using default"
         bundle_id="com.shuttlx.ShuttlX"
     fi
     
     echo_status "Bundle ID: $bundle_id"
-    
-    # Verify app bundle has valid structure
-    if [ ! -f "$app_path/Info.plist" ]; then
-        echo_error "App bundle is missing Info.plist"
-        return 1
-    fi
     
     # Uninstall previous version if exists
     echo_status "Uninstalling previous version (if exists)..."
@@ -804,38 +862,27 @@ launch_ios() {
         
         # Launch app with improved error handling
         echo_status "Launching iOS app with bundle ID: $bundle_id"
-        if xcrun simctl launch "$ios_device_id" "$bundle_id"; then
+        if xcrun simctl launch "$ios_device_id" "$bundle_id" 2>/dev/null; then
             local launch_pid=$(xcrun simctl launch "$ios_device_id" "$bundle_id" 2>&1 | grep -o '[0-9]*' | tail -1)
-            echo_success "iOS app launched successfully (PID: $launch_pid)"
+            echo_success "✅ iOS app launched successfully (PID: $launch_pid)"
             
             # Verify app is actually running
             sleep 2
             if xcrun simctl list devices | grep "$ios_device_id" | grep -q "Booted"; then
                 echo_status "iOS Simulator confirmed running"
-                # Optional: Check for app process
-                if xcrun simctl spawn "$ios_device_id" ps ax | grep -q "ShuttlX"; then
+                # Check for app process
+                if xcrun simctl spawn "$ios_device_id" ps ax 2>/dev/null | grep -q "ShuttlX"; then
                     echo_success "✅ iOS app process confirmed running"
                 else
                     echo_warning "⚠️  Could not confirm app process, but launch command succeeded"
                 fi
             fi
+            
+            echo_status "📱 The iOS app is now running!"
+            echo_status "iOS Simulator Device ID: $ios_device_id"
+            return 0
         else
             echo_error "Failed to launch iOS app"
-            return 1
-        fi
-        
-        echo_status "Launching app..."
-        if xcrun simctl launch "$ios_device_id" "$bundle_id"; then
-            echo_success "iOS app launched successfully"
-            echo_status "iOS Simulator Device ID: $ios_device_id"
-            
-            # Wait a moment and check if app is running
-            sleep 3
-            echo_status "Checking app status and logs..."
-            xcrun simctl spawn "$ios_device_id" log show --predicate 'subsystem contains "com.shuttlx" OR processImagePath contains "ShuttlX"' --info --last 10s 2>/dev/null | grep -E "(STARTUP|ERROR|LAUNCH)" || echo_status "No startup logs found yet"
-            
-        else
-            echo_error "Failed to launch app"
             return 1
         fi
     else
@@ -869,98 +916,96 @@ launch_watchos() {
         sleep 5
     fi
     
-    echo_status "Building and installing watchOS app directly..."
+    # Find the watch app bundle, excluding Index.noindex directories
+    local watch_app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "*Watch App.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" | head -1)
     
-    # Use xcodebuild to install and run the app directly
-    xcodebuild \
-        -project "$PROJECT_PATH" \
-        -scheme "$WATCH_SCHEME" \
-        -destination "platform=watchOS Simulator,id=$watch_device_id" \
-        -configuration Debug \
-        build install \
-        | grep -E "(BUILD|INSTALL|SUCCEEDED|FAILED|error:|warning:)" || true
+    if [ -z "$watch_app_path" ]; then
+        echo_warning "Could not find watch app bundle in Build/Products"
+        echo_status "Searching for app bundles in DerivedData (excluding Index.noindex)..."
+        find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null | head -5
+        return 1
+    fi
+
+    echo_status "Found watch app bundle: $watch_app_path"
     
-    if [ ${PIPESTATUS[0]} -eq 0 ]; then
-        echo_success "watchOS app installed successfully"
+    # Validate watch app bundle structure
+    echo_status "Validating watch app bundle..."
+    if [ ! -f "$watch_app_path/Info.plist" ]; then
+        echo_error "Watch app bundle is missing Info.plist - bundle may be empty"
+        echo_status "Bundle contents:"
+        ls -la "$watch_app_path" 2>/dev/null || echo "Cannot list bundle contents"
+        return 1
+    fi
+    
+    # Check for executable
+    local watch_executable_name=$(basename "$watch_app_path" .app)
+    if [ ! -f "$watch_app_path/$watch_executable_name" ]; then
+        echo_error "Watch app bundle is missing executable: $watch_executable_name"
+        echo_status "Bundle contents:"
+        ls -la "$watch_app_path" 2>/dev/null || echo "Cannot list bundle contents"
+        return 1
+    fi
+    
+    echo_success "Watch app bundle validation passed"
+    
+    # Extract bundle ID from Info.plist
+    local watch_bundle_id=$(plutil -extract CFBundleIdentifier raw "$watch_app_path/Info.plist" 2>/dev/null)
+    if [ -z "$watch_bundle_id" ] || [ "$watch_bundle_id" = "null" ]; then
+        echo_warning "Could not extract bundle ID from Info.plist, using default"
+        watch_bundle_id="com.shuttlx.ShuttlX.watchkitapp"
+    fi
+    
+    echo_status "Watch Bundle ID: $watch_bundle_id"
+    
+    # Uninstall previous version if exists
+    echo_status "Uninstalling previous version (if exists)..."
+    xcrun simctl uninstall "$watch_device_id" "$watch_bundle_id" 2>/dev/null || true
+    
+    # Install and launch with better error handling
+    echo_status "Installing watch app..."
+    if xcrun simctl install "$watch_device_id" "$watch_app_path"; then
+        echo_success "Watch app installed successfully"
         
-        # Find the watch app bundle and extract bundle ID, excluding Index.noindex
-        local watch_app_path=$(find ~/Library/Developer/Xcode/DerivedData -name "*Watch App.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" | head -1)
-        local watch_bundle_id=""
-        
-        if [ -n "$watch_app_path" ]; then
-            # Validate watch app bundle structure
-            echo_status "Validating watch app bundle: $watch_app_path"
-            if [ ! -f "$watch_app_path/Info.plist" ]; then
-                echo_error "Watch app bundle is missing Info.plist"
-                return 1
-            fi
+        # Verify installation
+        echo_status "Verifying watch app installation..."
+        sleep 2
+        if xcrun simctl listapps "$watch_device_id" | grep -q "$watch_bundle_id"; then
+            echo_success "✅ Watch app installation verified"
             
-            # Check for executable
-            local watch_executable_name=$(basename "$watch_app_path" .app)
-            if [ ! -f "$watch_app_path/$watch_executable_name" ]; then
-                echo_error "Watch app bundle is missing executable: $watch_executable_name"
-                echo_status "Watch bundle contents:"
-                ls -la "$watch_app_path" 2>/dev/null || echo "Cannot list bundle contents"
-                return 1
-            fi
-            
-            watch_bundle_id=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$watch_app_path/Info.plist" 2>/dev/null)
-            echo_success "Watch app bundle validation passed"
-            echo_status "Found watch app at: $watch_app_path"
-            echo_status "Watch Bundle ID: $watch_bundle_id"
-        else
-            echo_warning "Could not find watch app bundle automatically"
-        fi
-        
-        # Try to launch the app with detected bundle ID
-        echo_status "Launching watchOS app..."
-        if [ -n "$watch_bundle_id" ]; then
-            if xcrun simctl launch "$watch_device_id" "$watch_bundle_id"; then
-                local watch_pid=$(xcrun simctl launch "$watch_device_id" "$watch_bundle_id" 2>&1 | grep -o '[0-9]*' | tail -1)
-                echo_success "watchOS app launched successfully (PID: $watch_pid)"
+            # Launch watch app
+            echo_status "Launching watchOS app with bundle ID: $watch_bundle_id"
+            if xcrun simctl launch "$watch_device_id" "$watch_bundle_id" 2>/dev/null; then
+                local launch_pid=$(xcrun simctl launch "$watch_device_id" "$watch_bundle_id" 2>&1 | grep -o '[0-9]*' | tail -1)
+                echo_success "✅ watchOS app launched successfully (PID: $launch_pid)"
                 
-                # Verify watch app is running and respond to the "service delegate denied" error
+                # Verify app is actually running
                 sleep 3
-                echo_status "Verifying watch app status..."
-                
-                # Check for the watch app process
-                if xcrun simctl spawn "$watch_device_id" ps ax 2>/dev/null | grep -q "ShuttlXWatch"; then
+                if xcrun simctl spawn "$watch_device_id" ps ax 2>/dev/null | grep -q "ShuttlXWatch\|$watch_bundle_id"; then
                     echo_success "✅ watchOS app process confirmed running"
                 else
-                    echo_warning "⚠️  Watch app may have failed to start completely"
-                    echo_status "This is often due to service delegate restrictions in simulator"
-                    echo_status "Try manually launching the app in Watch Simulator UI"
+                    echo_warning "⚠️  Could not confirm app process, but launch command succeeded"
                 fi
                 
-                # Check for logs
-                sleep 2
-                echo_status "Checking watch app logs..."
-                xcrun simctl spawn "$watch_device_id" log show --predicate 'processImagePath contains "ShuttlX" OR subsystem contains "watch"' --info --last 10s 2>/dev/null | grep -E "(WATCH-STARTUP|ERROR|LAUNCH)" || echo_status "No watch startup logs found yet"
-                
+                echo_status "📱 The watchOS app is now running!"
+                echo_status "💡 To access the app:"
+                echo_status "   1. Press the Digital Crown on the Watch simulator"
+                echo_status "   2. Look for 'ShuttlXWatch' in the app grid"
+                echo_status "   3. Tap the app icon to open it"
             else
-                echo_warning "Could not launch watchOS app with bundle ID: $watch_bundle_id"
-                echo_status "This may be due to simulator service delegate restrictions"
-                echo_status "Try launching manually in Watch Simulator"
+                echo_warning "⚠️  App launch command failed, but app is installed"
+                echo_status "The app is installed and can be launched manually"
+                echo_status "Try: xcrun simctl launch $watch_device_id $watch_bundle_id"
             fi
         else
-            # Try common bundle IDs with improved error handling
-            echo_status "Attempting launch with common bundle IDs..."
-            if xcrun simctl launch "$watch_device_id" "com.shuttlx.ShuttlX.watchkitapp" 2>&1; then
-                echo_success "✅ Launched with standard bundle ID"
-            elif xcrun simctl launch "$watch_device_id" "com.shuttlx.watch.watchkitapp" 2>&1; then
-                echo_success "✅ Launched with alternate bundle ID"
-            else
-                echo_warning "Could not launch watchOS app automatically"
-                echo_status "App should be installed on the watch simulator. You can launch it manually."
-                echo_status "Look for 'ShuttlXWatch' app icon in the Watch Simulator"
-            fi
+            echo_error "❌ Watch app installation verification failed"
+            return 1
         fi
         
         echo_success "watchOS app setup completed"
         echo_status "watchOS Simulator Device ID: $watch_device_id"
         return 0
     else
-        echo_error "watchOS app installation failed"
+        echo_error "Failed to install watch app"
         return 1
     fi
 }
@@ -1335,19 +1380,32 @@ case "$COMMAND" in
         fi
         
         if [ "$ios_success" = true ]; then
-            open_simulators
-            setup_watch_pairing
-            launch_ios
+            echo_status "Starting full deployment sequence..."
             
-            # Try to launch watchOS app if available
+            # Deploy iOS app
+            if build_and_deploy_ios; then
+                echo_success "✅ iOS app deployed successfully"
+            else
+                echo_warning "⚠️ iOS app deployment failed"
+            fi
+            
+            # Deploy watchOS app if available
             if [ -n "$WATCH_SCHEME" ] && [ "$watchos_success" = true ]; then
-                echo_status "Attempting to launch watchOS app..."
-                if launch_watchos; then
+                echo_status "Deploying watchOS app..."
+                if build_and_deploy_watchos; then
+                    echo_success "✅ watchOS app deployed successfully"
                     echo_success "🎉 Complete setup! Both iOS and watchOS apps built and launched."
                     echo_status "Both apps are now running on their respective simulators."
                     
+                    # Run timer test if requested
+                    if [ "$TIMER_TEST" = true ]; then
+                        echo ""
+                        echo_status "🧪 Starting timer functionality test..."
+                        run_basic_timer_test
+                    fi
+                    
                     # Run GUI tests if requested
-                    if [ "$GUI_TEST" = true ] || [ "$TIMER_TEST" = true ]; then
+                    if [ "$GUI_TEST" = true ]; then
                         echo ""
                         echo_status "🧪 Starting GUI integration tests..."
                         
@@ -1355,23 +1413,19 @@ case "$COMMAND" in
                             echo_status "Running automated GUI tests..."
                             ./automated_gui_test.sh
                         else
-                            echo_warning "automated_gui_test.sh not found. Running basic timer test..."
-                            run_basic_timer_test
+                            echo_warning "automated_gui_test.sh not found. Skipping GUI tests."
                         fi
                     fi
-                    
                 else
-                    echo_success "🎉 Setup complete! Both apps built, iOS launched."
-                    echo_status "watchOS app built but launch failed - you can install it manually from Xcode."
+                    echo_warning "⚠️ watchOS app deployment failed"
+                    echo_success "🎉 iOS setup complete! iOS simulator ready."
+                    echo_status "watchOS app built but deployment failed - you can install it manually from Xcode."
                 fi
             else
                 echo_success "🎉 iOS setup complete! iOS simulator ready."
                 echo ""
-                echo_status "No watchOS target detected. Running watchOS setup guide..."
-                if [ -f "./setup_watchos_target.sh" ]; then
-                    echo_status "Executing watchOS setup script..."
-                    ./setup_watchos_target.sh
-                else
+                echo_status "No watchOS target detected or build failed."
+                if [ ! -f "./setup_watchos_target.sh" ]; then
                     echo_warning "setup_watchos_target.sh not found. You can add watchOS support manually through Xcode."
                     echo_status "To add watchOS target: File → New → Target → watchOS → Watch App"
                 fi

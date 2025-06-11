@@ -277,7 +277,7 @@ class WorkoutViewModel: NSObject, ObservableObject {
         let intervalMinute = Int(elapsedDuration) / 60
         if intervalMinute > 0 && Int(elapsedDuration) % 120 == 0 { // Every 2 minutes
             let remainingTime = totalDuration - elapsedDuration
-            let timeRemaining = formatTime(remainingTime)
+            let _ = formatTime(remainingTime)
             
             // audioCoachingManager.announceProgress(
             //     completed: currentIntervalIndex + 1,
@@ -293,7 +293,7 @@ class WorkoutViewModel: NSObject, ObservableObject {
         
         // Heart rate zone announcements
         if let avgHeartRate = averageHeartRate, Int(elapsedDuration) % 180 == 0 { // Every 3 minutes
-            let zone = getHeartRateZone(heartRate: avgHeartRate)
+            let _ = getHeartRateZone(heartRate: avgHeartRate)
             // audioCoachingManager.announceHeartRate(zone: zone)
             // accessibilityManager.announceHeartRate(current: Int(avgHeartRate), zone: zone)
         }
@@ -315,7 +315,7 @@ class WorkoutViewModel: NSObject, ObservableObject {
         guard let session = currentSession else { return }
         
         // Announce interval completion
-        if let currentInterval = currentInterval {
+        if currentInterval != nil {
             // accessibilityManager.provideHapticFeedback(for: .intervalEnd)
         }
         
@@ -329,13 +329,13 @@ class WorkoutViewModel: NSObject, ObservableObject {
             updateNextInterval()
             
             // Announce new interval
-            if let interval = currentInterval {
+            if currentInterval != nil {
                 // audioCoachingManager.announceInterval(
                 //     type: interval.type.displayName,
                 //     duration: Int(interval.duration)
                 // )
                 
-                let nextIntervalText = nextInterval?.type.displayName
+                let _ = nextInterval?.type.displayName
                 // accessibilityManager.announceIntervalChange(
                 //     current: interval.type.displayName,
                 //     next: nextIntervalText

@@ -243,10 +243,10 @@ struct PhysicalInfoStep: View {
             Spacer()
         }
         .padding()
-        .onChange(of: heightCm) { newValue in
+        .onChange(of: heightCm) { _, newValue in
             height = newValue / 100 // Convert to meters
         }
-        .onChange(of: weightKg) { newValue in
+        .onChange(of: weightKg) { _, newValue in
             weight = newValue
         }
         .onAppear {

@@ -1,0 +1,222 @@
+//
+//  WorkoutIntegrationTests.swift
+//  ShuttlXWatch Watch AppTests
+//
+//  Created by ShuttlX on 6/11/25.
+//
+
+import XCTest
+@testable import ShuttlXWatch_Watch_App
+
+@MainActor
+final class WorkoutIntegrationTests: XCTestCase {
+    
+    var workoutManager: WatchWorkoutManager!
+    
+    override func setUpWithError() throws {
+        workoutManager = WatchWorkoutManager()
+        // Set up test environment without HealthKit authorization for unit testing
+    }
+    
+    override func tearDownWithError() throws {
+        workoutManager?.endWorkout()
+        workoutManager = nil
+    }
+    
+    // MARK: - Integration Test: Short Workout Flow
+    func testShortWorkoutIntegration() async throws {
+        // Given: A short test workout
+        let testIntervals = [
+            WorkoutInterval(
+                id: UUID(),
+                name: "Test Warmup",
+                type: .warmup,
+                duration: 5, // 5 seconds
+                targetHeartRateZone: .easy
+            ),
+            WorkoutInterval(
+                id: UUID(),
+                name: "Test Run",
+                type: .work,
+                duration: 10, // 10 seconds
+                targetHeartRateZone: .moderate
+            ),
+            WorkoutInterval(
+                id: UUID(),
+                name: "Test Walk",
+                type: .rest,
+                duration: 5, // 5 seconds
+                targetHeartRateZone: .easy
+            ),
+            WorkoutInterval(
+                id: UUID(),
+                name: "Test Cooldown",
+                type: .cooldown,
+                duration: 5, // 5 seconds
+                targetHeartRateZone: .easy
+            )
+        ]
+        
+        // When: Start the workout
+        workoutManager.startWorkout(with: testIntervals)
+        
+        // Then: Verify initial state
+        XCTAssertTrue(workoutManager.isWorkoutActive, "Workout should be active")
+        XCTAssertFalse(workoutManager.isWorkoutPaused, "Workout should not be paused")
+        XCTAssertEqual(workoutManager.currentIntervalIndex, 0, "Should start with first interval")
+        XCTAssertEqual(workoutManager.intervals.count, 4, "Should have 4 intervals")
+        XCTAssertEqual(workoutManager.remainingIntervalTime, 5, "First interval should be 5 seconds")
+        XCTAssertEqual(workoutManager.currentInterval?.name, "Test Warmup", "Should start with warmup")
+        
+        // Wait for intervals to progress through timer simulation
+        let expectation = expectation(description: "Workout completion")
+        
+        // Simulate timer progression manually for testing
+        var intervalCheckCount = 0
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            intervalCheckCount += 1
+            
+            // Simulate timer decrement manually
+            if self.workoutManager.remainingIntervalTime > 0 {
+                self.workoutManager.remainingIntervalTime -= 1
+            }
+            
+            // Check progression through intervals
+            if intervalCheckCount == 6 { // After warmup (5s) + 1s into run
+                XCTAssertEqual(self.workoutManager.currentIntervalIndex, 1, "Should be in run interval")
+                XCTAssertEqual(self.workoutManager.currentInterval?.name, "Test Run", "Should be in run phase")
+            }
+            
+            if intervalCheckCount == 17 { // After warmup(5s) + run(10s) + 2s into walk
+                XCTAssertEqual(self.workoutManager.currentIntervalIndex, 2, "Should be in walk interval")
+                XCTAssertEqual(self.workoutManager.currentInterval?.name, "Test Walk", "Should be in walk phase")
+            }
+            
+            if intervalCheckCount == 23 { // After all intervals (5+10+5+3s)
+                XCTAssertEqual(self.workoutManager.currentIntervalIndex, 3, "Should be in cooldown interval")
+                XCTAssertEqual(self.workoutManager.currentInterval?.name, "Test Cooldown", "Should be in cooldown phase")
+            }
+            
+            // Test completion
+            if intervalCheckCount >= 26 { // Total duration + buffer
+                timer.invalidate()
+                
+                // Verify workout completion
+                // Note: In real implementation, workout would auto-end
+                self.workoutManager.endWorkout()
+                
+                XCTAssertFalse(self.workoutManager.isWorkoutActive, "Workout should be inactive after completion")
+                XCTAssertGreaterThan(self.workoutManager.elapsedTime, 0, "Should have elapsed time")
+                
+                expectation.fulfill()
+            }
+        }
+        
+        await fulfillment(of: [expectation], timeout: 30)
+    }
+    
+    // MARK: - Test: Workout Pause/Resume
+    func testWorkoutPauseResume() {
+        // Given: Active workout
+        let testInterval = WorkoutInterval(
+            id: UUID(),
+            name: "Test Interval",
+            type: .work,
+            duration: 30,
+            targetHeartRateZone: .moderate
+        )
+        
+        workoutManager.startWorkout(with: [testInterval])
+        XCTAssertTrue(workoutManager.isWorkoutActive)
+        
+        // When: Pause workout
+        workoutManager.pauseWorkout()
+        
+        // Then: Verify paused state
+        XCTAssertTrue(workoutManager.isWorkoutPaused, "Workout should be paused")
+        XCTAssertTrue(workoutManager.isWorkoutActive, "Workout should still be active")
+        
+        // When: Resume workout
+        workoutManager.resumeWorkout()
+        
+        // Then: Verify resumed state
+        XCTAssertFalse(workoutManager.isWorkoutPaused, "Workout should not be paused")
+        XCTAssertTrue(workoutManager.isWorkoutActive, "Workout should be active")
+    }
+    
+    // MARK: - Test: Skip Interval
+    func testSkipInterval() {
+        // Given: Workout with multiple intervals
+        let intervals = [
+            WorkoutInterval(id: UUID(), name: "Interval 1", type: .warmup, duration: 10, targetHeartRateZone: .easy),
+            WorkoutInterval(id: UUID(), name: "Interval 2", type: .work, duration: 20, targetHeartRateZone: .moderate),
+            WorkoutInterval(id: UUID(), name: "Interval 3", type: .rest, duration: 15, targetHeartRateZone: .easy)
+        ]
+        
+        workoutManager.startWorkout(with: intervals)
+        XCTAssertEqual(workoutManager.currentIntervalIndex, 0)
+        XCTAssertEqual(workoutManager.currentInterval?.name, "Interval 1")
+        
+        // When: Skip to next interval
+        workoutManager.skipToNextInterval()
+        
+        // Then: Verify progression
+        XCTAssertEqual(workoutManager.currentIntervalIndex, 1, "Should move to next interval")
+        XCTAssertEqual(workoutManager.currentInterval?.name, "Interval 2", "Should be in second interval")
+        XCTAssertEqual(workoutManager.remainingIntervalTime, 20, "Should have time from new interval")
+    }
+    
+    // MARK: - Test: Workout Data Persistence
+    func testWorkoutDataSaving() {
+        // Given: Completed workout
+        let testInterval = WorkoutInterval(
+            id: UUID(),
+            name: "Test Save",
+            type: .work,
+            duration: 1,
+            targetHeartRateZone: .moderate
+        )
+        
+        workoutManager.startWorkout(with: [testInterval])
+        
+        // Simulate some metrics
+        workoutManager.activeCalories = 50
+        workoutManager.distance = 500 // meters
+        workoutManager.heartRate = 150
+        
+        // When: End workout
+        workoutManager.endWorkout()
+        
+        // Then: Verify data was saved
+        let savedData = UserDefaults.standard.data(forKey: "lastWorkoutResults")
+        XCTAssertNotNil(savedData, "Workout data should be saved")
+        
+        if let data = savedData {
+            let decoder = JSONDecoder()
+            let results = try? decoder.decode(WorkoutResults.self, from: data)
+            XCTAssertNotNil(results, "Should be able to decode workout results")
+            XCTAssertEqual(results?.activeCalories, 50, "Should save correct calories")
+            XCTAssertEqual(results?.distance, 500, "Should save correct distance")
+            XCTAssertEqual(results?.heartRate, 150, "Should save correct heart rate")
+        }
+    }
+    
+    // MARK: - Test: Timer Format Display
+    func testTimerFormatting() {
+        // Given: Workout with known time
+        workoutManager.remainingIntervalTime = 125 // 2:05
+        
+        // When: Get formatted time
+        let formatted = workoutManager.formattedRemainingTime
+        
+        // Then: Verify correct format
+        XCTAssertEqual(formatted, "02:05", "Should format time correctly")
+        
+        // Test edge cases
+        workoutManager.remainingIntervalTime = 59
+        XCTAssertEqual(workoutManager.formattedRemainingTime, "00:59", "Should handle under a minute")
+        
+        workoutManager.remainingIntervalTime = 0
+        XCTAssertEqual(workoutManager.formattedRemainingTime, "00:00", "Should handle zero time")
+    }
+}

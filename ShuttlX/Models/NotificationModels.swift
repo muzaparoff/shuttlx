@@ -34,7 +34,7 @@ struct NotificationSettings: Codable {
 // MARK: - Simple Notification Model for MVP
 
 struct SimpleNotification: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let title: String
     let body: String
     let category: NotificationCategory

@@ -243,28 +243,14 @@ struct TrainingProgramDetailView: View {
     // MARK: - Action Buttons Section
     private var actionButtonsSection: some View {
         VStack(spacing: 12) {
-            // Start Workout Button
-            Button(action: {
-                programManager.selectProgram(program)
-                showingWorkoutView = true
-            }) {
-                HStack {
-                    Image(systemName: "play.fill")
-                    Text("Start Workout")
-                        .fontWeight(.semibold)
-                }
+            // Removed "Start Workout" button - training is now watchOS only
+            Text("Training Available on Apple Watch")
+                .font(.subheadline)
+                .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(
-                    LinearGradient(
-                        colors: [.orange, .red],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                )
-                .foregroundColor(.white)
+                .background(Color.gray.opacity(0.1))
                 .cornerRadius(12)
-            }
             
             // Send to Watch Button
             Button(action: {

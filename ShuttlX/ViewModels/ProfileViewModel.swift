@@ -180,7 +180,7 @@ class ProfileViewModel: ObservableObject {
     }
     
     private func generateProfileCompletionMessage() -> String {
-        guard let profile = userProfile else {
+        guard userProfile != nil else {
             return "Please complete your profile setup"
         }
         
