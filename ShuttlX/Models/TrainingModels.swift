@@ -238,6 +238,19 @@ extension TrainingProgram {
             description: "Long-distance training to prepare for marathon events.",
             estimatedCalories: 750,
             targetHeartRateZone: .moderate
+        ),
+        
+        TrainingProgram(
+            name: "Quick Test Workout",
+            distance: 0.1,
+            runInterval: 0.25, // 15 seconds
+            walkInterval: 0.25, // 15 seconds  
+            totalDuration: 0.5, // 30 seconds total
+            difficulty: .beginner,
+            description: "Short test workout for integration testing and quick verification.",
+            estimatedCalories: 10,
+            targetHeartRateZone: .easy,
+            isCustom: false
         )
     ]
 }

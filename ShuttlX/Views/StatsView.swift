@@ -95,6 +95,12 @@ struct StatsView: View {
                     .foregroundColor(.secondary)
             }
             
+            // Check for recent workout data
+            if let todaysWorkout = getTodaysWorkout() {
+                // Show today's workout summary
+                TodaysWorkoutCard(workout: todaysWorkout)
+            }
+            
             // Quick Today Stats
             HStack(spacing: 20) {
                 TodayStatView(
@@ -418,5 +424,155 @@ struct ProgramStatBubble: View {
         .padding()
         .background(color.opacity(0.1))
         .cornerRadius(12)
+    }
+}
+
+// MARK: - StatsView Helper Functions
+extension StatsView {
+    private func getTodaysWorkout() -> WorkoutResults? {
+        // Check for workout data from UserDefaults
+        if let workoutData = UserDefaults.standard.data(forKey: "lastWorkoutResults_iOS"),
+           let lastWorkout = try? JSONDecoder().decode(WorkoutResults.self, from: workoutData) {
+            
+            // Check if workout is from today
+            let calendar = Calendar.current
+            if calendar.isDateInToday(lastWorkout.startDate) {
+                return lastWorkout
+            }
+        }
+        
+        // Also check completed workouts list for today's workouts
+        if let allWorkoutsData = UserDefaults.standard.data(forKey: "completedWorkouts_iOS"),
+           let allWorkouts = try? JSONDecoder().decode([WorkoutResults].self, from: allWorkoutsData) {
+            
+            let todaysWorkouts = allWorkouts.filter { workout in
+                Calendar.current.isDateInToday(workout.startDate)
+            }
+            
+            return todaysWorkouts.last // Return most recent workout from today
+        }
+        
+        return nil
+    }
+}
+
+// MARK: - Today's Workout Card
+struct TodaysWorkoutCard: View {
+    let workout: WorkoutResults
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "applewatch")
+                    .foregroundColor(.orange)
+                    .font(.title3)
+                
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Latest Workout")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    
+                    Text("Completed \(workout.startDate.formatted(date: .omitted, time: .shortened))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                
+                Spacer()
+                
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.title2)
+            }
+            
+            // Workout metrics
+            HStack(spacing: 20) {
+                WorkoutMetric(
+                    title: "Duration",
+                    value: formatDuration(workout.totalDuration),
+                    icon: "timer",
+                    color: .blue
+                )
+                
+                WorkoutMetric(
+                    title: "Calories",
+                    value: "\(Int(workout.activeCalories))",
+                    icon: "flame.fill",
+                    color: .orange
+                )
+                
+                WorkoutMetric(
+                    title: "Distance",
+                    value: String(format: "%.1f km", workout.distance / 1000),
+                    icon: "location.fill",
+                    color: .green
+                )
+            }
+            
+            // Intervals completed
+            HStack {
+                Image(systemName: "arrow.triangle.2.circlepath")
+                    .foregroundColor(.purple)
+                
+                Text("\(workout.completedIntervals) intervals completed")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                if workout.averageHeartRate > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(.red)
+                            .font(.caption)
+                        Text("\(Int(workout.averageHeartRate)) BPM")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color.orange.opacity(0.1))
+        .cornerRadius(12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+        )
+    }
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds) / 60
+        let remainingSeconds = Int(seconds) % 60
+        if minutes > 0 {
+            return "\(minutes)m \(remainingSeconds)s"
+        } else {
+            return "\(remainingSeconds)s"
+        }
+    }
+}
+
+// MARK: - Workout Metric Component
+struct WorkoutMetric: View {
+    let title: String
+    let value: String
+    let icon: String
+    let color: Color
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption)
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+            
+            Text(title)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
