@@ -43,8 +43,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Initialization
     override init() {
         super.init()
+        print("⌚ [DEBUG] WatchWorkoutManager init called")
         checkAuthorizationStatus()
-        print("⌚ WatchWorkoutManager initialized")
+        print("⌚ [DEBUG] WatchWorkoutManager initialized with auth status: \(authorizationStatus.rawValue)")
     }
     
     // MARK: - Authorization
@@ -88,14 +89,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     
     // MARK: - Workout Management
     func startWorkout(from program: TrainingProgram) {
-        print("🚀 startWorkout(from:) called with program: \(program.name)")
-        print("📋 Program details: \(program.runInterval)min run, \(program.walkInterval)min walk, \(program.totalDuration)min total")
+        print("🏃‍♂️ [DEBUG] startWorkout(from:) called with program: \(program.name)")
+        print("🏃‍♂️ [DEBUG] Program details - run: \(program.runInterval)min, walk: \(program.walkInterval)min, total: \(program.totalDuration)min")
         
         // Convert TrainingProgram to WorkoutInterval array
         let intervals = generateIntervals(from: program)
-        print("📊 Generated \(intervals.count) intervals from program")
+        print("🏃‍♂️ [DEBUG] Generated \(intervals.count) intervals")
         
         startWorkout(with: intervals)
+        print("🏃‍♂️ [DEBUG] Called startWorkout(with intervals)")
     }
     
     private func generateIntervals(from program: TrainingProgram) -> [WorkoutInterval] {
@@ -153,13 +155,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
     
     func startWorkout(with intervals: [WorkoutInterval]) {
+        print("🏃‍♂️ [DEBUG] startWorkout(with intervals) called with \(intervals.count) intervals")
+        print("🏃‍♂️ [DEBUG] Current isWorkoutActive: \(isWorkoutActive)")
+        
         guard !isWorkoutActive else { 
-            print("❌ Workout already active")
+            print("❌ [DEBUG] Workout already active - returning early")
             return 
         }
         
-        print("🏃‍♂️ Starting workout with \(intervals.count) intervals")
-        print("📊 HealthKit authorization status: \(authorizationStatus.rawValue)")
+        print("🏃‍♂️ [DEBUG] Starting workout with \(intervals.count) intervals")
+        print("🏃‍♂️ [DEBUG] Authorization status: \(authorizationStatus.rawValue)")
         
         // Check authorization status but don't block if not authorized
         if authorizationStatus != .sharingAuthorized {
@@ -170,12 +175,28 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         self.currentIntervalIndex = 0
         self.workoutPhase = .warming
         
-        // Reset all metrics
-        resetMetrics()
+        // Reset metrics but DON'T reset interval time yet
+        heartRate = 0
+        activeCalories = 0
+        distance = 0
+        elapsedTime = 0
+        // remainingIntervalTime will be set by startIntervalTimer()
         
-        // DEBUG: Print first interval details
-        if let firstInterval = intervals.first {
-            print("📋 First interval: \(firstInterval.name) - \(firstInterval.type.displayName) for \(firstInterval.duration)s")
+        // Set up first interval IMMEDIATELY on MainActor
+        Task { @MainActor in
+            if let firstInterval = intervals.first {
+                self.currentInterval = firstInterval
+                self.remainingIntervalTime = firstInterval.duration
+                print("🚀 [TIMER-INIT] First interval setup: \(firstInterval.name) - \(firstInterval.type.displayName) for \(firstInterval.duration)s")
+                print("🚀 [TIMER-INIT] remainingIntervalTime set to: \(self.remainingIntervalTime)")
+                print("🚀 [TIMER-INIT] Formatted time should show: \(self.formattedRemainingTime)")
+                
+                // Force immediate UI update
+                self.objectWillChange.send()
+            } else {
+                print("❌ [TIMER-INIT] No intervals available!")
+                return
+            }
         }
         
         let configuration = HKWorkoutConfiguration()
@@ -205,9 +226,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             self.startIntervalTimer()
             self.playHapticFeedback(.start)
             
-            print("✅ Workout started successfully with timers active")
-            print("📊 Workout state: isActive=\(self.isWorkoutActive), isPaused=\(self.isWorkoutPaused)")
-            print("📊 Current interval: \(self.currentIntervalIndex + 1)/\(self.intervals.count)")
+            print("✅ [TIMER-DEBUG] Workout started successfully with timers active")
+            print("📊 [TIMER-DEBUG] Workout state: isActive=\(self.isWorkoutActive), isPaused=\(self.isWorkoutPaused)")
+            print("📊 [TIMER-DEBUG] Current interval: \(self.currentIntervalIndex + 1)/\(self.intervals.count)")
+            print("⏱ [TIMER-DEBUG] First interval: \(self.currentInterval?.name ?? "unknown") for \(self.remainingIntervalTime)s")
             
             // Begin HealthKit data collection
             builder.beginCollection(withStart: Date()) { [weak self] success, error in
@@ -298,20 +320,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     
     @MainActor
     private func moveToNextInterval() {
-        print("🔄 Moving to next interval...")
+        print("🔄 [NEXT-INTERVAL] Moving to next interval...")
         
         currentIntervalIndex += 1
         
         if currentIntervalIndex >= intervals.count {
-            print("🏁 All intervals completed!")
+            print("🏁 [NEXT-INTERVAL] All intervals completed!")
             endWorkout()
             return
         }
         
         // Setup next interval
         if let nextInterval = getCurrentInterval() {
-            remainingIntervalTime = nextInterval.duration
-            print("📋 Next interval: \(nextInterval.type.displayName) (\(formatTime(nextInterval.duration)))")
+            self.currentInterval = nextInterval
+            self.remainingIntervalTime = nextInterval.duration
+            print("📋 [NEXT-INTERVAL] Next interval: \(nextInterval.type.displayName) (\(formatTime(nextInterval.duration)))")
+            print("📋 [NEXT-INTERVAL] remainingIntervalTime set to: \(self.remainingIntervalTime)")
             
             // Update workout phase based on interval type
             switch nextInterval.type {
@@ -324,6 +348,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             case .cooldown:
                 workoutPhase = .cooling
             }
+            
+            // Force UI update
+            self.objectWillChange.send()
             
             // Play haptic feedback for interval change
             playHapticFeedback(.notification)
@@ -454,8 +481,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     
     // MARK: - Interval Management
     private func startIntervalTimer() {
+        print("🚀 [TIMER-START] startIntervalTimer() called")
+        print("🚀 [TIMER-START] currentIntervalIndex: \(currentIntervalIndex)")
+        print("🚀 [TIMER-START] intervals.count: \(intervals.count)")
+        
         guard currentIntervalIndex < intervals.count else { 
-            print("❌ Cannot start interval timer: index out of bounds (\(currentIntervalIndex) >= \(intervals.count))")
+            print("❌ [TIMER-START] Cannot start interval timer: index out of bounds (\(currentIntervalIndex) >= \(intervals.count))")
             endWorkout()
             return 
         }
@@ -464,35 +495,43 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         intervalTimer?.invalidate()
         intervalTimer = nil
         
-        currentInterval = intervals[currentIntervalIndex]
-        guard let interval = currentInterval else {
-            print("❌ Current interval is nil")
-            return
+        // Get current interval
+        let interval = intervals[currentIntervalIndex]
+        
+        // CRITICAL: Set these on main thread immediately to trigger UI updates
+        Task { @MainActor in
+            self.currentInterval = interval
+            self.remainingIntervalTime = interval.duration
+            
+            print("🚀 [TIMER-START] Setting up interval: \(interval.name)")
+            print("🚀 [TIMER-START] Interval duration: \(interval.duration)")
+            print("🚀 [TIMER-START] remainingIntervalTime set to: \(self.remainingIntervalTime)")
+            
+            // Force immediate UI update
+            self.objectWillChange.send()
         }
         
-        remainingIntervalTime = interval.duration
-        
-        guard remainingIntervalTime > 0 else {
-            print("❌ Invalid interval duration: \(remainingIntervalTime)")
+        guard interval.duration > 0 else {
+            print("❌ [TIMER-START] Invalid interval duration: \(interval.duration)")
             moveToNextInterval()
             return
         }
         
-        print("⏱ Starting interval timer for: \(interval.name) (\(interval.duration)s)")
+        print("🚀 Starting interval timer for: \(interval.name) (\(interval.duration)s)")
         print("📋 Interval \(currentIntervalIndex + 1)/\(intervals.count): \(interval.type.displayName)")
         
         // Update workout phase
-        switch interval.type {
-        case .warmup: workoutPhase = .warming
-        case .work: workoutPhase = .working
-        case .rest: workoutPhase = .resting
-        case .cooldown: workoutPhase = .cooling
+        Task { @MainActor in
+            switch interval.type {
+            case .warmup: self.workoutPhase = .warming
+            case .work: self.workoutPhase = .working
+            case .rest: self.workoutPhase = .resting
+            case .cooldown: self.workoutPhase = .cooling
+            }
         }
         
-        // Ensure timer runs on main thread
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
+        // Create timer on main thread with proper scheduling
+        Task { @MainActor in
             self.intervalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
                 Task { @MainActor in
                     guard let self = self else {
@@ -500,37 +539,47 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                         return
                     }
                     
-                    if self.isWorkoutActive && !self.isWorkoutPaused {
-                        self.remainingIntervalTime -= 1.0
-                        
-                        // Debug every 10 seconds
-                        if Int(self.remainingIntervalTime) % 10 == 0 {
-                            print("⏱ Interval timer: \(self.remainingIntervalTime)s remaining for \(self.currentInterval?.name ?? "unknown")")
-                        }
-                        
-                        if self.remainingIntervalTime <= 0 {
-                            timer.invalidate()
-                            self.intervalTimer = nil
-                            print("✅ Interval completed, moving to next...")
-                            self.moveToNextInterval()
-                        }
-                    } else {
-                        // Keep timer but don't decrement if workout is paused
+                    // Only update if workout is active and not paused
+                    guard self.isWorkoutActive && !self.isWorkoutPaused else {
                         if !self.isWorkoutActive {
-                            print("⚠️ Stopping interval timer - workout no longer active")
+                            print("⚠️ [TIMER-DEBUG] Stopping interval timer - workout no longer active")
                             timer.invalidate()
                             self.intervalTimer = nil
                         }
+                        return
+                    }
+                    
+                    // Decrement timer
+                    self.remainingIntervalTime = max(0, self.remainingIntervalTime - 1.0)
+                    
+                    // Debug logging every 5 seconds
+                    let remaining = Int(self.remainingIntervalTime)
+                    if remaining % 5 == 0 || remaining <= 10 {
+                        print("⏱️ [TIMER-TICK] \(remaining)s remaining for '\(self.currentInterval?.name ?? "unknown")'")
+                        print("⏱️ [TIMER-TICK] UI should show: \(self.formattedRemainingTime)")
+                    }
+                    
+                    // Force UI update
+                    self.objectWillChange.send()
+                    
+                    // Check if interval is complete
+                    if self.remainingIntervalTime <= 0 {
+                        timer.invalidate()
+                        self.intervalTimer = nil
+                        print("✅ [TIMER-COMPLETE] Interval completed, moving to next...")
+                        self.moveToNextInterval()
                     }
                 }
             }
             
-            // Add timer to run loop to ensure it fires consistently
+            // Ensure timer is added to run loop for consistent firing
             if let timer = self.intervalTimer {
-                RunLoop.current.add(timer, forMode: .common)
-                print("✅ Interval timer started successfully")
+                RunLoop.main.add(timer, forMode: .common)
+                print("✅ [TIMER-SUCCESS] Interval timer started and added to run loop")
+                print("✅ [TIMER-SUCCESS] Initial remaining time: \(self.remainingIntervalTime)s")
+                print("✅ [TIMER-SUCCESS] Formatted time: \(self.formattedRemainingTime)")
             } else {
-                print("❌ Failed to create interval timer")
+                print("❌ [TIMER-ERROR] Failed to create interval timer")
             }
         }
     }
@@ -554,12 +603,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutTimer?.invalidate()
         workoutTimer = nil
         
-        print("⏱ Starting workout timer...")
+        print("🚀 [WORKOUT-TIMER] Starting workout timer...")
         
-        // Ensure timer runs on main thread
-        DispatchQueue.main.async { [weak self] in
-            guard let self = self else { return }
-            
+        // Create timer on main thread with proper MainActor context
+        Task { @MainActor in
             self.workoutTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
                 Task { @MainActor in
                     guard let self = self else {
@@ -567,22 +614,33 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                         return
                     }
                     
-                    if self.isWorkoutActive {
-                        self.updateElapsedTime()
-                    } else {
-                        print("⚠️ Workout timer running but workout not active - stopping timer")
+                    guard self.isWorkoutActive else {
+                        print("⚠️ [WORKOUT-TIMER] Workout timer running but workout not active - stopping timer")
                         timer.invalidate()
                         self.workoutTimer = nil
+                        return
+                    }
+                    
+                    // Update elapsed time
+                    self.updateElapsedTime()
+                    
+                    // Force UI update for elapsed time
+                    self.objectWillChange.send()
+                    
+                    // Debug every 30 seconds
+                    if Int(self.elapsedTime) % 30 == 0 && self.elapsedTime > 0 {
+                        print("🚀 [WORKOUT-TIMER] Workout timer: \(self.formattedElapsedTime) elapsed")
+                        print("🚀 [WORKOUT-TIMER] Current interval: \(self.currentInterval?.name ?? "none") - \(self.remainingIntervalTime)s remaining")
                     }
                 }
             }
             
             // Add timer to run loop to ensure it fires consistently
             if let timer = self.workoutTimer {
-                RunLoop.current.add(timer, forMode: .common)
-                print("✅ Workout timer started successfully")
+                RunLoop.main.add(timer, forMode: .common)
+                print("✅ [WORKOUT-TIMER] Workout timer started successfully and added to run loop")
             } else {
-                print("❌ Failed to create workout timer")
+                print("❌ [WORKOUT-TIMER] Failed to create workout timer")
             }
         }
     }
@@ -681,6 +739,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     
     var totalIntervals: Int {
         return intervals.count
+    }
+    
+    var nextInterval: WorkoutInterval? {
+        let nextIndex = currentIntervalIndex + 1
+        guard nextIndex < intervals.count else { return nil }
+        return intervals[nextIndex]
     }
     
     var overallProgress: Double {

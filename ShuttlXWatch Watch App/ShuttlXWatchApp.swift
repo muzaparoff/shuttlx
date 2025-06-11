@@ -30,6 +30,7 @@ struct ShuttlXWatch_Watch_AppApp: App {
                     workoutManager.requestAuthorization()
                     print("⌚ [WATCH-STARTUP] ContentView appeared successfully")
                     print("⌚ [WATCH-STARTUP] Watch app fully loaded and ready!")
+                    print("🚀 [DEBUG] ShuttlXWatch app launched successfully")
                 }
         }
     }

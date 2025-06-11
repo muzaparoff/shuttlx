@@ -9,6 +9,66 @@ import SwiftUI
 import WatchConnectivity
 import HealthKit
 
+// MARK: - Enums (defined first to avoid forward reference issues)
+
+enum TrainingDifficulty: String, CaseIterable, Codable {
+    case beginner = "beginner"
+    case intermediate = "intermediate"
+    case advanced = "advanced"
+    
+    var displayName: String {
+        rawValue.capitalized
+    }
+    
+    var color: Color {
+        switch self {
+        case .beginner: return .green
+        case .intermediate: return .orange
+        case .advanced: return .red
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .beginner: return "leaf.fill"
+        case .intermediate: return "flame.fill"
+        case .advanced: return "bolt.fill"
+        }
+    }
+}
+
+enum HeartRateZone: String, CaseIterable, Codable {
+    case recovery = "recovery"
+    case easy = "easy"
+    case moderate = "moderate"
+    case hard = "hard"
+    case maximum = "maximum"
+    
+    var displayName: String {
+        rawValue.capitalized
+    }
+    
+    var color: Color {
+        switch self {
+        case .recovery: return .blue
+        case .easy: return .green
+        case .moderate: return .yellow
+        case .hard: return .orange
+        case .maximum: return .red
+        }
+    }
+    
+    var percentage: String {
+        switch self {
+        case .recovery: return "50-60%"
+        case .easy: return "60-70%"
+        case .moderate: return "70-80%"
+        case .hard: return "80-90%"
+        case .maximum: return "90-100%"
+        }
+    }
+}
+
 // MARK: - Shared Training Models for watchOS
 
 struct TrainingProgram: Identifiable, Codable {
@@ -69,63 +129,81 @@ struct TrainingProgram: Identifiable, Codable {
     }
 }
 
-enum TrainingDifficulty: String, CaseIterable, Codable {
-    case beginner = "beginner"
-    case intermediate = "intermediate"
-    case advanced = "advanced"
-    
-    var displayName: String {
-        rawValue.capitalized
-    }
-    
-    var color: Color {
-        switch self {
-        case .beginner: return .green
-        case .intermediate: return .orange
-        case .advanced: return .red
-        }
-    }
-    
-    var icon: String {
-        switch self {
-        case .beginner: return "leaf.fill"
-        case .intermediate: return "flame.fill"
-        case .advanced: return "bolt.fill"
-        }
-    }
-}
+// MARK: - Default Training Programs (defined before ContentView)
 
-enum HeartRateZone: String, CaseIterable, Codable {
-    case recovery = "recovery"
-    case easy = "easy"
-    case moderate = "moderate"
-    case hard = "hard"
-    case maximum = "maximum"
+let defaultTrainingPrograms: [TrainingProgram] = [
+    TrainingProgram(
+        name: "Beginner 5K",
+        distance: 5.0,
+        runInterval: 1.0,
+        walkInterval: 2.0,
+        totalDuration: 35.0,
+        difficulty: .beginner,
+        description: "Perfect for beginners starting their running journey",
+        estimatedCalories: 250,
+        targetHeartRateZone: .easy
+    ),
     
-    var displayName: String {
-        rawValue.capitalized
-    }
+    TrainingProgram(
+        name: "HIIT Blast",
+        distance: 3.0,
+        runInterval: 1.5,
+        walkInterval: 1.0,
+        totalDuration: 25.0,
+        difficulty: .advanced,
+        description: "High-intensity intervals for maximum calorie burn",
+        estimatedCalories: 300,
+        targetHeartRateZone: .hard
+    ),
     
-    var color: Color {
-        switch self {
-        case .recovery: return .blue
-        case .easy: return .green
-        case .moderate: return .yellow
-        case .hard: return .orange
-        case .maximum: return .red
-        }
-    }
+    TrainingProgram(
+        name: "Endurance Challenge",
+        distance: 8.0,
+        runInterval: 3.0,
+        walkInterval: 1.0,
+        totalDuration: 50.0,
+        difficulty: .intermediate,
+        description: "Build your endurance with longer running intervals",
+        estimatedCalories: 480,
+        targetHeartRateZone: .moderate
+    ),
     
-    var percentage: String {
-        switch self {
-        case .recovery: return "50-60%"
-        case .easy: return "60-70%"
-        case .moderate: return "70-80%"
-        case .hard: return "80-90%"
-        case .maximum: return "90-100%"
-        }
-    }
-}
+    TrainingProgram(
+        name: "Speed Demon",
+        distance: 4.0,
+        runInterval: 0.5,
+        walkInterval: 0.5,
+        totalDuration: 20.0,
+        difficulty: .advanced,
+        description: "Short bursts of maximum effort for speed training",
+        estimatedCalories: 320,
+        targetHeartRateZone: .maximum
+    ),
+    
+    TrainingProgram(
+        name: "Recovery Run",
+        distance: 3.0,
+        runInterval: 2.0,
+        walkInterval: 3.0,
+        totalDuration: 30.0,
+        difficulty: .beginner,
+        description: "Gentle intervals for active recovery days",
+        estimatedCalories: 180,
+        targetHeartRateZone: .recovery
+    ),
+    
+    TrainingProgram(
+        name: "Marathon Prep",
+        distance: 10.0,
+        runInterval: 4.0,
+        walkInterval: 1.0,
+        totalDuration: 60.0,
+        difficulty: .advanced,
+        description: "Long-distance training for marathon preparation",
+        estimatedCalories: 600,
+        targetHeartRateZone: .moderate
+    )
+]
 
 // MARK: - ContentView
 
@@ -135,6 +213,8 @@ struct ContentView: View {
     @State private var isConnectedToPhone = false
     @StateObject private var watchConnectivity = WatchConnectivityDelegate()
     @StateObject private var coordinator = WatchConnectivityCoordinator()
+    @EnvironmentObject var workoutManager: WatchWorkoutManager // Add environment object reference
+    @Environment(\.dismiss) var dismiss
     
     var allPrograms: [TrainingProgram] {
         return trainingPrograms + customPrograms
@@ -185,6 +265,12 @@ struct ContentView: View {
                         Image(systemName: "arrow.clockwise.circle")
                             .foregroundColor(.orange)
                     }
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Test") {
+                        // Test button for debugging - functionality can be added here
+                    }
+                    .foregroundColor(.green)
                 }
             }
         }
@@ -340,82 +426,6 @@ class WatchConnectivityDelegate: NSObject, ObservableObject, WCSessionDelegate {
     }
 }
 
-// MARK: - Default Training Programs
-
-let defaultTrainingPrograms: [TrainingProgram] = [
-    TrainingProgram(
-        name: "Beginner 5K",
-        distance: 5.0,
-        runInterval: 1.0,
-        walkInterval: 2.0,
-        totalDuration: 35.0,
-        difficulty: .beginner,
-        description: "Perfect for beginners starting their running journey",
-        estimatedCalories: 250,
-        targetHeartRateZone: .easy
-    ),
-    
-    TrainingProgram(
-        name: "HIIT Blast",
-        distance: 3.0,
-        runInterval: 1.5,
-        walkInterval: 1.0,
-        totalDuration: 25.0,
-        difficulty: .advanced,
-        description: "High-intensity intervals for maximum calorie burn",
-        estimatedCalories: 300,
-        targetHeartRateZone: .hard
-    ),
-    
-    TrainingProgram(
-        name: "Endurance Challenge",
-        distance: 8.0,
-        runInterval: 3.0,
-        walkInterval: 1.0,
-        totalDuration: 50.0,
-        difficulty: .intermediate,
-        description: "Build your endurance with longer running intervals",
-        estimatedCalories: 480,
-        targetHeartRateZone: .moderate
-    ),
-    
-    TrainingProgram(
-        name: "Speed Demon",
-        distance: 4.0,
-        runInterval: 0.5,
-        walkInterval: 0.5,
-        totalDuration: 20.0,
-        difficulty: .advanced,
-        description: "Short bursts of maximum effort for speed training",
-        estimatedCalories: 320,
-        targetHeartRateZone: .maximum
-    ),
-    
-    TrainingProgram(
-        name: "Recovery Run",
-        distance: 3.0,
-        runInterval: 2.0,
-        walkInterval: 3.0,
-        totalDuration: 30.0,
-        difficulty: .beginner,
-        description: "Gentle intervals for active recovery days",
-        estimatedCalories: 180,
-        targetHeartRateZone: .recovery
-    ),
-    
-    TrainingProgram(
-        name: "Marathon Prep",
-        distance: 10.0,
-        runInterval: 4.0,
-        walkInterval: 1.0,
-        totalDuration: 60.0,
-        difficulty: .advanced,
-        description: "Long-distance training for marathon preparation",
-        estimatedCalories: 600,
-        targetHeartRateZone: .moderate
-    )
-]
-
 struct DifficultyBadge: View {
     let difficulty: TrainingDifficulty
     
@@ -473,6 +483,7 @@ struct TrainingProgramRow: View {
 struct TrainingDetailView: View {
     let program: TrainingProgram
     @State private var isWorkoutActive = false
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
     
     var body: some View {
         ScrollView {
@@ -497,9 +508,19 @@ struct TrainingDetailView: View {
                 
                 // Start Workout Button
                 Button(action: {
-                    print("🔥 Start Workout button pressed for program: \(program.name)")
+                    print("🔴 [UI-DEBUG] Start Workout button pressed for program: \(program.name)")
+                    print("🔴 [UI-DEBUG] WorkoutManager state before start: isActive=\(workoutManager.isWorkoutActive)")
+                    
+                    // Start the workout immediately so timer activates right away
+                    workoutManager.startWorkout(from: program)
+                    
+                    print("🔴 [UI-DEBUG] WorkoutManager.startWorkout() called")
+                    print("🔴 [UI-DEBUG] WorkoutManager state after start: isActive=\(workoutManager.isWorkoutActive)")
+                    print("🔴 [UI-DEBUG] Current intervals count: \(workoutManager.intervals.count)")
+                    print("🔴 [UI-DEBUG] Current interval: \(workoutManager.currentInterval?.name ?? "nil")")
+                    
                     isWorkoutActive = true
-                    print("🔥 Setting isWorkoutActive to true, will show WorkoutView sheet")
+                    print("🔴 [UI-DEBUG] Setting isWorkoutActive to true - should show WorkoutView")
                 }) {
                     HStack {
                         Image(systemName: "play.fill")
@@ -519,9 +540,6 @@ struct TrainingDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $isWorkoutActive) {
             WorkoutView(program: program)
-                .onAppear {
-                    print("🎬 WorkoutView sheet appeared for program: \(program.name)")
-                }
         }
     }
 }
@@ -554,39 +572,332 @@ struct WorkoutView: View {
     let program: TrainingProgram
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var workoutManager: WatchWorkoutManager
-    @State private var selectedTab = 0
+    @State private var currentTab = 0
     
     var body: some View {
-        TabView(selection: $selectedTab) {
-            // Main workout display
-            WorkoutMetricsView(program: program)
+        TabView(selection: $currentTab) {
+            // Main Timer Display
+            MainTimerView(program: program)
                 .tag(0)
+            
+            // Metrics View
+            WorkoutMetricsView(program: program)
+                .tag(1)
             
             // Controls
             WorkoutControlsView(program: program)
-                .tag(1)
-            
-            // Progress
-            WorkoutProgressView()
                 .tag(2)
         }
         .tabViewStyle(PageTabViewStyle())
         .navigationBarHidden(true)
         .onAppear {
-            print("🎯 WorkoutView onAppear - about to start workout with program: \(program.name)")
-            print("📱 WorkoutManager state before start: isActive=\(workoutManager.isWorkoutActive)")
-            
-            // Start the workout automatically with the selected program
-            workoutManager.startWorkout(from: program)
-            
-            print("📱 WorkoutManager state after start call: isActive=\(workoutManager.isWorkoutActive)")
+            // Workout already started when button was pressed - no need to start again
+            print("📱 [DEBUG] WorkoutView appeared, workout should already be active: \(workoutManager.isWorkoutActive)")
+            print("📱 [DEBUG] Current intervals: \(workoutManager.intervals.count)")
+            print("📱 [DEBUG] Current interval index: \(workoutManager.currentIntervalIndex)")
+            print("📱 [DEBUG] Current interval: \(workoutManager.currentInterval?.name ?? "nil")")
+            print("📱 [DEBUG] Remaining time: \(workoutManager.remainingIntervalTime)")
+            print("📱 [DEBUG] Elapsed time: \(workoutManager.elapsedTime)")
         }
         .onDisappear {
-            // Clean up if needed when view disappears
-            if workoutManager.isWorkoutActive && workoutManager.workoutPhase != .completed {
-                // Optionally pause workout when view disappears
-                // workoutManager.pauseWorkout()
+            // Keep workout running when view disappears - workout continues in background
+        }
+    }
+}
+
+// MARK: - Main Timer View
+struct MainTimerView: View {
+    let program: TrainingProgram
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(\.dismiss) var dismiss
+    
+    var body: some View {
+        VStack(spacing: 16) {
+            // Debug info at the top - remove this after debugging
+            if workoutManager.isWorkoutActive {
+                VStack {
+                    Text("DEBUG: Active=\(workoutManager.isWorkoutActive ? "YES" : "NO")")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    Text("Interval: \(workoutManager.currentInterval?.name ?? "NIL")")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    Text("Remaining: \(Int(workoutManager.remainingIntervalTime))s")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    Text("Elapsed: \(Int(workoutManager.elapsedTime))s")
+                        .font(.caption2)
+                        .foregroundColor(.green)
+                    Text("Formatted: \(formattedRemainingTime)")
+                        .font(.caption2)
+                        .foregroundColor(.blue)
+                    Text("Manager Formatted: \(workoutManager.formattedRemainingTime)")
+                        .font(.caption2)
+                        .foregroundColor(.purple)
+                }
+                .padding(4)
+                .background(Color.green.opacity(0.2))
+                .cornerRadius(4)
+            } else {
+                VStack {
+                    Text("DEBUG: WORKOUT NOT ACTIVE")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                    Text("Remaining: \(Int(workoutManager.remainingIntervalTime))s")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                }
+                .padding(4)
+                .background(Color.red.opacity(0.2))
+                .cornerRadius(4)
             }
+            
+            // Current Activity Header
+            currentActivityHeader
+            
+            // Main Timer Circle
+            mainTimerCircle
+            
+            // Current Interval Progress
+            intervalProgress
+            
+            // Quick Actions
+            quickActions
+        }
+        .padding()
+        .background(backgroundColor)
+    }
+    
+    // MARK: - Current Activity Header
+    private var currentActivityHeader: some View {
+        VStack(spacing: 4) {
+            HStack {
+                Circle()
+                    .fill(currentActivityColor)
+                    .frame(width: 12, height: 12)
+                    .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: workoutManager.isWorkoutActive)
+                
+                Text(currentActivityText)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+            }
+            
+            Text("Interval \(workoutManager.currentIntervalIndex + 1) of \(workoutManager.intervals.count)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+    
+    // MARK: - Main Timer Circle
+    private var mainTimerCircle: some View {
+        ZStack {
+            // Background Circle
+            Circle()
+                .stroke(Color.gray.opacity(0.3), lineWidth: 8)
+                .frame(width: 120, height: 120)
+            
+            // Progress Circle
+            Circle()
+                .trim(from: 0, to: intervalProgressValue)
+                .stroke(currentActivityColor, style: StrokeStyle(lineWidth: 8, lineCap: .round))
+                .frame(width: 120, height: 120)
+                .rotationEffect(.degrees(-90))
+                .animation(.easeInOut, value: intervalProgressValue)
+            
+            // Timer Text
+            VStack(spacing: 4) {
+                Text(formattedRemainingTime)
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .monospacedDigit()
+                
+                Text("remaining")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+    
+    // MARK: - Interval Progress
+    private var intervalProgress: some View {
+        VStack(spacing: 8) {
+            // Total Program Progress
+            VStack(spacing: 4) {
+                HStack {
+                    Text("Program Progress")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(formattedTotalRemainingTime)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.orange)
+                }
+                
+                ProgressView(value: totalProgress)
+                    .progressViewStyle(LinearProgressViewStyle(tint: .orange))
+                    .scaleEffect(y: 1.5)
+            }
+            
+            // Next Activity Preview
+            if let nextInterval = workoutManager.nextInterval {
+                HStack {
+                    Text("Next:")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    
+                    HStack(spacing: 4) {
+                        Image(systemName: nextInterval.type.icon)
+                            .foregroundColor(nextInterval.type.color)
+                        Text(nextInterval.name)
+                            .fontWeight(.medium)
+                    }
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    
+                    Spacer()
+                }
+            }
+        }
+    }
+    
+    // MARK: - Quick Actions
+    private var quickActions: some View {
+        HStack(spacing: 20) {
+            // Pause/Resume Button
+            Button(action: {
+                if workoutManager.isWorkoutPaused {
+                    workoutManager.resumeWorkout()
+                } else {
+                    workoutManager.pauseWorkout()
+                }
+            }) {
+                Image(systemName: workoutManager.isWorkoutPaused ? "play.fill" : "pause.fill")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(workoutManager.isWorkoutPaused ? .green : .orange)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // Skip Interval Button
+            Button(action: {
+                workoutManager.skipToNextInterval()
+            }) {
+                Image(systemName: "forward.fill")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(.blue)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(PlainButtonStyle())
+            
+            // End Workout Button
+            Button(action: {
+                workoutManager.endWorkout()
+                dismiss()
+            }) {
+                Image(systemName: "stop.fill")
+                    .font(.title3)
+                    .foregroundColor(.white)
+                    .frame(width: 40, height: 40)
+                    .background(.red)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(PlainButtonStyle())
+        }
+    }
+    
+    // MARK: - Computed Properties
+    
+    private var currentActivityText: String {
+        guard let currentInterval = workoutManager.currentInterval else {
+            // If no current interval, show the first interval name if available
+            if let firstInterval = workoutManager.intervals.first {
+                return firstInterval.name
+            }
+            return "Ready"
+        }
+        
+        switch currentInterval.type {
+        case .warmup:
+            return "Warming Up"
+        case .work:
+            return "Running 🏃‍♂️"
+        case .rest:
+            return "Walking 🚶‍♂️"
+        case .cooldown:
+            return "Cooling Down"
+        }
+    }
+    
+    private var currentActivityColor: Color {
+        guard let currentInterval = workoutManager.currentInterval else {
+            return .gray
+        }
+        
+        switch currentInterval.type {
+        case .warmup:
+            return .yellow
+        case .work:
+            return .red
+        case .rest:
+            return .blue
+        case .cooldown:
+            return .green
+        }
+    }
+    
+    private var backgroundColor: LinearGradient {
+        LinearGradient(
+            colors: [
+                currentActivityColor.opacity(0.1),
+                Color.black.opacity(0.05)
+            ],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+    
+    private var intervalProgressValue: CGFloat {
+        guard let currentInterval = workoutManager.currentInterval,
+              currentInterval.duration > 0 else {
+            return 0
+        }
+        
+        let elapsed = currentInterval.duration - workoutManager.remainingIntervalTime
+        return CGFloat(elapsed / currentInterval.duration)
+    }
+    
+    private var totalProgress: Double {
+        let totalDuration = program.totalDuration * 60 // Convert to seconds
+        let elapsed = workoutManager.elapsedTime
+        return min(elapsed / totalDuration, 1.0)
+    }
+    
+    private var formattedRemainingTime: String {
+        let remaining = workoutManager.remainingIntervalTime
+        let minutes = Int(remaining) / 60
+        let seconds = Int(remaining) % 60
+        return String(format: "%02d:%02d", minutes, seconds)
+    }
+    
+    private var formattedTotalRemainingTime: String {
+        let totalDuration = program.totalDuration * 60 // Convert to seconds
+        let remaining = totalDuration - workoutManager.elapsedTime
+        let minutes = Int(remaining) / 60
+        let seconds = Int(remaining) % 60
+        
+        if remaining > 3600 { // More than an hour
+            let hours = Int(remaining) / 3600
+            let mins = (Int(remaining) % 3600) / 60
+            return String(format: "%d:%02d:%02d", hours, mins, seconds)
+        } else {
+            return String(format: "%02d:%02d", minutes, seconds)
         }
     }
 }
