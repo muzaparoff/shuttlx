@@ -79,12 +79,29 @@ class WorkoutViewModel: NSObject, ObservableObject {
     private var currentIntervalElapsedTime: TimeInterval = 0
     private var locationManager: CLLocationManager?
     private var cancellables = Set<AnyCancellable>()
+    private let performanceService = PerformanceOptimizationService.shared
+    
+    // MARK: - Memory Management
+    private let maxLocationPoints = 500 // Reduced from 1000
+    private let maxHeartRatePoints = 100 // Keep manageable
     
     // MARK: - Initialization
     override init() {
         super.init()
         setupLocationManager()
         setupSampleWorkout()
+        setupPerformanceOptimization()
+    }
+    
+    deinit {
+        // Ensure cleanup - capture service weakly to avoid deinit capture warning
+        let performanceService = self.performanceService
+        Task { @MainActor in
+            performanceService.invalidateTimer(identifier: "workout_main")
+            performanceService.invalidateTimer(identifier: "workout_interval")
+        }
+        locationManager?.stopUpdatingLocation()
+        cancellables.removeAll()
     }
     
     // MARK: - Public Methods
@@ -240,15 +257,21 @@ class WorkoutViewModel: NSObject, ObservableObject {
     }
     
     private func startTimers() {
-        // Main timer for overall workout progress
-        timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
+        // Use optimized timer service to prevent memory leaks
+        timer = performanceService.createOptimizedTimer(
+            identifier: "workout_main",
+            interval: 1.0
+        ) { [weak self] in
             Task { @MainActor in
                 self?.updateWorkoutProgress()
             }
         }
         
         // Interval timer for current interval progress
-        intervalTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+        intervalTimer = performanceService.createOptimizedTimer(
+            identifier: "workout_interval",
+            interval: 0.1
+        ) { [weak self] in
             Task { @MainActor in
                 self?.updateIntervalProgress()
             }
@@ -256,8 +279,8 @@ class WorkoutViewModel: NSObject, ObservableObject {
     }
     
     private func stopTimers() {
-        timer?.invalidate()
-        intervalTimer?.invalidate()
+        performanceService.invalidateTimer(identifier: "workout_main")
+        performanceService.invalidateTimer(identifier: "workout_interval")
         timer = nil
         intervalTimer = nil
     }
@@ -396,9 +419,10 @@ class WorkoutViewModel: NSObject, ObservableObject {
         let dataPoint = HeartRateDataPoint(timestamp: Date(), heartRate: heartRate)
         currentSession?.heartRateData.append(dataPoint)
         
-        // Keep only last 100 data points to manage memory
-        if currentSession?.heartRateData.count ?? 0 > 100 {
-            currentSession?.heartRateData.removeFirst()
+        // Keep only last maxHeartRatePoints data points to manage memory
+        if currentSession?.heartRateData.count ?? 0 > maxHeartRatePoints {
+            let excessCount = (currentSession?.heartRateData.count ?? 0) - maxHeartRatePoints
+            currentSession?.heartRateData.removeFirst(excessCount)
         }
     }
     
@@ -461,6 +485,17 @@ class WorkoutViewModel: NSObject, ObservableObject {
     private func checkAccessibilitySettings() -> Bool {
         return true
     }
+    
+    // MARK: - Performance Optimization
+    private func setupPerformanceOptimization() {
+        // Schedule periodic memory cleanup
+        _ = performanceService.createOptimizedTimer(
+            identifier: "memory_cleanup",
+            interval: 30.0 // Every 30 seconds
+        ) { [weak self] in
+            self?.performanceService.performMemoryCleanup()
+        }
+    }
 }
 
 // MARK: - CLLocationManagerDelegate
@@ -487,13 +522,14 @@ extension WorkoutViewModel: CLLocationManagerDelegate {
             )
             currentSession?.locationData.append(locationData)
             
-            // Keep only last 1000 location points to manage memory
-            if routePoints.count > 1000 {
-                routePoints.removeFirst()
+            // Keep only last maxLocationPoints location points to manage memory
+            if routePoints.count > maxLocationPoints {
+                routePoints.removeFirst(routePoints.count - maxLocationPoints)
             }
             
-            if currentSession?.locationData.count ?? 0 > 1000 {
-                currentSession?.locationData.removeFirst()
+            if currentSession?.locationData.count ?? 0 > maxLocationPoints {
+                let excessCount = (currentSession?.locationData.count ?? 0) - maxLocationPoints
+                currentSession?.locationData.removeFirst(excessCount)
             }
         }
     }

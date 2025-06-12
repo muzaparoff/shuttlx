@@ -187,7 +187,7 @@ struct TrainingProgramDetailView: View {
                 
                 QuickStatCard(
                     title: "Intensity",
-                    value: program.targetHeartRateZone.description,
+                    value: program.targetHeartRateZone.displayName,
                     icon: "heart.fill",
                     color: program.targetHeartRateZone.color
                 )
@@ -599,10 +599,10 @@ struct WorkoutExecutionView: View {
             runInterval: 2.0,
             walkInterval: 1.0,
             totalDuration: 30.0,
-            difficulty: .moderate,
+            difficulty: .intermediate,
             description: "A custom high-intensity interval training program designed for intermediate runners",
             estimatedCalories: 350,
-            targetHeartRateZone: .hard,
+            targetHeartRateZone: .zone4,
             isCustom: true
         )
     )

@@ -37,6 +37,10 @@
 		E1234567 /* UserProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7654321 /* UserProfileService.swift */; };
 		E2345678 /* CalorieCalculationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8765432 /* CalorieCalculationService.swift */; };
 		E3456789 /* TrainingProgramSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9876543 /* TrainingProgramSync.swift */; };
+		PERF1001 /* PerformanceOptimizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF1111 /* PerformanceOptimizationService.swift */; };
+		PERF1002 /* AdvancedPerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF2222 /* AdvancedPerformanceMonitor.swift */; };
+		PERF1003 /* ViewPerformanceModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF3333 /* ViewPerformanceModifiers.swift */; };
+		TRAIN001 /* TrainingProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TRAIN111 /* TrainingProgramDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -113,6 +117,10 @@
 		E9876543 /* TrainingProgramSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgramSync.swift; sourceTree = "<group>"; };
 		EB21EC92 /* NotificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationModels.swift; sourceTree = "<group>"; };
 		F5E5779F /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		PERF1111 /* PerformanceOptimizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceOptimizationService.swift; sourceTree = "<group>"; };
+		PERF2222 /* AdvancedPerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedPerformanceMonitor.swift; sourceTree = "<group>"; };
+		PERF3333 /* ViewPerformanceModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewPerformanceModifiers.swift; sourceTree = "<group>"; };
+		TRAIN111 /* TrainingProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgramDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -214,6 +222,8 @@
 				E7654321 /* UserProfileService.swift */,
 				E8765432 /* CalorieCalculationService.swift */,
 				E9876543 /* TrainingProgramSync.swift */,
+				PERF1111 /* PerformanceOptimizationService.swift */,
+				PERF2222 /* AdvancedPerformanceMonitor.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -242,6 +252,8 @@
 				99887766 /* SettingsView.swift */,
 				00998877 /* NotificationsView.swift */,
 				AABBCCDD /* ProgramsView.swift */,
+				TRAIN111 /* TrainingProgramDetailView.swift */,
+				PERF3333 /* ViewPerformanceModifiers.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -478,9 +490,13 @@
 				00112233 /* OnboardingViewModel.swift in Sources */,
 				11223355 /* ProfileViewModel.swift in Sources */,
 				DDCCBBAA /* ProgramsView.swift in Sources */,
+				TRAIN001 /* TrainingProgramDetailView.swift in Sources */,
 				E1234567 /* UserProfileService.swift in Sources */,
 				E2345678 /* CalorieCalculationService.swift in Sources */,
 				E3456789 /* TrainingProgramSync.swift in Sources */,
+				PERF1001 /* PerformanceOptimizationService.swift in Sources */,
+				PERF1002 /* AdvancedPerformanceMonitor.swift in Sources */,
+				PERF1003 /* ViewPerformanceModifiers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

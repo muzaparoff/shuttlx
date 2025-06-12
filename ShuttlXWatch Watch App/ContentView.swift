@@ -222,37 +222,24 @@ struct ContentView: View {
     
     var body: some View {
         NavigationView {
-            VStack {
-                // Connection Status
-                if !isConnectedToPhone {
-                    HStack {
-                        Image(systemName: "iphone.slash")
-                            .foregroundColor(.orange)
-                        Text("Phone Disconnected")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal)
-                    .padding(.vertical, 4)
-                }
-                
-                // Programs List
-                List {
-                    if !customPrograms.isEmpty {
-                        Section("Custom Programs") {
-                            ForEach(customPrograms) { program in
-                                NavigationLink(destination: TrainingDetailView(program: program)) {
-                                    TrainingProgramRow(program: program)
-                                }
+            List {
+                // Custom Workouts Section - Simplified
+                if !customPrograms.isEmpty {
+                    Section("My Workouts") {
+                        ForEach(customPrograms) { program in
+                            NavigationLink(destination: TrainingDetailView(program: program)) {
+                                SimpleWorkoutRow(program: program, isCustom: true)
                             }
                         }
+                        .onDelete(perform: deleteCustomPrograms)
                     }
-                    
-                    Section("Default Programs") {
-                        ForEach(trainingPrograms) { program in
-                            NavigationLink(destination: TrainingDetailView(program: program)) {
-                                TrainingProgramRow(program: program)
-                            }
+                }
+                
+                // Default Programs Section - Simplified
+                Section("Training Programs") {
+                    ForEach(trainingPrograms) { program in
+                        NavigationLink(destination: TrainingDetailView(program: program)) {
+                            SimpleWorkoutRow(program: program, isCustom: false)
                         }
                     }
                 }
@@ -262,25 +249,44 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button(action: requestProgramSync) {
-                        Image(systemName: "arrow.clockwise.circle")
+                        Image(systemName: "arrow.clockwise")
                             .foregroundColor(.orange)
                     }
-                }
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Test") {
-                        // Test button for debugging - functionality can be added here
-                    }
-                    .foregroundColor(.green)
                 }
             }
         }
         .onAppear {
             setupWatchConnectivity()
             checkPhoneConnection()
+            loadCustomWorkouts()
         }
         .onReceive(coordinator.$trainingPrograms) { programs in
             if !programs.isEmpty {
                 updateReceivedPrograms(programs)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("TrainingProgramsUpdated"))) { notification in
+            if let programs = notification.object as? [TrainingProgram] {
+                updateReceivedPrograms(programs)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("CustomWorkoutAdded"))) { notification in
+            if let workout = notification.object as? TrainingProgram {
+                DispatchQueue.main.async {
+                    if !self.customPrograms.contains(where: { $0.id == workout.id }) {
+                        self.customPrograms.append(workout)
+                        self.saveCustomWorkouts()
+                    }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSNotification.Name("AllCustomWorkoutsSynced"))) { notification in
+            if let workouts = notification.object as? [TrainingProgram] {
+                DispatchQueue.main.async {
+                    self.customPrograms = workouts
+                    self.saveCustomWorkouts()
+                    print("⌚ Updated custom programs from sync: \(workouts.count)")
+                }
             }
         }
     }
@@ -299,12 +305,28 @@ struct ContentView: View {
     }
     
     private func checkPhoneConnection() {
-        isConnectedToPhone = WCSession.default.isReachable
+        // Use a more reliable connection check for watchOS
+        let session = WCSession.default
+        let isSessionActivated = session.activationState == .activated
+        let isReachable = session.isReachable
         
-        // Check connection periodically
-        Timer.scheduledTimer(withTimeInterval: 10.0, repeats: true) { _ in
+        // Connection is considered good if session is activated
+        // Even if not immediately reachable, the connection infrastructure is there
+        isConnectedToPhone = isSessionActivated
+        
+        print("⌚ Connection Status: Activated=\(isSessionActivated), Reachable=\(isReachable)")
+        
+        // Check connection less frequently and with better logic
+        Timer.scheduledTimer(withTimeInterval: 30.0, repeats: true) { _ in
             DispatchQueue.main.async {
-                isConnectedToPhone = WCSession.default.isReachable
+                let session = WCSession.default
+                // Show as connected if session is activated, regardless of immediate reachability
+                self.isConnectedToPhone = session.activationState == .activated
+                
+                // Only show disconnected if there's a real problem
+                if !self.isConnectedToPhone {
+                    print("⌚ Connection issue detected - State: \(session.activationState.rawValue)")
+                }
             }
         }
     }
@@ -315,9 +337,36 @@ struct ContentView: View {
             return
         }
         
-        let message = ["action": "sync_programs"]
-        WCSession.default.sendMessage(message, replyHandler: nil) { error in
+        // Request all programs including custom workouts
+        let message = [
+            "action": "request_custom_workouts",
+            "timestamp": Date().timeIntervalSince1970
+        ] as [String: Any]
+        
+        WCSession.default.sendMessage(message, replyHandler: { reply in
+            print("⌚ ✅ Sync request successful: \(reply)")
+            
+            // Handle sync response
+            if let workoutsData = reply["workouts_data"] as? Data {
+                do {
+                    let customWorkouts = try JSONDecoder().decode([TrainingProgram].self, from: workoutsData)
+                    DispatchQueue.main.async {
+                        self.customPrograms = customWorkouts
+                        self.saveCustomWorkouts()
+                        print("⌚ ✅ Synced \(customWorkouts.count) custom workouts from iPhone")
+                    }
+                } catch {
+                    print("❌ Failed to decode synced workouts: \(error)")
+                }
+            }
+        }) { error in
             print("❌ Failed to request sync: \(error.localizedDescription)")
+            
+            // Fallback: try legacy sync method
+            let fallbackMessage = ["action": "sync_programs"]
+            WCSession.default.sendMessage(fallbackMessage, replyHandler: nil) { fallbackError in
+                print("❌ Fallback sync also failed: \(fallbackError.localizedDescription)")
+            }
         }
     }
     
@@ -332,6 +381,93 @@ struct ContentView: View {
             }
             customPrograms = custom
             print("⌚ Updated programs: \(defaults.count) default, \(custom.count) custom")
+        }
+    }
+    
+    // MARK: - Custom Workout Management
+    
+    private func deleteCustomPrograms(offsets: IndexSet) {
+        let programsToDelete = offsets.map { customPrograms[$0] }
+        
+        for program in programsToDelete {
+            // Remove from local array
+            customPrograms.removeAll { $0.id == program.id }
+            
+            // Send deletion request to iPhone
+            sendCustomWorkoutDeletion(program)
+        }
+    }
+    
+    private func requestCustomWorkoutCreation() {
+        // Send request to iPhone to create new custom workout
+        guard WCSession.default.isReachable else {
+            print("⌚ Phone not reachable for custom workout creation")
+            return
+        }
+        
+        let message = [
+            "action": "create_custom_workout",
+            "timestamp": Date().timeIntervalSince1970
+        ] as [String : Any]
+        
+        WCSession.default.sendMessage(message, replyHandler: { reply in
+            print("⌚ Custom workout creation request sent")
+        }) { error in
+            print("⌚ ❌ Failed to send custom workout creation request: \(error)")
+        }
+    }
+    
+    private func sendCustomWorkoutDeletion(_ program: TrainingProgram) {
+        guard WCSession.default.isReachable else {
+            print("⌚ Phone not reachable for custom workout deletion")
+            return
+        }
+        
+        do {
+            let encoder = JSONEncoder()
+            let programData = try encoder.encode(program)
+            
+            let message = [
+                "action": "delete_custom_workout",
+                "workout_data": programData,
+                "workout_id": program.id.uuidString,
+                "timestamp": Date().timeIntervalSince1970
+            ] as [String : Any]
+            
+            WCSession.default.sendMessage(message, replyHandler: { reply in
+                print("⌚ ✅ Custom workout deletion sent to iPhone")
+            }) { error in
+                print("⌚ ❌ Failed to send custom workout deletion: \(error)")
+            }
+        } catch {
+            print("⌚ ❌ Failed to encode custom workout for deletion: \(error)")
+        }
+    }
+    
+    // MARK: - Custom Workout Persistence
+    
+    private func loadCustomWorkouts() {
+        // Load custom workouts from UserDefaults
+        if let data = UserDefaults.standard.data(forKey: "customWorkouts_watch"),
+           let workouts = try? JSONDecoder().decode([TrainingProgram].self, from: data) {
+            customPrograms = workouts
+            print("⌚ Loaded \(workouts.count) custom workouts from local storage")
+        }
+        
+        // Request sync from iPhone if we have a connection
+        if isConnectedToPhone {
+            requestProgramSync()
+        }
+    }
+    
+    private func saveCustomWorkouts() {
+        // Save custom workouts to UserDefaults
+        do {
+            let data = try JSONEncoder().encode(customPrograms)
+            UserDefaults.standard.set(data, forKey: "customWorkouts_watch")
+            print("⌚ Saved \(customPrograms.count) custom workouts to local storage")
+        } catch {
+            print("❌ Failed to save custom workouts: \(error)")
         }
     }
 }
@@ -475,6 +611,77 @@ struct TrainingProgramRow: View {
             }
         }
         .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Simple Workout Row for watchOS
+
+struct SimpleWorkoutRow: View {
+    let program: TrainingProgram
+    let isCustom: Bool
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(program.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                
+                Spacer()
+                
+                if isCustom {
+                    Image(systemName: "star.fill")
+                        .foregroundColor(.yellow)
+                        .font(.caption)
+                }
+                
+                DifficultyBadge(difficulty: program.difficulty)
+            }
+            
+            HStack {
+                Text("\(Int(program.totalDuration))min")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+                
+                Text("•")
+                    .foregroundColor(.secondary)
+                
+                Text(String(format: "%.1f km", program.distance))
+                    .font(.caption)
+                    .foregroundColor(.blue)
+                
+                Spacer()
+                
+                Text("\(program.estimatedCalories) cal")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+struct QuickStat: View {
+    let icon: String
+    let value: String
+    let unit: String
+    let color: Color
+    
+    var body: some View {
+        HStack(spacing: 2) {
+            Image(systemName: icon)
+                .font(.caption2)
+                .foregroundColor(color)
+            
+            Text(value)
+                .font(.caption)
+                .fontWeight(.medium)
+            
+            Text(unit)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
     }
 }
 
@@ -954,11 +1161,9 @@ struct CompactMetricView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(color)
                 
-                if !unit.isEmpty {
-                    Text(unit)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text(unit)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
             }
             
             Text(label)

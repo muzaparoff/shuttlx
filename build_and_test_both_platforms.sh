@@ -90,7 +90,7 @@ fi
 echo "🧹 Cleaning up old log files..."
 rm -f *.log
 
-# Function to clean Xcode build cache and DerivedData
+# Function to clean Xcode build cache and DerivedData with comprehensive cleanup
 clean_xcode_cache() {
     echo_status "🧹 Cleaning Xcode build cache and DerivedData..."
     
@@ -118,6 +118,99 @@ clean_xcode_cache() {
     fi
     
     echo_success "✅ Xcode cache cleanup complete"
+}
+
+# Enhanced function for comprehensive cache cleanup including simulator data
+comprehensive_cache_cleanup() {
+    echo_status "🧹 Performing comprehensive cache cleanup..."
+    
+    # Standard Xcode cache cleanup
+    clean_xcode_cache
+    
+    # Clean simulator device logs
+    echo_status "Cleaning simulator device logs..."
+    if [ -d ~/Library/Logs/CoreSimulator ]; then
+        rm -rf ~/Library/Logs/CoreSimulator/*
+        echo_success "Simulator logs cleared"
+    fi
+    
+    # Clean build logs
+    echo_status "Cleaning build logs..."
+    rm -f *.log
+    rm -f build_*.log
+    rm -f ios_*.log
+    rm -f watch_*.log
+    echo_success "Build logs cleared"
+    
+    # Clean SDKStatCaches if they exist
+    if [ -d "build/SDKStatCaches.noindex" ]; then
+        echo_status "Removing SDK stat caches..."
+        rm -rf build/SDKStatCaches.noindex
+        echo_success "SDK stat caches cleared"
+    fi
+    
+    # Clean temporary test files
+    echo_status "Cleaning temporary test files..."
+    rm -f /tmp/test_custom_workout.json
+    rm -f /tmp/schemes_output.txt
+    echo_success "Temporary test files cleared"
+    
+    echo_success "✅ Comprehensive cache cleanup complete"
+}
+
+# M1 Pro optimized emulator management with memory constraints
+optimize_simulators_for_m1() {
+    echo_status "🔧 Optimizing simulators for M1 Pro MacBook (memory/CPU constraints)..."
+    
+    # Get current memory usage
+    local memory_info=$(vm_stat | head -4)
+    echo_status "Current memory status:"
+    echo "$memory_info" | sed 's/^/   /'
+    
+    # Check for running simulators
+    local running_sims=$(xcrun simctl list devices | grep -c "(Booted)" 2>/dev/null || echo "0")
+    echo_status "Currently running simulators: $running_sims"
+    
+    # If more than 2 simulators are running, shut down extras to conserve memory
+    if [ "$running_sims" -gt 2 ]; then
+        echo_status "Too many simulators running for M1 Pro constraints. Shutting down extras..."
+        shutdown_excess_simulators
+    fi
+    
+    # Validate memory is sufficient (require at least 4GB free)
+    local free_memory=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.' 2>/dev/null || echo "1000000")
+    local free_mb=$((free_memory * 16384 / 1024 / 1024 2>/dev/null || 4096))
+    
+    if [ "$free_mb" -lt 4096 ]; then
+        echo_warning "⚠️ Low memory detected: ${free_mb}MB free. Consider closing other applications."
+        echo_status "Recommended for optimal performance: Close browsers, IDEs, and other memory-intensive apps"
+    else
+        echo_success "✅ Memory check passed: ${free_mb}MB free"
+    fi
+    
+    echo_success "✅ Simulator optimization for M1 Pro complete"
+}
+
+# Function to shutdown excess simulators to optimize memory usage
+shutdown_excess_simulators() {
+    echo_status "Shutting down excess simulators to optimize memory..."
+    
+    # Get list of booted devices excluding our target devices
+    local target_ios_id=$(get_ios_device_id)
+    local target_watch_id=$(get_watch_device_id)
+    
+    xcrun simctl list devices | grep "(Booted)" | while read line; do
+        local device_id=$(echo "$line" | grep -E -o '\([A-F0-9-]+\)' | tr -d '()')
+        
+        # Don't shutdown our target devices
+        if [ "$device_id" != "$target_ios_id" ] && [ "$device_id" != "$target_watch_id" ]; then
+            local device_name=$(echo "$line" | sed 's/(.*//')
+            echo_status "Shutting down: $device_name"
+            xcrun simctl shutdown "$device_id" 2>/dev/null || true
+        fi
+    done
+    
+    echo_success "Excess simulators shutdown complete"
 }
 
 echo "🚀 ShuttlX Multi-Platform Build & Test Script"
@@ -166,14 +259,14 @@ echo_error() {
     echo -e "${RED}[ERROR]${NC} $1"
 }
 
-# Helper function to get iOS device ID
+# Helper function to get iOS device ID - prefer reusing existing simulators
 get_ios_device_id() {
-    find_device_with_version "$IOS_SIMULATOR" "$IOS_VERSION"
+    find_or_reuse_simulator "$IOS_SIMULATOR" "$IOS_VERSION"
 }
 
-# Helper function to get watchOS device ID
+# Helper function to get watchOS device ID - prefer reusing existing simulators
 get_watch_device_id() {
-    find_device_with_version "$WATCH_SIMULATOR" "$WATCHOS_VERSION"
+    find_or_reuse_simulator "$WATCH_SIMULATOR" "$WATCHOS_VERSION"
 }
 
 # Function to run device pairing test
@@ -940,7 +1033,7 @@ find_device_with_version() {
     return 1
 }
 
-# Function to check if simulator is available
+# Function to check if simulator is available and reuse existing ones
 check_simulator() {
     local sim_name="$1"
     if xcrun simctl list devices | grep -q "$sim_name"; then
@@ -948,6 +1041,104 @@ check_simulator() {
         return 0
     else
         echo_error "Simulator '$sim_name' not found"
+        return 1
+    fi
+}
+
+# Enhanced function to find or reuse existing simulator (optimized for M1 Pro)
+find_or_reuse_simulator() {
+    local sim_name="$1"
+    local os_version="$2"
+    
+    echo_status "🔍 Finding optimal simulator for $sim_name (OS: $os_version)..."
+    
+    # First priority: Find already booted simulator with matching name
+    local booted_device_id=$(xcrun simctl list devices | grep "^[[:space:]]*$sim_name (" | grep "(Booted)" | head -1 | grep -E -o '\([A-F0-9-]+\)' | tr -d '()')
+    
+    if [ -n "$booted_device_id" ]; then
+        echo_success "✅ Reusing already booted simulator: $sim_name (ID: $booted_device_id)"
+        echo "$booted_device_id"
+        return 0
+    fi
+    
+    # Second priority: Find existing simulator with that name (any state)
+    local existing_device_id=$(xcrun simctl list devices | grep "^[[:space:]]*$sim_name (" | head -1 | grep -E -o '\([A-F0-9-]+\)' | tr -d '()')
+    
+    if [ -n "$existing_device_id" ]; then
+        echo_status "Found existing simulator: $sim_name (ID: $existing_device_id)"
+        
+        # Check its current state
+        local sim_state=$(xcrun simctl list devices | grep "$existing_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+        
+        if [ "$sim_state" = "(Shutdown)" ]; then
+            echo_status "Booting existing simulator..."
+            xcrun simctl boot "$existing_device_id"
+            sleep 3
+        fi
+        
+        echo_success "✅ Using existing simulator: $sim_name (ID: $existing_device_id)"
+        echo "$existing_device_id"
+        return 0
+    fi
+    
+    # Third priority: Search by version if no existing simulator found
+    echo_status "No existing simulator found, searching by version..." >&2
+    find_device_with_version "$sim_name" "$os_version"
+}
+
+# Enhanced function to ensure simulators are booted with memory optimization
+ensure_simulators_booted() {
+    echo_status "🚀 Ensuring target simulators are booted (M1 Pro optimized)..."
+    
+    # Optimize for M1 Pro first
+    optimize_simulators_for_m1
+    
+    local ios_device_id=$(get_ios_device_id)
+    local watch_device_id=$(get_watch_device_id)
+    
+    if [ -z "$ios_device_id" ] || [ -z "$watch_device_id" ]; then
+        echo_error "❌ Could not find required simulators"
+        show_simulators
+        return 1
+    fi
+    
+    echo_status "Target simulators:"
+    echo_status "  📱 iOS: $IOS_SIMULATOR ($ios_device_id)"
+    echo_status "  ⌚ Watch: $WATCH_SIMULATOR ($watch_device_id)"
+    
+    # Check iOS simulator state
+    local ios_state=$(xcrun simctl list devices | grep "$ios_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+    if [ "$ios_state" = "(Shutdown)" ]; then
+        echo_status "Booting iOS simulator..."
+        xcrun simctl boot "$ios_device_id"
+        sleep 3
+        echo_success "iOS simulator booted"
+    elif [ "$ios_state" = "(Booted)" ]; then
+        echo_success "iOS simulator already booted"
+    fi
+    
+    # Check watchOS simulator state  
+    local watch_state=$(xcrun simctl list devices | grep "$watch_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+    if [ "$watch_state" = "(Shutdown)" ]; then
+        echo_status "Booting watchOS simulator..."
+        xcrun simctl boot "$watch_device_id"
+        sleep 3
+        echo_success "watchOS simulator booted"
+    elif [ "$watch_state" = "(Booted)" ]; then
+        echo_success "watchOS simulator already booted"
+    fi
+    
+    # Verify both are now booted
+    sleep 2
+    local ios_final_state=$(xcrun simctl list devices | grep "$ios_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+    local watch_final_state=$(xcrun simctl list devices | grep "$watch_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+    
+    if [ "$ios_final_state" = "(Booted)" ] && [ "$watch_final_state" = "(Booted)" ]; then
+        echo_success "✅ Both simulators successfully booted and ready"
+        return 0
+    else
+        echo_error "❌ Failed to boot simulators"
+        echo_status "iOS state: $ios_final_state, Watch state: $watch_final_state"
         return 1
     fi
 }
@@ -962,11 +1153,17 @@ start_simulator() {
         return 1
     fi
     
-    local sim_state=$(xcrun simctl list devices | grep "$device_id" | grep -o "(Booted)\|(Shutdown)")
+    local sim_state=$(xcrun simctl list devices | grep "$device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
     
     if [ "$sim_state" = "(Shutdown)" ]; then
         echo_status "Starting $sim_name..."
         xcrun simctl boot "$device_id"
+        sleep 3
+    elif [ "$sim_state" = "(Booted)" ]; then
+        echo_success "$sim_name already booted"
+    else
+        echo_warning "$sim_name in unknown state: $sim_state, trying to boot anyway..."
+        xcrun simctl boot "$device_id" || true
         sleep 3
     fi
     
@@ -978,7 +1175,7 @@ build_and_deploy_ios() {
     echo_status "Building, installing and launching iOS app for $IOS_SIMULATOR (iOS $IOS_VERSION)..."
     
     local ios_device_id
-    ios_device_id=$(find_device_with_version "$IOS_SIMULATOR" "$IOS_VERSION")
+    ios_device_id=$(find_or_reuse_simulator "$IOS_SIMULATOR" "$IOS_VERSION")
     if [ -z "$ios_device_id" ]; then
         echo_error "Could not find iOS device"
         return 1
@@ -988,11 +1185,14 @@ build_and_deploy_ios() {
     
     # Ensure the iOS simulator is booted
     echo_status "Ensuring iOS simulator is booted..."
-    if ! xcrun simctl list devices | grep "$ios_device_id" | grep -q "Booted"; then
+    local ios_status=$(xcrun simctl list devices | grep "$ios_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+    if [ "$ios_status" != "(Booted)" ]; then
         echo_status "Booting iOS simulator..."
         xcrun simctl boot "$ios_device_id" || true
         echo_status "Waiting for simulator to boot..."
         sleep 3
+    else
+        echo_success "iOS simulator already booted"
     fi
     
     # Build the iOS app using the same command that worked manually
@@ -1123,7 +1323,7 @@ build_and_deploy_watchos() {
     echo_status "Building, installing and launching watchOS app for $WATCH_SIMULATOR (watchOS $WATCHOS_VERSION)..."
     
     local watch_device_id
-    watch_device_id=$(find_device_with_version "$WATCH_SIMULATOR" "$WATCHOS_VERSION")
+    watch_device_id=$(find_or_reuse_simulator "$WATCH_SIMULATOR" "$WATCHOS_VERSION")
     if [ -z "$watch_device_id" ]; then
         echo_error "Could not find watchOS device"
         return 1
@@ -1133,11 +1333,14 @@ build_and_deploy_watchos() {
     
     # Ensure the watchOS simulator is booted
     echo_status "Ensuring watchOS simulator is booted..."
-    if ! xcrun simctl list devices | grep "$watch_device_id" | grep -q "Booted"; then
+    local watch_status=$(xcrun simctl list devices | grep "$watch_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
+    if [ "$watch_status" != "(Booted)" ]; then
         echo_status "Booting watchOS simulator..."
         xcrun simctl boot "$watch_device_id" || true
         echo_status "Waiting for simulator to boot..."
         sleep 5
+    else
+        echo_success "watchOS simulator already booted"
     fi
     
     # Build the watchOS app using the same command that worked manually
@@ -1733,11 +1936,15 @@ detect_watch_scheme
 # Main execution
 case "$COMMAND" in
     "clean")
-        clean_xcode_cache
+        comprehensive_cache_cleanup
         ;;
     "clean-build")
-        echo_status "Performing clean build from scratch..."
-        clean_xcode_cache
+        echo_status "Performing clean build from scratch with comprehensive cleanup..."
+        comprehensive_cache_cleanup
+        
+        # Optimize simulators for M1 Pro before building
+        optimize_simulators_for_m1
+        
         echo ""
         echo_status "Building both iOS and watchOS apps after cleanup..."
         ios_success=false
@@ -1753,6 +1960,10 @@ case "$COMMAND" in
         
         if [ "$ios_success" = true ] && [ "$watchos_success" = true ]; then
             echo_success "Both platforms built successfully after cleanup!"
+            
+            # Clean up after successful build
+            echo_status "Performing post-build cleanup..."
+            comprehensive_cache_cleanup
         elif [ "$ios_success" = true ]; then
             echo_warning "iOS build succeeded, but watchOS build failed after cleanup"
         elif [ "$watchos_success" = true ]; then
@@ -1903,7 +2114,11 @@ case "$COMMAND" in
         run_comprehensive_integration_tests
         ;;
     "test-all")
-        echo_status "🧪 Running Complete Test Suite..."
+        echo_status "🧪 Running Complete Test Suite with M1 Pro Optimization..."
+        
+        # Optimize for M1 Pro first
+        optimize_simulators_for_m1
+        
         echo ""
         echo_status "🧪 Test 1/6: Models Test Suite..."
         echo_status "Testing WorkoutModels, TrainingModels, UserModels, etc."
@@ -1936,8 +2151,10 @@ case "$COMMAND" in
             echo_warning "⚠️ Build test incomplete - One or more platforms failed to build"
         fi
         echo ""
+        echo_status "Performing comprehensive post-test cleanup..."
+        comprehensive_cache_cleanup
         echo_success "🎉 Complete Test Suite Finished!"
-        echo_status "All comprehensive tests have been executed."
+        echo_status "All comprehensive tests have been executed and cleanup completed."
         ;;
     "test-workout")
         echo_status "Running short workout execution test..."
@@ -1968,7 +2185,11 @@ case "$COMMAND" in
         run_data_sync_test
         ;;
     "full")
-        echo_status "Running full build and test sequence..."
+        echo_status "Running full build and test sequence with M1 Pro optimization..."
+        
+        # Optimize for M1 Pro before starting
+        optimize_simulators_for_m1
+        
         show_simulators
         echo ""
         
@@ -2025,6 +2246,11 @@ case "$COMMAND" in
                             echo_warning "automated_gui_test.sh not found. Skipping GUI tests."
                         fi
                     fi
+                    
+                    # Comprehensive cleanup after successful deployment
+                    echo_status "Performing comprehensive post-deployment cleanup..."
+                    comprehensive_cache_cleanup
+                    
                 else
                     echo_warning "⚠️ watchOS app deployment failed"
                     echo_success "🎉 iOS setup complete! iOS simulator ready."

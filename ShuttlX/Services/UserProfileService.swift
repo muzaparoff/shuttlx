@@ -282,6 +282,11 @@ class TrainingProgramManager: ObservableObject {
         saveToUserDefaults()
     }
     
+    func deleteCustomProgramById(_ id: String) {
+        customPrograms.removeAll { $0.id.uuidString == id }
+        saveToUserDefaults()
+    }
+    
     func updateCustomProgram(_ program: TrainingProgram) {
         if let index = customPrograms.firstIndex(where: { $0.id == program.id }) {
             customPrograms[index] = program

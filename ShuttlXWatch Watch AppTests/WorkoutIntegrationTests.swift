@@ -219,4 +219,91 @@ final class WorkoutIntegrationTests: XCTestCase {
         workoutManager.remainingIntervalTime = 0
         XCTAssertEqual(workoutManager.formattedRemainingTime, "00:00", "Should handle zero time")
     }
+    
+    // MARK: - Timer Start Test
+    func testTimerStartsOnWorkoutButtonPress() throws {
+        // Given: Prepare test intervals
+        let testIntervals = [
+            WorkoutInterval(
+                id: UUID(),
+                name: "Timer Test",
+                type: .work,
+                duration: 5, // 5 seconds for quick test
+                targetHeartRateZone: .moderate
+            )
+        ]
+        
+        // When: Start the workout
+        workoutManager.startWorkout(with: testIntervals)
+        
+        // Then: Timer should start immediately
+        XCTAssertTrue(workoutManager.isWorkoutActive, "Workout should be active immediately")
+        XCTAssertEqual(workoutManager.remainingIntervalTime, 5, "Timer should show initial interval time")
+        XCTAssertNotNil(workoutManager.currentInterval, "Current interval should be set")
+        XCTAssertEqual(workoutManager.currentInterval?.name, "Timer Test", "Should be in correct interval")
+        
+        // Wait for timer to tick
+        let expectation = expectation(description: "Timer countdown")
+        
+        var tickCount = 0
+        let timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { timer in
+            tickCount += 1
+            
+            // Check timer is decrementing
+            if tickCount == 2 {
+                XCTAssertLessThan(self.workoutManager.remainingIntervalTime, 5, "Timer should be counting down")
+            }
+            
+            // Complete test after 3 seconds
+            if tickCount >= 3 {
+                timer.invalidate()
+                expectation.fulfill()
+            }
+        }
+        
+        waitForExpectations(timeout: 5)
+        
+        // Cleanup
+        workoutManager.endWorkout()
+    }
+    
+    // MARK: - Custom Workout Sync Test
+    func testCustomWorkoutSyncToWatch() throws {
+        // This test verifies custom workout sync from iOS to watchOS
+        let customWorkout = TrainingProgram(
+            name: "Sync Test Workout",
+            distance: 3.0,
+            runInterval: 2.0,
+            walkInterval: 1.0,
+            totalDuration: 15.0,
+            difficulty: .beginner,
+            description: "Testing sync functionality",
+            estimatedCalories: 200,
+            targetHeartRateZone: .moderate,
+            isCustom: true
+        )
+        
+        // Simulate receiving custom workout from iOS
+        let encoder = JSONEncoder()
+        let workoutData = try encoder.encode(customWorkout)
+        
+        let message = [
+            "action": "custom_workout_created",
+            "workout_data": workoutData,
+            "workout_id": customWorkout.id.uuidString,
+            "timestamp": Date().timeIntervalSince1970
+        ] as [String : Any]
+        
+        // Test sync handling
+        // Note: This would normally be tested with WatchConnectivityManager
+        // For now, we'll verify data encoding/decoding works
+        
+        let decoder = JSONDecoder()
+        let decodedWorkout = try decoder.decode(TrainingProgram.self, from: workoutData)
+        
+        XCTAssertEqual(decodedWorkout.name, customWorkout.name)
+        XCTAssertEqual(decodedWorkout.isCustom, true)
+        XCTAssertEqual(decodedWorkout.runInterval, 2.0)
+        XCTAssertEqual(decodedWorkout.walkInterval, 1.0)
+    }
 }

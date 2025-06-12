@@ -13,8 +13,6 @@ import SwiftUI
 class WatchConnectivityManager: NSObject, ObservableObject {
     // MARK: - Published Properties
     @Published var isReachable = false
-    @Published var isPaired = false
-    @Published var isWatchAppInstalled = false
     @Published var receivedPrograms: [TrainingProgram] = []
     @Published var syncStatus: SyncStatus = .disconnected
     
@@ -105,11 +103,150 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     }
     
     private func updateConnectionStatus() {
-        // watchOS doesn't have isPaired and isWatchAppInstalled properties
+        // More comprehensive connection status update
+        let session = WCSession.default
         isReachable = session.isReachable
-        updateSyncStatus()
         
-        print("⌚ Connection status - Reachable: \(isReachable)")
+        // On watchOS, we don't have access to isPaired and isWatchAppInstalled
+        // We can only check reachability and activation state
+        
+        // Update sync status based on overall connectivity health
+        if session.activationState != .activated {
+            syncStatus = .disconnected
+        } else if !isReachable {
+            // Don't immediately mark as unreachable - iOS app might be backgrounded
+            // Keep previous status unless it was already unreachable
+            if syncStatus != .unreachable {
+                syncStatus = .connected // Maintain optimistic connection status
+            }
+        } else {
+            syncStatus = .connected
+        }
+        
+        print("⌚ Connection status updated - Reachable: \(isReachable), ActivationState: \(session.activationState.rawValue), Status: \(syncStatus.displayName)")
+    }
+    
+    // MARK: - Custom Workout Handling
+    
+    private func handleCustomWorkoutCreated(_ message: [String: Any]) {
+        guard let workoutData = message["workout_data"] as? Data else {
+            print("❌ No workout data in custom workout creation message")
+            return
+        }
+        
+        do {
+            let workout = try JSONDecoder().decode(TrainingProgram.self, from: workoutData)
+            
+            // Add to received programs if not already present - IMPROVED SYNC
+            if !receivedPrograms.contains(where: { $0.id == workout.id }) {
+                receivedPrograms.append(workout)
+                print("⌚ ✅ Added new custom workout: \(workout.name)")
+                
+                // Save to local storage immediately
+                saveWorkoutToLocalStorage(workout)
+                
+                // Notify ContentView with proper main thread dispatch
+                DispatchQueue.main.async {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("CustomWorkoutAdded"),
+                        object: workout
+                    )
+                    
+                    // Also trigger a full programs update
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("TrainingProgramsUpdated"),
+                        object: self.receivedPrograms
+                    )
+                    
+                    print("⌚ ✅ Custom workout creation notifications sent")
+                }
+            } else {
+                print("⌚ ⚠️ Custom workout already exists, skipping duplicate")
+            }
+        } catch {
+            print("❌ Failed to decode custom workout: \(error)")
+        }
+    }
+    
+    private func handleCustomWorkoutUpdated(_ message: [String: Any]) {
+        guard let workoutData = message["workout_data"] as? Data,
+              let workoutId = message["workout_id"] as? String else {
+            print("❌ Missing workout data or ID in update message")
+            return
+        }
+        
+        do {
+            let updatedWorkout = try JSONDecoder().decode(TrainingProgram.self, from: workoutData)
+            
+            // Update existing workout in received programs
+            if let index = receivedPrograms.firstIndex(where: { $0.id.uuidString == workoutId }) {
+                receivedPrograms[index] = updatedWorkout
+                print("⌚ Updated custom workout: \(updatedWorkout.name)")
+                
+                // Notify ContentView
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("CustomWorkoutUpdated"),
+                    object: updatedWorkout
+                )
+            }
+        } catch {
+            print("❌ Failed to decode updated custom workout: \(error)")
+        }
+    }
+    
+    private func handleCustomWorkoutDeleted(_ message: [String: Any]) {
+        guard let workoutId = message["workout_id"] as? String else {
+            print("❌ No workout ID in deletion message")
+            return
+        }
+        
+        // Remove from received programs
+        if let index = receivedPrograms.firstIndex(where: { $0.id.uuidString == workoutId }) {
+            let deletedWorkout = receivedPrograms.remove(at: index)
+            print("⌚ Deleted custom workout: \(deletedWorkout.name)")
+            
+            // Notify ContentView
+            NotificationCenter.default.post(
+                name: NSNotification.Name("CustomWorkoutDeleted"),
+                object: workoutId
+            )
+        }
+    }
+    
+    private func handleSyncAllCustomWorkouts(_ message: [String: Any]) {
+        guard let workoutsData = message["workouts_data"] as? Data else {
+            print("❌ No workouts data in sync all message")
+            return
+        }
+        
+        do {
+            let customWorkouts = try JSONDecoder().decode([TrainingProgram].self, from: workoutsData)
+            
+            // Update custom workouts in received programs - FIXED sync logic
+            receivedPrograms.removeAll { $0.isCustom }
+            receivedPrograms.append(contentsOf: customWorkouts)
+            
+            print("⌚ ✅ Synced \(customWorkouts.count) custom workouts successfully")
+            
+            // Notify ContentView with immediate update
+            DispatchQueue.main.async {
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("AllCustomWorkoutsSynced"),
+                    object: customWorkouts
+                )
+                
+                // Also send general program update notification
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("TrainingProgramsUpdated"),
+                    object: self.receivedPrograms
+                )
+                
+                print("⌚ ✅ Custom workout notifications sent to ContentView")
+            }
+            
+        } catch {
+            print("❌ Failed to decode custom workouts: \(error)")
+        }
     }
 }
 
@@ -158,8 +295,30 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 let programs = try JSONDecoder().decode([TrainingProgram].self, from: programData)
                 receivedPrograms = programs
                 print("⌚ Received \(programs.count) training programs via message")
+                
+                // Notify ContentView about updated programs
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("TrainingProgramsUpdated"),
+                    object: programs
+                )
             } catch {
                 print("❌ Failed to decode received programs: \(error)")
+            }
+        }
+        
+        // Handle custom workout operations
+        if let action = message["action"] as? String {
+            switch action {
+            case "custom_workout_created":
+                handleCustomWorkoutCreated(message)
+            case "custom_workout_updated":
+                handleCustomWorkoutUpdated(message)
+            case "custom_workout_deleted":
+                handleCustomWorkoutDeleted(message)
+            case "sync_all_custom_workouts":
+                handleSyncAllCustomWorkouts(message)
+            default:
+                print("⌚ Unknown action: \(action)")
             }
         }
         
@@ -196,11 +355,34 @@ extension WatchConnectivityManager: WCSessionDelegate {
     
     private func handleApplicationContext(_ context: [String: Any]) {
         // Handle application context updates
+        print("⌚ Received application context: \(context.keys)")
+        
         if let programsData = context["training_programs"] as? Data {
             do {
                 let programs = try JSONDecoder().decode([TrainingProgram].self, from: programsData)
+                
+                // Separate custom and default programs
+                let customPrograms = programs.filter { $0.isCustom }
+                let defaultPrograms = programs.filter { !$0.isCustom }
+                
                 receivedPrograms = programs
-                print("⌚ Received \(programs.count) training programs via context")
+                print("⌚ ✅ Synced \(programs.count) programs via application context (\(customPrograms.count) custom, \(defaultPrograms.count) default)")
+                
+                // Notify ContentView about updated programs
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("TrainingProgramsUpdated"),
+                    object: programs
+                )
+                
+                // Specifically notify about custom workouts if any
+                if !customPrograms.isEmpty {
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("AllCustomWorkoutsSynced"),
+                        object: customPrograms
+                    )
+                    print("⌚ ✅ Custom workouts synced successfully")
+                }
+                
             } catch {
                 print("❌ Failed to decode context programs: \(error)")
             }
@@ -244,6 +426,44 @@ enum SyncStatus: String {
         case .appNotInstalled: return "app.badge"
         case .syncing: return "arrow.clockwise.circle.fill"
         }
+    }
+}
+
+// MARK: - Local Storage Management
+    
+extension WatchConnectivityManager {
+    private func saveWorkoutToLocalStorage(_ workout: TrainingProgram) {
+        do {
+            var customWorkouts: [TrainingProgram] = []
+            
+            // Load existing custom workouts
+            if let data = UserDefaults.standard.data(forKey: "customWorkouts_watch"),
+               let existing = try? JSONDecoder().decode([TrainingProgram].self, from: data) {
+                customWorkouts = existing
+            }
+            
+            // Add new workout if not already present
+            if !customWorkouts.contains(where: { $0.id == workout.id }) {
+                customWorkouts.append(workout)
+                
+                // Save back to UserDefaults
+                let encoder = JSONEncoder()
+                let data = try encoder.encode(customWorkouts)
+                UserDefaults.standard.set(data, forKey: "customWorkouts_watch")
+                
+                print("⌚ ✅ Saved custom workout to local storage: \(workout.name)")
+            }
+        } catch {
+            print("❌ Failed to save custom workout to local storage: \(error)")
+        }
+    }
+    
+    private func loadCustomWorkoutsFromLocalStorage() -> [TrainingProgram] {
+        guard let data = UserDefaults.standard.data(forKey: "customWorkouts_watch"),
+              let workouts = try? JSONDecoder().decode([TrainingProgram].self, from: data) else {
+            return []
+        }
+        return workouts
     }
 }
 

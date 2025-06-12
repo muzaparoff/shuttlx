@@ -487,148 +487,92 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Interval Management (COMPREHENSIVE FIX)
+    // MARK: - Interval Management (SIMPLIFIED & FIXED)
     private func startIntervalTimer() {
-        print("🚀 [TIMER-COMPREHENSIVE-FIX] startIntervalTimer() called")
-        print("🚀 [TIMER-COMPREHENSIVE-FIX] currentIntervalIndex: \(currentIntervalIndex)")
-        print("🚀 [TIMER-COMPREHENSIVE-FIX] intervals.count: \(intervals.count)")
+        print("🚀 [TIMER-FIX] startIntervalTimer() called")
         
         guard currentIntervalIndex < intervals.count else { 
-            print("❌ [TIMER-COMPREHENSIVE-FIX] Cannot start interval timer: index out of bounds (\(currentIntervalIndex) >= \(intervals.count))")
+            print("❌ [TIMER-FIX] Cannot start interval timer: index out of bounds")
             endWorkout()
             return 
         }
         
-        // CRITICAL: Stop any existing interval timer FIRST
-        if let existingTimer = intervalTimer {
-            existingTimer.invalidate()
-            intervalTimer = nil
-            print("🛑 [TIMER-COMPREHENSIVE-FIX] Stopped existing interval timer")
-        }
+        // Stop any existing interval timer FIRST
+        intervalTimer?.invalidate()
+        intervalTimer = nil
         
         // Get current interval
         let interval = intervals[currentIntervalIndex]
-        
         guard interval.duration > 0 else {
-            print("❌ [TIMER-COMPREHENSIVE-FIX] Invalid interval duration: \(interval.duration)")
+            print("❌ [TIMER-FIX] Invalid interval duration: \(interval.duration)")
             moveToNextInterval()
             return
         }
         
-        print("🚀 [TIMER-COMPREHENSIVE-FIX] Setting up interval: \(interval.name)")
-        print("🚀 [TIMER-COMPREHENSIVE-FIX] Interval duration: \(interval.duration)s")
+        print("🚀 [TIMER-FIX] Setting up interval: \(interval.name) for \(interval.duration)s")
         
-        // CRITICAL: Set these properties SYNCHRONOUSLY on main thread
-        self.currentInterval = interval
-        self.remainingIntervalTime = interval.duration
+        // Set properties synchronously on main thread
+        currentInterval = interval
+        remainingIntervalTime = interval.duration
         
-        // Update workout phase immediately
+        // Update workout phase
         switch interval.type {
-        case .warmup: self.workoutPhase = .warming
-        case .work: self.workoutPhase = .working
-        case .rest: self.workoutPhase = .resting
-        case .cooldown: self.workoutPhase = .cooling
+        case .warmup: workoutPhase = .warming
+        case .work: workoutPhase = .working
+        case .rest: workoutPhase = .resting
+        case .cooldown: workoutPhase = .cooling
         }
         
-        print("✅ [TIMER-COMPREHENSIVE-FIX] Properties set - remainingIntervalTime: \(self.remainingIntervalTime)s")
-        print("✅ [TIMER-COMPREHENSIVE-FIX] Formatted time shows: \(self.formattedRemainingTime)")
+        // Force immediate UI update
+        objectWillChange.send()
         
-        // Force immediate UI update BEFORE starting timer
-        self.objectWillChange.send()
-        
-        // Create timer using a more robust approach for watchOS
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                print("❌ [TIMER-COMPREHENSIVE-FIX] Self is nil, invalidating timer")
-                timer.invalidate()
-                return
-            }
-            
-            // CRITICAL: Always execute on main thread for watchOS UI updates
-            DispatchQueue.main.async {
-                self.handleIntervalTimerTick(timer)
+        // Create simplified timer for watchOS
+        intervalTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                self?.handleIntervalTimerTick(timer)
             }
         }
         
-        // Store the timer reference
-        self.intervalTimer = timer
-        
-        // CRITICAL: Schedule timer on main run loop with multiple modes for watchOS reliability
-        RunLoop.main.add(timer, forMode: .default)
-        RunLoop.main.add(timer, forMode: .common)
-        
-        print("✅ [TIMER-COMPREHENSIVE-FIX] Interval timer created and scheduled on run loop")
-        print("✅ [TIMER-COMPREHENSIVE-FIX] Timer valid: \(timer.isValid)")
-        print("✅ [TIMER-COMPREHENSIVE-FIX] Initial setup complete for '\(interval.name)' - \(self.remainingIntervalTime)s")
-        
-        // Additional verification with a slight delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            print("🔍 [TIMER-COMPREHENSIVE-FIX] Verification after 0.5s:")
-            print("🔍 [TIMER-COMPREHENSIVE-FIX] Timer still valid: \(self.intervalTimer?.isValid ?? false)")
-            print("🔍 [TIMER-COMPREHENSIVE-FIX] Remaining time: \(self.remainingIntervalTime)s")
-            print("🔍 [TIMER-COMPREHENSIVE-FIX] Formatted time: \(self.formattedRemainingTime)")
+        // Add to RunLoop for watchOS reliability
+        if let timer = intervalTimer {
+            RunLoop.main.add(timer, forMode: .common)
         }
+        
+        print("✅ [TIMER-FIX] Interval timer started successfully")
     }
     
     @MainActor
     private func handleIntervalTimerTick(_ timer: Timer) {
-        // Verify timer is still valid and we're in correct state
-        guard timer.isValid else {
-            print("⚠️ [TIMER-COMPREHENSIVE-FIX] Timer tick called on invalid timer")
-            return
-        }
-        
-        // Only update if workout is active and not paused
-        guard isWorkoutActive && !isWorkoutPaused else {
+        // Verify timer is still valid and workout is active
+        guard timer.isValid && isWorkoutActive && !isWorkoutPaused else {
             if !isWorkoutActive {
-                print("⚠️ [TIMER-COMPREHENSIVE-FIX] Stopping interval timer - workout no longer active")
                 timer.invalidate()
                 intervalTimer = nil
             }
             return
         }
         
-        // CRITICAL: Decrement timer with validation
-        let previousTime = remainingIntervalTime
+        // Decrement timer
         remainingIntervalTime = max(0, remainingIntervalTime - 1.0)
         
-        // Verify timer is actually decrementing
-        if remainingIntervalTime == previousTime && remainingIntervalTime > 0 {
-            print("⚠️ [TIMER-COMPREHENSIVE-FIX] Timer not decrementing! Previous: \(previousTime), Current: \(remainingIntervalTime)")
-        }
-        
-        // Debug logging every 5 seconds or when low
+        // Debug output for critical intervals
         let remaining = Int(remainingIntervalTime)
-        if remaining % 5 == 0 || remaining <= 10 || remaining == Int(previousTime) - 1 {
-            print("⏱️ [TIMER-COMPREHENSIVE-FIX] TICK: \(remaining)s remaining for '\(currentInterval?.name ?? "unknown")'")
-            print("⏱️ [TIMER-COMPREHENSIVE-FIX] Formatted display: \(formattedRemainingTime)")
-            print("⏱️ [TIMER-COMPREHENSIVE-FIX] Timer valid: \(timer.isValid), Workout active: \(isWorkoutActive)")
+        if remaining % 5 == 0 || remaining <= 10 {
+            print("⏱️ [TIMER-FIX] \(remaining)s remaining for '\(currentInterval?.name ?? "unknown")'")
         }
         
-        // CRITICAL: Force UI update with multiple approaches for watchOS
+        // Force UI update
         objectWillChange.send()
-        
-        // Additional UI update trigger (watchOS sometimes needs this)
-        DispatchQueue.main.async {
-            self.objectWillChange.send()
-        }
         
         // Check if interval is complete
         if remainingIntervalTime <= 0 {
-            print("✅ [TIMER-COMPREHENSIVE-FIX] Interval completed! Stopping timer and moving to next...")
-            
-            // Immediately invalidate the current timer
+            print("✅ [TIMER-FIX] Interval completed! Moving to next interval...")
             timer.invalidate()
             intervalTimer = nil
-            
-            // Ensure we don't go below zero
             remainingIntervalTime = 0
             
-            // Force immediate UI update
-            self.objectWillChange.send()
-            
-            // Move to next interval with a very small delay to ensure UI updates
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            // Move to next interval
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 self.moveToNextInterval()
             }
         }
@@ -646,68 +590,49 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
     
-    // MARK: - Timer Management (COMPREHENSIVE FIX)
+    // MARK: - Timer Management (SIMPLIFIED & FIXED)
     private func startWorkoutTimer() {
         // Stop any existing timer
-        if let existingTimer = workoutTimer {
-            existingTimer.invalidate()
-            workoutTimer = nil
-            print("🛑 [WORKOUT-TIMER-COMPREHENSIVE-FIX] Stopped existing workout timer")
-        }
+        workoutTimer?.invalidate()
+        workoutTimer = nil
         
-        print("🚀 [WORKOUT-TIMER-COMPREHENSIVE-FIX] Starting workout timer...")
+        print("🚀 [TIMER-FIX] Starting workout timer...")
         
-        // Create timer using more robust approach for watchOS
-        let timer = Timer(timeInterval: 1.0, repeats: true) { [weak self] timer in
-            guard let self = self else {
-                print("❌ [WORKOUT-TIMER-COMPREHENSIVE-FIX] Self is nil, invalidating timer")
-                timer.invalidate()
-                return
-            }
-            
-            // Execute on main queue for watchOS UI consistency
-            DispatchQueue.main.async {
-                self.handleWorkoutTimerTick(timer)
+        // Create simplified timer for watchOS
+        workoutTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] timer in
+            Task { @MainActor in
+                self?.handleWorkoutTimerTick(timer)
             }
         }
         
-        // Store timer reference
-        self.workoutTimer = timer
+        // Add to RunLoop for watchOS reliability
+        if let timer = workoutTimer {
+            RunLoop.main.add(timer, forMode: .common)
+        }
         
-        // Schedule on main run loop with multiple modes for watchOS reliability
-        RunLoop.main.add(timer, forMode: .default)
-        RunLoop.main.add(timer, forMode: .common)
-        
-        print("✅ [WORKOUT-TIMER-COMPREHENSIVE-FIX] Workout timer created and scheduled")
-        print("✅ [WORKOUT-TIMER-COMPREHENSIVE-FIX] Timer valid: \(timer.isValid)")
+        print("✅ [TIMER-FIX] Workout timer started successfully")
     }
     
     @MainActor
     private func handleWorkoutTimerTick(_ timer: Timer) {
-        guard timer.isValid else {
-            print("⚠️ [WORKOUT-TIMER-COMPREHENSIVE-FIX] Timer tick called on invalid timer")
-            return
-        }
-        
-        guard isWorkoutActive else {
-            print("⚠️ [WORKOUT-TIMER-COMPREHENSIVE-FIX] Workout timer running but workout not active - stopping timer")
-            timer.invalidate()
-            workoutTimer = nil
+        guard timer.isValid && isWorkoutActive else {
+            if !isWorkoutActive {
+                timer.invalidate()
+                workoutTimer = nil
+            }
             return
         }
         
         // Update elapsed time
         updateElapsedTime()
         
-        // Force UI update for elapsed time with multiple triggers for watchOS
+        // Force UI update 
         objectWillChange.send()
         
-        // Debug every 30 seconds or on first few ticks
+        // Debug every 30 seconds
         let elapsed = Int(elapsedTime)
         if elapsed % 30 == 0 || elapsed <= 5 {
-            print("🚀 [WORKOUT-TIMER-COMPREHENSIVE-FIX] Workout timer: \(formattedElapsedTime) elapsed")
-            print("🚀 [WORKOUT-TIMER-COMPREHENSIVE-FIX] Current interval: \(currentInterval?.name ?? "none") - \(remainingIntervalTime)s remaining")
-            print("🚀 [WORKOUT-TIMER-COMPREHENSIVE-FIX] Workout active: \(isWorkoutActive), Timer valid: \(timer.isValid)")
+            print("🚀 [TIMER-FIX] Workout timer: \(formattedElapsedTime) elapsed")
         }
     }
     

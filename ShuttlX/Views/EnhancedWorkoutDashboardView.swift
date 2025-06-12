@@ -1,94 +1,61 @@
 //
-//  WorkoutDashboardView.swift
-//  ShuttlX MVP
+//  EnhancedWorkoutDashboardView.swift
+//  ShuttlX
 //
-//  Enhanced with performance monitoring and optimization
-//  Created by ShuttlX on 6/8/25.
+//  Enhanced workout dashboard with performance optimizations
+//  Created by ShuttlX on 6/9/25.
 //
 
 import SwiftUI
 import HealthKit
 
-struct WorkoutDashboardView: View {
+struct EnhancedWorkoutDashboardView: View {
     @EnvironmentObject private var serviceLocator: ServiceLocator
     @StateObject private var performanceService = PerformanceOptimizationService.shared
-    @StateObject private var performanceMonitor = AdvancedPerformanceMonitor.shared
     @State private var showingWorkoutSelection = false
-    @State private var showingPerformanceMonitor = false
     @State private var selectedProgram: TrainingProgram?
+    @State private var showingPerformanceDetails = false
     
     var body: some View {
-        NavigationView {
-            OptimizedScrollView {
-                VStack(spacing: 20) {
-                    // Performance indicator and monitoring access
-                    performanceHeaderSection
-                    
-                    // Enhanced today's summary with performance optimization
-                    EnhancedTodaySummaryCard()
+        OptimizedScrollView {
+            VStack(spacing: 20) {
+                // Performance indicator (if needed)
+                if performanceService.memoryUsage != .normal {
+                    PerformanceIndicatorView()
                         .optimizedForLists()
-                    
-                    // Quick Start Section
-                    quickStartSection
-                        .optimizedForLists()
-                    
-                    // Training Programs Preview
-                    trainingProgramsPreview
-                        .optimizedForLists()
-                    
-                    // Recent Activity with optimized loading
-                    if !serviceLocator.healthManager.recentWorkouts.isEmpty {
-                        recentActivitySection
-                            .optimizedForLists()
-                    }
-                    
-                    Spacer(minLength: 100)
                 }
-                .padding()
+                
+                // Today's Summary Card with enhanced performance
+                EnhancedTodaySummaryCard()
+                    .optimizedForLists()
+                
+                // Quick Start Section
+                quickStartSection
+                    .optimizedForLists()
+                
+                // Training Programs Preview
+                trainingProgramsPreview
+                    .optimizedForLists()
+                
+                // Recent Activity with optimized loading
+                if !serviceLocator.healthManager.recentWorkouts.isEmpty {
+                    recentActivitySection
+                        .optimizedForLists()
+                }
+                
+                Spacer(minLength: 100)
             }
-            .navigationTitle("Workouts")
-            .onOptimizedAppear {
-                loadDashboardData()
-            }
-            .sheet(isPresented: $showingWorkoutSelection) {
-                WorkoutSelectionView()
-            }
-            .sheet(item: $selectedProgram) { program in
-                TrainingProgramDetailView(program: program)
-            }
-            .sheet(isPresented: $showingPerformanceMonitor) {
-                PerformanceMonitoringDashboard()
-            }
+            .padding()
         }
-    }
-    
-    // MARK: - Performance Header Section
-    private var performanceHeaderSection: some View {
-        VStack(spacing: 12) {
-            // Performance indicator (when memory usage is high)
-            if performanceService.memoryUsage != .normal {
-                PerformanceIndicatorView()
-            }
-            
-            // Performance monitoring access button
-            HStack {
-                Spacer()
-                Button(action: {
-                    showingPerformanceMonitor = true
-                }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "speedometer")
-                            .font(.caption)
-                        Text("Performance")
-                            .font(.caption)
-                    }
-                    .foregroundColor(.secondary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(.ultraThinMaterial)
-                    .cornerRadius(16)
-                }
-            }
+        .navigationTitle("Workouts")
+        .onOptimizedAppear {
+            loadDashboardData()
+        }
+        .sheet(isPresented: $showingWorkoutSelection) {
+            WorkoutSelectionView()
+        }
+        .sheet(item: $selectedProgram) { program in
+            TrainingProgramDetailView(program: program)
         }
     }
     
@@ -159,7 +126,7 @@ struct WorkoutDashboardView: View {
             
             // Use optimized loading for featured programs
             let featuredPrograms = performanceService.loadDataWithPagination(
-                data: TrainingProgramManager.shared.defaultPrograms,
+                data: TrainingProgram.defaultPrograms,
                 pageSize: 3
             )
             
@@ -213,304 +180,8 @@ struct WorkoutDashboardView: View {
             for: performanceService,
             delay: 0.2
         ) {
-            // Load health data and refresh UI
-            Task {
-                await serviceLocator.healthManager.fetchTodayData()
-            }
+            // Load data here
         }
-    }
-}
-
-// MARK: - Performance Monitoring Dashboard
-struct PerformanceMonitoringDashboard: View {
-    @StateObject private var performanceMonitor = AdvancedPerformanceMonitor.shared
-    @Environment(\.dismiss) private var dismiss
-    
-    var body: some View {
-        NavigationView {
-            ScrollView {
-                VStack(spacing: 20) {
-                    // Current Performance Metrics
-                    currentMetricsSection
-                    
-                    // Performance Alerts
-                    performanceAlertsSection
-                    
-                    // Optimization Suggestions
-                    optimizationSuggestionsSection
-                    
-                    // Resource Usage History
-                    resourceUsageHistorySection
-                }
-                .padding()
-            }
-            .navigationTitle("Performance Monitor")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Done") {
-                        dismiss()
-                    }
-                }
-            }
-        }
-    }
-    
-    private var currentMetricsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Current Performance")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 2), spacing: 16) {
-                PerformanceMetricCard(
-                    title: "Memory Usage",
-                    value: performanceMonitor.currentMetrics.memoryUsageMB,
-                    unit: "MB",
-                    status: getMemoryStatus(performanceMonitor.currentMetrics.memoryUsageMB),
-                    icon: "memorychip"
-                )
-                
-                PerformanceMetricCard(
-                    title: "CPU Usage",
-                    value: performanceMonitor.currentMetrics.cpuUsage,
-                    unit: "%",
-                    status: getCPUStatus(performanceMonitor.currentMetrics.cpuUsage),
-                    icon: "cpu"
-                )
-                
-                PerformanceMetricCard(
-                    title: "Active Timers",
-                    value: Double(performanceMonitor.currentMetrics.activeTimers),
-                    unit: "",
-                    status: getTimerStatus(performanceMonitor.currentMetrics.activeTimers),
-                    icon: "timer"
-                )
-                
-                PerformanceMetricCard(
-                    title: "Battery",
-                    value: Double(performanceMonitor.currentMetrics.batteryLevel) * 100,
-                    unit: "%",
-                    status: getBatteryStatus(performanceMonitor.currentMetrics.batteryLevel),
-                    icon: "battery.100"
-                )
-            }
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-    }
-    
-    private var performanceAlertsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Performance Alerts")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            if performanceMonitor.alerts.isEmpty {
-                HStack {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("All systems running optimally")
-                        .foregroundColor(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding()
-                .background(Color.green.opacity(0.1))
-                .cornerRadius(12)
-            } else {
-                LazyVStack(spacing: 8) {
-                    ForEach(performanceMonitor.alerts) { alert in
-                        PerformanceAlertRow(alert: alert.message)
-                    }
-                }
-            }
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-    }
-    
-    private var optimizationSuggestionsSection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Optimization Suggestions")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            LazyVStack(spacing: 12) {
-                ForEach(performanceMonitor.optimizationSuggestions) { suggestion in
-                    OptimizationSuggestionRow(suggestion: suggestion.description)
-                }
-            }
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-    }
-    
-    private var resourceUsageHistorySection: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text("Resource Usage Trends")
-                .font(.headline)
-                .fontWeight(.semibold)
-            
-            // Simple chart representation
-            VStack(spacing: 12) {
-                HStack {
-                    Text("Memory")
-                        .font(.subheadline)
-                    Spacer()
-                    Text("Stable")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-                
-                ProgressView(value: performanceMonitor.currentMetrics.memoryUsageMB / 1024, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .blue))
-                
-                HStack {
-                    Text("CPU")
-                        .font(.subheadline)
-                    Spacer()
-                    Text("\(Int(performanceMonitor.currentMetrics.cpuUsage))%")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                ProgressView(value: performanceMonitor.currentMetrics.cpuUsage / 100, total: 1.0)
-                    .progressViewStyle(LinearProgressViewStyle(tint: .orange))
-            }
-        }
-        .padding()
-        .background(.ultraThinMaterial)
-        .cornerRadius(16)
-    }
-    
-    // MARK: - Helper Functions
-    private func getMemoryStatus(_ memoryUsage: Double) -> PerformanceStatus {
-        if memoryUsage > 200 {
-            return .critical
-        } else if memoryUsage > 150 {
-            return .warning
-        } else {
-            return .optimal
-        }
-    }
-    
-    private func getCPUStatus(_ cpuUsage: Double) -> PerformanceStatus {
-        if cpuUsage > 85 {
-            return .critical
-        } else if cpuUsage > 70 {
-            return .warning
-        } else {
-            return .optimal
-        }
-    }
-    
-    private func getTimerStatus(_ timerCount: Int) -> PerformanceStatus {
-        if timerCount > 15 {
-            return .critical
-        } else if timerCount > 10 {
-            return .warning
-        } else {
-            return .optimal
-        }
-    }
-    
-    private func getBatteryStatus(_ batteryLevel: Float) -> PerformanceStatus {
-        if batteryLevel < 0.15 {
-            return .critical
-        } else if batteryLevel < 0.30 {
-            return .warning
-        } else {
-            return .optimal
-        }
-    }
-}
-
-// MARK: - Supporting Views for Performance Dashboard
-
-struct PerformanceMetricCard: View {
-    let title: String
-    let value: Double
-    let unit: String
-    let status: PerformanceStatus
-    let icon: String
-    
-    var body: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundColor(status.color)
-                Spacer()
-                Circle()
-                    .fill(status.color)
-                    .frame(width: 8, height: 8)
-            }
-            
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text(formatValue(value))
-                        .font(.title2)
-                        .fontWeight(.bold)
-                    Text(unit)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                
-                Text(title)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding()
-        .background(status.color.opacity(0.1))
-        .cornerRadius(12)
-    }
-    
-    private func formatValue(_ value: Double) -> String {
-        if unit.isEmpty {
-            return "\(Int(value))"
-        } else {
-            return String(format: "%.1f", value)
-        }
-    }
-}
-
-struct PerformanceAlertRow: View {
-    let alert: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
-            Text(alert)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-            Spacer()
-        }
-        .padding()
-        .background(Color.orange.opacity(0.1))
-        .cornerRadius(8)
-    }
-}
-
-struct OptimizationSuggestionRow: View {
-    let suggestion: String
-    
-    var body: some View {
-        HStack {
-            Image(systemName: "lightbulb.fill")
-                .foregroundColor(.blue)
-            Text(suggestion)
-                .font(.subheadline)
-                .foregroundColor(.primary)
-            Spacer()
-        }
-        .padding()
-        .background(Color.blue.opacity(0.1))
-        .cornerRadius(8)
     }
 }
 
@@ -785,8 +456,7 @@ struct EnhancedWorkoutRow: View {
                     .font(.subheadline)
                     .fontWeight(.medium)
                 
-                if let statistics = workout.statistics(for: HKQuantityType(.activeEnergyBurned)),
-                   let calories = statistics.sumQuantity()?.doubleValue(for: .kilocalorie()) {
+                if let calories = workout.totalEnergyBurned?.doubleValue(for: .kilocalorie()) {
                     Text("\(Int(calories)) cal")
                         .font(.caption)
                         .foregroundColor(.secondary)
@@ -818,4 +488,9 @@ extension HKWorkoutActivityType {
         default: return "Workout"
         }
     }
+}
+
+#Preview {
+    EnhancedWorkoutDashboardView()
+        .environmentObject(ServiceLocator.shared)
 }
