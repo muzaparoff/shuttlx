@@ -16,7 +16,6 @@ struct TrainingProgram: Identifiable, Codable {
     var distance: Double // in kilometers
     var runInterval: Double // in minutes
     var walkInterval: Double // in minutes
-    var totalDuration: Double // in minutes
     var difficulty: TrainingDifficulty
     var description: String
     var estimatedCalories: Int
@@ -24,12 +23,13 @@ struct TrainingProgram: Identifiable, Codable {
     var createdDate: Date
     var isCustom: Bool
     
+    // REMOVED: totalDuration - now calculated automatically
+    
     init(
         name: String,
         distance: Double,
         runInterval: Double,
         walkInterval: Double,
-        totalDuration: Double,
         difficulty: TrainingDifficulty,
         description: String = "",
         estimatedCalories: Int = 0,
@@ -40,13 +40,19 @@ struct TrainingProgram: Identifiable, Codable {
         self.distance = distance
         self.runInterval = runInterval
         self.walkInterval = walkInterval
-        self.totalDuration = totalDuration
         self.difficulty = difficulty
         self.description = description
         self.estimatedCalories = estimatedCalories
         self.targetHeartRateZone = targetHeartRateZone
         self.createdDate = Date()
         self.isCustom = isCustom
+    }
+    
+    // CALCULATED: Total duration based on intervals only
+    var totalDuration: Double {
+        // Simple calculation: 10 cycles of run + walk intervals
+        let cycleTime = runInterval + walkInterval
+        return cycleTime * 10 // 10 cycles as default
     }
     
     var formattedDistance: String {
@@ -171,9 +177,8 @@ extension TrainingProgram {
         TrainingProgram(
             name: "Beginner 5K Builder",
             distance: 5.0,
-            runInterval: 3.0,
+            runInterval: 1.0,
             walkInterval: 2.0,
-            totalDuration: 30.0,
             difficulty: .beginner,
             description: "Perfect for starting your running journey. Gentle intervals to build endurance.",
             estimatedCalories: 250,
@@ -185,7 +190,6 @@ extension TrainingProgram {
             distance: 3.0,
             runInterval: 1.0,
             walkInterval: 1.0,
-            totalDuration: 20.0,
             difficulty: .intermediate,
             description: "High-intensity interval training for maximum calorie burn and fitness gains.",
             estimatedCalories: 300,
@@ -195,9 +199,8 @@ extension TrainingProgram {
         TrainingProgram(
             name: "Endurance Challenge",
             distance: 10.0,
-            runInterval: 5.0,
+            runInterval: 3.0,
             walkInterval: 1.0,
-            totalDuration: 45.0,
             difficulty: .advanced,
             description: "Build serious endurance with longer running intervals and minimal rest.",
             estimatedCalories: 500,
@@ -207,9 +210,8 @@ extension TrainingProgram {
         TrainingProgram(
             name: "Recovery Run",
             distance: 3.0,
-            runInterval: 4.0,
+            runInterval: 2.0,
             walkInterval: 2.0,
-            totalDuration: 25.0,
             difficulty: .beginner,
             description: "Light recovery session to maintain fitness while allowing muscle recovery.",
             estimatedCalories: 200,
@@ -221,7 +223,6 @@ extension TrainingProgram {
             distance: 2.0,
             runInterval: 0.5,
             walkInterval: 1.5,
-            totalDuration: 15.0,
             difficulty: .advanced,
             description: "Short, intense sprints to improve speed and anaerobic capacity.",
             estimatedCalories: 250,
@@ -229,23 +230,10 @@ extension TrainingProgram {
         ),
         
         TrainingProgram(
-            name: "Marathon Prep",
-            distance: 15.0,
-            runInterval: 8.0,
-            walkInterval: 2.0,
-            totalDuration: 75.0,
-            difficulty: .advanced,
-            description: "Long-distance training to prepare for marathon events.",
-            estimatedCalories: 750,
-            targetHeartRateZone: .moderate
-        ),
-        
-        TrainingProgram(
             name: "Quick Test Workout",
             distance: 0.1,
-            runInterval: 0.25, // 15 seconds
-            walkInterval: 0.25, // 15 seconds  
-            totalDuration: 0.5, // 30 seconds total
+            runInterval: 0.17, // 10 seconds
+            walkInterval: 0.17, // 10 seconds  
             difficulty: .beginner,
             description: "Short test workout for integration testing and quick verification.",
             estimatedCalories: 10,

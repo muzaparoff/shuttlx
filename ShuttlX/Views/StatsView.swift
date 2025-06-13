@@ -432,9 +432,7 @@ struct StatsView: View {
                 loadDataOptimized()
             }
             .refreshable {
-                Task {
-                    await statsManager.loadStats()
-                }
+                statsManager.refreshStats()
             }
             .onDisappear {
                 // Cancel any running tasks to prevent memory leaks
@@ -451,7 +449,7 @@ struct StatsView: View {
         
         // Start new optimized loading task
         dataLoadingTask = Task {
-            await statsManager.loadStats()
+            statsManager.refreshStats()
         }
     }
     

@@ -15,7 +15,6 @@ struct TrainingProgram: Identifiable, Codable {
     var distance: Double // in kilometers
     var runInterval: Double // in minutes
     var walkInterval: Double // in minutes
-    var totalDuration: Double // in minutes
     var difficulty: TrainingDifficulty
     var description: String
     var estimatedCalories: Int
@@ -28,7 +27,6 @@ struct TrainingProgram: Identifiable, Codable {
         distance: Double,
         runInterval: Double,
         walkInterval: Double,
-        totalDuration: Double,
         difficulty: TrainingDifficulty,
         description: String = "",
         estimatedCalories: Int = 0,
@@ -39,13 +37,18 @@ struct TrainingProgram: Identifiable, Codable {
         self.distance = distance
         self.runInterval = runInterval
         self.walkInterval = walkInterval
-        self.totalDuration = totalDuration
         self.difficulty = difficulty
         self.description = description
         self.estimatedCalories = estimatedCalories
         self.targetHeartRateZone = targetHeartRateZone
         self.createdDate = Date()
         self.isCustom = isCustom
+    }
+    
+    // CALCULATED: Total duration based on 10 cycles
+    var totalDuration: Double {
+        let cycleTime = runInterval + walkInterval
+        return cycleTime * 10 // 10 cycles as default
     }
     
     // Computed properties for display
@@ -324,13 +327,17 @@ struct AddProgramView: View {
     @State private var distance: Double = 5.0
     @State private var runInterval: Double = 2.0
     @State private var walkInterval: Double = 1.0
-    @State private var totalDuration: Double = 30.0
     @State private var difficulty: TrainingDifficulty = .beginner
     @State private var description = ""
     @State private var estimatedCalories: Int = 300
     @State private var targetHeartRateZone: HeartRateZone = .zone3
     
     let onSave: (TrainingProgram) -> Void
+    
+    var calculatedDuration: Double {
+        let cycleTime = runInterval + walkInterval
+        return cycleTime * 10 // 10 cycles
+    }
     
     var body: some View {
         NavigationView {
@@ -343,33 +350,37 @@ struct AddProgramView: View {
                 
                 Section("Intervals") {
                     HStack {
-                        Text("Run Interval")
+                        Text("Walk Interval (first)")
+                        Spacer()
+                        Text("\(String(format: "%.1f", walkInterval)) min")
+                            .foregroundColor(.secondary)
+                    }
+                    Slider(value: $walkInterval, in: 0.5...5.0, step: 0.5)
+                    
+                    HStack {
+                        Text("Run Interval (after walk)")
                         Spacer()
                         Text("\(String(format: "%.1f", runInterval)) min")
                             .foregroundColor(.secondary)
                     }
                     Slider(value: $runInterval, in: 0.5...10.0, step: 0.5)
                     
+                    // Show calculated duration (read-only)
                     HStack {
-                        Text("Walk Interval")
+                        Text("Total Duration (auto)")
                         Spacer()
-                        Text("\(String(format: "%.1f", walkInterval)) min")
-                            .foregroundColor(.secondary)
+                        Text("\(Int(calculatedDuration)) min")
+                            .foregroundColor(.orange)
+                            .fontWeight(.medium)
                     }
-                    Slider(value: $walkInterval, in: 0.5...5.0, step: 0.5)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(8)
                 }
                 
                 Section("Workout Details") {
                     HStack {
-                        Text("Total Duration")
-                        Spacer()
-                        Text("\(Int(totalDuration)) min")
-                            .foregroundColor(.secondary)
-                    }
-                    Slider(value: $totalDuration, in: 10...120, step: 5)
-                    
-                    HStack {
-                        Text("Distance")
+                        Text("Target Distance")
                         Spacer()
                         Text("\(String(format: "%.1f", distance)) km")
                             .foregroundColor(.secondary)
@@ -401,6 +412,31 @@ struct AddProgramView: View {
                         }
                     }
                 }
+                
+                Section {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Workout Pattern")
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        
+                        Text("• Starts with \(String(format: "%.1f", walkInterval)) min walking")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("• Then \(String(format: "%.1f", runInterval)) min running")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("• Repeats for 10 cycles")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Text("• No warmup or cooldown")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
             }
             .navigationTitle("New Program")
             .navigationBarTitleDisplayMode(.inline)
@@ -418,7 +454,6 @@ struct AddProgramView: View {
                             distance: distance,
                             runInterval: runInterval,
                             walkInterval: walkInterval,
-                            totalDuration: totalDuration,
                             difficulty: difficulty,
                             description: description,
                             estimatedCalories: estimatedCalories,
@@ -626,7 +661,9 @@ struct EditProgramView: View {
                         Text("\(Int(program.totalDuration)) min")
                             .foregroundColor(.secondary)
                     }
-                    Slider(value: $program.totalDuration, in: 10...120, step: 5)
+                    Text("Duration is automatically calculated from intervals")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                     
                     HStack {
                         Text("Distance")
@@ -686,50 +723,46 @@ struct EditProgramView: View {
 
 let defaultTrainingPrograms: [TrainingProgram] = [
     TrainingProgram(
-        name: "Beginner 5K",
+        name: "Beginner 5K Builder",
         distance: 5.0,
         runInterval: 1.0,
         walkInterval: 2.0,
-        totalDuration: 35.0,
         difficulty: .beginner,
-        description: "Perfect for beginners starting their running journey",
+        description: "Perfect for starting your running journey. Gentle intervals to build endurance.",
         estimatedCalories: 250,
         targetHeartRateZone: .zone2
     ),
     
     TrainingProgram(
-        name: "HIIT Blast",
+        name: "HIIT Power Blast",
         distance: 3.0,
-        runInterval: 1.5,
+        runInterval: 1.0,
         walkInterval: 1.0,
-        totalDuration: 25.0,
-        difficulty: .advanced,
-        description: "High-intensity intervals for maximum calorie burn",
+        difficulty: .intermediate,
+        description: "High-intensity interval training for maximum calorie burn and fitness gains.",
         estimatedCalories: 300,
         targetHeartRateZone: .zone4
     ),
     
     TrainingProgram(
         name: "Endurance Challenge",
-        distance: 8.0,
+        distance: 10.0,
         runInterval: 3.0,
         walkInterval: 1.0,
-        totalDuration: 50.0,
-        difficulty: .intermediate,
-        description: "Build your endurance with longer running intervals",
-        estimatedCalories: 480,
+        difficulty: .advanced,
+        description: "Build serious endurance with longer running intervals and minimal rest.",
+        estimatedCalories: 500,
         targetHeartRateZone: .zone3
     ),
     
     TrainingProgram(
-        name: "Speed Demon",
-        distance: 4.0,
+        name: "Sprint Intervals",
+        distance: 2.0,
         runInterval: 0.5,
-        walkInterval: 0.5,
-        totalDuration: 20.0,
+        walkInterval: 1.5,
         difficulty: .advanced,
-        description: "Short bursts of maximum effort for speed training",
-        estimatedCalories: 320,
+        description: "Short, intense sprints to improve speed and anaerobic capacity.",
+        estimatedCalories: 250,
         targetHeartRateZone: .zone5
     ),
     
@@ -737,12 +770,23 @@ let defaultTrainingPrograms: [TrainingProgram] = [
         name: "Recovery Run",
         distance: 3.0,
         runInterval: 2.0,
-        walkInterval: 3.0,
-        totalDuration: 30.0,
+        walkInterval: 2.0,
         difficulty: .beginner,
-        description: "Gentle intervals for active recovery days",
-        estimatedCalories: 180,
+        description: "Light recovery session to maintain fitness while allowing muscle recovery",
+        estimatedCalories: 200,
         targetHeartRateZone: .zone1
+    ),
+    
+    TrainingProgram(
+        name: "Quick Test Workout",
+        distance: 0.1,
+        runInterval: 0.17, // 10 seconds
+        walkInterval: 0.17, // 10 seconds  
+        difficulty: .beginner,
+        description: "Short test workout for integration testing and quick verification.",
+        estimatedCalories: 10,
+        targetHeartRateZone: .zone2,
+        isCustom: false
     )
 ]
 

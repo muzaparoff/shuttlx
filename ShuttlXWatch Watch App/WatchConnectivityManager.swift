@@ -137,31 +137,52 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         do {
             let workout = try JSONDecoder().decode(TrainingProgram.self, from: workoutData)
             
-            // Add to received programs if not already present - IMPROVED SYNC
+            // Add to received programs if not already present - CRITICAL SYNC FIX
             if !receivedPrograms.contains(where: { $0.id == workout.id }) {
                 receivedPrograms.append(workout)
                 print("⌚ ✅ Added new custom workout: \(workout.name)")
                 
-                // Save to local storage immediately
+                // Save to local storage immediately - CRITICAL FOR PERSISTENCE
                 saveWorkoutToLocalStorage(workout)
                 
-                // Notify ContentView with proper main thread dispatch
+                // Notify ContentView with proper main thread dispatch - CRITICAL FIX
                 DispatchQueue.main.async {
+                    // Send individual workout notification
                     NotificationCenter.default.post(
                         name: NSNotification.Name("CustomWorkoutAdded"),
                         object: workout
                     )
                     
-                    // Also trigger a full programs update
+                    // Send full programs update notification
                     NotificationCenter.default.post(
                         name: NSNotification.Name("TrainingProgramsUpdated"),
                         object: self.receivedPrograms
                     )
                     
-                    print("⌚ ✅ Custom workout creation notifications sent")
+                    // Send specific custom workout sync notification  
+                    let customWorkouts = self.receivedPrograms.filter { $0.isCustom }
+                    NotificationCenter.default.post(
+                        name: NSNotification.Name("AllCustomWorkoutsSynced"),
+                        object: customWorkouts
+                    )
+                    
+                    print("⌚ ✅ All custom workout creation notifications sent")
                 }
             } else {
-                print("⌚ ⚠️ Custom workout already exists, skipping duplicate")
+                print("⌚ ⚠️ Custom workout already exists, updating existing...")
+                
+                // Update existing workout instead of skipping
+                if let index = receivedPrograms.firstIndex(where: { $0.id == workout.id }) {
+                    receivedPrograms[index] = workout
+                    saveWorkoutToLocalStorage(workout)
+                    
+                    DispatchQueue.main.async {
+                        NotificationCenter.default.post(
+                            name: NSNotification.Name("CustomWorkoutUpdated"),
+                            object: workout
+                        )
+                    }
+                }
             }
         } catch {
             print("❌ Failed to decode custom workout: \(error)")
@@ -442,19 +463,36 @@ extension WatchConnectivityManager {
                 customWorkouts = existing
             }
             
-            // Add new workout if not already present
-            if !customWorkouts.contains(where: { $0.id == workout.id }) {
+            // Add new workout if not already present, or update existing
+            if let existingIndex = customWorkouts.firstIndex(where: { $0.id == workout.id }) {
+                customWorkouts[existingIndex] = workout
+                print("⌚ ✅ Updated existing custom workout in local storage: \(workout.name)")
+            } else {
                 customWorkouts.append(workout)
-                
-                // Save back to UserDefaults
-                let encoder = JSONEncoder()
-                let data = try encoder.encode(customWorkouts)
-                UserDefaults.standard.set(data, forKey: "customWorkouts_watch")
-                
-                print("⌚ ✅ Saved custom workout to local storage: \(workout.name)")
+                print("⌚ ✅ Added new custom workout to local storage: \(workout.name)")
             }
+            
+            // Save back to UserDefaults with error handling
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(customWorkouts)
+            UserDefaults.standard.set(data, forKey: "customWorkouts_watch")
+            UserDefaults.standard.synchronize() // Force immediate save
+            
+            print("⌚ ✅ Successfully saved \(customWorkouts.count) custom workouts to local storage")
+            
         } catch {
             print("❌ Failed to save custom workout to local storage: \(error)")
+            
+            // Fallback: try to save just this workout with unique key
+            do {
+                let encoder = JSONEncoder()
+                let workoutData = try encoder.encode(workout)
+                UserDefaults.standard.set(workoutData, forKey: "custom_workout_\(workout.id.uuidString)")
+                UserDefaults.standard.synchronize()
+                print("⌚ ✅ Fallback save successful for workout: \(workout.name)")
+            } catch {
+                print("❌ Fallback save also failed: \(error)")
+            }
         }
     }
     

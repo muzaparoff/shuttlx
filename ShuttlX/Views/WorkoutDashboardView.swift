@@ -214,9 +214,7 @@ struct WorkoutDashboardView: View {
             delay: 0.2
         ) {
             // Load health data and refresh UI
-            Task {
-                await serviceLocator.healthManager.fetchTodayData()
-            }
+            serviceLocator.healthManager.fetchTodayData()
         }
     }
 }

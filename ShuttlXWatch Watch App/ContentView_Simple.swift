@@ -167,17 +167,19 @@ struct WorkoutDetailView: View {
                     StatRow(icon: "heart", label: "Heart Rate", value: program.targetHeartRateZone.displayName)
                 }
                 
-                // Start Button
+                // Start Button - FIXED: Properly sized for all watch screens
                 Button(action: startWorkout) {
-                    HStack {
+                    HStack(spacing: 8) {
                         Image(systemName: "play.fill")
-                        Text("Start Workout")
+                            .font(.system(size: 16, weight: .semibold))
+                        Text("Start Training")
+                            .font(.system(size: 16, weight: .semibold))
                     }
                     .frame(maxWidth: .infinity)
-                    .padding()
+                    .frame(height: 44) // Fixed height for consistent watch screen fitting
                     .background(Color.orange)
                     .foregroundColor(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: 22))
                 }
                 .buttonStyle(PlainButtonStyle())
             }

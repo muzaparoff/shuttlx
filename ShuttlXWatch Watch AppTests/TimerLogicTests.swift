@@ -1,5 +1,3 @@
-#!/usr/bin/env swift
-
 // Timer Test Script - Tests the WatchWorkoutManager timer logic
 // This script simulates the timer functionality to verify it works correctly
 
@@ -218,22 +216,4 @@ class TimerLogicTests: XCTestCase {
         
         XCTAssertFalse(manager.isWorkoutActive)
     }
-}
-
-// Auto-run if executed directly
-if CommandLine.arguments.count > 0 && CommandLine.arguments[0].contains("timer_test") {
-    print("🧪 Running Timer Logic Tests")
-    print("============================")
-    
-    let testSuite = TimerLogicTests()
-    testSuite.testBasicTimerFunctionality()
-    print("✅ Basic timer functionality test passed")
-    
-    testSuite.testPauseResumeFunctionality()
-    print("✅ Pause/resume functionality test passed")
-    
-    testSuite.testWorkoutCompletion()
-    print("✅ Workout completion test passed")
-    
-    print("\n🎉 All timer logic tests passed!")
 }

@@ -66,8 +66,42 @@ class WatchConnectivityManager: NSObject, ObservableObject {
                     self.scheduleRetrySync()
                 }
             }
+            
+            // ALSO update application context as backup sync method
+            Task { [weak self] in
+                do {
+                    try await self?.updateApplicationContextWithWorkout(workout)
+                } catch {
+                    print("❌ Failed to update application context: \(error)")
+                }
+            }
+            
         } catch {
             print("❌ Failed to encode custom workout: \(error)")
+        }
+        #endif
+    }
+    
+    private func updateApplicationContextWithWorkout(_ workout: TrainingProgram) async throws {
+        #if os(iOS)
+        await MainActor.run {
+            do {
+                let allPrograms = TrainingProgramManager.shared.allPrograms
+                let encoder = JSONEncoder()
+                let programsData = try encoder.encode(allPrograms)
+                
+                let contextData = [
+                    "training_programs": programsData,
+                    "timestamp": Date().timeIntervalSince1970,
+                    "sync_type": "custom_workout_update",
+                    "latest_workout_id": workout.id.uuidString
+                ] as [String : Any]
+                
+                try WCSession.default.updateApplicationContext(contextData)
+                print("📱 ✅ Updated application context with new custom workout as backup")
+            } catch {
+                print("❌ Failed to update application context: \(error)")
+            }
         }
         #endif
     }
@@ -316,7 +350,12 @@ class WatchConnectivityManager: NSObject, ObservableObject {
         // Retry sync after 30 seconds if connection becomes available
         DispatchQueue.main.asyncAfter(deadline: .now() + 30.0) {
             if WCSession.default.isReachable {
+                print("📱 ⏰ Retry sync triggered - processing queued operations")
                 self.processQueuedOperations()
+            } else {
+                print("📱 ⏰ Retry sync - watch still not reachable, will try again")
+                // Try again in another 30 seconds if still not reachable
+                self.scheduleRetrySync()
             }
         }
         #endif
@@ -324,7 +363,7 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     
     func forceSyncAllCustomWorkouts() {
         #if os(iOS)
-        DispatchQueue.main.async {
+        Task { @MainActor in
             let customWorkouts = TrainingProgramManager.shared.customPrograms
             self.sendAllCustomWorkouts(customWorkouts)
             
@@ -336,21 +375,23 @@ class WatchConnectivityManager: NSObject, ObservableObject {
     
     private func updateApplicationContextWithAllPrograms() {
         #if os(iOS)
-        do {
-            let allPrograms = TrainingProgramManager.shared.allPrograms
-            let encoder = JSONEncoder()
-            let programsData = try encoder.encode(allPrograms)
-            
-            let contextData = [
-                "training_programs": programsData,
-                "timestamp": Date().timeIntervalSince1970,
-                "sync_type": "full_sync"
-            ] as [String : Any]
-            
-            try WCSession.default.updateApplicationContext(contextData)
-            print("📱 ✅ Updated application context with all programs")
-        } catch {
-            print("❌ Failed to update application context: \(error)")
+        Task { @MainActor in
+            do {
+                let allPrograms = TrainingProgramManager.shared.allPrograms
+                let encoder = JSONEncoder()
+                let programsData = try encoder.encode(allPrograms)
+                
+                let contextData = [
+                    "training_programs": programsData,
+                    "timestamp": Date().timeIntervalSince1970,
+                    "sync_type": "full_sync"
+                ] as [String : Any]
+                
+                try WCSession.default.updateApplicationContext(contextData)
+                print("📱 ✅ Updated application context with all programs")
+            } catch {
+                print("❌ Failed to update application context: \(error)")
+            }
         }
         #endif
     }
@@ -459,14 +500,14 @@ extension WatchConnectivityManager: WCSessionDelegate {
         }
         
         // Delete the custom workout from iOS
-        DispatchQueue.main.async {
+        Task { @MainActor in
             TrainingProgramManager.shared.deleteCustomProgramById(workoutId)
             print("📱 Custom workout deleted via watch request: \(workoutId)")
         }
     }
     
     private func handleCustomWorkoutSyncRequest(replyHandler: @escaping ([String: Any]) -> Void) {
-        DispatchQueue.main.async {
+        Task { @MainActor in
             let customWorkouts = TrainingProgramManager.shared.customPrograms
             
             do {
@@ -493,7 +534,7 @@ extension WatchConnectivityManager: WCSessionDelegate {
     
     private func handleProgramSyncRequest(_ message: [String: Any]) {
         // Send all training programs (including custom workouts) to watch
-        DispatchQueue.main.async {
+        Task { @MainActor in
             let allPrograms = TrainingProgramManager.shared.allPrograms
             let customWorkouts = TrainingProgramManager.shared.customPrograms
             

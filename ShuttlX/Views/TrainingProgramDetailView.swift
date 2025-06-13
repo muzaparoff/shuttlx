@@ -598,7 +598,6 @@ struct WorkoutExecutionView: View {
             distance: 5.0,
             runInterval: 2.0,
             walkInterval: 1.0,
-            totalDuration: 30.0,
             difficulty: .intermediate,
             description: "A custom high-intensity interval training program designed for intermediate runners",
             estimatedCalories: 350,

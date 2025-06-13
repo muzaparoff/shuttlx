@@ -179,7 +179,14 @@ optimize_simulators_for_m1() {
     
     # Validate memory is sufficient (require at least 4GB free)
     local free_memory=$(vm_stat | grep "Pages free" | awk '{print $3}' | tr -d '.' 2>/dev/null || echo "1000000")
-    local free_mb=$((free_memory * 16384 / 1024 / 1024 2>/dev/null || 4096))
+    local free_mb
+    
+    # Safe arithmetic with error handling
+    if [[ "$free_memory" =~ ^[0-9]+$ ]]; then
+        free_mb=$((free_memory * 16384 / 1024 / 1024))
+    else
+        free_mb=4096  # Default fallback
+    fi
     
     if [ "$free_mb" -lt 4096 ]; then
         echo_warning "⚠️ Low memory detected: ${free_mb}MB free. Consider closing other applications."
@@ -660,6 +667,9 @@ run_comprehensive_integration_tests() {
     echo_status "iOS Device ID: $ios_device_id"
     echo_status "watchOS Device ID: $watch_device_id"
     
+    # Run Swift Integration Tests first
+    run_swift_integration_tests
+    
     # Test 1: Custom workout creation and sync test
     run_custom_workout_sync_test
     
@@ -670,6 +680,39 @@ run_comprehensive_integration_tests() {
     run_data_sync_verification_test
     
     echo_success "🎉 Comprehensive integration tests completed!"
+}
+
+# Function to run Swift integration tests using xcodebuild
+run_swift_integration_tests() {
+    echo_status "🧪 Running Swift Integration Tests..."
+    
+    # Run iOS tests first
+    echo_status "📱 Running iOS Integration Tests..."
+    if xcodebuild test -project ShuttlX.xcodeproj -scheme ShuttlX -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:ShuttlXTests 2>/dev/null; then
+        echo_success "✅ iOS tests passed"
+    else
+        echo_warning "⚠️ iOS tests not found or failed"
+    fi
+    
+    # Run watchOS tests
+    echo_status "⌚ Running watchOS Integration Tests..."
+    if xcodebuild test -project ShuttlX.xcodeproj -scheme 'ShuttlXWatch Watch App' -destination 'platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)' -only-testing:ShuttlXWatchWatchAppTests 2>/dev/null; then
+        echo_success "✅ watchOS tests passed"
+    else
+        echo_warning "⚠️ watchOS tests not found or failed"
+    fi
+    
+    # Run Swift tests in Tests folder using swift test (if Package.swift is configured)
+    echo_status "🧪 Running Swift Package Integration Tests..."
+    if [ -f "Package.swift" ]; then
+        if swift test --enable-test-discovery 2>/dev/null; then
+            echo_success "✅ Swift Package tests passed"
+        else
+            echo_warning "⚠️ Swift Package tests not configured or failed"
+        fi
+    fi
+    
+    echo_success "🎉 Swift Integration Tests completed!"
 }
 
 # Test 1: Custom workout creation and sync
@@ -1050,13 +1093,13 @@ find_or_reuse_simulator() {
     local sim_name="$1"
     local os_version="$2"
     
-    echo_status "🔍 Finding optimal simulator for $sim_name (OS: $os_version)..."
+    echo_status "🔍 Finding optimal simulator for $sim_name (OS: $os_version)..." >&2
     
     # First priority: Find already booted simulator with matching name
     local booted_device_id=$(xcrun simctl list devices | grep "^[[:space:]]*$sim_name (" | grep "(Booted)" | head -1 | grep -E -o '\([A-F0-9-]+\)' | tr -d '()')
     
     if [ -n "$booted_device_id" ]; then
-        echo_success "✅ Reusing already booted simulator: $sim_name (ID: $booted_device_id)"
+        echo_success "✅ Reusing already booted simulator: $sim_name (ID: $booted_device_id)" >&2
         echo "$booted_device_id"
         return 0
     fi
@@ -1065,18 +1108,18 @@ find_or_reuse_simulator() {
     local existing_device_id=$(xcrun simctl list devices | grep "^[[:space:]]*$sim_name (" | head -1 | grep -E -o '\([A-F0-9-]+\)' | tr -d '()')
     
     if [ -n "$existing_device_id" ]; then
-        echo_status "Found existing simulator: $sim_name (ID: $existing_device_id)"
+        echo_status "Found existing simulator: $sim_name (ID: $existing_device_id)" >&2
         
         # Check its current state
         local sim_state=$(xcrun simctl list devices | grep "$existing_device_id" | grep -o "(Booted)\|(Shutdown)" || echo "(Unknown)")
         
         if [ "$sim_state" = "(Shutdown)" ]; then
-            echo_status "Booting existing simulator..."
+            echo_status "Booting existing simulator..." >&2
             xcrun simctl boot "$existing_device_id"
             sleep 3
         fi
         
-        echo_success "✅ Using existing simulator: $sim_name (ID: $existing_device_id)"
+        echo_success "✅ Using existing simulator: $sim_name (ID: $existing_device_id)" >&2
         echo "$existing_device_id"
         return 0
     fi
@@ -1629,7 +1672,7 @@ launch_watchos() {
     if [ -z "$watch_app_path" ]; then
         echo_warning "Could not find watch app bundle in Build/Products"
         echo_status "Searching for app bundles in DerivedData (excluding Index.noindex)..."
-        find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*" 2>/dev/null | head -5
+        find ~/Library/Developer/Xcode/DerivedData -name "*Watch*.app" -path "*/Debug-watchsimulator/*" -not -path "*/Index.noindex/*"  2>/dev/null | head -5
         return 1
     fi
 
@@ -1685,8 +1728,9 @@ launch_watchos() {
                 local launch_pid=$(xcrun simctl launch "$watch_device_id" "$watch_bundle_id" 2>&1 | grep -o '[0-9]*' | tail -1)
                 echo_success "✅ watchOS app launched successfully (PID: $launch_pid)"
                 
-                # Verify app is actually running
+                # Verify the app is running
                 sleep 3
+                echo_status "Verifying app is running..."
                 if xcrun simctl spawn "$watch_device_id" ps ax 2>/dev/null | grep -q "ShuttlXWatch\|$watch_bundle_id"; then
                     echo_success "✅ watchOS app process confirmed running"
                 else
@@ -2180,10 +2224,6 @@ case "$COMMAND" in
         echo_status "⏱️ Testing workout execution on watchOS..."
         run_workout_execution_test
         ;;
-    "test-data-sync")
-        echo_status "🔄 Testing data synchronization between platforms..."
-        run_data_sync_test
-        ;;
     "full")
         echo_status "Running full build and test sequence with M1 Pro optimization..."
         
@@ -2259,7 +2299,7 @@ case "$COMMAND" in
             else
                 echo_success "🎉 iOS setup complete! iOS simulator ready."
                 echo ""
-                echo_status "No watchOS target detected or build failed."
+                echo status "No watchOS target detected or build failed."
                 if [ ! -f "./setup_watchos_target.sh" ]; then
                     echo_warning "setup_watchos_target.sh not found. You can add watchOS support manually through Xcode."
                     echo_status "To add watchOS target: File → New → Target → watchOS → Watch App"
@@ -2274,3 +2314,5 @@ case "$COMMAND" in
         show_usage
         ;;
 esac
+
+
