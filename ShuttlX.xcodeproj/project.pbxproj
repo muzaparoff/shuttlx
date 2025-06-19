@@ -1,0 +1,902 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		00112233 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33221100 /* OnboardingViewModel.swift */; };
+		01834666 /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21EC92 /* NotificationModels.swift */; };
+		11223344 /* WorkoutDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44332211 /* WorkoutDashboardView.swift */; };
+		11223355 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55332211 /* ProfileViewModel.swift */; };
+		22334455 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55443322 /* StatsView.swift */; };
+		2E75A97D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E5E4AE /* NotificationService.swift */; };
+		33445566 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66554433 /* ProfileView.swift */; };
+		44556677 /* WorkoutSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77665544 /* WorkoutSelectionView.swift */; };
+		4F4A2F12 /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB81A6F /* SettingsModels.swift */; };
+		4FC4E876 /* HealthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD001790 /* HealthModels.swift */; };
+		55667788 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88776655 /* OnboardingView.swift */; };
+		66778899 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99887766 /* SettingsView.swift */; };
+		7118A4BC /* WorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDF6B7F /* WorkoutModels.swift */; };
+		77889900 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00998877 /* NotificationsView.swift */; };
+		78E5D995 /* HapticFeedbackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5027DB6 /* HapticFeedbackManager.swift */; };
+		815C2DFB /* WorkoutTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4FFFF7 /* WorkoutTypes.swift */; };
+		82890C70 /* UserModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A40238 /* UserModels.swift */; };
+		88990011 /* WorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11009988 /* WorkoutViewModel.swift */; };
+		99001122 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22110099 /* AppViewModel.swift */; };
+		A527051A2DF716E10072BB03 /* ShuttlXWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A5923501 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
+		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
+		A5923503 /* ServiceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A592350B /* ServiceLocator.swift */; };
+		ADE12960 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8DAE01 /* WatchConnectivityManager.swift */; };
+		AFCE18F4 /* HealthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAB32B1 /* HealthManager.swift */; };
+		BD65EDD9 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E5779F /* SettingsService.swift */; };
+		DDCCBBAA /* ProgramsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDD /* ProgramsView.swift */; };
+		E1234567 /* UserProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7654321 /* UserProfileService.swift */; };
+		E2345678 /* CalorieCalculationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8765432 /* CalorieCalculationService.swift */; };
+		E3456789 /* TrainingProgramSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9876543 /* TrainingProgramSync.swift */; };
+		PERF1001 /* PerformanceOptimizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF1111 /* PerformanceOptimizationService.swift */; };
+		PERF1002 /* AdvancedPerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF2222 /* AdvancedPerformanceMonitor.swift */; };
+		PERF1003 /* ViewPerformanceModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF3333 /* ViewPerformanceModifiers.swift */; };
+		TRAIN001 /* TrainingProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TRAIN111 /* TrainingProgramDetailView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		A52705072DF716E10072BB03 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A59234D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A52704F92DF716DE0072BB03;
+			remoteInfo = "ShuttlXWatch Watch App";
+		};
+		A52705112DF716E10072BB03 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A59234D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A52704F92DF716DE0072BB03;
+			remoteInfo = "ShuttlXWatch Watch App";
+		};
+		A52705182DF716E10072BB03 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A59234D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A52704F92DF716DE0072BB03;
+			remoteInfo = "ShuttlXWatch Watch App";
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A527051E2DF716E10072BB03 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				A527051A2DF716E10072BB03 /* ShuttlXWatch Watch App.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		00998877 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		11009988 /* WorkoutViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutViewModel.swift; sourceTree = "<group>"; };
+		1E4FFFF7 /* WorkoutTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTypes.swift; sourceTree = "<group>"; };
+		22110099 /* AppViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppViewModel.swift; sourceTree = "<group>"; };
+		33221100 /* OnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingViewModel.swift; sourceTree = "<group>"; };
+		33A40238 /* UserModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserModels.swift; sourceTree = "<group>"; };
+		3E8DAE01 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		44332211 /* WorkoutDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutDashboardView.swift; sourceTree = "<group>"; };
+		55332211 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		55443322 /* StatsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatsView.swift; sourceTree = "<group>"; };
+		59E5E4AE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		66554433 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		6FAB32B1 /* HealthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthManager.swift; sourceTree = "<group>"; };
+		77665544 /* WorkoutSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSelectionView.swift; sourceTree = "<group>"; };
+		88776655 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		99887766 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlXWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A52705062DF716E10072BB03 /* ShuttlXWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ShuttlXWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A52705102DF716E10072BB03 /* ShuttlXWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ShuttlXWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
+		A5923508 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A592350A /* ShuttlX.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlX.entitlements; sourceTree = "<group>"; };
+		A592350B /* ServiceLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceLocator.swift; sourceTree = "<group>"; };
+		AABBCCDD /* ProgramsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsView.swift; sourceTree = "<group>"; };
+		BCDF6B7F /* WorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutModels.swift; sourceTree = "<group>"; };
+		BFB81A6F /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
+		CD001790 /* HealthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthModels.swift; sourceTree = "<group>"; };
+		D5027DB6 /* HapticFeedbackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedbackManager.swift; sourceTree = "<group>"; };
+		E7654321 /* UserProfileService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserProfileService.swift; sourceTree = "<group>"; };
+		E8765432 /* CalorieCalculationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieCalculationService.swift; sourceTree = "<group>"; };
+		E9876543 /* TrainingProgramSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgramSync.swift; sourceTree = "<group>"; };
+		EB21EC92 /* NotificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationModels.swift; sourceTree = "<group>"; };
+		F5E5779F /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		PERF1111 /* PerformanceOptimizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceOptimizationService.swift; sourceTree = "<group>"; };
+		PERF2222 /* AdvancedPerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedPerformanceMonitor.swift; sourceTree = "<group>"; };
+		PERF3333 /* ViewPerformanceModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewPerformanceModifiers.swift; sourceTree = "<group>"; };
+		TRAIN111 /* TrainingProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgramDetailView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		A52704FB2DF716DE0072BB03 /* ShuttlXWatch Watch App */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ShuttlXWatch Watch App";
+			sourceTree = "<group>";
+		};
+		A52705092DF716E10072BB03 /* ShuttlXWatch Watch AppTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ShuttlXWatch Watch AppTests";
+			sourceTree = "<group>";
+		};
+		A52705132DF716E10072BB03 /* ShuttlXWatch Watch AppUITests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "ShuttlXWatch Watch AppUITests";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A52704F72DF716DE0072BB03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A52705032DF716E10072BB03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A527050D2DF716E10072BB03 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A59234DB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A59234D5 = {
+			isa = PBXGroup;
+			children = (
+				A59234E0 /* ShuttlX */,
+				A52704FB2DF716DE0072BB03 /* ShuttlXWatch Watch App */,
+				A52705092DF716E10072BB03 /* ShuttlXWatch Watch AppTests */,
+				A52705132DF716E10072BB03 /* ShuttlXWatch Watch AppUITests */,
+				A59234DF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A59234DF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A59234DE /* ShuttlX.app */,
+				A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */,
+				A52705062DF716E10072BB03 /* ShuttlXWatch Watch AppTests.xctest */,
+				A52705102DF716E10072BB03 /* ShuttlXWatch Watch AppUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A59234E0 /* ShuttlX */ = {
+			isa = PBXGroup;
+			children = (
+				A5923507 /* ShuttlXApp.swift */,
+				A5923508 /* ContentView.swift */,
+				A592350B /* ServiceLocator.swift */,
+				A5923509 /* Info.plist */,
+				A592350A /* ShuttlX.entitlements */,
+				A5923600 /* Services */,
+				A5923700 /* Models */,
+				A5923800 /* Views */,
+				A5923900 /* ViewModels */,
+			);
+			path = ShuttlX;
+			sourceTree = "<group>";
+		};
+		A5923600 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				59E5E4AE /* NotificationService.swift */,
+				6FAB32B1 /* HealthManager.swift */,
+				D5027DB6 /* HapticFeedbackManager.swift */,
+				3E8DAE01 /* WatchConnectivityManager.swift */,
+				F5E5779F /* SettingsService.swift */,
+				E7654321 /* UserProfileService.swift */,
+				E8765432 /* CalorieCalculationService.swift */,
+				E9876543 /* TrainingProgramSync.swift */,
+				PERF1111 /* PerformanceOptimizationService.swift */,
+				PERF2222 /* AdvancedPerformanceMonitor.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		A5923700 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BFB81A6F /* SettingsModels.swift */,
+				33A40238 /* UserModels.swift */,
+				1E4FFFF7 /* WorkoutTypes.swift */,
+				CD001790 /* HealthModels.swift */,
+				EB21EC92 /* NotificationModels.swift */,
+				BCDF6B7F /* WorkoutModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		A5923800 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				44332211 /* WorkoutDashboardView.swift */,
+				55443322 /* StatsView.swift */,
+				66554433 /* ProfileView.swift */,
+				77665544 /* WorkoutSelectionView.swift */,
+				88776655 /* OnboardingView.swift */,
+				99887766 /* SettingsView.swift */,
+				00998877 /* NotificationsView.swift */,
+				AABBCCDD /* ProgramsView.swift */,
+				TRAIN111 /* TrainingProgramDetailView.swift */,
+				PERF3333 /* ViewPerformanceModifiers.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		A5923900 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				11009988 /* WorkoutViewModel.swift */,
+				22110099 /* AppViewModel.swift */,
+				33221100 /* OnboardingViewModel.swift */,
+				55332211 /* ProfileViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A527051B2DF716E10072BB03 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch App" */;
+			buildPhases = (
+				A52704F62DF716DE0072BB03 /* Sources */,
+				A52704F72DF716DE0072BB03 /* Frameworks */,
+				A52704F82DF716DE0072BB03 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				A52704FB2DF716DE0072BB03 /* ShuttlXWatch Watch App */,
+			);
+			name = "ShuttlXWatch Watch App";
+			packageProductDependencies = (
+			);
+			productName = "ShuttlXWatch Watch App";
+			productReference = A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A52705052DF716E10072BB03 /* ShuttlXWatch Watch AppTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A527051F2DF716E10072BB03 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch AppTests" */;
+			buildPhases = (
+				A52705022DF716E10072BB03 /* Sources */,
+				A52705032DF716E10072BB03 /* Frameworks */,
+				A52705042DF716E10072BB03 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A52705082DF716E10072BB03 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A52705092DF716E10072BB03 /* ShuttlXWatch Watch AppTests */,
+			);
+			name = "ShuttlXWatch Watch AppTests";
+			packageProductDependencies = (
+			);
+			productName = "ShuttlXWatch Watch AppTests";
+			productReference = A52705062DF716E10072BB03 /* ShuttlXWatch Watch AppTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		A527050F2DF716E10072BB03 /* ShuttlXWatch Watch AppUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A52705222DF716E10072BB03 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch AppUITests" */;
+			buildPhases = (
+				A527050C2DF716E10072BB03 /* Sources */,
+				A527050D2DF716E10072BB03 /* Frameworks */,
+				A527050E2DF716E10072BB03 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A52705122DF716E10072BB03 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A52705132DF716E10072BB03 /* ShuttlXWatch Watch AppUITests */,
+			);
+			name = "ShuttlXWatch Watch AppUITests";
+			packageProductDependencies = (
+			);
+			productName = "ShuttlXWatch Watch AppUITests";
+			productReference = A52705102DF716E10072BB03 /* ShuttlXWatch Watch AppUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		A59234DD /* ShuttlX */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A59234FE /* Build configuration list for PBXNativeTarget "ShuttlX" */;
+			buildPhases = (
+				A59234DA /* Sources */,
+				A59234DB /* Frameworks */,
+				A59234DC /* Resources */,
+				A527051E2DF716E10072BB03 /* Embed Watch Content */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A52705192DF716E10072BB03 /* PBXTargetDependency */,
+			);
+			name = ShuttlX;
+			productName = ShuttlX;
+			productReference = A59234DE /* ShuttlX.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A59234D6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1640;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A52704F92DF716DE0072BB03 = {
+						CreatedOnToolsVersion = 16.4;
+					};
+					A52705052DF716E10072BB03 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = A52704F92DF716DE0072BB03;
+					};
+					A527050F2DF716E10072BB03 = {
+						CreatedOnToolsVersion = 16.4;
+						TestTargetID = A52704F92DF716DE0072BB03;
+					};
+					A59234DD = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A59234D9 /* Build configuration list for PBXProject "ShuttlX" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A59234D5;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A59234DF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A59234DD /* ShuttlX */,
+				A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */,
+				A52705052DF716E10072BB03 /* ShuttlXWatch Watch AppTests */,
+				A527050F2DF716E10072BB03 /* ShuttlXWatch Watch AppUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A52704F82DF716DE0072BB03 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A52705042DF716E10072BB03 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A527050E2DF716E10072BB03 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A59234DC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A52704F62DF716DE0072BB03 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A52705022DF716E10072BB03 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A527050C2DF716E10072BB03 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A59234DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A5923501 /* ShuttlXApp.swift in Sources */,
+				A5923502 /* ContentView.swift in Sources */,
+				A5923503 /* ServiceLocator.swift in Sources */,
+				2E75A97D /* NotificationService.swift in Sources */,
+				AFCE18F4 /* HealthManager.swift in Sources */,
+				78E5D995 /* HapticFeedbackManager.swift in Sources */,
+				ADE12960 /* WatchConnectivityManager.swift in Sources */,
+				BD65EDD9 /* SettingsService.swift in Sources */,
+				4F4A2F12 /* SettingsModels.swift in Sources */,
+				82890C70 /* UserModels.swift in Sources */,
+				815C2DFB /* WorkoutTypes.swift in Sources */,
+				4FC4E876 /* HealthModels.swift in Sources */,
+				01834666 /* NotificationModels.swift in Sources */,
+				7118A4BC /* WorkoutModels.swift in Sources */,
+				11223344 /* WorkoutDashboardView.swift in Sources */,
+				22334455 /* StatsView.swift in Sources */,
+				33445566 /* ProfileView.swift in Sources */,
+				44556677 /* WorkoutSelectionView.swift in Sources */,
+				55667788 /* OnboardingView.swift in Sources */,
+				66778899 /* SettingsView.swift in Sources */,
+				77889900 /* NotificationsView.swift in Sources */,
+				88990011 /* WorkoutViewModel.swift in Sources */,
+				99001122 /* AppViewModel.swift in Sources */,
+				00112233 /* OnboardingViewModel.swift in Sources */,
+				11223355 /* ProfileViewModel.swift in Sources */,
+				DDCCBBAA /* ProgramsView.swift in Sources */,
+				TRAIN001 /* TrainingProgramDetailView.swift in Sources */,
+				E1234567 /* UserProfileService.swift in Sources */,
+				E2345678 /* CalorieCalculationService.swift in Sources */,
+				E3456789 /* TrainingProgramSync.swift in Sources */,
+				PERF1001 /* PerformanceOptimizationService.swift in Sources */,
+				PERF1002 /* AdvancedPerformanceMonitor.swift in Sources */,
+				PERF1003 /* ViewPerformanceModifiers.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		A52705082DF716E10072BB03 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */;
+			targetProxy = A52705072DF716E10072BB03 /* PBXContainerItemProxy */;
+		};
+		A52705122DF716E10072BB03 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */;
+			targetProxy = A52705112DF716E10072BB03 /* PBXContainerItemProxy */;
+		};
+		A52705192DF716E10072BB03 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */;
+			targetProxy = A52705182DF716E10072BB03 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		A527051C2DF716E10072BB03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ShuttlXWatch;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "ShuttlX uses HealthKit to save your workout data and fitness activities to keep your health information up to date across all your devices.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.shuttlx.ShuttlX;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Debug;
+		};
+		A527051D2DF716E10072BB03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = ShuttlXWatch;
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "ShuttlX uses HealthKit to save your workout data and fitness activities to keep your health information up to date across all your devices.";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.shuttlx.ShuttlX;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Release;
+		};
+		A52705202DF716E10072BB03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.shuttlx.watch.ShuttlXWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShuttlXWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ShuttlXWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Debug;
+		};
+		A52705212DF716E10072BB03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.shuttlx.watch.ShuttlXWatch-Watch-AppTests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShuttlXWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ShuttlXWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Release;
+		};
+		A52705232DF716E10072BB03 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.shuttlx.watch.ShuttlXWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "ShuttlXWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Debug;
+		};
+		A52705242DF716E10072BB03 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "com.shuttlx.watch.ShuttlXWatch-Watch-AppUITests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				TEST_TARGET_NAME = "ShuttlXWatch Watch App";
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Release;
+		};
+		A59234FC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A59234FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A59234FF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShuttlX/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A5923510 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShuttlX/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.sports";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A527051B2DF716E10072BB03 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch App" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A527051C2DF716E10072BB03 /* Debug */,
+				A527051D2DF716E10072BB03 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A527051F2DF716E10072BB03 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch AppTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A52705202DF716E10072BB03 /* Debug */,
+				A52705212DF716E10072BB03 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A52705222DF716E10072BB03 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch AppUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A52705232DF716E10072BB03 /* Debug */,
+				A52705242DF716E10072BB03 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A59234D9 /* Build configuration list for PBXProject "ShuttlX" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A59234FC /* Debug */,
+				A59234FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A59234FE /* Build configuration list for PBXNativeTarget "ShuttlX" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A59234FF /* Debug */,
+				A5923510 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A59234D6 /* Project object */;
+}

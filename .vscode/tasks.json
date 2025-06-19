@@ -1,0 +1,15 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build iOS + watchOS",
+			"type": "shell",
+			"command": "echo",
+			"args": [
+				"Building both iOS and watchOS targets..."
+			],
+			"group": "build",
+			"isBackground": false
+		}
+	]
+}

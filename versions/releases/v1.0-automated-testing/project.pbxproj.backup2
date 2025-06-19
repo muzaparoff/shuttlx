@@ -1,0 +1,464 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A5923501 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
+		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
+		A5923503 /* ServiceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A592350B /* ServiceLocator.swift */; };
+		E46361ED /* AudioCoachingManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = C155D30F /* AudioCoachingManager.swift */; };
+		7AB2D67C /* APIService.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE038BB6 /* APIService.swift */; };
+		AF8D4D75 /* FormAnalysisManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE26A9AA /* FormAnalysisManager.swift */; };
+		67FB015A /* WeatherManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A51E983 /* WeatherManager.swift */; };
+		2E75A97D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E5E4AE /* NotificationService.swift */; };
+		3B407956 /* MLModelManager_iOS.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3782DA16 /* MLModelManager_iOS.swift */; };
+		A14ACF2F /* GamificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59BB175A /* GamificationManager.swift */; };
+		2FB4C74B /* MessagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BCB6588 /* MessagingService.swift */; };
+		AFCE18F4 /* HealthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAB32B1 /* HealthManager.swift */; };
+		78E5D995 /* HapticFeedbackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5027DB6 /* HapticFeedbackManager.swift */; };
+		F6B9D506 /* SocialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 229A7D33 /* SocialService.swift */; };
+		ADE12960 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8DAE01 /* WatchConnectivityManager.swift */; };
+		BAAEEEB8 /* CloudKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A3670571 /* CloudKitManager.swift */; };
+		AB162777 /* AIFormAnalysisService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58234D44 /* AIFormAnalysisService.swift */; };
+		BD65EDD9 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E5779F /* SettingsService.swift */; };
+		169D6B78 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D5770A1 /* LocationManager.swift */; };
+		BE1050A6 /* AccessibilityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82552636 /* AccessibilityManager.swift */; };
+		C8153DDB /* RealTimeMessagingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08E38A89 /* RealTimeMessagingService.swift */; };
+		24983023 /* SocialModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5A5A57 /* SocialModels.swift */; };
+		4F4A2F12 /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB81A6F /* SettingsModels.swift */; };
+		82890C70 /* UserModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A40238 /* UserModels.swift */; };
+		F2B62C59 /* MessagingModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A2A0550 /* MessagingModels.swift */; };
+		815C2DFB /* WorkoutTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4FFFF7 /* WorkoutTypes.swift */; };
+		4FC4E876 /* HealthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD001790 /* HealthModels.swift */; };
+		01834666 /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21EC92 /* NotificationModels.swift */; };
+		7118A4BC /* WorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDF6B7F /* WorkoutModels.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
+		A5923508 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A592350A /* ShuttlX.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlX.entitlements; sourceTree = "<group>"; };
+		A592350B /* ServiceLocator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceLocator.swift; sourceTree = "<group>"; };
+		C155D30F /* AudioCoachingManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCoachingManager.swift; sourceTree = "<group>"; };
+		FE038BB6 /* APIService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIService.swift; sourceTree = "<group>"; };
+		BE26A9AA /* FormAnalysisManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormAnalysisManager.swift; sourceTree = "<group>"; };
+		5A51E983 /* WeatherManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeatherManager.swift; sourceTree = "<group>"; };
+		59E5E4AE /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		3782DA16 /* MLModelManager_iOS.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLModelManager_iOS.swift; sourceTree = "<group>"; };
+		59BB175A /* GamificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GamificationManager.swift; sourceTree = "<group>"; };
+		7BCB6588 /* MessagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagingService.swift; sourceTree = "<group>"; };
+		6FAB32B1 /* HealthManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthManager.swift; sourceTree = "<group>"; };
+		D5027DB6 /* HapticFeedbackManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticFeedbackManager.swift; sourceTree = "<group>"; };
+		229A7D33 /* SocialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialService.swift; sourceTree = "<group>"; };
+		3E8DAE01 /* WatchConnectivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchConnectivityManager.swift; sourceTree = "<group>"; };
+		A3670571 /* CloudKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitManager.swift; sourceTree = "<group>"; };
+		58234D44 /* AIFormAnalysisService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AIFormAnalysisService.swift; sourceTree = "<group>"; };
+		F5E5779F /* SettingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsService.swift; sourceTree = "<group>"; };
+		9D5770A1 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
+		82552636 /* AccessibilityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityManager.swift; sourceTree = "<group>"; };
+		08E38A89 /* RealTimeMessagingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealTimeMessagingService.swift; sourceTree = "<group>"; };
+		BC5A5A57 /* SocialModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocialModels.swift; sourceTree = "<group>"; };
+		BFB81A6F /* SettingsModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsModels.swift; sourceTree = "<group>"; };
+		33A40238 /* UserModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserModels.swift; sourceTree = "<group>"; };
+		0A2A0550 /* MessagingModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagingModels.swift; sourceTree = "<group>"; };
+		1E4FFFF7 /* WorkoutTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTypes.swift; sourceTree = "<group>"; };
+		CD001790 /* HealthModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthModels.swift; sourceTree = "<group>"; };
+		EB21EC92 /* NotificationModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationModels.swift; sourceTree = "<group>"; };
+		BCDF6B7F /* WorkoutModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutModels.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A59234DB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A59234D5 = {
+			isa = PBXGroup;
+			children = (
+				A59234E0 /* ShuttlX */,
+				A59234DF /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A59234DF /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A59234DE /* ShuttlX.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A59234E0 /* ShuttlX */ = {
+			isa = PBXGroup;
+			children = (
+				A5923507 /* ShuttlXApp.swift */,
+				A5923508 /* ContentView.swift */,
+				A592350B /* ServiceLocator.swift */,
+				A5923509 /* Info.plist */,
+				A592350A /* ShuttlX.entitlements */,
+							A5923600 /* Services */,
+				A5923700 /* Models */,
+			);
+			path = ShuttlX;
+			sourceTree = "<group>";
+		};
+
+		A5923600 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				C155D30F /* AudioCoachingManager.swift */,
+				FE038BB6 /* APIService.swift */,
+				BE26A9AA /* FormAnalysisManager.swift */,
+				5A51E983 /* WeatherManager.swift */,
+				59E5E4AE /* NotificationService.swift */,
+				3782DA16 /* MLModelManager_iOS.swift */,
+				59BB175A /* GamificationManager.swift */,
+				7BCB6588 /* MessagingService.swift */,
+				6FAB32B1 /* HealthManager.swift */,
+				D5027DB6 /* HapticFeedbackManager.swift */,
+				229A7D33 /* SocialService.swift */,
+				3E8DAE01 /* WatchConnectivityManager.swift */,
+				A3670571 /* CloudKitManager.swift */,
+				58234D44 /* AIFormAnalysisService.swift */,
+				F5E5779F /* SettingsService.swift */,
+				9D5770A1 /* LocationManager.swift */,
+				82552636 /* AccessibilityManager.swift */,
+				08E38A89 /* RealTimeMessagingService.swift */,
+
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+
+		A5923700 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				BC5A5A57 /* SocialModels.swift */,
+				BFB81A6F /* SettingsModels.swift */,
+				33A40238 /* UserModels.swift */,
+				0A2A0550 /* MessagingModels.swift */,
+				1E4FFFF7 /* WorkoutTypes.swift */,
+				CD001790 /* HealthModels.swift */,
+				EB21EC92 /* NotificationModels.swift */,
+				BCDF6B7F /* WorkoutModels.swift */,
+
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A59234DD /* ShuttlX */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A59234FE /* Build configuration list for PBXNativeTarget "ShuttlX" */;
+			buildPhases = (
+				A59234DA /* Sources */,
+				A59234DB /* Frameworks */,
+				A59234DC /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShuttlX;
+			productName = ShuttlX;
+			productReference = A59234DE /* ShuttlX.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A59234D6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					A59234DD = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = A59234D9 /* Build configuration list for PBXProject "ShuttlX" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A59234D5;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A59234DF /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A59234DD /* ShuttlX */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A59234DC /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A59234DA /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A5923501 /* ShuttlXApp.swift in Sources */,
+				A5923502 /* ContentView.swift in Sources */,
+				A5923503 /* ServiceLocator.swift in Sources */,
+							E46361ED /* AudioCoachingManager.swift in Sources */,
+				7AB2D67C /* APIService.swift in Sources */,
+				AF8D4D75 /* FormAnalysisManager.swift in Sources */,
+				67FB015A /* WeatherManager.swift in Sources */,
+				2E75A97D /* NotificationService.swift in Sources */,
+				3B407956 /* MLModelManager_iOS.swift in Sources */,
+				A14ACF2F /* GamificationManager.swift in Sources */,
+				2FB4C74B /* MessagingService.swift in Sources */,
+				AFCE18F4 /* HealthManager.swift in Sources */,
+				78E5D995 /* HapticFeedbackManager.swift in Sources */,
+				F6B9D506 /* SocialService.swift in Sources */,
+				ADE12960 /* WatchConnectivityManager.swift in Sources */,
+				BAAEEEB8 /* CloudKitManager.swift in Sources */,
+				AB162777 /* AIFormAnalysisService.swift in Sources */,
+				BD65EDD9 /* SettingsService.swift in Sources */,
+				169D6B78 /* LocationManager.swift in Sources */,
+				BE1050A6 /* AccessibilityManager.swift in Sources */,
+				C8153DDB /* RealTimeMessagingService.swift in Sources */,
+				24983023 /* SocialModels.swift in Sources */,
+				4F4A2F12 /* SettingsModels.swift in Sources */,
+				82890C70 /* UserModels.swift in Sources */,
+				F2B62C59 /* MessagingModels.swift in Sources */,
+				815C2DFB /* WorkoutTypes.swift in Sources */,
+				4FC4E876 /* HealthModels.swift in Sources */,
+				01834666 /* NotificationModels.swift in Sources */,
+				7118A4BC /* WorkoutModels.swift in Sources */,
+);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A59234FC /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A59234FD /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A59234FF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShuttlX/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A5923510 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShuttlX/Info.plist;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A59234D9 /* Build configuration list for PBXProject "ShuttlX" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A59234FC /* Debug */,
+				A59234FD /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A59234FE /* Build configuration list for PBXNativeTarget "ShuttlX" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A59234FF /* Debug */,
+				A5923510 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A59234D6 /* Project object */;
+}
