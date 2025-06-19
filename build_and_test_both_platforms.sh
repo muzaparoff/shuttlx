@@ -1307,15 +1307,22 @@ build_ios() {
     
     echo_status "Using iOS device ID: $ios_device_id"
     
+    echo_status "Running xcodebuild for iOS..."
     if xcodebuild \
         -project "$PROJECT_PATH" \
         -scheme "$IOS_SCHEME" \
         -destination "platform=iOS Simulator,id=$ios_device_id" \
         -configuration Debug \
-        clean build \
-        | grep -E "(CLEAN|BUILD|SUCCEEDED|FAILED|error:|warning:)" || true; then
-        echo_success "iOS build completed successfully for device: $ios_device_id"
-        return 0
+        clean build 2>&1 | tee ios_build_errors.log; then
+        
+        # Check if the build actually succeeded by looking for specific success indicators
+        if grep -q "BUILD SUCCEEDED" ios_build_errors.log; then
+            echo_success "iOS build completed successfully for device: $ios_device_id"
+            return 0
+        else
+            echo_error "iOS build failed - no success indicator found"
+            return 1
+        fi
     else
         echo_error "iOS build failed"
         return 1
@@ -1485,15 +1492,22 @@ build_watchos() {
     
     echo_status "Using watchOS device ID: $watch_device_id"
     
+    echo_status "Running xcodebuild for watchOS..."
     if xcodebuild \
         -project "$PROJECT_PATH" \
         -scheme "$WATCH_SCHEME" \
         -destination "platform=watchOS Simulator,id=$watch_device_id" \
         -configuration Debug \
-        clean build \
-        | grep -E "(CLEAN|BUILD|SUCCEEDED|FAILED|error:|warning:)" || true; then
-        echo_success "watchOS build completed successfully for device: $watch_device_id"
-        return 0
+        clean build 2>&1 | tee watchos_build_errors.log; then
+        
+        # Check if the build actually succeeded by looking for specific success indicators
+        if grep -q "BUILD SUCCEEDED" watchos_build_errors.log; then
+            echo_success "watchOS build completed successfully for device: $watch_device_id"
+            return 0
+        else
+            echo_error "watchOS build failed - no success indicator found"
+            return 1
+        fi
     else
         echo_error "watchOS build failed"
         return 1

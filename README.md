@@ -192,4 +192,34 @@ AutomatedTestPlan.xctestplan       # Test plan configuration
 - **Timer verification**: Multiple verification methods implemented
 - **Sync timeout**: Extended timeouts for automation environment
 
+## 📁 **FILE MANAGEMENT GUIDELINES**
+
+**⚠️ IMPORTANT: Working with Clean Files Only**
+
+To maintain a clean codebase and avoid build issues, **DO NOT** create or work with duplicate files that have these suffixes:
+- `_new.swift` (e.g., `ContentView_New.swift`)
+- `_clean.swift` (e.g., `UserModels_clean.swift`) 
+- `_backup.swift` (e.g., `UserModels_backup.swift`)
+- `.backup` files
+
+**✅ CORRECT APPROACH:**
+- Work only with the actual production files (e.g., `ContentView.swift`, `UserModels.swift`)
+- If you need to make changes, edit the original file directly
+- Use git for version control and backup, not duplicate files
+
+**❌ INCORRECT APPROACH:**
+- Creating `ContentView_New.swift` alongside `ContentView.swift`
+- Keeping multiple versions like `UserModels.swift`, `UserModels_clean.swift`, `UserModels_backup.swift`
+- Adding `.backup` extensions to files in the source tree
+
+**WHY THIS MATTERS:**
+- Duplicate files can cause build conflicts and ambiguous type errors
+- The build system may compile multiple versions of the same code
+- It makes debugging and maintenance much more difficult
+- The automated testing system expects a clean, single-source-of-truth structure
+
+**EXISTING BACKUP LOCATION:**
+- Historical versions and alternatives are stored in `versions/releases/v1.0-automated-testing/`
+- This keeps them available for reference without affecting the build
+
 ---
