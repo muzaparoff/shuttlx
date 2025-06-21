@@ -8,17 +8,6 @@ struct ShuttlXWatchApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(workoutManager)
-                .onAppear {
-                    setupWatchApp()
-                }
         }
-    }
-    
-    private func setupWatchApp() {
-        // Initialize workout manager and load programs
-        workoutManager.loadPrograms()
-        
-        // Request necessary permissions
-        workoutManager.requestPermissions()
     }
 }

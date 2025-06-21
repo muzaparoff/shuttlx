@@ -2,112 +2,48 @@ import Foundation
 
 struct TrainingInterval: Identifiable, Codable {
     let id = UUID()
-    var type: IntervalType
+    var phase: IntervalPhase
     var duration: TimeInterval // in seconds
-    var targetPace: TrainingPace?
-    
-    init(type: IntervalType, duration: TimeInterval, targetPace: TrainingPace? = nil) {
-        self.type = type
-        self.duration = duration
-        self.targetPace = targetPace
-    }
-    
-    // Computed properties for convenience
-    var durationMinutes: Int {
-        Int(duration / 60)
-    }
-    
-    var durationSeconds: Int {
-        Int(duration.truncatingRemainder(dividingBy: 60))
-    }
-    
-    var formattedDuration: String {
-        let minutes = durationMinutes
-        let seconds = durationSeconds
-        
-        if minutes > 0 {
-            return seconds > 0 ? "\(minutes)m \(seconds)s" : "\(minutes)m"
-        } else {
-            return "\(seconds)s"
-        }
-    }
-    
-    var displayName: String {
-        return "\(type.rawValue) - \(formattedDuration)"
-    }
+    var intensity: TrainingIntensity
 }
 
-enum IntervalType: String, CaseIterable, Codable {
-    case walk = "Walk"
-    case run = "Run"
+enum IntervalPhase: String, CaseIterable, Codable {
+    case work = "Work"
     case rest = "Rest"
     
-    var systemImageName: String {
+    var displayName: String {
         switch self {
-        case .walk:
-            return "figure.walk"
-        case .run:
-            return "figure.run"
-        case .rest:
-            return "pause.circle"
+        case .work: return "Work"
+        case .rest: return "Rest"
         }
     }
     
-    var color: String {
+    var systemImage: String {
         switch self {
-        case .walk:
-            return "blue"
-        case .run:
-            return "red"
-        case .rest:
-            return "gray"
+        case .work: return "bolt.fill"
+        case .rest: return "pause.circle.fill"
         }
     }
 }
 
-enum TrainingPace: String, CaseIterable, Codable {
-    case easy = "Easy"
+enum TrainingIntensity: String, CaseIterable, Codable {
+    case low = "Low"
     case moderate = "Moderate"
-    case intense = "Intense"
+    case high = "High"
     
     var description: String {
         switch self {
-        case .easy:
-            return "Comfortable, conversational pace"
-        case .moderate:
-            return "Somewhat hard, focused effort"
-        case .intense:
-            return "Hard, maximum sustainable effort"
+        case .low: return "Easy pace, conversational"
+        case .moderate: return "Moderate effort, slightly breathless"
+        case .high: return "High intensity, maximum effort"
         }
     }
     
     var heartRateZone: String {
         switch self {
-        case .easy:
-            return "Zone 1-2 (60-70% max HR)"
-        case .moderate:
-            return "Zone 3-4 (70-85% max HR)"
-        case .intense:
-            return "Zone 4-5 (85-95% max HR)"
+        case .low: return "Zone 1-2 (60-70% max HR)"
+        case .moderate: return "Zone 3-4 (70-85% max HR)"
+        case .high: return "Zone 4-5 (85-95% max HR)"
         }
-    }
-}
-
-// MARK: - Helper Extensions
-extension Array where Element == TrainingInterval {
-    var totalDuration: TimeInterval {
-        reduce(0) { $0 + $1.duration }
-    }
-    
-    var walkDuration: TimeInterval {
-        filter { $0.type == .walk }.reduce(0) { $0 + $1.duration }
-    }
-    
-    var runDuration: TimeInterval {
-        filter { $0.type == .run }.reduce(0) { $0 + $1.duration }
-    }
-    
-    var restDuration: TimeInterval {
-        filter { $0.type == .rest }.reduce(0) { $0 + $1.duration }
     }
 }

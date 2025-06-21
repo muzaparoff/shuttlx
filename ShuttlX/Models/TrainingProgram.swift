@@ -4,6 +4,7 @@ import CloudKit
 struct TrainingProgram: Identifiable, Codable {
     let id = UUID()
     var name: String
+    var type: ProgramType
     var intervals: [TrainingInterval]
     var maxPulse: Int
     var createdDate: Date
@@ -12,73 +13,75 @@ struct TrainingProgram: Identifiable, Codable {
     // CloudKit integration
     var recordID: CKRecord.ID?
     
-    init(name: String, intervals: [TrainingInterval] = [], maxPulse: Int = 180) {
-        self.name = name
-        self.intervals = intervals
-        self.maxPulse = maxPulse
-        self.createdDate = Date()
-        self.lastModified = Date()
-        self.recordID = nil
-    }
-    
-    // Computed properties for convenience
+    // Computed properties
     var totalDuration: TimeInterval {
         intervals.reduce(0) { $0 + $1.duration }
     }
     
-    var intervalCount: Int {
-        intervals.count
+    var workIntervals: [TrainingInterval] {
+        intervals.filter { $0.phase == .work }
     }
     
-    var walkIntervalCount: Int {
-        intervals.filter { $0.type == .walk }.count
-    }
-    
-    var runIntervalCount: Int {
-        intervals.filter { $0.type == .run }.count
+    var restIntervals: [TrainingInterval] {
+        intervals.filter { $0.phase == .rest }
     }
 }
 
-// MARK: - CloudKit Support
-extension TrainingProgram {
-    init?(from record: CKRecord) {
-        guard let name = record["name"] as? String,
-              let maxPulse = record["maxPulse"] as? Int,
-              let createdDate = record["createdDate"] as? Date,
-              let lastModified = record["lastModified"] as? Date,
-              let intervalsData = record["intervals"] as? Data else {
-            return nil
-        }
-        
-        self.name = name
-        self.maxPulse = maxPulse
-        self.createdDate = createdDate
-        self.lastModified = lastModified
-        self.recordID = record.recordID
-        
-        // Decode intervals from data
-        do {
-            self.intervals = try JSONDecoder().decode([TrainingInterval].self, from: intervalsData)
-        } catch {
-            self.intervals = []
+enum ProgramType: String, CaseIterable, Codable {
+    case walkRun = "Walk-Run"
+    case hiit = "HIIT" // Future expansion
+    case tabata = "Tabata" // Future expansion
+    case custom = "Custom" // Future expansion
+    
+    var description: String {
+        switch self {
+        case .walkRun: 
+            return "Alternating walking and running intervals for endurance building"
+        case .hiit: 
+            return "High-Intensity Interval Training for maximum calorie burn"
+        case .tabata: 
+            return "20 seconds work, 10 seconds rest protocol"
+        case .custom: 
+            return "Fully customizable interval training"
         }
     }
     
-    func toCloudKitRecord() -> CKRecord {
-        let record = CKRecord(recordType: "TrainingProgram", recordID: recordID ?? CKRecord.ID())
-        record["name"] = name
-        record["maxPulse"] = maxPulse
-        record["createdDate"] = createdDate
-        record["lastModified"] = lastModified
-        
-        // Encode intervals to data
-        do {
-            let intervalsData = try JSONEncoder().encode(intervals)
-            record["intervals"] = intervalsData
-        } catch {
-            record["intervals"] = Data()
+    var defaultIntervals: [TrainingInterval] {
+        switch self {
+        case .walkRun:
+            return [
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),   // 2min walk
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),   // 2min walk
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),   // 2min walk
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low)    // 5min cooldown walk
+            ]
+        case .hiit:
+            return [] // Future implementation
+        case .tabata:
+            return [] // Future implementation
+        case .custom:
+            return []
         }
-        
-        return record
+    }
+    
+    var workPhaseLabel: String {
+        switch self {
+        case .walkRun: return "Run"
+        case .hiit: return "High Intensity"
+        case .tabata: return "Work"
+        case .custom: return "Work"
+        }
+    }
+    
+    var restPhaseLabel: String {
+        switch self {
+        case .walkRun: return "Walk"
+        case .hiit: return "Rest"
+        case .tabata: return "Rest"
+        case .custom: return "Rest"
+        }
     }
 }

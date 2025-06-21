@@ -7,40 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		00112233 /* OnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33221100 /* OnboardingViewModel.swift */; };
-		01834666 /* NotificationModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB21EC92 /* NotificationModels.swift */; };
-		11223344 /* WorkoutDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 44332211 /* WorkoutDashboardView.swift */; };
-		11223355 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55332211 /* ProfileViewModel.swift */; };
-		22334455 /* StatsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 55443322 /* StatsView.swift */; };
-		2E75A97D /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E5E4AE /* NotificationService.swift */; };
-		33445566 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66554433 /* ProfileView.swift */; };
-		44556677 /* WorkoutSelectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77665544 /* WorkoutSelectionView.swift */; };
-		4F4A2F12 /* SettingsModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFB81A6F /* SettingsModels.swift */; };
-		4FC4E876 /* HealthModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD001790 /* HealthModels.swift */; };
-		55667788 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88776655 /* OnboardingView.swift */; };
-		66778899 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99887766 /* SettingsView.swift */; };
-		7118A4BC /* WorkoutModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = BCDF6B7F /* WorkoutModels.swift */; };
-		77889900 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00998877 /* NotificationsView.swift */; };
-		78E5D995 /* HapticFeedbackManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5027DB6 /* HapticFeedbackManager.swift */; };
-		815C2DFB /* WorkoutTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E4FFFF7 /* WorkoutTypes.swift */; };
-		82890C70 /* UserModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A40238 /* UserModels.swift */; };
-		88990011 /* WorkoutViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 11009988 /* WorkoutViewModel.swift */; };
-		99001122 /* AppViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22110099 /* AppViewModel.swift */; };
-		A527051A2DF716E10072BB03 /* ShuttlXWatch Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923501 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
-		A5923503 /* ServiceLocator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A592350B /* ServiceLocator.swift */; };
-		ADE12960 /* WatchConnectivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E8DAE01 /* WatchConnectivityManager.swift */; };
-		AFCE18F4 /* HealthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FAB32B1 /* HealthManager.swift */; };
-		BD65EDD9 /* SettingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5E5779F /* SettingsService.swift */; };
-		DDCCBBAA /* ProgramsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABBCCDD /* ProgramsView.swift */; };
-		E1234567 /* UserProfileService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7654321 /* UserProfileService.swift */; };
-		E2345678 /* CalorieCalculationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E8765432 /* CalorieCalculationService.swift */; };
-		E3456789 /* TrainingProgramSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9876543 /* TrainingProgramSync.swift */; };
-		PERF1001 /* PerformanceOptimizationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF1111 /* PerformanceOptimizationService.swift */; };
-		PERF1002 /* AdvancedPerformanceMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF2222 /* AdvancedPerformanceMonitor.swift */; };
-		PERF1003 /* ViewPerformanceModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = PERF3333 /* ViewPerformanceModifiers.swift */; };
-		TRAIN001 /* TrainingProgramDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TRAIN111 /* TrainingProgramDetailView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,28 +26,7 @@
 			remoteGlobalIDString = A52704F92DF716DE0072BB03;
 			remoteInfo = "ShuttlXWatch Watch App";
 		};
-		A52705182DF716E10072BB03 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = A59234D6 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = A52704F92DF716DE0072BB03;
-			remoteInfo = "ShuttlXWatch Watch App";
-		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		A527051E2DF716E10072BB03 /* Embed Watch Content */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
-			dstSubfolderSpec = 16;
-			files = (
-				A527051A2DF716E10072BB03 /* ShuttlXWatch Watch App.app in Embed Watch Content */,
-			);
-			name = "Embed Watch Content";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		00998877 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -347,12 +294,10 @@
 				A59234DA /* Sources */,
 				A59234DB /* Frameworks */,
 				A59234DC /* Resources */,
-				A527051E2DF716E10072BB03 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
-				A52705192DF716E10072BB03 /* PBXTargetDependency */,
 			);
 			name = ShuttlX;
 			productName = ShuttlX;
@@ -481,11 +426,6 @@
 			isa = PBXTargetDependency;
 			target = A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */;
 			targetProxy = A52705112DF716E10072BB03 /* PBXContainerItemProxy */;
-		};
-		A52705192DF716E10072BB03 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = A52704F92DF716DE0072BB03 /* ShuttlXWatch Watch App */;
-			targetProxy = A52705182DF716E10072BB03 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 

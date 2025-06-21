@@ -4,151 +4,62 @@ struct ProgramSelectionView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     
     var body: some View {
-        NavigationView {
-            Group {
-                if workoutManager.availablePrograms.isEmpty {
-                    EmptyProgramsWatchView()
-                } else {
-                    List {
-                        ForEach(workoutManager.availablePrograms) { program in
-                            ProgramRowWatchView(program: program) {
-                                workoutManager.selectProgram(program)
-                            }
-                        }
-                    }
-                    .listStyle(.carousel)
-                }
-            }
-            .navigationTitle("Programs")
-            .navigationBarTitleDisplayMode(.inline)
-            .onAppear {
-                workoutManager.loadPrograms()
-            }
-        }
-    }
-}
-
-struct ProgramRowWatchView: View {
-    let program: TrainingProgram
-    let onSelect: () -> Void
-    
-    var body: some View {
-        Button(action: onSelect) {
-            VStack(alignment: .leading, spacing: 6) {
-                // Program name
-                Text(program.name)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
-                    .lineLimit(2)
-                
-                // Program details
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("\(program.intervalCount) intervals")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+        List {
+            ForEach(workoutManager.availablePrograms, id: \.id) { program in
+                Button(action: {
+                    workoutManager.startWorkout(with: program)
+                }) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(program.name)
+                            .font(.headline)
+                            .foregroundColor(.primary)
                         
-                        Text(program.formattedTotalDuration)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    
-                    Spacer()
-                    
-                    VStack(alignment: .trailing, spacing: 2) {
-                        HStack(spacing: 2) {
-                            Image(systemName: "heart.fill")
-                                .foregroundColor(.red)
-                                .font(.caption2)
-                            
-                            Text("\(program.maxPulse)")
+                        HStack {
+                            Text("\(program.intervals.count) intervals")
                                 .font(.caption)
-                                .foregroundColor(.red)
+                                .foregroundColor(.secondary)
+                            
+                            Spacer()
+                            
+                            Text(formatDuration(program.totalDuration))
+                                .font(.caption)
+                                .foregroundColor(.secondary)
                         }
                         
-                        // Interval type indicators
-                        HStack(spacing: 3) {
-                            if program.walkIntervalCount > 0 {
-                                HStack(spacing: 1) {
-                                    Image(systemName: "figure.walk")
-                                        .font(.caption2)
-                                        .foregroundColor(.blue)
-                                    
-                                    Text("\(program.walkIntervalCount)")
-                                        .font(.caption2)
-                                        .foregroundColor(.blue)
-                                }
-                            }
-                            
-                            if program.runIntervalCount > 0 {
-                                HStack(spacing: 1) {
-                                    Image(systemName: "figure.run")
-                                        .font(.caption2)
-                                        .foregroundColor(.red)
-                                    
-                                    Text("\(program.runIntervalCount)")
-                                        .font(.caption2)
-                                        .foregroundColor(.red)
-                                }
+                        // Visual preview of intervals
+                        HStack(spacing: 2) {
+                            ForEach(Array(program.intervals.enumerated()), id: \.offset) { index, interval in
+                                Rectangle()
+                                    .fill(interval.phase == .work ? Color.red : Color.blue)
+                                    .frame(height: 4)
+                                    .frame(width: max(2, min(8, interval.duration / 30)))
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
+                    .padding(.vertical, 4)
                 }
-                
-                // Visual interval preview (simplified for watch)
-                HStack(spacing: 1) {
-                    ForEach(program.intervals.prefix(6)) { interval in
-                        Rectangle()
-                            .fill(colorForIntervalType(interval.type))
-                            .frame(width: 3, height: 8)
-                    }
-                    
-                    if program.intervals.count > 6 {
-                        Text("...")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                .buttonStyle(PlainButtonStyle())
             }
-            .padding(.vertical, 4)
         }
-        .buttonStyle(.plain)
+        .navigationTitle("Programs")
     }
     
-    private func colorForIntervalType(_ type: IntervalType) -> Color {
-        switch type {
-        case .walk:
-            return .blue
-        case .run:
-            return .red
-        case .rest:
-            return .gray
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds / 60)
+        let remainingSeconds = Int(seconds.truncatingRemainder(dividingBy: 60))
+        
+        if minutes > 0 {
+            return remainingSeconds > 0 ? "\(minutes)m \(remainingSeconds)s" : "\(minutes)m"
+        } else {
+            return "\(remainingSeconds)s"
         }
-    }
-}
-
-struct EmptyProgramsWatchView: View {
-    var body: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "iphone")
-                .font(.system(size: 32))
-                .foregroundColor(.secondary)
-            
-            Text("No Programs")
-                .font(.headline)
-                .multilineTextAlignment(.center)
-            
-            Text("Create programs on your iPhone")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .padding()
     }
 }
 
 #Preview {
-    ProgramSelectionView()
-        .environmentObject(WatchWorkoutManager())
+    NavigationView {
+        ProgramSelectionView()
+            .environmentObject(WatchWorkoutManager())
+    }
 }

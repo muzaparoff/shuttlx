@@ -43,12 +43,64 @@ struct ProgramRowView: View {
     let program: TrainingProgram
     
     var body: some View {
-        VStack(alignment: .leading) {
-            Text(program.name)
-                .font(.headline)
-            Text("\(program.intervals.count) intervals")
-                .font(.caption)
-                .foregroundColor(.secondary)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(program.name)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                
+                Spacer()
+                
+                Text(program.type.rawValue)
+                    .font(.caption)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(Color.blue.opacity(0.1))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+            }
+            
+            HStack {
+                Label("\(program.intervals.count) intervals", systemImage: "list.number")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                Label(formatDuration(program.totalDuration), systemImage: "clock")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            
+            // Mini interval visualization
+            HStack(spacing: 2) {
+                ForEach(Array(program.intervals.prefix(10).enumerated()), id: \.offset) { _, interval in
+                    Rectangle()
+                        .fill(interval.phase == .work ? Color.red : Color.blue)
+                        .frame(width: 4, height: 8)
+                }
+                
+                if program.intervals.count > 10 {
+                    Text("...")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+    
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let minutes = Int(seconds / 60)
+        if minutes > 0 {
+            return "\(minutes)m"
+        } else {
+            return "\(Int(seconds))s"
         }
     }
+}
+
+#Preview {
+    ProgramListView()
+        .environmentObject(DataManager())
 }
