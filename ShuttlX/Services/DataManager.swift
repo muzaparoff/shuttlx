@@ -74,6 +74,9 @@ class DataManager: ObservableObject {
         
         sessions = [sampleSession]
         saveToLocal()
+        
+        // Send sample data to watch immediately after loading
+        connectivityManager.sendProgramsToWatch(programs)
     }
     
     // MARK: - CRUD Operations
@@ -94,6 +97,10 @@ class DataManager: ObservableObject {
     func deleteProgram(_ program: TrainingProgram) {
         programs.removeAll { $0.id == program.id }
         saveToLocal()
+        
+        // Send updated program list to watch after deletion
+        connectivityManager.sendProgramsToWatch(programs)
+        
         // TODO: Delete from CloudKit
     }
     
@@ -148,6 +155,15 @@ class DataManager: ObservableObject {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] session in
                 self?.saveSession(session)
+            }
+            .store(in: &cancellables)
+        
+        // Listen for program requests from watch
+        NotificationCenter.default.publisher(for: .programsRequestedFromWatch)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                guard let self = self else { return }
+                self.connectivityManager.sendProgramsToWatch(self.programs)
             }
             .store(in: &cancellables)
         

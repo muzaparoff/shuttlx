@@ -75,10 +75,20 @@ extension WatchConnectivityManager: WCSessionDelegate {
                 print("Error decoding session from watch: \(error.localizedDescription)")
             }
         }
+        
+        // Handle program requests from watch
+        if message["requestPrograms"] as? Bool == true {
+            // Send current programs to watch
+            NotificationCenter.default.post(
+                name: .programsRequestedFromWatch,
+                object: nil
+            )
+        }
     }
 }
 
 // MARK: - Notification Names
 extension Notification.Name {
     static let sessionReceivedFromWatch = Notification.Name("sessionReceivedFromWatch")
+    static let programsRequestedFromWatch = Notification.Name("programsRequestedFromWatch")
 }
