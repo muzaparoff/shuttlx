@@ -1,5 +1,4 @@
 import Foundation
-import CloudKit
 import Combine
 
 class DataManager: ObservableObject {
@@ -7,30 +6,73 @@ class DataManager: ObservableObject {
     @Published var sessions: [TrainingSession] = []
     
     private var cancellables = Set<AnyCancellable>()
-    private let connectivityManager = WatchConnectivityManager.shared
+    private let sharedDataManager = SharedDataManager.shared
     
+    // MARK: - App Group Properties
+    private let programsKey = "programs.json"
+    private let sessionsKey = "sessions.json"
+    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
+
     init() {
-        loadFromLocal()
+        loadProgramsFromAppGroup()
+        loadSessionsFromAppGroup()
+        
         if programs.isEmpty {
             loadSampleData()
+            saveProgramsToAppGroup() // Save samples to App Group
         }
-        setupCloudKitSync()
-        setupWatchConnectivity()
+        setupBindings()
+        
+        // Initial sync to ensure watch is up-to-date
+        sharedDataManager.syncProgramsToWatch(programs)
     }
     
-    // MARK: - Sample Data for Testing
+    private func setupBindings() {
+        // When local programs change, save to App Group and notify watch
+        $programs
+            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+            .sink { [weak self] updatedPrograms in
+                self?.saveProgramsToAppGroup()
+                self?.sharedDataManager.syncProgramsToWatch(updatedPrograms)
+            }
+            .store(in: &cancellables)
+        
+        // When a session is received from the watch, merge and save it
+        sharedDataManager.$syncedSessions
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] receivedSessions in
+                self?.handleReceivedSessions(receivedSessions)
+            }
+            .store(in: &cancellables)
+    }
+    
+    private func handleReceivedSessions(_ receivedSessions: [TrainingSession]) {
+        var hasChanges = false
+        for session in receivedSessions {
+            if !sessions.contains(where: { $0.id == session.id }) {
+                sessions.append(session)
+                hasChanges = true
+                print("📱✅ New session received and merged: \(session.programName)")
+            }
+        }
+        if hasChanges {
+            saveSessionsToAppGroup()
+        }
+    }
+
+    // MARK: - Sample Data
     private func loadSampleData() {
         let beginnerProgram = TrainingProgram(
             name: "Beginner Walk-Run",
             type: .walkRun,
             intervals: [
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low),     // 5min warmup walk
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low)      // 5min cooldown walk
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low),
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low)
             ],
             maxPulse: 180,
             createdDate: Date(),
@@ -41,42 +83,23 @@ class DataManager: ObservableObject {
             name: "Intermediate Walk-Run",
             type: .walkRun,
             intervals: [
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low),     // 5min warmup walk
-                TrainingInterval(phase: .work, duration: 120, intensity: .moderate), // 2min run
-                TrainingInterval(phase: .rest, duration: 60, intensity: .low),      // 1min walk
-                TrainingInterval(phase: .work, duration: 120, intensity: .moderate), // 2min run
-                TrainingInterval(phase: .rest, duration: 60, intensity: .low),      // 1min walk
-                TrainingInterval(phase: .work, duration: 120, intensity: .moderate), // 2min run
-                TrainingInterval(phase: .rest, duration: 60, intensity: .low),      // 1min walk
-                TrainingInterval(phase: .work, duration: 120, intensity: .moderate), // 2min run
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low)      // 5min cooldown walk
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low),
+                TrainingInterval(phase: .work, duration: 120, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 60, intensity: .low),
+                TrainingInterval(phase: .work, duration: 120, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 60, intensity: .low),
+                TrainingInterval(phase: .work, duration: 120, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 60, intensity: .low),
+                TrainingInterval(phase: .work, duration: 120, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low)
             ],
             maxPulse: 185,
-            createdDate: Date().addingTimeInterval(-86400), // Yesterday
+            createdDate: Date().addingTimeInterval(-86400),
             lastModified: Date().addingTimeInterval(-86400)
         )
         
         programs = [beginnerProgram, intermediateProgram]
-        
-        // Add sample training sessions
-        let sampleSession = TrainingSession(
-            programID: beginnerProgram.id,
-            programName: beginnerProgram.name,
-            startDate: Date().addingTimeInterval(-7200), // 2 hours ago
-            endDate: Date().addingTimeInterval(-5400),   // 1.5 hours ago
-            duration: 1800, // 30 minutes
-            averageHeartRate: 145,
-            maxHeartRate: 168,
-            caloriesBurned: 245,
-            distance: 2.1,
-            completedIntervals: []
-        )
-        
-        sessions = [sampleSession]
-        saveToLocal()
-        
-        // Send sample data to watch immediately after loading
-        connectivityManager.sendProgramsToWatch(programs)
+        saveProgramsToAppGroup()
     }
     
     // MARK: - CRUD Operations
@@ -86,93 +109,70 @@ class DataManager: ObservableObject {
         } else {
             programs.append(program)
         }
-        saveToLocal()
-        
-        // Sync to watch
-        connectivityManager.sendProgramsToWatch(programs)
-        
-        // TODO: Sync to CloudKit
+        // Publisher binding will handle saving and syncing
     }
     
     func deleteProgram(_ program: TrainingProgram) {
         programs.removeAll { $0.id == program.id }
-        saveToLocal()
-        
-        // Send updated program list to watch after deletion
-        connectivityManager.sendProgramsToWatch(programs)
-        
-        // TODO: Delete from CloudKit
+        // Publisher binding will handle saving and syncing
     }
     
-    func saveSession(_ session: TrainingSession) {
-        sessions.append(session)
-        saveToLocal()
-        // TODO: Sync to CloudKit
-    }
-    
-    // MARK: - Local Storage
-    private func saveToLocal() {
-        // Save programs to UserDefaults
-        if let encoded = try? JSONEncoder().encode(programs) {
-            UserDefaults.standard.set(encoded, forKey: "trainingPrograms")
+    // MARK: - App Group Storage (Replaces Local Storage)
+    private func saveProgramsToAppGroup() {
+        guard let url = sharedContainer?.appendingPathComponent(programsKey) else {
+            print("❌ Invalid shared container URL for programs.")
+            return
         }
-        
-        // Save sessions to UserDefaults
-        if let encoded = try? JSONEncoder().encode(sessions) {
-            UserDefaults.standard.set(encoded, forKey: "trainingSessions")
+        do {
+            let data = try JSONEncoder().encode(programs)
+            try data.write(to: url)
+            print("✅ Saved \(programs.count) programs to App Group.")
+        } catch {
+            print("❌ Failed to save programs to App Group: \(error)")
         }
     }
     
-    private func loadFromLocal() {
-        // Load programs from UserDefaults
-        if let data = UserDefaults.standard.data(forKey: "trainingPrograms"),
-           let decoded = try? JSONDecoder().decode([TrainingProgram].self, from: data) {
-            programs = decoded
-        }
-        
-        // Load sessions from UserDefaults
-        if let data = UserDefaults.standard.data(forKey: "trainingSessions"),
-           let decoded = try? JSONDecoder().decode([TrainingSession].self, from: data) {
-            sessions = decoded
-        }
-    }
-    
-    // MARK: - CloudKit Sync (placeholder)
-    private func setupCloudKitSync() {
-        // TODO: Implement CloudKit synchronization
-        // This would handle:
-        // - Uploading local changes to CloudKit
-        // - Downloading remote changes from CloudKit
-        // - Resolving conflicts
-        print("CloudKit sync setup - TODO: Implement")
-    }
-    
-    // MARK: - WatchConnectivity Setup
-    private func setupWatchConnectivity() {
-        // Listen for sessions received from watch
-        NotificationCenter.default.publisher(for: .sessionReceivedFromWatch)
-            .compactMap { $0.object as? TrainingSession }
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] session in
-                self?.saveSession(session)
+    private func loadProgramsFromAppGroup() {
+        guard let url = sharedContainer?.appendingPathComponent(programsKey) else { return }
+        do {
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                print("ℹ️ No program file found in App Group. Starting fresh.")
+                return
             }
-            .store(in: &cancellables)
-        
-        // Listen for program requests from watch
-        NotificationCenter.default.publisher(for: .programsRequestedFromWatch)
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] _ in
-                guard let self = self else { return }
-                self.connectivityManager.sendProgramsToWatch(self.programs)
+            let data = try Data(contentsOf: url)
+            self.programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
+            print("✅ Loaded \(programs.count) programs from App Group.")
+        } catch {
+            print("❌ Failed to load programs from App Group: \(error)")
+        }
+    }
+    
+    private func saveSessionsToAppGroup() {
+        guard let url = sharedContainer?.appendingPathComponent(sessionsKey) else {
+            print("❌ Invalid shared container URL for sessions.")
+            return
+        }
+        do {
+            let data = try JSONEncoder().encode(sessions)
+            try data.write(to: url)
+            print("✅ Saved \(sessions.count) sessions to App Group.")
+        } catch {
+            print("❌ Failed to save sessions to App Group: \(error)")
+        }
+    }
+    
+    private func loadSessionsFromAppGroup() {
+        guard let url = sharedContainer?.appendingPathComponent(sessionsKey) else { return }
+        do {
+            guard FileManager.default.fileExists(atPath: url.path) else {
+                print("ℹ️ No session file found in App Group. Starting fresh.")
+                return
             }
-            .store(in: &cancellables)
-        
-        // Send current programs to watch when they change
-        $programs
-            .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
-            .sink { [weak self] programs in
-                self?.connectivityManager.sendProgramsToWatch(programs)
-            }
-            .store(in: &cancellables)
+            let data = try Data(contentsOf: url)
+            self.sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+            print("✅ Loaded \(sessions.count) sessions from App Group.")
+        } catch {
+            print("❌ Failed to load sessions from App Group: \(error)")
+        }
     }
 }

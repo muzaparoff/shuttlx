@@ -22,21 +22,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var completedIntervals: [CompletedInterval] = []
     private var cancellables = Set<AnyCancellable>()
     
-    private var connectivityManager: WatchConnectivityProtocol?
+    private let sharedDataManager = SharedDataManager.shared
     
-    // Fallback sample programs for the watch (used when no connectivity)
-    private let samplePrograms: [TrainingProgram] = [
+    // Fallback sample programs for the watch (identical to iOS defaults)
+    private let fallbackPrograms: [TrainingProgram] = [
         TrainingProgram(
             name: "Beginner Walk-Run",
             type: .walkRun,
             intervals: [
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low),    // 5min warmup walk
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low),     // 5min warmup walk
                 TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low),    // 2min walk
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
                 TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low),    // 2min walk
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
                 TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low)     // 5min cooldown
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low)      // 5min cooldown walk
             ],
             maxPulse: 180,
             createdDate: Date(),
@@ -64,42 +64,34 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     
     override init() {
         super.init()
-        setupConnectivity()
+        setupProgramSync()
         requestHealthPermissions()
     }
     
-    // Convenience initializer for dependency injection (useful for testing)
-    init(connectivityManager: WatchConnectivityProtocol? = nil) {
-        super.init()
-        self.connectivityManager = connectivityManager
-        setupConnectivity()
-        requestHealthPermissions()
-    }
-    
-    private func setupConnectivity() {
-        // Use injected connectivity manager or create the shared instance
-        if connectivityManager == nil {
-            connectivityManager = WatchConnectivityManager.shared
-        }
-        
-        // Listen for programs from iPhone
-        connectivityManager?.receivedProgramsPublisher
+    private func setupProgramSync() {
+        // Listen for programs from SharedDataManager
+        sharedDataManager.$syncedPrograms
             .receive(on: DispatchQueue.main)
             .sink { [weak self] programs in
                 self?.updateAvailablePrograms(programs)
             }
             .store(in: &cancellables)
         
-        // Set initial programs (fallback to sample data)
-        updateAvailablePrograms(connectivityManager?.receivedPrograms ?? [])
+        // Load programs immediately
+        sharedDataManager.loadPrograms()
+        updateAvailablePrograms(sharedDataManager.syncedPrograms)
+        
+        print("🔄 Program sync setup completed for watchOS")
     }
     
     private func updateAvailablePrograms(_ receivedPrograms: [TrainingProgram]) {
         if receivedPrograms.isEmpty {
-            // Use fallback sample programs when no programs received from iPhone
-            availablePrograms = samplePrograms
+            // Use fallback programs when no programs received from iPhone
+            availablePrograms = fallbackPrograms
+            print("⚠️ Using fallback programs (\(fallbackPrograms.count) programs)")
         } else {
             availablePrograms = receivedPrograms
+            print("✅ Updated available programs (\(receivedPrograms.count) programs)")
         }
     }
     
@@ -167,8 +159,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 completedIntervals: completedIntervals
             )
             
-            // Send session to iPhone via connectivity manager
-            connectivityManager?.sendSessionToPhone(session)
+            // Send session to iPhone via SharedDataManager
+            sharedDataManager.sendSessionToiOS(session)
+            print("⌚➡️📱 Session sent to iOS: \(session.programName), Duration: \(Int(session.duration))s")
         }
         
         isWorkoutActive = false

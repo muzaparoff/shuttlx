@@ -45,7 +45,7 @@
 		77665544 /* WorkoutSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSelectionView.swift; sourceTree = "<group>"; };
 		88776655 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		99887766 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlXWatch Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlXWatch_Watch_App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A52705062DF716E10072BB03 /* ShuttlXWatch Watch AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ShuttlXWatch Watch AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A52705102DF716E10072BB03 /* ShuttlXWatch Watch AppUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "ShuttlXWatch Watch AppUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -70,54 +70,6 @@
 		TRAIN111 /* TrainingProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgramDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		A52704FB2DF716DE0072BB03 /* ShuttlXWatch Watch App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ShuttlXWatch Watch App";
-			sourceTree = "<group>";
-		};
-		A52705092DF716E10072BB03 /* ShuttlXWatch Watch AppTests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ShuttlXWatch Watch AppTests";
-			sourceTree = "<group>";
-		};
-		A52705132DF716E10072BB03 /* ShuttlXWatch Watch AppUITests */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "ShuttlXWatch Watch AppUITests";
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		A52704F72DF716DE0072BB03 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A52705032DF716E10072BB03 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A527050D2DF716E10072BB03 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-		A59234DB /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		A59234D5 = {
@@ -237,7 +189,7 @@
 			name = "ShuttlXWatch Watch App";
 			packageProductDependencies = (
 			);
-			productName = "ShuttlXWatch Watch App";
+			productName = "ShuttlXWatch_Watch_App";
 			productReference = A52704FA2DF716DE0072BB03 /* ShuttlXWatch Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
@@ -451,7 +403,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "ShuttlXWatch_Watch_App";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -482,7 +434,7 @@
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_NAME = "ShuttlXWatch_Watch_App";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -507,7 +459,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShuttlXWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ShuttlXWatch Watch App";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShuttlXWatch_Watch_App.app/ShuttlXWatch_Watch_App";
 				WATCHOS_DEPLOYMENT_TARGET = 11.5;
 			};
 			name = Debug;
@@ -527,7 +479,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShuttlXWatch Watch App.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/ShuttlXWatch Watch App";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/ShuttlXWatch_Watch_App.app/ShuttlXWatch_Watch_App";
 				WATCHOS_DEPLOYMENT_TARGET = 11.5;
 			};
 			name = Release;
@@ -546,7 +498,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				TEST_TARGET_NAME = "ShuttlXWatch Watch App";
+				TEST_TARGET_NAME = ShuttlXWatch_Watch_App;
 				WATCHOS_DEPLOYMENT_TARGET = 11.5;
 			};
 			name = Debug;
@@ -565,7 +517,7 @@
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 4;
-				TEST_TARGET_NAME = "ShuttlXWatch Watch App";
+				TEST_TARGET_NAME = ShuttlXWatch_Watch_App;
 				WATCHOS_DEPLOYMENT_TARGET = 11.5;
 			};
 			name = Release;

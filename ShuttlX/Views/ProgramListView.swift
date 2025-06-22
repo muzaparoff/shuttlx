@@ -4,6 +4,7 @@ struct ProgramListView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var showingEditor = false
     @State private var selectedProgram: TrainingProgram?
+    @State private var showingDebugView = false
     
     var body: some View {
         NavigationView {
@@ -19,15 +20,32 @@ struct ProgramListView: View {
             }
             .navigationTitle("Training Programs")
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    Button(action: {
+                        showingDebugView = true
+                    }) {
+                        Image(systemName: "ladybug")
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Add") {
-                        selectedProgram = nil
-                        showingEditor = true
+                    Button("Add Test Program") {
+                        let newProgram = TrainingProgram(
+                            name: "Test Program \(Int.random(in: 1...100))",
+                            type: .beepTest,
+                            intervals: [
+                                TrainingInterval(phase: .work, duration: 10),
+                                TrainingInterval(phase: .rest, duration: 5)
+                            ]
+                        )
+                        dataManager.addProgram(newProgram)
                     }
                 }
             }
             .sheet(isPresented: $showingEditor) {
                 ProgramEditorView(program: selectedProgram)
+            }
+            .sheet(isPresented: $showingDebugView) {
+                DebugView()
             }
         }
     }

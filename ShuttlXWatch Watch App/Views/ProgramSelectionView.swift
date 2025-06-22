@@ -2,9 +2,19 @@ import SwiftUI
 
 struct ProgramSelectionView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @State private var showingDebugView = false
     
     var body: some View {
         List {
+            Button(action: {
+                showingDebugView = true
+            }) {
+                Text("Debug Info")
+            }
+            .sheet(isPresented: $showingDebugView) {
+                DebugView()
+            }
+
             ForEach(workoutManager.availablePrograms, id: \.id) { program in
                 Button(action: {
                     workoutManager.startWorkout(with: program)
