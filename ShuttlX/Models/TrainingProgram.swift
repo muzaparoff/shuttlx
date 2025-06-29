@@ -10,8 +10,13 @@ struct TrainingProgram: Identifiable, Codable {
     var createdDate: Date
     var lastModified: Date
     
-    // CloudKit integration
+    // CloudKit integration (excluded from Codable)
     var recordID: CKRecord.ID?
+    
+    // Custom Codable implementation to exclude recordID
+    enum CodingKeys: String, CodingKey {
+        case id, name, type, intervals, maxPulse, createdDate, lastModified
+    }
     
     // Computed properties
     var totalDuration: TimeInterval {

@@ -35,7 +35,7 @@ struct ProgramEditorView: View {
                             Text(type.rawValue).tag(type)
                         }
                     }
-                    .onChange(of: program.type) { newType in
+                    .onChange(of: program.type) { oldValue, newType in
                         if program.intervals.isEmpty {
                             program.intervals = newType.defaultIntervals
                         }

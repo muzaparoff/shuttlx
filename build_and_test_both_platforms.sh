@@ -1,11 +1,11 @@
-#!/bin/zsh
+#!/bin/bash
 
 # ShuttlX - Build and Test Script for iOS and watchOS
 # This script builds and tests both platforms as per the phased rewrite plan
 # Usage: ./build_and_test_both_platforms.sh [flags]
 # Flags: --clean, --build, --install, --test, --launch, --ios-only, --watchos-only
 
-set -e
+# Note: We handle errors manually rather than using 'set -e' for better control
 
 # Parse command line arguments
 CLEAN=false
@@ -54,7 +54,6 @@ while [[ $# -gt 0 ]]; do
             ;;
         *)
             echo "Unknown option $1"
-            echo "Usage: $0 [--clean] [--build] [--install] [--test] [--launch] [--ios-only] [--watchos-only]"
             exit 1
             ;;
     esac
@@ -72,18 +71,10 @@ echo "  iOS Only: $IOS_ONLY"
 echo "  watchOS Only: $WATCHOS_ONLY"
 echo ""
 
-# Function to clean up macOS metadata that causes code signing issues
-cleanup_metadata() {
-    local app_path="$1"
-    if [ -d "$app_path" ]; then
-        echo "🧹 Cleaning up macOS metadata in: $app_path"
-        find "$app_path" -name ".DS_Store" -delete 2>/dev/null || true
-        find "$app_path" -name "._*" -delete 2>/dev/null || true
-        xattr -cr "$app_path" 2>/dev/null || true
-    fi
-}
+# Build timeout in seconds
+BUILD_TIMEOUT=300
 
-# Function to build with code signing error tolerance
+# Helper: Build a target with proper timeout and error handling
 build_target() {
     local target="$1"
     local sdk="$2"
@@ -94,23 +85,99 @@ build_target() {
     echo "SDK: $sdk"
     echo "Destination: $destination"
     
-    # Build without code signing for simulator
-    if xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
-        CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
-        clean build 2>&1 | tee "/tmp/build_${platform_name}.log"; then
+    local build_action="build"
+    local clean_first=false
+    if [ "$CLEAN" = true ]; then
+        clean_first=true
+    fi
+    
+    echo "Command line invocation:"
+    if [ "$clean_first" = true ]; then
+        echo "    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean"
+        echo "    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build"
+    else
+        echo "    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build"
+    fi
+    echo ""
+    
+    # Clean first if requested
+    if [ "$clean_first" = true ]; then
+        echo "🧹 Cleaning $platform_name target..."
+        timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
+            clean 2>&1 | tee "/tmp/clean_${platform_name}.log"
+        local clean_exit_code=$?
+        if [ $clean_exit_code -ne 0 ]; then
+            echo "⚠️  Clean failed (exit code: $clean_exit_code), but continuing with build..."
+        fi
+    fi
+
+    # Run the build and capture output and exit code properly
+    echo "🚀 Starting $platform_name build..."
+    
+    # Use a more reliable approach to capture both output and exit code
+    set +e  # Temporarily disable exit on error
+    
+    # Create a temporary script to capture the exact exit code from xcodebuild
+    local temp_script="/tmp/build_${platform_name}_script.sh"
+    cat > "$temp_script" << EOF
+#!/bin/bash
+timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \\
+    CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \\
+    $build_action
+echo "XCODEBUILD_EXIT_CODE: \$?" >&2
+EOF
+    chmod +x "$temp_script"
+    
+    # Run the script and capture both stdout and stderr
+    "$temp_script" > "/tmp/build_${platform_name}.log" 2>&1
+    
+    # Extract the actual exit code from xcodebuild (not from the shell pipeline)
+    local exit_code=$(grep "XCODEBUILD_EXIT_CODE:" "/tmp/build_${platform_name}.log" | tail -1 | cut -d':' -f2 | tr -d ' ')
+    if [ -z "$exit_code" ]; then
+        exit_code=1  # If we can't find the exit code, assume failure
+    fi
+    
+    # Clean up the temporary script
+    rm -f "$temp_script"
+    
+    set -e  # Re-enable exit on error
+    
+    # Display the build output (excluding the exit code line)
+    grep -v "XCODEBUILD_EXIT_CODE:" "/tmp/build_${platform_name}.log"
+    
+    # Check the exit code first - this is the definitive indicator
+    echo "\n🔍 Build Exit Code Analysis:"
+    echo "   Platform: $platform_name"
+    echo "   Exit Code: $exit_code"
+    if [ $exit_code -eq 0 ]; then
         echo "✅ $platform_name build successful!"
         return 0
+    elif [ $exit_code -eq 124 ]; then
+        echo "❌ $platform_name build TIMED OUT after $BUILD_TIMEOUT seconds"
+        echo "� Build log saved to: /tmp/build_${platform_name}.log"
+        echo "📄 Last 20 lines of error log:"
+        tail -20 "/tmp/build_${platform_name}.log"
+        return 1
     else
-        # Check if it's just a code signing error (expected for simulator)
-        if grep -q "CodeSign.*failed" "/tmp/build_${platform_name}.log" && ! grep -q -E "(error:|Error:|BUILD FAILED)" "/tmp/build_${platform_name}.log"; then
+        # Build failed - check if it's a compilation error or just code signing
+        if grep -q -E "(BUILD FAILED|error:|Error:|The following build commands failed)" "/tmp/build_${platform_name}.log"; then
+            echo "❌ $platform_name BUILD FAILED with compilation errors! (exit code: $exit_code)"
+            echo "📄 Build log saved to: /tmp/build_${platform_name}.log"
+            echo "📄 Critical errors from build log:"
+            echo "----------------------------------------"
+            grep -A5 -B2 -E "(BUILD FAILED|error:|Error:|The following build commands failed)" "/tmp/build_${platform_name}.log" | tail -30
+            echo "----------------------------------------"
+            return 1
+        elif grep -q "CodeSign.*failed" "/tmp/build_${platform_name}.log"; then
             echo "⚠️  $platform_name build completed with expected code signing error (simulator)"
             echo "✅ $platform_name compilation successful!"
             return 0
         else
-            echo "❌ $platform_name build failed with compilation errors!"
+            echo "❌ $platform_name build failed with unknown error (exit code: $exit_code)"
             echo "📄 Build log saved to: /tmp/build_${platform_name}.log"
-            echo "📄 Last few lines of error log:"
-            tail -10 "/tmp/build_${platform_name}.log"
+            echo "📄 Last 20 lines of error log:"
+            tail -20 "/tmp/build_${platform_name}.log"
             return 1
         fi
     fi
@@ -118,119 +185,319 @@ build_target() {
 
 # Helper: Get simulator UDID by name and runtime
 get_sim_udid() {
-    local name="$1"
+    local device_name="$1"
     local runtime="$2"
-    xcrun simctl list devices --json | \
-        python3 -c "import sys, json; d=json.load(sys.stdin)['devices'];
-for k in d:
-    if '$runtime' in k:
-        for dev in d[k]:
-            if dev['name'] == '$name' and dev.get('isAvailable', False):
-                print(dev['udid']); exit(0)
-exit(1)"
+    xcrun simctl list devices | grep "$device_name" | grep "$runtime" | head -1 | sed 's/.*(\([^)]*\)).*/\1/'
 }
 
-# Helper: Boot simulator if not already booted
-boot_simulator() {
-    local udid="$1"
-    local state=$(xcrun simctl list devices | grep "$udid" | grep -oE '\((Booted|Shutdown)\)' | tr -d '()')
-    if [ "$state" != "Booted" ]; then
-        echo "🔄 Booting simulator $udid..."
-        xcrun simctl boot "$udid"
-        # Wait for boot
-        sleep 5
+# Helper: Install app on simulator
+install_app() {
+    local device_name="$1"
+    local app_path="$2"
+    local platform_name="$3"
+    
+    echo "\n📲 Installing $platform_name app on $device_name..."
+    echo "App path: $app_path"
+    
+    if [ ! -d "$app_path" ]; then
+        echo "❌ App not found at path: $app_path"
+        return 1
+    fi
+    
+    if xcrun simctl install "$device_name" "$app_path"; then
+        echo "✅ $platform_name app installed successfully!"
+        return 0
+    else
+        echo "❌ Failed to install $platform_name app"
+        return 1
     fi
 }
 
-# Configuration
-IOS_SCHEME="ShuttlX"
-WATCHOS_SCHEME="ShuttlXWatch Watch App"
-IOS_TARGET="ShuttlX"
-WATCHOS_TARGET="ShuttlXWatch Watch App"
-IOS_DESTINATION="platform=iOS Simulator,name=iPhone 16,OS=18.5"
-WATCHOS_DESTINATION="platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.5"
+# Helper: Launch app on simulator
+launch_app() {
+    local device_name="$1"
+    local bundle_id="$2"
+    local platform_name="$3"
+    
+    echo "\n🚀 Launching $platform_name app on $device_name..."
+    echo "Bundle ID: $bundle_id"
+    
+    if xcrun simctl launch "$device_name" "$bundle_id"; then
+        echo "✅ $platform_name app launched successfully!"
+        return 0
+    else
+        echo "❌ Failed to launch $platform_name app"
+        return 1
+    fi
+}
 
-# Build both targets
-echo "\n⌚ Building watchOS target first..."
-if ! build_target "$WATCHOS_TARGET" "watchsimulator" "$WATCHOS_DESTINATION" "watchOS"; then
-    exit 1
+# Auto-add missing Swift files to iOS project target
+auto_fix_missing_files() {
+    echo "🔍 Checking for missing Swift files in iOS project target..."
+    
+    PROJECT_FILE="ShuttlX.xcodeproj/project.pbxproj"
+    BACKUP_FILE="ShuttlX.xcodeproj/project.pbxproj.backup_auto_$(date +%Y%m%d_%H%M%S)"
+    
+    # Find all Swift files in the ShuttlX/ directory (excluding test files)
+    local missing_files=()
+    while IFS= read -r file; do
+        filename=$(basename "$file")
+        # Skip backup files and test files
+        if [[ "$filename" == *"backup"* ]] || [[ "$file" == *"Test"* ]]; then
+            continue
+        fi
+        
+        # Check if file is already referenced in project.pbxproj
+        if ! grep -q "$filename" "$PROJECT_FILE"; then
+            missing_files+=("$file")
+        fi
+    done < <(find ShuttlX -name "*.swift" -type f)
+    
+    if [ ${#missing_files[@]} -eq 0 ]; then
+        echo "✅ All Swift files are already included in iOS project target"
+        return 0
+    fi
+    
+    echo "📋 Found ${#missing_files[@]} Swift files missing from iOS project target:"
+    for file in "${missing_files[@]}"; do
+        echo "  - $file"
+    done
+    
+    echo "🔧 Automatically adding missing files to iOS project target..."
+    
+    # Create backup
+    cp "$PROJECT_FILE" "$BACKUP_FILE"
+    echo "📦 Backup created: $BACKUP_FILE"
+    
+    # Generate unique IDs for new files
+    local base_id_num=5923520  # Start after likely existing IDs
+    local file_ref_ids=()
+    local build_file_ids=()
+    
+    # Generate IDs for each missing file
+    local file_index=0
+    for file in "${missing_files[@]}"; do
+        local file_ref_id="A${base_id_num}"
+        local build_file_id="A$((base_id_num + 1000))"
+        
+        file_ref_ids+=("$file_ref_id")
+        build_file_ids+=("$build_file_id")
+        
+        ((base_id_num++))
+        ((file_index++))
+    done
+    
+    # Create temporary file for modifications
+    local temp_file=$(mktemp)
+    cp "$PROJECT_FILE" "$temp_file"
+    
+    echo "📝 Adding PBXBuildFile entries..."
+    
+    # Build the PBXBuildFile entries
+    local build_file_entries=""
+    local file_index=0
+    for file in "${missing_files[@]}"; do
+        local filename=$(basename "$file")
+        build_file_entries+="\t\t${build_file_ids[$file_index]} /* $filename in Sources */ = {isa = PBXBuildFile; fileRef = ${file_ref_ids[$file_index]} /* $filename */; };\n"
+        ((file_index++))
+    done
+    
+    # Insert build file entries after existing PBXBuildFile entries
+    if grep -q "A5923502.*ContentView.swift in Sources" "$temp_file"; then
+        sed -i '' "/A5923502.*ContentView.swift in Sources.*fileRef.*A5923508.*ContentView.swift/a\\
+$build_file_entries" "$temp_file"
+    else
+        echo "⚠️  Could not find expected PBXBuildFile insertion point"
+        rm "$temp_file"
+        return 1
+    fi
+    
+    echo "📁 Adding PBXFileReference entries..."
+    
+    # Build the PBXFileReference entries
+    local file_ref_entries=""
+    local file_index=0
+    for file in "${missing_files[@]}"; do
+        local filename=$(basename "$file")
+        local relative_path=$(echo "$file" | sed 's|^ShuttlX/||')  # Remove ShuttlX/ prefix
+        file_ref_entries+="\t\t${file_ref_ids[$file_index]} /* $filename */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = \"$relative_path\"; sourceTree = \"<group>\"; };\n"
+        ((file_index++))
+    done
+    
+    # Insert file reference entries after existing PBXFileReference entries
+    if grep -q "A5923508.*ContentView.swift.*PBXFileReference" "$temp_file"; then
+        sed -i '' "/A5923508.*ContentView.swift.*PBXFileReference.*sourcecode.swift.*path = ContentView.swift/a\\
+$file_ref_entries" "$temp_file"
+    else
+        echo "⚠️  Could not find expected PBXFileReference insertion point"
+        rm "$temp_file"
+        return 1
+    fi
+    
+    echo "⚡ Adding files to iOS Sources build phase..."
+    
+    # Build the Sources build phase entries
+    local sources_entries=""
+    local file_index=0
+    for file in "${missing_files[@]}"; do
+        local filename=$(basename "$file")
+        sources_entries+="\t\t\t${build_file_ids[$file_index]} /* $filename in Sources */,\n"
+        ((file_index++))
+    done
+    
+    # Insert into iOS Sources build phase (A59234DA)
+    if grep -q "A5923502.*ContentView.swift in Sources.*," "$temp_file"; then
+        sed -i '' "/A5923502.*ContentView.swift in Sources.*,/a\\
+$sources_entries" "$temp_file"
+    else
+        echo "⚠️  Could not find expected Sources build phase insertion point"
+        rm "$temp_file"
+        return 1
+    fi
+    
+    echo "📂 Adding files to group structure..."
+    
+    # Build the group entries
+    local group_entries=""
+    local file_index=0
+    for file in "${missing_files[@]}"; do
+        local filename=$(basename "$file")
+        group_entries+="\t\t\t${file_ref_ids[$file_index]} /* $filename */,\n"
+        ((file_index++))
+    done
+    
+    # Insert into group structure (after ContentView.swift in group)
+    if grep -q "A5923508.*ContentView.swift.*," "$temp_file"; then
+        sed -i '' "/A5923508.*ContentView.swift.*,/a\\
+$group_entries" "$temp_file"
+    else
+        echo "⚠️  Could not find expected group insertion point"
+        rm "$temp_file"
+        return 1
+    fi
+    
+    # Validate the modified project file by checking basic syntax
+    if grep -q "// !\\$\\*UTF8\\*\\$!" "$temp_file" && grep -q "archiveVersion = 1;" "$temp_file"; then
+        # Replace original file with modified version
+        mv "$temp_file" "$PROJECT_FILE"
+        echo "✅ Successfully added ${#missing_files[@]} Swift files to iOS project target!"
+        
+        echo "📋 Files added:"
+        for file in "${missing_files[@]}"; do
+            echo "  ✅ $file"
+        done
+        
+        echo "🔄 Backup available at: $BACKUP_FILE"
+        return 0
+    else
+        echo "❌ Project file validation failed, restoring from backup"
+        rm "$temp_file"
+        return 1
+    fi
+}
+
+# Main build logic
+if [ "$BUILD" = true ]; then
+    build_failed=false
+    
+    if [ "$IOS_ONLY" != true ]; then
+        echo "\n⌚ Building watchOS target first..."
+        
+        if build_target "ShuttlXWatch Watch App Watch App" "watchsimulator" "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.5" "watchOS"; then
+            
+            # Detect and preserve watchOS app
+            WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlXWatch Watch App Watch App.app"
+            if [ -d "$WATCHOS_APP_PATH" ]; then
+                echo "🔍 watchOS app path detected: $WATCHOS_APP_PATH"
+                
+                # Copy to temp location to preserve it
+                cp -r "$WATCHOS_APP_PATH" "/tmp/ShuttlXWatch_Watch_App.app"
+                echo "💾 watchOS app preserved to: /tmp/ShuttlXWatch_Watch_App.app"
+            fi
+        else
+            echo "❌ watchOS build failed"
+            build_failed=true
+        fi
+    fi
+    
+    if [ "$WATCHOS_ONLY" != true ]; then
+        echo "\n📱 Building iOS target (independent)..."
+        
+        # Automatically fix missing Swift files before building
+        if ! auto_fix_missing_files; then
+            echo "⚠️  Advanced project file manipulation failed, trying Python alternative..."
+            if command -v python3 >/dev/null 2>&1; then
+                python3 auto_fix_files.py
+            else
+                echo "💡 Alternative: Run 'python3 auto_fix_files.py' to get detailed manual instructions"
+            fi
+        fi
+        
+        if build_target "ShuttlX" "iphonesimulator" "platform=iOS Simulator,name=iPhone 16,OS=18.5" "iOS"; then
+            
+            # Detect iOS app
+            IOS_APP_PATH="build/Release-iphonesimulator/ShuttlX.app"
+            if [ -d "$IOS_APP_PATH" ]; then
+                echo "🔍 iOS app path detected: $IOS_APP_PATH"
+            fi
+        else
+            echo "❌ iOS build failed"
+            build_failed=true
+        fi
+    fi
+    
+    # Exit immediately if any build failed
+    if [ "$build_failed" = true ]; then
+        echo "\n💥 BUILD SCRIPT STOPPED: One or more builds failed!"
+        echo "🚫 Installation and testing skipped due to build failures."
+        echo "📋 Please fix the compilation errors above and try again."
+        exit 1
+    fi
 fi
 
-# Find and preserve watchOS app immediately after build (before it gets cleaned up)
-WATCHOS_APP_PATH=$(find build -name "*Watch*App.app" -type d 2>/dev/null | head -1)
-if [ -n "$WATCHOS_APP_PATH" ]; then
-    echo "🔍 watchOS app path detected: $WATCHOS_APP_PATH"
-    # Copy to temp location to preserve during iOS build
-    TEMP_WATCHOS_APP="/tmp/ShuttlXWatch_Watch_App.app"
-    rm -rf "$TEMP_WATCHOS_APP"
-    cp -R "$WATCHOS_APP_PATH" "$TEMP_WATCHOS_APP"
-    echo "💾 watchOS app preserved to: $TEMP_WATCHOS_APP"
-    WATCHOS_APP_PATH="$TEMP_WATCHOS_APP"
-else
-    echo "⚠️  watchOS app path not detected"
+# Installation logic
+if [ "$INSTALL" = true ]; then
+    if [ "$IOS_ONLY" != true ]; then
+        # Install watchOS app
+        WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlXWatch Watch App Watch App.app"
+        if [ ! -d "$WATCHOS_APP_PATH" ] && [ -d "/tmp/ShuttlXWatch_Watch_App.app" ]; then
+            WATCHOS_APP_PATH="/tmp/ShuttlXWatch_Watch_App.app"
+        fi
+        
+        if [ -d "$WATCHOS_APP_PATH" ]; then
+            install_app "Apple Watch Series 10 (46mm)" "$WATCHOS_APP_PATH" "watchOS"
+        else
+            echo "⚠️  watchOS app not found for installation"
+        fi
+    fi
+    
+    if [ "$WATCHOS_ONLY" != true ]; then
+        # Install iOS app
+        IOS_APP_PATH="build/Release-iphonesimulator/ShuttlX.app"
+        if [ -d "$IOS_APP_PATH" ]; then
+            install_app "iPhone 16" "$IOS_APP_PATH" "iOS"
+        else
+            echo "⚠️  iOS app not found for installation"
+        fi
+    fi
 fi
 
-echo "\n📱 Building iOS target (independent)..."
-if ! build_target "$IOS_TARGET" "iphonesimulator" "$IOS_DESTINATION" "iOS"; then
-    exit 1
+# Launch logic
+if [ "$LAUNCH" = true ]; then
+    if [ "$IOS_ONLY" != true ]; then
+        # Launch watchOS app
+        launch_app "Apple Watch Series 10 (46mm)" "com.shuttlx.ShuttlX.watchkitapp" "watchOS"
+    fi
+    
+    if [ "$WATCHOS_ONLY" != true ]; then
+        # Launch iOS app
+        launch_app "iPhone 16" "com.shuttlx.ShuttlX" "iOS"
+    fi
 fi
 
-# Find iOS app after build
-IOS_APP_PATH=$(find build/Release-iphonesimulator -name "*.app" -type d 2>/dev/null | head -1)
-echo "🔍 iOS app path detected: $IOS_APP_PATH"
-
-echo "\n🔧 Installing on simulators..."
-
-# Clean up built apps metadata
-if [ -n "$WATCHOS_APP_PATH" ] && [ -d "$WATCHOS_APP_PATH" ]; then
-    cleanup_metadata "$WATCHOS_APP_PATH"
-fi
-
-if [ -n "$IOS_APP_PATH" ] && [ -d "$IOS_APP_PATH" ]; then
-    cleanup_metadata "$IOS_APP_PATH"
-fi
-
-# Get UDIDs for target simulators
-IOS_UDID=$(get_sim_udid "iPhone 16" "iOS-18-5")
-WATCHOS_UDID=$(get_sim_udid "Apple Watch Series 10 (46mm)" "watchOS-11-5")
-
-# Boot simulators if needed
-if [ -n "$IOS_UDID" ]; then
-    boot_simulator "$IOS_UDID"
-fi
-if [ -n "$WATCHOS_UDID" ]; then
-    boot_simulator "$WATCHOS_UDID"
-fi
-
-# Install iOS app
-
-echo "\n📱 Installing iOS app..."
-if [ -n "$IOS_APP_PATH" ] && [ -n "$IOS_UDID" ] && xcrun simctl install "$IOS_UDID" "$IOS_APP_PATH"; then
-    echo "✅ iOS app installed successfully!"
-elif [ -n "$IOS_APP_PATH" ]; then
-    echo "⚠️  iOS app built but installation skipped (simulator may not be available)"
-else
-    echo "⚠️  iOS app path not found, skipping installation"
-fi
-
-# Install watchOS app
-
-echo "\n⌚ Installing watchOS app..."
-if [ -n "$WATCHOS_APP_PATH" ] && [ -n "$WATCHOS_UDID" ] && xcrun simctl install "$WATCHOS_UDID" "$WATCHOS_APP_PATH"; then
-    echo "✅ watchOS app installed successfully!"
-elif [ -n "$WATCHOS_APP_PATH" ]; then
-    echo "⚠️  watchOS app built but installation skipped (simulator may not be available)"
-else
-    echo "⚠️  watchOS app path not found, skipping installation"
-fi
-
-echo "\n🎉 Build process completed!"
-echo "\n✅ Both iOS and watchOS targets built successfully"
-echo "📱 iOS: iPhone 16 Simulator (iOS 18.5)"
-echo "⌚ watchOS: Apple Watch Series 10 Simulator (watchOS 11.5)"
-echo "\n📄 Build logs available at:"
-echo "   - iOS: /tmp/build_iOS.log"
-echo "   - watchOS: /tmp/build_watchOS.log"
-
-# Cleanup temp files
-rm -rf "/tmp/ShuttlXWatch_Watch_App.app" 2>/dev/null || true
+echo "\n🎉 Script completed successfully!"
+echo "📋 Summary:"
+echo "  - Build: $BUILD"
+echo "  - Install: $INSTALL" 
+echo "  - Launch: $LAUNCH"
+echo ""

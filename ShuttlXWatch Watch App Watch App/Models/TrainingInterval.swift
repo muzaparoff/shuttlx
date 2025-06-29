@@ -1,6 +1,6 @@
 import Foundation
 
-struct TrainingInterval: Identifiable, Codable {
+struct TrainingInterval: Identifiable, Codable, Equatable {
     let id: UUID
     var phase: IntervalPhase
     var duration: TimeInterval // in seconds

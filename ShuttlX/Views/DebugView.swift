@@ -28,14 +28,16 @@ struct DebugView: View {
                     }
                 }
 
-                Section(header: Text("Training Sessions (App Group)")) {
+                Section {
                     if sessions.isEmpty {
                         Text("No sessions found.")
                     } else {
                         ForEach(sessions) { session in
-                            Text("Session at \(session.date, formatter: itemFormatter)")
+                            Text("Session at \(session.startDate, formatter: itemFormatter)")
                         }
                     }
+                } header: {
+                    Text("Training Sessions (App Group)")
                 }
                 
                 Section(header: Text("Sync Log")) {

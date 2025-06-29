@@ -13,6 +13,14 @@ class SharedDataManager: NSObject, ObservableObject {
     private let sessionsKey = "sessions.json"
     private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
     
+    // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
+    private var fallbackContainer: URL {
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("SharedData")
+    }
+    
+    // Weak reference to DataManager to avoid retain cycles
+    private weak var dataManager: DataManager?
+    
     private var session: WCSession {
         return WCSession.default
     }
@@ -24,6 +32,15 @@ class SharedDataManager: NSObject, ObservableObject {
             session.activate()
         }
         loadSessionsFromSharedStorage()
+    }
+    
+    // MARK: - DataManager Integration
+    func setDataManager(_ dataManager: DataManager) {
+        self.dataManager = dataManager
+    }
+    
+    private func getDataManager() -> DataManager? {
+        return dataManager
     }
 
     private func log(_ message: String) {
@@ -39,31 +56,68 @@ class SharedDataManager: NSObject, ObservableObject {
     // MARK: - Program Sync
     func syncProgramsToWatch(_ programs: [TrainingProgram]) {
         log("📱➡️⌚ Syncing \(programs.count) programs to watch.")
+        print("📱 WatchConnectivity session state: \(session.activationState.rawValue)")
+        print("📱 Session reachable: \(session.isReachable)")
+        print("📱 Session paired: \(session.isPaired)")
+        print("📱 Session installed: \(session.isWatchAppInstalled)")
+        
+        // Save to App Groups first (always works)
         saveProgramsToSharedStorage(programs)
+        
+        // Then try WatchConnectivity with enhanced reliability
         sendProgramsToWatch(programs)
+        
+        // Force immediate session activation check
+        if session.activationState != .activated {
+            print("🔄 Session not activated, attempting to activate...")
+            session.activate()
+        }
+        
+        // Debug: Print program details
+        for (index, program) in programs.enumerated() {
+            print("📱 Program \(index + 1): \(program.name) - \(program.intervals.count) intervals - \(program.totalDuration/60) min")
+        }
     }
     
     private func sendProgramsToWatch(_ programs: [TrainingProgram]) {
         guard session.activationState == .activated else {
-            log("❌ WC Session not activated.")
+            log("❌ WC Session not activated. State: \(session.activationState.rawValue)")
             return
         }
         
+        // Use both transferUserInfo (reliable) and sendMessage (immediate) for maximum success
         do {
             let encodedData = try JSONEncoder().encode(programs)
-            let userInfo = ["programs": encodedData, "timestamp": Date().timeIntervalSince1970]
+            let userInfo: [String: Any] = ["programs": encodedData, "timestamp": Date().timeIntervalSince1970]
+            
+            // Primary method: transferUserInfo (reliable, works when watch is locked)
             session.transferUserInfo(userInfo)
-            log("✅ Sent programs via transferUserInfo.")
+            log("✅ Sent programs via transferUserInfo (reliable delivery).")
+            
+            // Secondary method: immediate message if watch is reachable
+            if session.isReachable {
+                session.sendMessage(userInfo, replyHandler: { reply in
+                    Task { @MainActor in
+                        self.log("✅ Immediate message sent successfully")
+                    }
+                }, errorHandler: { error in
+                    Task { @MainActor in
+                        self.log("⚠️ Immediate message failed: \(error.localizedDescription)")
+                    }
+                })
+            }
         } catch {
             log("❌ Failed to encode programs for transfer: \(error)")
         }
     }
 
     private func saveProgramsToSharedStorage(_ programs: [TrainingProgram]) {
-        guard let url = sharedContainer?.appendingPathComponent(programsKey) else {
-            log("❌ Invalid shared container URL.")
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ No valid container URL available.")
             return
         }
+        
+        let url = containerURL.appendingPathComponent(programsKey)
         do {
             let encodedData = try JSONEncoder().encode(programs)
             try encodedData.write(to: url)
@@ -85,10 +139,12 @@ class SharedDataManager: NSObject, ObservableObject {
     }
     
     private func saveSessionsToSharedStorage(_ sessions: [TrainingSession]) {
-        guard let url = sharedContainer?.appendingPathComponent(sessionsKey) else {
-            log("❌ Invalid shared container URL for sessions.")
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ No valid container URL available.")
             return
         }
+        
+        let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let encodedData = try JSONEncoder().encode(sessions)
             try encodedData.write(to: url)
@@ -99,7 +155,12 @@ class SharedDataManager: NSObject, ObservableObject {
     }
 
     private func loadSessionsFromSharedStorage() {
-        guard let url = sharedContainer?.appendingPathComponent(sessionsKey) else { return }
+        guard let containerURL = getWorkingContainer() else {
+            log("⚠️ No valid container URL available for loading sessions")
+            return
+        }
+        
+        let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let data = try Data(contentsOf: url)
             self.syncedSessions = try JSONDecoder().decode([TrainingSession].self, from: data)
@@ -111,27 +172,37 @@ class SharedDataManager: NSObject, ObservableObject {
 
     // MARK: - Public accessors for Debugging
     func loadProgramsFromAppGroup() -> [TrainingProgram] {
-        guard let url = sharedContainer?.appendingPathComponent(programsKey) else { return [] }
+        guard let containerURL = getWorkingContainer() else {
+            log("⚠️ [Debug] No valid container URL available")
+            return []
+        }
+        
+        let url = containerURL.appendingPathComponent(programsKey)
         do {
             let data = try Data(contentsOf: url)
             let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
-            log("✅ [Debug] Loaded \(programs.count) programs from App Group")
+            log("✅ [Debug] Loaded \(programs.count) programs from storage")
             return programs
         } catch {
-            log("⚠️ [Debug] Failed to load programs from App Group: \(error)")
+            log("⚠️ [Debug] Failed to load programs from storage: \(error)")
             return []
         }
     }
 
     func loadSessionsFromAppGroup() -> [TrainingSession] {
-        guard let url = sharedContainer?.appendingPathComponent(sessionsKey) else { return [] }
+        guard let containerURL = getWorkingContainer() else {
+            log("⚠️ [Debug] No valid container URL available")
+            return []
+        }
+        
+        let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let data = try Data(contentsOf: url)
             let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            log("✅ [Debug] Loaded \(sessions.count) sessions from App Group")
+            log("✅ [Debug] Loaded \(sessions.count) sessions from storage")
             return sessions
         } catch {
-            log("⚠️ [Debug] Failed to load sessions from App Group: \(error)")
+            log("⚠️ [Debug] Failed to load sessions from storage: \(error)")
             return []
         }
     }
@@ -172,9 +243,47 @@ extension SharedDataManager: WCSessionDelegate {
 
             if let _ = userInfo["requestPrograms"] as? Bool {
                 log("⌚️ Received request for programs from watch.")
-                // This should be handled by the DataManager to provide the current programs
-                // NotificationCenter.default.post(name: .requestPrograms, object: nil)
+                // Send current programs from DataManager
+                if let dataManager = getDataManager() {
+                    sendProgramsToWatch(dataManager.programs)
+                }
             }
+        }
+    }
+}
+
+// MARK: - Container Management
+extension SharedDataManager {
+    private func getWorkingContainer() -> URL? {
+        // First try the App Group container
+        if let appGroupContainer = sharedContainer {
+            // Check if the directory exists or can be created
+            let fileManager = FileManager.default
+            var isDirectory: ObjCBool = false
+            
+            if fileManager.fileExists(atPath: appGroupContainer.path, isDirectory: &isDirectory) && isDirectory.boolValue {
+                return appGroupContainer
+            } else {
+                // Try to create the App Group directory
+                do {
+                    try fileManager.createDirectory(at: appGroupContainer, withIntermediateDirectories: true, attributes: nil)
+                    log("✅ Created App Group container directory")
+                    return appGroupContainer
+                } catch {
+                    log("⚠️ Failed to create App Group container, using fallback: \(error.localizedDescription)")
+                }
+            }
+        }
+        
+        // Fallback to Documents directory
+        let fileManager = FileManager.default
+        do {
+            try fileManager.createDirectory(at: fallbackContainer, withIntermediateDirectories: true, attributes: nil)
+            log("ℹ️ Using fallback container: \(fallbackContainer.path)")
+            return fallbackContainer
+        } catch {
+            log("❌ Failed to create fallback container: \(error.localizedDescription)")
+            return nil
         }
     }
 }

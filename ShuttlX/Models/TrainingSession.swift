@@ -15,8 +15,13 @@ struct TrainingSession: Identifiable, Codable {
     var distance: Double?
     var completedIntervals: [CompletedInterval]
     
-    // CloudKit integration
+    // CloudKit integration (excluded from Codable)
     var recordID: CKRecord.ID?
+    
+    // Custom Codable implementation to exclude recordID
+    enum CodingKeys: String, CodingKey {
+        case id, programID, programName, startDate, endDate, duration, averageHeartRate, maxHeartRate, caloriesBurned, distance, completedIntervals
+    }
 }
 
 struct CompletedInterval: Identifiable, Codable {

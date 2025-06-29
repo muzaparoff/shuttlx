@@ -1,20 +1,30 @@
 import Foundation
 import WatchConnectivity
 import Combine
+import os.log
 
 /// Enhanced data synchronization manager for watchOS with dual-sync architecture
 /// Uses both WatchConnectivity (primary) and App Groups (fallback) for maximum reliability
 @MainActor
 class SharedDataManager: NSObject, ObservableObject {
-    static let shared = SharedDataManager()
-    
     @Published var syncedPrograms: [TrainingProgram] = []
     @Published var syncLog: [String] = []
 
     // App Groups shared container for reliable persistence
-    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
+    private let appGroupIdentifier = "group.com.shuttlx.shared"
     private let programsKey = "programs.json"
     private let sessionsKey = "sessions.json"
+    
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
+    
+    private var sharedContainer: URL? {
+        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
+    }
+    
+    // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
+    private var fallbackContainer: URL {
+        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("SharedData")
+    }
     
     // Session management for WatchConnectivity
     private var sessionActivated = false
@@ -22,10 +32,54 @@ class SharedDataManager: NSObject, ObservableObject {
     private var retryAttempts = 0
     private let maxRetryAttempts = 3
     
-    private override init() {
+    override init() {
+        logger.info("🔄 SharedDataManager init() called...")
         super.init()
+        logger.info("✅ super.init() completed successfully")
+        log("🔄 SharedDataManager initializing safely...")
+        
+        // Delay complex initialization to avoid crashes
+        Task {
+            logger.info("🚀 Starting async initialization...")
+            await initializeSafely()
+            logger.info("✅ Async initialization completed successfully")
+        }
+    }
+    
+    private func initializeSafely() async {
+        await MainActor.run {
+            log("🔄 Starting safe initialization sequence...")
+            logger.info("🔄 Safe initialization sequence starting...")
+        }
+        
+        // Step 1: Setup WatchConnectivity first (less likely to crash)
+        logger.info("📡 Setting up WatchConnectivity...")
         setupWatchConnectivity()
-        loadProgramsFromSharedStorage()
+        logger.info("✅ WatchConnectivity setup completed")
+        
+        // Step 2: Try to load from shared storage with error handling
+        logger.info("💾 Loading programs from shared storage...")
+        loadProgramsFromSharedStorageSafely()
+        logger.info("✅ Programs loaded from shared storage")
+    }
+    
+    private func loadFallbackPrograms() {
+        logger.info("📋 Loading fallback programs...")
+        // Provide basic fallback programs if all else fails
+        let fallbackProgram = TrainingProgram(
+            name: "Basic Walk-Run",
+            type: .walkRun,
+            intervals: [
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low),
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low)
+            ],
+            maxPulse: 180,
+            createdDate: Date(),
+            lastModified: Date()
+        )
+        syncedPrograms = [fallbackProgram]
+        log("✅ Fallback programs loaded successfully")
     }
     
     private func log(_ message: String) {
@@ -62,9 +116,11 @@ class SharedDataManager: NSObject, ObservableObject {
     }
     
     private func loadProgramsFromSharedStorage() {
-        guard let containerURL = sharedContainer else {
-            log("❌ Failed to access shared container, requesting from iOS")
-            requestProgramsFromiOS() // Request from phone if container is missing
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ Failed to access container for shared storage")
+            log("⚠️ Check entitlements and provisioning profile, using defaults")
+            // Provide default programs as fallback
+            provideDefaultPrograms()
             return
         }
         
@@ -72,7 +128,8 @@ class SharedDataManager: NSObject, ObservableObject {
         
         do {
             guard FileManager.default.fileExists(atPath: programsURL.path) else {
-                log("ℹ️ No program file in App Group, requesting from iOS.")
+                log("ℹ️ No program file in App Group, providing defaults and requesting from iOS.")
+                provideDefaultPrograms()
                 requestProgramsFromiOS()
                 return
             }
@@ -81,26 +138,107 @@ class SharedDataManager: NSObject, ObservableObject {
             syncedPrograms = programs
             log("✅ Loaded \(programs.count) programs from shared storage")
         } catch {
-            log("⚠️ Failed to load from shared storage, requesting from iOS. Error: \(error)")
+            log("⚠️ Failed to load from shared storage, providing defaults. Error: \(error)")
+            provideDefaultPrograms()
             requestProgramsFromiOS()
         }
     }
     
+    private func loadProgramsFromSharedStorageSafely() {
+        do {
+            guard let containerURL = getWorkingContainer() else {
+                log("❌ Failed to access container for shared storage")
+                log("⚠️ Using defaults due to container access issue")
+                // Provide default programs as fallback
+                provideDefaultPrograms()
+                return
+            }
+            
+            let programsURL = containerURL.appendingPathComponent(programsKey)
+            
+            guard FileManager.default.fileExists(atPath: programsURL.path) else {
+                log("ℹ️ No program file in App Group, providing defaults and requesting from iOS.")
+                provideDefaultPrograms()
+                requestProgramsFromiOS()
+                return
+            }
+            let data = try Data(contentsOf: programsURL)
+            let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
+            syncedPrograms = programs
+            log("✅ Loaded \(programs.count) programs from shared storage")
+        } catch {
+            log("⚠️ Failed to load from shared storage safely, providing defaults. Error: \(error)")
+            provideDefaultPrograms()
+            // Don't request from iOS in safe mode to avoid additional crashes
+        }
+    }
+    
+    private func provideDefaultPrograms() {
+        let defaultProgram = TrainingProgram(
+            name: "Beginner Walk-Run",
+            type: .walkRun,
+            intervals: [
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low),     // 5min warmup walk
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
+                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
+                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
+                TrainingInterval(phase: .rest, duration: 300, intensity: .low)      // 5min cooldown walk
+            ],
+            maxPulse: 180,
+            createdDate: Date(),
+            lastModified: Date()
+        )
+        
+        syncedPrograms = [defaultProgram]
+        log("✅ Provided default training program as fallback")
+    }
+    
     private func requestProgramsFromiOS() {
-        guard sessionActivated && WCSession.default.activationState == .activated else {
-            log("⏳ WatchConnectivity not ready for program request")
+        guard WCSession.default.activationState == .activated else {
+            log("⏳ WatchConnectivity not ready for program request, state: \(WCSession.default.activationState.rawValue)")
             return
+        }
+        
+        if !WCSession.default.isReachable {
+            log("📱💤 iPhone not reachable, but still trying transferUserInfo")
         }
         
         let message = [
             "requestPrograms": true,
             "timestamp": Date().timeIntervalSince1970,
-            "source": "watchOS"
+            "source": "watchOS",
+            "currentProgramCount": syncedPrograms.count,
+            "sessionState": WCSession.default.activationState.rawValue
         ] as [String: Any]
         
-        // Use transferUserInfo for reliable delivery
+        // Use transferUserInfo for reliable delivery (works even when iPhone is locked/backgrounded)
         WCSession.default.transferUserInfo(message)
-        log("📱 Requested programs from iOS via transferUserInfo")
+        log("📱 Requested programs from iOS via transferUserInfo (reliable delivery)")
+        
+        // Also try immediate message if iPhone is reachable for faster response
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: { reply in
+                Task { @MainActor in
+                    self.log("✅ Immediate program request sent successfully")
+                    if reply["programs"] is Data {
+                        self.log("📦 Received immediate reply with program data")
+                    }
+                }
+            }, errorHandler: { error in
+                Task { @MainActor in
+                    self.log("⚠️ Immediate program request failed: \(error.localizedDescription)")
+                }
+            })
+        }
+    }
+    
+    // MARK: - Manual Refresh for User Triggering
+    func refreshProgramsFromiOS() {
+        log("🔄 Manual refresh triggered by user")
+        loadProgramsFromSharedStorage() // Reload from App Group first
+        requestProgramsFromiOS()        // Then request fresh data from iOS
     }
     
     // MARK: - Enhanced Session Sync to iOS
@@ -161,8 +299,8 @@ class SharedDataManager: NSObject, ObservableObject {
     
     // MARK: - App Groups Shared Storage (Reliable Fallback)
     private func saveSessionToSharedStorage(_ session: TrainingSession) {
-        guard let containerURL = sharedContainer else {
-            log("❌ Failed to access shared container for session")
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ Failed to access container for session storage")
             return
         }
         
@@ -190,8 +328,8 @@ class SharedDataManager: NSObject, ObservableObject {
     
     // MARK: - Public accessors for Debugging
     func loadProgramsFromAppGroup() -> [TrainingProgram] {
-        guard let containerURL = sharedContainer else {
-            log("❌ Failed to access shared container")
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ Failed to access container")
             return []
         }
         let programsURL = containerURL.appendingPathComponent(programsKey)
@@ -207,8 +345,8 @@ class SharedDataManager: NSObject, ObservableObject {
     }
 
     func loadSessionsFromAppGroup() -> [TrainingSession] {
-        guard let containerURL = sharedContainer else {
-            log("❌ Failed to access shared container")
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ Failed to access container")
             return []
         }
         let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
@@ -297,8 +435,8 @@ extension SharedDataManager: WCSessionDelegate {
     }
     
     private func saveReceivedProgramsToSharedStorage(_ programs: [TrainingProgram]) {
-        guard let containerURL = sharedContainer else {
-            log("❌ Failed to access shared container")
+        guard let containerURL = getWorkingContainer() else {
+            log("❌ Failed to access container")
             return
         }
         
@@ -328,6 +466,53 @@ extension SharedDataManager: WCSessionDelegate {
                     log("❌ Failed to decode programs from message: \(error)")
                 }
             }
+        }
+    }
+    
+    // These methods are deprecated in newer iOS/watchOS versions but required for iOS compatibility
+    #if os(iOS)
+    nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
+        // Handle session becoming inactive
+    }
+    
+    nonisolated func sessionDidDeactivate(_ session: WCSession) {
+        // Handle session deactivation
+    }
+    #endif
+}
+
+// MARK: - Container Management
+extension SharedDataManager {
+    private func getWorkingContainer() -> URL? {
+        // First try the App Group container
+        if let appGroupContainer = sharedContainer {
+            // Check if the directory exists or can be created
+            let fileManager = FileManager.default
+            var isDirectory: ObjCBool = false
+            
+            if fileManager.fileExists(atPath: appGroupContainer.path, isDirectory: &isDirectory) && isDirectory.boolValue {
+                return appGroupContainer
+            } else {
+                // Try to create the App Group directory
+                do {
+                    try fileManager.createDirectory(at: appGroupContainer, withIntermediateDirectories: true, attributes: nil)
+                    logger.info("✅ Created App Group container directory")
+                    return appGroupContainer
+                } catch {
+                    logger.warning("⚠️ Failed to create App Group container, using fallback: \(error.localizedDescription)")
+                }
+            }
+        }
+        
+        // Fallback to Documents directory
+        let fileManager = FileManager.default
+        do {
+            try fileManager.createDirectory(at: fallbackContainer, withIntermediateDirectories: true, attributes: nil)
+            logger.info("ℹ️ Using fallback container: \(self.fallbackContainer.path)")
+            return fallbackContainer
+        } catch {
+            logger.error("❌ Failed to create fallback container: \(error.localizedDescription)")
+            return nil
         }
     }
 }
