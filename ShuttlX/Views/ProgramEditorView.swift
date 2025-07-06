@@ -32,7 +32,7 @@ struct ProgramEditorView: View {
                     
                     Picker("Training Type", selection: $program.type) {
                         ForEach(ProgramType.allCases, id: \.self) { type in
-                            Text(type.rawValue).tag(type)
+                            Text(type.displayName).tag(type)
                         }
                     }
                     .onChange(of: program.type) { oldValue, newType in

@@ -1,10 +1,17 @@
 import Foundation
 
 struct TrainingInterval: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID
     var phase: IntervalPhase
     var duration: TimeInterval // in seconds
     var intensity: TrainingIntensity
+    
+    init(phase: IntervalPhase, duration: TimeInterval, intensity: TrainingIntensity) {
+        self.id = UUID()
+        self.phase = phase
+        self.duration = duration
+        self.intensity = intensity
+    }
 }
 
 enum IntervalPhase: String, CaseIterable, Codable {

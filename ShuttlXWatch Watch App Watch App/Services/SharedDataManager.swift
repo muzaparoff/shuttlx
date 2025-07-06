@@ -1,518 +1,760 @@
 import Foundation
-import WatchConnectivity
-import Combine
+@preconcurrency import WatchConnectivity
 import os.log
 
-/// Enhanced data synchronization manager for watchOS with dual-sync architecture
-/// Uses both WatchConnectivity (primary) and App Groups (fallback) for maximum reliability
 @MainActor
-class SharedDataManager: NSObject, ObservableObject {
+class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDelegate {
+    static let shared = SharedDataManager()
     @Published var syncedPrograms: [TrainingProgram] = []
+    @Published var syncStatus: String = "Not synced"
+    @Published var isConnected: Bool = false
+    @Published var lastSyncTime: Date?
     @Published var syncLog: [String] = []
-
-    // App Groups shared container for reliable persistence
-    private let appGroupIdentifier = "group.com.shuttlx.shared"
-    private let programsKey = "programs.json"
-    private let sessionsKey = "sessions.json"
+    
+    // Enhanced with fallback mechanisms and health monitoring
+    @Published var connectivityHealth: Double = 1.0 // 0.0-1.0 scale
+    @Published var backgroundSyncEnabled: Bool = true
     
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
+    private let appGroupIdentifier = "group.com.shuttlx.shared" // Changed to match iOS app
+    private var retryCount = 0
+    private let maxRetries = 5 // Increased from 3
     
-    private var sharedContainer: URL? {
-        return FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
-    }
+    // Enhanced sync management
+    private var backgroundSyncTimer: Timer?
+    private var pendingSessions: [TrainingSession] = []
+    private var lastSyncAttempt: Date?
+    private var consecutiveFailures = 0
     
-    // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
-    private var fallbackContainer: URL {
-        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("SharedData")
-    }
-    
-    // Session management for WatchConnectivity
-    private var sessionActivated = false
-    private var pendingSessionUpdates: [TrainingSession] = []
-    private var retryAttempts = 0
-    private let maxRetryAttempts = 3
+    // MARK: - Initialization
     
     override init() {
-        logger.info("🔄 SharedDataManager init() called...")
         super.init()
-        logger.info("✅ super.init() completed successfully")
-        log("🔄 SharedDataManager initializing safely...")
         
-        // Delay complex initialization to avoid crashes
-        Task {
-            logger.info("🚀 Starting async initialization...")
-            await initializeSafely()
-            logger.info("✅ Async initialization completed successfully")
+        // Set up WatchConnectivity session
+        if WCSession.isSupported() {
+            let session = WCSession.default
+            session.delegate = self
+            session.activate()
+            logger.info("📱 WCSession activated")
+        } else {
+            logger.warning("⚠️ WCSession not supported on this device")
+        }
+        
+        // Load programs from App Group container
+        loadPrograms()
+        
+        // Setup periodic background tasks
+        setupBackgroundTasks()
+    }
+    
+    deinit {
+        backgroundSyncTimer?.invalidate()
+    }
+    
+    // MARK: - Background Tasks
+    
+    private func setupBackgroundTasks() {
+        // Periodic sync check (every 15 seconds)
+        backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+            guard let self = self, self.backgroundSyncEnabled else { return }
+            
+            Task { @MainActor in
+                self.performBackgroundSync()
+            }
+        }
+        
+        // Initial sync after a short delay
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            Task { @MainActor in
+                self.syncFromiPhone()
+            }
         }
     }
     
-    private func initializeSafely() async {
-        await MainActor.run {
-            log("🔄 Starting safe initialization sequence...")
-            logger.info("🔄 Safe initialization sequence starting...")
-        }
+    private func performBackgroundSync() {
+        // Check for updated programs
+        checkForUpdatedPrograms()
         
-        // Step 1: Setup WatchConnectivity first (less likely to crash)
-        logger.info("📡 Setting up WatchConnectivity...")
-        setupWatchConnectivity()
-        logger.info("✅ WatchConnectivity setup completed")
+        // Retry sending any pending sessions
+        retryPendingSessions()
         
-        // Step 2: Try to load from shared storage with error handling
-        logger.info("💾 Loading programs from shared storage...")
-        loadProgramsFromSharedStorageSafely()
-        logger.info("✅ Programs loaded from shared storage")
+        // Update connectivity health score
+        updateConnectivityHealth()
     }
     
-    private func loadFallbackPrograms() {
-        logger.info("📋 Loading fallback programs...")
-        // Provide basic fallback programs if all else fails
-        let fallbackProgram = TrainingProgram(
-            name: "Basic Walk-Run",
-            type: .walkRun,
-            intervals: [
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low),
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low)
-            ],
-            maxPulse: 180,
-            createdDate: Date(),
-            lastModified: Date()
-        )
-        syncedPrograms = [fallbackProgram]
-        log("✅ Fallback programs loaded successfully")
-    }
-    
-    private func log(_ message: String) {
-        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
-        let logMessage = "\(timestamp): \(message)"
-        print(logMessage)
-        syncLog.insert(logMessage, at: 0)
-        if syncLog.count > 100 {
-            syncLog.removeLast()
-        }
-    }
-
-    // MARK: - Robust WatchConnectivity Setup
-    private func setupWatchConnectivity() {
-        guard WCSession.isSupported() else {
-            log("⚠️ WatchConnectivity not supported on this device")
+    private func checkForUpdatedPrograms() {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
             return
         }
         
-        log("🔄 Setting up WatchConnectivity session on watch...")
-        WCSession.default.delegate = self
-        WCSession.default.activate()
-    }
-    
-    // MARK: - Load Programs with Dual Sources
-    func loadPrograms() {
-        log("📲 Loading programs on watch...")
-        
-        // First, load from shared storage (reliable fallback)
-        loadProgramsFromSharedStorage()
-        
-        // Then, request latest from iOS if connectivity is available
-        requestProgramsFromiOS()
-    }
-    
-    private func loadProgramsFromSharedStorage() {
-        guard let containerURL = getWorkingContainer() else {
-            log("❌ Failed to access container for shared storage")
-            log("⚠️ Check entitlements and provisioning profile, using defaults")
-            // Provide default programs as fallback
-            provideDefaultPrograms()
-            return
-        }
-        
-        let programsURL = containerURL.appendingPathComponent(programsKey)
+        let programsURL = containerURL.appendingPathComponent("programs.json")
         
         do {
-            guard FileManager.default.fileExists(atPath: programsURL.path) else {
-                log("ℹ️ No program file in App Group, providing defaults and requesting from iOS.")
-                provideDefaultPrograms()
-                requestProgramsFromiOS()
-                return
+            let attributes = try FileManager.default.attributesOfItem(atPath: programsURL.path)
+            if let modificationDate = attributes[.modificationDate] as? Date,
+               let lastSync = lastSyncTime,
+               modificationDate > lastSync {
+                logger.info("🔄 New program data detected in App Group, reloading...")
+                loadPrograms()
             }
-            let data = try Data(contentsOf: programsURL)
-            let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
-            syncedPrograms = programs
-            log("✅ Loaded \(programs.count) programs from shared storage")
         } catch {
-            log("⚠️ Failed to load from shared storage, providing defaults. Error: \(error)")
-            provideDefaultPrograms()
-            requestProgramsFromiOS()
+            // File might not exist yet, which is normal
+            logger.debug("📂 No programs file found in background check")
         }
     }
     
-    private func loadProgramsFromSharedStorageSafely() {
-        do {
-            guard let containerURL = getWorkingContainer() else {
-                log("❌ Failed to access container for shared storage")
-                log("⚠️ Using defaults due to container access issue")
-                // Provide default programs as fallback
-                provideDefaultPrograms()
-                return
-            }
-            
-            let programsURL = containerURL.appendingPathComponent(programsKey)
-            
-            guard FileManager.default.fileExists(atPath: programsURL.path) else {
-                log("ℹ️ No program file in App Group, providing defaults and requesting from iOS.")
-                provideDefaultPrograms()
-                requestProgramsFromiOS()
-                return
-            }
-            let data = try Data(contentsOf: programsURL)
-            let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
-            syncedPrograms = programs
-            log("✅ Loaded \(programs.count) programs from shared storage")
-        } catch {
-            log("⚠️ Failed to load from shared storage safely, providing defaults. Error: \(error)")
-            provideDefaultPrograms()
-            // Don't request from iOS in safe mode to avoid additional crashes
-        }
-    }
-    
-    private func provideDefaultPrograms() {
-        let defaultProgram = TrainingProgram(
-            name: "Beginner Walk-Run",
-            type: .walkRun,
-            intervals: [
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low),     // 5min warmup walk
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 120, intensity: .low),     // 2min walk
-                TrainingInterval(phase: .work, duration: 60, intensity: .moderate), // 1min run
-                TrainingInterval(phase: .rest, duration: 300, intensity: .low)      // 5min cooldown walk
-            ],
-            maxPulse: 180,
-            createdDate: Date(),
-            lastModified: Date()
-        )
+    private func retryPendingSessions() {
+        guard !pendingSessions.isEmpty else { return }
         
-        syncedPrograms = [defaultProgram]
-        log("✅ Provided default training program as fallback")
+        logger.info("🔄 Attempting to sync \(pendingSessions.count) pending sessions")
+        
+        if WCSession.default.isReachable {
+            let sessionsToSync = pendingSessions
+            pendingSessions = [] // Clear before attempting sync to avoid duplicates
+            
+            for session in sessionsToSync {
+                sendSessionToiOS(session)
+            }
+        } else if let lastAttempt = lastSyncAttempt,
+                  Date().timeIntervalSince(lastAttempt) > 300 { // 5 minutes
+            // If iPhone has been unreachable for 5+ minutes, save sessions to App Group anyway
+            logger.warning("⚠️ iPhone unreachable for 5+ minutes, saving sessions to App Group only")
+            for session in pendingSessions {
+                saveSessionToAppGroup(session)
+            }
+            pendingSessions = []
+            updateSyncStatus("⚠️ Sessions saved locally only")
+        }
     }
     
-    private func requestProgramsFromiOS() {
-        guard WCSession.default.activationState == .activated else {
-            log("⏳ WatchConnectivity not ready for program request, state: \(WCSession.default.activationState.rawValue)")
-            return
+    private func updateConnectivityHealth() {
+        // Factors affecting health score:
+        // 1. Recent successful syncs
+        // 2. Consecutive failures
+        // 3. WCSession state
+        
+        var healthScore = 1.0
+        
+        if WCSession.default.activationState != .activated {
+            healthScore -= 0.5
         }
         
         if !WCSession.default.isReachable {
-            log("📱💤 iPhone not reachable, but still trying transferUserInfo")
+            healthScore -= 0.3
         }
         
-        let message = [
-            "requestPrograms": true,
-            "timestamp": Date().timeIntervalSince1970,
-            "source": "watchOS",
-            "currentProgramCount": syncedPrograms.count,
-            "sessionState": WCSession.default.activationState.rawValue
-        ] as [String: Any]
+        healthScore -= min(0.5, Double(consecutiveFailures) * 0.1)
         
-        // Use transferUserInfo for reliable delivery (works even when iPhone is locked/backgrounded)
-        WCSession.default.transferUserInfo(message)
-        log("📱 Requested programs from iOS via transferUserInfo (reliable delivery)")
-        
-        // Also try immediate message if iPhone is reachable for faster response
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(message, replyHandler: { reply in
-                Task { @MainActor in
-                    self.log("✅ Immediate program request sent successfully")
-                    if reply["programs"] is Data {
-                        self.log("📦 Received immediate reply with program data")
-                    }
-                }
-            }, errorHandler: { error in
-                Task { @MainActor in
-                    self.log("⚠️ Immediate program request failed: \(error.localizedDescription)")
-                }
-            })
-        }
-    }
-    
-    // MARK: - Manual Refresh for User Triggering
-    func refreshProgramsFromiOS() {
-        log("🔄 Manual refresh triggered by user")
-        loadProgramsFromSharedStorage() // Reload from App Group first
-        requestProgramsFromiOS()        // Then request fresh data from iOS
-    }
-    
-    // MARK: - Enhanced Session Sync to iOS
-    func syncSessionToiOS(_ session: TrainingSession) {
-        log("⌚➡️📱 Syncing training session to iOS...")
-        
-        // Always save to shared storage first (fallback)
-        saveSessionToSharedStorage(session)
-        
-        // Attempt WatchConnectivity sync if session is ready
-        if sessionActivated && WCSession.default.activationState == .activated {
-            sendSessionViaWatchConnectivity(session)
-        } else {
-            log("⏳ WatchConnectivity not ready, queuing session for sync...")
-            pendingSessionUpdates.append(session)
-        }
-    }
-    
-    // MARK: - Enhanced Session Sync to iOS with Dual Fallback
-    func sendSessionToiOS(_ session: TrainingSession) {
-        log("⌚➡️📱 Sending training session to iOS: \(session.programName)")
-        
-        // Always save to shared storage first (fallback)
-        saveSessionToSharedStorage(session)
-        
-        // Attempt WatchConnectivity sync if session is ready
-        if sessionActivated && WCSession.default.activationState == .activated {
-            sendSessionViaWatchConnectivity(session)
-        } else {
-            log("⏳ WatchConnectivity not ready, queuing session for sync...")
-            pendingSessionUpdates.append(session)
-        }
-    }
-    
-    private func sendSessionViaWatchConnectivity(_ session: TrainingSession) {
-        guard WCSession.default.activationState == .activated else {
-            log("❌ WatchConnectivity session not activated")
-            return
-        }
-        
-        do {
-            let data = try JSONEncoder().encode(session)
-            let message = [
-                "session": data,
-                "timestamp": Date().timeIntervalSince1970,
-                "source": "watchOS",
-                "method": "WatchConnectivity"
-            ] as [String: Any]
-            
-            // Use transferUserInfo for reliable delivery
-            WCSession.default.transferUserInfo(message)
-            log("✅ Session sent via WatchConnectivity transferUserInfo")
-            
-        } catch {
-            log("❌ Failed to encode session for WatchConnectivity: \(error)")
-        }
-    }
-    
-    // MARK: - App Groups Shared Storage (Reliable Fallback)
-    private func saveSessionToSharedStorage(_ session: TrainingSession) {
-        guard let containerURL = getWorkingContainer() else {
-            log("❌ Failed to access container for session storage")
-            return
-        }
-        
-        let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
-        
-        do {
-            // Load existing sessions
-            var sessions: [TrainingSession] = []
-            if let existingData = try? Data(contentsOf: sessionsURL) {
-                sessions = try JSONDecoder().decode([TrainingSession].self, from: existingData)
+        if let lastSync = lastSyncTime {
+            let timeSinceLastSync = Date().timeIntervalSince(lastSync)
+            if timeSinceLastSync > 300 { // 5 minutes
+                healthScore -= 0.2
             }
-            
-            // Add new session
-            sessions.append(session)
-            
-            // Save updated sessions
-            let data = try JSONEncoder().encode(sessions)
-            try data.write(to: sessionsURL)
-            log("✅ Session saved to shared storage on watch")
-            
-        } catch {
-            log("❌ Failed to save session to shared storage: \(error)")
+        } else {
+            healthScore -= 0.2
+        }
+        
+        // Clamp between 0 and 1
+        healthScore = max(0, min(1, healthScore))
+        
+        if healthScore != connectivityHealth {
+            connectivityHealth = healthScore
+            logger.info("📊 Connectivity health updated: \(Int(healthScore * 100))%")
         }
     }
     
-    // MARK: - Public accessors for Debugging
-    func loadProgramsFromAppGroup() -> [TrainingProgram] {
-        guard let containerURL = getWorkingContainer() else {
-            log("❌ Failed to access container")
-            return []
+    // MARK: - Program Management
+    
+    func loadPrograms() {
+        logger.info("📂 Loading programs from App Group container...")
+        
+        // Try App Group first
+        if let programs = loadProgramsFromAppGroup() {
+            self.syncedPrograms = programs
+            self.lastSyncTime = Date()
+            updateSyncStatus("✅ Loaded \(programs.count) programs")
+            logger.info("✅ Successfully loaded \(programs.count) programs from App Group")
+            
+            // Clear consecutive failures since we succeeded
+            consecutiveFailures = 0
+        } else {
+            // Try to load from fallback location if App Group fails
+            if let programs = loadProgramsFromFallbackLocation() {
+                self.syncedPrograms = programs
+                self.lastSyncTime = Date()
+                updateSyncStatus("⚠️ Loaded \(programs.count) programs from fallback")
+                logger.warning("⚠️ Using fallback programs storage")
+            } else {
+                // As a last resort, create sample programs
+                let samplePrograms = createSamplePrograms()
+                self.syncedPrograms = samplePrograms
+                updateSyncStatus("⚠️ Using sample programs")
+                logger.warning("⚠️ No programs available, using samples")
+                
+                // Increment failure count
+                consecutiveFailures += 1
+            }
         }
-        let programsURL = containerURL.appendingPathComponent(programsKey)
+        
+        // Update UI immediately
+        self.objectWillChange.send()
+    }
+    
+    private func loadProgramsFromAppGroup() -> [TrainingProgram]? {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            logger.error("❌ Failed to get App Group container URL")
+            return nil
+        }
+        
+        let programsURL = containerURL.appendingPathComponent("programs.json")
+        
         do {
             let data = try Data(contentsOf: programsURL)
-            let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
-            log("✅ [Debug] Loaded \(programs.count) programs from App Group")
-            return programs
+            return try JSONDecoder().decode([TrainingProgram].self, from: data)
         } catch {
-            log("⚠️ [Debug] Failed to load programs from App Group: \(error)")
-            return []
+            logger.error("❌ Failed to load programs from App Group: \(error.localizedDescription)")
+            return nil
         }
     }
-
-    func loadSessionsFromAppGroup() -> [TrainingSession] {
-        guard let containerURL = getWorkingContainer() else {
-            log("❌ Failed to access container")
-            return []
-        }
-        let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
+    
+    private func loadProgramsFromFallbackLocation() -> [TrainingProgram]? {
+        let fileManager = FileManager.default
+        let fallbackURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0].appendingPathComponent("backup_programs.json")
+        
         do {
-            let data = try Data(contentsOf: sessionsURL)
-            let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            log("✅ [Debug] Loaded \(sessions.count) sessions from App Group")
-            return sessions
+            let data = try Data(contentsOf: fallbackURL)
+            return try JSONDecoder().decode([TrainingProgram].self, from: data)
         } catch {
-            log("⚠️ [Debug] Failed to load sessions from App Group: \(error)")
-            return []
+            logger.error("❌ Failed to load programs from fallback: \(error.localizedDescription)")
+            return nil
         }
     }
-
-    // MARK: - Error Recovery and Retry Logic
-    private func retryPendingSync() {
-        guard !pendingSessionUpdates.isEmpty, retryAttempts < maxRetryAttempts else {
+    
+    private func createSamplePrograms() -> [TrainingProgram] {
+        return [
+            TrainingProgram(
+                name: "Beginner Walk-Run",
+                type: .walkRun,
+                intervals: [
+                    TrainingInterval(phase: .rest, duration: 300, intensity: .low),
+                    TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                    TrainingInterval(phase: .rest, duration: 120, intensity: .low),
+                    TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                    TrainingInterval(phase: .rest, duration: 120, intensity: .low),
+                    TrainingInterval(phase: .work, duration: 60, intensity: .moderate),
+                    TrainingInterval(phase: .rest, duration: 300, intensity: .low)
+                ],
+                maxPulse: 180,
+                createdDate: Date(),
+                lastModified: Date()
+            ),
+            TrainingProgram(
+                name: "Quick Test",
+                type: .walkRun,
+                intervals: [
+                    TrainingInterval(phase: .rest, duration: 10, intensity: .low),
+                    TrainingInterval(phase: .work, duration: 10, intensity: .moderate)
+                ],
+                maxPulse: 180,
+                createdDate: Date(),
+                lastModified: Date()
+            )
+        ]
+    }
+    
+    func syncFromiPhone() {
+        logger.info("🔄 Starting manual sync from iPhone...")
+        updateSyncStatus("🔄 Requesting sync from iPhone...")
+        lastSyncAttempt = Date()
+        
+        // Always try App Group first
+        loadPrograms()
+        
+        // Then try WatchConnectivity if available
+        guard WCSession.default.isReachable else {
+            logger.warning("⚠️ iPhone not reachable for direct sync")
+            updateSyncStatus("⚠️ Using locally cached data")
             return
         }
         
-        retryAttempts += 1
-        log("🔄 Retry attempt \(retryAttempts)/\(maxRetryAttempts) for pending session sync")
-        
-        for session in pendingSessionUpdates {
-            sendSessionViaWatchConnectivity(session)
-        }
-        
-        // Schedule next retry if needed
-        if retryAttempts < maxRetryAttempts {
-            DispatchQueue.main.asyncAfter(deadline: .now() + TimeInterval(retryAttempts * 2)) {
-                self.retryPendingSync()
+        // Request fresh data from iPhone
+        let message = ["action": "requestPrograms", "timestamp": Date().timeIntervalSince1970]
+        WCSession.default.sendMessage(message, replyHandler: { [weak self] reply in
+            Task { @MainActor in
+                self?.handleSyncResponse(reply)
             }
-        } else {
-            pendingSessionUpdates.removeAll()
+        }, errorHandler: { [weak self] error in
+            Task { @MainActor in
+                self?.handleSyncError(error)
+            }
+        })
+    }
+    
+    // MARK: - Session Management
+    
+    func sendSessionToiOS(_ session: TrainingSession) {
+        logger.info("📤 Sending training session to iOS...")
+        
+        // First, save to App Group for reliability
+        saveSessionToAppGroup(session)
+        
+        // Also save to fallback location
+        saveSessionToFallback(session)
+        
+        do {
+            let sessionData = try JSONEncoder().encode(session)
+            
+            // 1. Try sending via WCSession if available
+            if WCSession.default.isReachable {
+                let message = [
+                    "action": "saveSession",
+                    "sessionData": sessionData.base64EncodedString(),
+                    "timestamp": Date().timeIntervalSince1970
+                ]
+                
+                WCSession.default.sendMessage(message, replyHandler: { response in
+                    Task { @MainActor in
+                        self.logger.info("✅ Session sent successfully to iOS")
+                        self.updateSyncStatus("✅ Session saved to iPhone")
+                        
+                        // Update health metrics
+                        self.consecutiveFailures = 0
+                        self.updateConnectivityHealth()
+                    }
+                }, errorHandler: { error in
+                    Task { @MainActor in
+                        self.logger.error("⚠️ Message failed, falling back to transferUserInfo: \(error.localizedDescription)")
+                        
+                        // Fall back to transferUserInfo (more reliable, but may be delayed)
+                        self.sendSessionViaUserInfo(session, sessionData: sessionData)
+                        
+                        // Update metrics
+                        self.consecutiveFailures += 1
+                        self.updateConnectivityHealth()
+                    }
+                })
+            } else {
+                // If not reachable, store in pending sessions
+                if !pendingSessions.contains(where: { $0.id == session.id }) {
+                    pendingSessions.append(session)
+                    logger.warning("⚠️ iPhone not reachable, session queued for later sync")
+                    updateSyncStatus("⚠️ Session queued for sync")
+                }
+                
+                // Also try transferUserInfo which works even when not immediately reachable
+                sendSessionViaUserInfo(session, sessionData: sessionData)
+            }
+        } catch {
+            logger.error("❌ Failed to encode session: \(error.localizedDescription)")
+            updateSyncStatus("❌ Failed to encode session")
+            
+            // Still add to pending for later retry
+            if !pendingSessions.contains(where: { $0.id == session.id }) {
+                pendingSessions.append(session)
+            }
         }
     }
-}
-
-// MARK: - WCSessionDelegate
-extension SharedDataManager: WCSessionDelegate {
+    
+    private func sendSessionViaUserInfo(_ session: TrainingSession, sessionData: Data) {
+        let userInfo = [
+            "action": "saveSession",
+            "sessionData": sessionData.base64EncodedString(),
+            "timestamp": Date().timeIntervalSince1970,
+            "sessionID": session.id.uuidString
+        ] as [String : Any]
+        
+        let transferID = WCSession.default.transferUserInfo(userInfo)
+        logger.info("📤 Session queued via transferUserInfo (ID: \(transferID))")
+        updateSyncStatus("📤 Session queued for background sync")
+    }
+    
+    private func saveSessionToFallback(_ session: TrainingSession) {
+        let fileManager = FileManager.default
+        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let fallbackURL = docsURL.appendingPathComponent("fallback_sessions.json")
+        
+        do {
+            var sessions: [TrainingSession] = []
+            
+            // Load existing if available
+            if fileManager.fileExists(atPath: fallbackURL.path) {
+                let data = try Data(contentsOf: fallbackURL)
+                sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+            }
+            
+            // Add if not already there
+            if !sessions.contains(where: { $0.id == session.id }) {
+                sessions.append(session)
+                let data = try JSONEncoder().encode(sessions)
+                try data.write(to: fallbackURL)
+                logger.info("✅ Session backed up to fallback location")
+            }
+        } catch {
+            logger.error("❌ Failed to save session to fallback: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - WCSessionDelegate Methods
+    
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         Task { @MainActor in
+            self.isConnected = (activationState == .activated)
+            
             if let error = error {
-                log("❌ WatchConnectivity activation failed: \(error.localizedDescription)")
-                return
-            }
-            
-            sessionActivated = true
-            retryAttempts = 0
-            
-            log("✅ WatchConnectivity activated on watch with state: \(activationState.rawValue)")
-            
-            // Request programs when session becomes active
-            requestProgramsFromiOS()
-            
-            // Send any pending session updates
-            if !pendingSessionUpdates.isEmpty {
-                log("📤 Sending queued session updates...")
-                for session in pendingSessionUpdates {
-                    sendSessionViaWatchConnectivity(session)
-                }
-                pendingSessionUpdates.removeAll()
-            }
-        }
-    }
-    
-    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
-        Task { @MainActor in
-            log("📦 Received userInfo on watch")
-            
-            // Handle programs from iOS
-            if let programsData = userInfo["programs"] as? Data {
-                do {
-                    let programs = try JSONDecoder().decode([TrainingProgram].self, from: programsData)
-                    syncedPrograms = programs
-                    log("✅ Received \(programs.count) programs from iOS")
-                    
-                    // Save to shared storage for future use
-                    saveReceivedProgramsToSharedStorage(programs)
-                    
-                } catch {
-                    log("❌ Failed to decode programs from iOS: \(error)")
+                self.logger.error("❌ WCSession activation failed: \(error.localizedDescription)")
+                self.updateSyncStatus("❌ Connection failed")
+                self.consecutiveFailures += 1
+            } else {
+                self.logger.info("✅ WCSession activated successfully")
+                self.updateSyncStatus("✅ Connected to iPhone")
+                self.consecutiveFailures = 0
+                
+                // Load programs after successful activation
+                self.loadPrograms()
+                
+                // Try to sync any pending sessions
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                    Task { @MainActor in
+                        self.retryPendingSessions()
+                    }
                 }
             }
-        }
-    }
-    
-    private func saveReceivedProgramsToSharedStorage(_ programs: [TrainingProgram]) {
-        guard let containerURL = getWorkingContainer() else {
-            log("❌ Failed to access container")
-            return
-        }
-        
-        let programsURL = containerURL.appendingPathComponent(programsKey)
-        
-        do {
-            let data = try JSONEncoder().encode(programs)
-            try data.write(to: programsURL)
-            log("✅ Programs saved to shared storage on watch")
-        } catch {
-            log("❌ Failed to save programs to shared storage: \(error)")
+            
+            self.updateConnectivityHealth()
         }
     }
     
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any]) {
         Task { @MainActor in
-            log("📥 Received message on watch")
+            self.logger.info("📥 Received message from iPhone: \(message)")
             
-            // Handle program updates from iOS
-            if let programsData = message["programs"] as? Data {
-                do {
-                    let programs = try JSONDecoder().decode([TrainingProgram].self, from: programsData)
-                    syncedPrograms = programs
-                    saveReceivedProgramsToSharedStorage(programs)
-                    log("✅ Received \(programs.count) programs via message")
-                } catch {
-                    log("❌ Failed to decode programs from message: \(error)")
+            if let action = message["action"] as? String {
+                switch action {
+                case "programsUpdated":
+                    self.loadPrograms()
+                    self.consecutiveFailures = 0
+                case "syncPrograms":
+                    if let programsData = message["programs"] as? Data {
+                        self.handleProgramsData(programsData)
+                    } else if let programsString = message["programs"] as? String,
+                              let programsData = Data(base64Encoded: programsString) {
+                        self.handleProgramsData(programsData)
+                    }
+                case "ping":
+                    self.logger.info("📍 Ping received from iPhone")
+                    self.updateSyncStatus("✅ Connection verified")
+                    self.consecutiveFailures = 0
+                default:
+                    self.logger.info("ℹ️ Unknown action: \(action)")
+                }
+            }
+            
+            self.updateConnectivityHealth()
+        }
+    }
+    
+    nonisolated func session(_ session: WCSession, didReceiveMessage message: [String : Any], replyHandler: @escaping ([String : Any]) -> Void) {
+        Task { @MainActor in
+            self.logger.info("📥 Received message with reply handler: \(message)")
+            
+            if let action = message["action"] as? String {
+                switch action {
+                case "requestPrograms":
+                    // Send back current programs
+                    do {
+                        let programsData = try JSONEncoder().encode(self.syncedPrograms)
+                        replyHandler([
+                            "programs": programsData.base64EncodedString(),
+                            "count": self.syncedPrograms.count,
+                            "timestamp": Date().timeIntervalSince1970
+                        ])
+                        self.consecutiveFailures = 0
+                    } catch {
+                        replyHandler(["error": "Failed to encode programs: \(error.localizedDescription)"])
+                        self.logger.error("❌ Failed to encode programs: \(error.localizedDescription)")
+                    }
+                case "ping":
+                    // Simple connectivity check
+                    replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
+                    self.updateSyncStatus("✅ Connection verified")
+                    self.consecutiveFailures = 0
+                default:
+                    replyHandler(["error": "Unknown action: \(action)"])
+                }
+            } else {
+                replyHandler(["error": "No action specified"])
+            }
+            
+            self.updateConnectivityHealth()
+        }
+    }
+    
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String : Any]) {
+        Task { @MainActor in
+            self.logger.info("📥 Received userInfo from iPhone: \(userInfo.keys)")
+            
+            if let action = userInfo["action"] as? String {
+                switch action {
+                case "syncPrograms":
+                    if let programsString = userInfo["programs"] as? String,
+                       let programsData = Data(base64Encoded: programsString) {
+                        self.handleProgramsData(programsData)
+                    }
+                default:
+                    self.logger.info("ℹ️ Unknown userInfo action: \(action)")
                 }
             }
         }
     }
     
-    // These methods are deprecated in newer iOS/watchOS versions but required for iOS compatibility
-    #if os(iOS)
+    nonisolated func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
+        Task { @MainActor in
+            if let error = error {
+                self.logger.error("❌ UserInfo transfer failed: \(error.localizedDescription)")
+            } else {
+                self.logger.info("✅ UserInfo transfer completed successfully")
+                self.consecutiveFailures = 0
+            }
+        }
+    }
+    
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
-        // Handle session becoming inactive
+        Task { @MainActor in
+            self.isConnected = false
+            self.logger.warning("⚠️ WCSession became inactive")
+            self.updateSyncStatus("⚠️ Connection inactive")
+            self.updateConnectivityHealth()
+        }
     }
     
     nonisolated func sessionDidDeactivate(_ session: WCSession) {
-        // Handle session deactivation
-    }
-    #endif
-}
-
-// MARK: - Container Management
-extension SharedDataManager {
-    private func getWorkingContainer() -> URL? {
-        // First try the App Group container
-        if let appGroupContainer = sharedContainer {
-            // Check if the directory exists or can be created
-            let fileManager = FileManager.default
-            var isDirectory: ObjCBool = false
+        Task { @MainActor in
+            self.isConnected = false
+            self.logger.warning("⚠️ WCSession deactivated, reactivating...")
+            self.updateSyncStatus("🔄 Reconnecting...")
             
-            if fileManager.fileExists(atPath: appGroupContainer.path, isDirectory: &isDirectory) && isDirectory.boolValue {
-                return appGroupContainer
-            } else {
-                // Try to create the App Group directory
-                do {
-                    try fileManager.createDirectory(at: appGroupContainer, withIntermediateDirectories: true, attributes: nil)
-                    logger.info("✅ Created App Group container directory")
-                    return appGroupContainer
-                } catch {
-                    logger.warning("⚠️ Failed to create App Group container, using fallback: \(error.localizedDescription)")
+            // Always try to reactivate
+            WCSession.default.activate()
+            self.updateConnectivityHealth()
+        }
+    }
+    
+    // MARK: - Private Helper Methods
+    
+    private func handleSyncResponse(_ reply: [String: Any]) {
+        logger.info("📥 Received sync response: \(reply)")
+        
+        if let programsDataString = reply["programs"] as? String,
+           let programsData = Data(base64Encoded: programsDataString) {
+            handleProgramsData(programsData)
+        } else if let programsData = reply["programs"] as? Data {
+            handleProgramsData(programsData)
+        } else if let error = reply["error"] as? String {
+            logger.error("❌ Sync response error: \(error)")
+            updateSyncStatus("❌ Sync failed: \(error)")
+            consecutiveFailures += 1
+            updateConnectivityHealth()
+        }
+    }
+    
+    private func handleSyncError(_ error: Error) {
+        logger.error("❌ Sync error: \(error.localizedDescription)")
+        consecutiveFailures += 1
+        
+        retryCount += 1
+        if retryCount < maxRetries {
+            let delay = min(pow(2.0, Double(retryCount)), 30.0) // Exponential backoff: 2, 4, 8, 16, 30 seconds max
+            logger.info("🔄 Retrying sync in \(Int(delay))s... (\(self.retryCount)/\(self.maxRetries))")
+            updateSyncStatus("🔄 Retrying in \(Int(delay))s... (\(self.retryCount)/\(self.maxRetries))")
+            
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                Task { @MainActor in
+                    self.syncFromiPhone()
                 }
             }
+        } else {
+            updateSyncStatus("❌ Sync failed after \(maxRetries) attempts")
+            retryCount = 0
+            
+            // Fall back to loading from App Group
+            loadPrograms()
         }
         
-        // Fallback to Documents directory
-        let fileManager = FileManager.default
+        updateConnectivityHealth()
+    }
+    
+    private func handleProgramsData(_ data: Data) {
         do {
-            try fileManager.createDirectory(at: fallbackContainer, withIntermediateDirectories: true, attributes: nil)
-            logger.info("ℹ️ Using fallback container: \(self.fallbackContainer.path)")
-            return fallbackContainer
+            let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
+            
+            self.syncedPrograms = programs
+            self.lastSyncTime = Date()
+            self.retryCount = 0
+            self.consecutiveFailures = 0
+            
+            updateSyncStatus("✅ Synced \(programs.count) programs")
+            logger.info("✅ Successfully synced \(programs.count) programs")
+            
+            // Save to both App Group and fallback locations
+            savePrograms(programs)
+            saveProgramsToFallback(programs)
+            
+            // Update UI immediately
+            self.objectWillChange.send()
+            
         } catch {
-            logger.error("❌ Failed to create fallback container: \(error.localizedDescription)")
-            return nil
+            logger.error("❌ Failed to decode programs: \(error.localizedDescription)")
+            updateSyncStatus("❌ Decode failed: \(error.localizedDescription)")
+            consecutiveFailures += 1
+        }
+        
+        updateConnectivityHealth()
+    }
+    
+    private func savePrograms(_ programs: [TrainingProgram]) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            logger.error("❌ Failed to get App Group container URL for saving")
+            return
+        }
+        
+        let programsURL = containerURL.appendingPathComponent("programs.json")
+        
+        do {
+            let data = try JSONEncoder().encode(programs)
+            try data.write(to: programsURL)
+            logger.info("✅ Programs saved to App Group container")
+        } catch {
+            logger.error("❌ Failed to save programs to App Group: \(error.localizedDescription)")
         }
     }
+    
+    private func saveProgramsToFallback(_ programs: [TrainingProgram]) {
+        let fileManager = FileManager.default
+        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let fallbackURL = docsURL.appendingPathComponent("backup_programs.json")
+        
+        do {
+            let data = try JSONEncoder().encode(programs)
+            try data.write(to: fallbackURL)
+            logger.info("✅ Programs backed up to fallback location")
+        } catch {
+            logger.error("❌ Failed to save programs to fallback: \(error.localizedDescription)")
+        }
+    }
+    
+    private func updateSyncStatus(_ status: String) {
+        syncStatus = status
+        
+        // Add to sync log
+        let timestamp = DateFormatter.shortDateTime.string(from: Date())
+        syncLog.insert("[\(timestamp)] \(status)", at: 0)
+        
+        // Keep only last 20 entries (increased from 10)
+        if syncLog.count > 20 {
+            syncLog = Array(syncLog.prefix(20))
+        }
+        
+        logger.info("📊 Sync status updated: \(status)")
+    }
+    
+    private func saveSessionToAppGroup(_ session: TrainingSession) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            logger.error("❌ Failed to get App Group container URL for session save")
+            return
+        }
+        
+        let sessionsURL = containerURL.appendingPathComponent("sessions.json")
+        
+        do {
+            var sessions: [TrainingSession] = []
+            
+            // Load existing sessions if they exist
+            if FileManager.default.fileExists(atPath: sessionsURL.path) {
+                do {
+                    let data = try Data(contentsOf: sessionsURL)
+                    sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+                } catch {
+                    logger.warning("⚠️ Couldn't read existing sessions, starting fresh: \(error.localizedDescription)")
+                }
+            }
+            
+            // Check if this session is already saved
+            if !sessions.contains(where: { $0.id == session.id }) {
+                // Add new session
+                sessions.append(session)
+                
+                // Save updated sessions
+                let data = try JSONEncoder().encode(sessions)
+                try data.write(to: sessionsURL)
+                
+                logger.info("✅ Session saved to App Group")
+            } else {
+                logger.info("ℹ️ Session already exists in App Group storage")
+            }
+        } catch {
+            logger.error("❌ Failed to save session to App Group: \(error.localizedDescription)")
+        }
+    }
+    
+    // MARK: - Public Debug/Diagnostic Methods
+    
+    func checkConnectivity() -> String {
+        let session = WCSession.default
+        return """
+        Activation State: \(session.activationState.rawValue)
+        Reachable: \(session.isReachable)
+        Paired: \(session.isPaired)
+        App Installed: \(session.isWatchAppInstalled)
+        Complication Enabled: \(session.isComplicationEnabled)
+        Connectivity Health: \(Int(connectivityHealth * 100))%
+        App Group Access: \(FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) != nil)
+        Programs Synced: \(syncedPrograms.count)
+        Last Sync: \(lastSyncTime?.description ?? "Never")
+        Pending Sessions: \(pendingSessions.count)
+        Consecutive Failures: \(consecutiveFailures)
+        """
+    }
+    
+    func forceSyncNow() {
+        // Reset counters
+        retryCount = 0
+        lastSyncAttempt = nil
+        
+        // Attempt immediate sync
+        syncFromiPhone()
+        
+        // Ping iPhone
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(
+                ["action": "ping", "timestamp": Date().timeIntervalSince1970],
+                replyHandler: { reply in
+                    Task { @MainActor in
+                        self.logger.info("✅ Ping reply received: \(reply)")
+                        self.updateSyncStatus("✅ Connection verified")
+                        self.consecutiveFailures = 0
+                        self.updateConnectivityHealth()
+                    }
+                },
+                errorHandler: { error in
+                    Task { @MainActor in
+                        self.logger.error("❌ Ping failed: \(error.localizedDescription)")
+                        self.consecutiveFailures += 1
+                        self.updateConnectivityHealth()
+                    }
+                }
+            )
+        }
+    }
+}
+
+// MARK: - DateFormatter Extension
+
+extension DateFormatter {
+    static let shortDateTime: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
+        return formatter
+    }()
 }

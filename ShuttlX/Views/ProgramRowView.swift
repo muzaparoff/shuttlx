@@ -12,7 +12,7 @@ struct ProgramRowView: View {
                 
                 Spacer()
                 
-                Text(program.type.rawValue)
+                Text(program.type.displayName)
                     .font(.caption)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 2)

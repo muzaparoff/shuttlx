@@ -2,7 +2,7 @@ import Foundation
 import Combine
 import HealthKit
 
-class DataManager: ObservableObject {
+class DataManager: ObservableObject, @unchecked Sendable {
     @Published var programs: [TrainingProgram] = []
     @Published var sessions: [TrainingSession] = []
     @Published var healthKitAuthorized = false
@@ -50,9 +50,10 @@ class DataManager: ObservableObject {
     private func setupBindings() {
         // When local programs change, save to App Group and notify watch
         $programs
-            .debounce(for: .seconds(0.5), scheduler: DispatchQueue.main)
+            .debounce(for: .seconds(0.1), scheduler: DispatchQueue.main)  // Reduced from 0.5 to 0.1 seconds
             .sink { [weak self] updatedPrograms in
                 self?.saveProgramsToAppGroup()
+                print("📱 Programs changed, syncing \(updatedPrograms.count) to watch...")
                 SharedDataManager.shared.syncProgramsToWatch(updatedPrograms)
             }
             .store(in: &cancellables)
@@ -168,7 +169,14 @@ class DataManager: ObservableObject {
         
         // Force immediate sync without waiting for debounce
         Task { @MainActor in
+            print("🔄 Triggering immediate sync to watch...")
             SharedDataManager.shared.syncProgramsToWatch(programs)
+            
+            // Add a delay and retry mechanism to ensure sync succeeds
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                print("🔄 Retry sync to watch (ensuring delivery)...")
+                SharedDataManager.shared.syncProgramsToWatch(self.programs)
+            }
         }
         
         // Additional debug info

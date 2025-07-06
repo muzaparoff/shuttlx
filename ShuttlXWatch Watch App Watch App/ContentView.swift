@@ -29,11 +29,13 @@ struct ContentView: View {
 }
 
 #Preview {
-    let dataManager = SharedDataManager()
+    let dataManager = SharedDataManager.shared
     let workoutManager = WatchWorkoutManager()
-    workoutManager.setSharedDataManager(dataManager)
     
-    return ContentView()
+    ContentView()
         .environmentObject(dataManager)
         .environmentObject(workoutManager)
+        .onAppear {
+            workoutManager.setSharedDataManager(dataManager)
+        }
 }

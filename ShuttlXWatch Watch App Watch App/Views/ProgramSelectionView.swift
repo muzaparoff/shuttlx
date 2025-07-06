@@ -24,14 +24,14 @@ struct ProgramSelectionView: View {
                 DebugView()
             }
             
-            // Refresh button to manually sync programs
+            // Sync button to manually sync programs from iPhone
             Button(action: {
-                logger.info("🔄 Manual refresh requested")
-                dataManager.refreshProgramsFromiOS()
+                logger.info("🔄 Manual sync requested")
+                dataManager.syncFromiPhone()
             }) {
                 HStack {
                     Image(systemName: "arrow.clockwise")
-                    Text("Refresh Programs")
+                    Text("Sync from iPhone")
                 }
             }
             
@@ -91,6 +91,7 @@ struct ProgramSelectionView: View {
             logger.info("📊 Current program count: \(dataManager.syncedPrograms.count)")
             // Programs are loaded via SharedDataManager
         }
+
     }
     
     private func loadSamplePrograms() {
@@ -124,13 +125,15 @@ struct ProgramSelectionView: View {
 }
 
 #Preview {
-    let dataManager = SharedDataManager()
+    let dataManager = SharedDataManager.shared
     let workoutManager = WatchWorkoutManager()
-    workoutManager.setSharedDataManager(dataManager)
     
-    return NavigationView {
+    NavigationView {
         ProgramSelectionView()
             .environmentObject(dataManager)
             .environmentObject(workoutManager)
+            .onAppear {
+                workoutManager.setSharedDataManager(dataManager)
+            }
     }
 }

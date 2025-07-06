@@ -25,9 +25,17 @@ struct TrainingSession: Identifiable, Codable {
 }
 
 struct CompletedInterval: Identifiable, Codable {
-    let id = UUID()
+    let id: UUID
     var intervalID: UUID
     var actualDuration: TimeInterval
     var averageHeartRate: Double?
     var maxHeartRate: Double?
+    
+    init(intervalID: UUID, actualDuration: TimeInterval, averageHeartRate: Double? = nil, maxHeartRate: Double? = nil) {
+        self.id = UUID()
+        self.intervalID = intervalID
+        self.actualDuration = actualDuration
+        self.averageHeartRate = averageHeartRate
+        self.maxHeartRate = maxHeartRate
+    }
 }

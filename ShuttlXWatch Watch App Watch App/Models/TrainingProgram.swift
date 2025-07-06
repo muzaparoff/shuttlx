@@ -34,10 +34,23 @@ struct TrainingProgram: Identifiable, Codable, Equatable {
 }
 
 enum ProgramType: String, CaseIterable, Codable {
-    case walkRun = "Walk-Run"
-    case hiit = "HIIT" // Future expansion
-    case tabata = "Tabata" // Future expansion
-    case custom = "Custom" // Future expansion
+    case walkRun = "walkRun"
+    case hiit = "hiit" // Future expansion
+    case tabata = "tabata" // Future expansion
+    case custom = "custom" // Future expansion
+    
+    var displayName: String {
+        switch self {
+        case .walkRun: 
+            return "Walk-Run"
+        case .hiit: 
+            return "HIIT"
+        case .tabata: 
+            return "Tabata"
+        case .custom: 
+            return "Custom"
+        }
+    }
     
     var description: String {
         switch self {

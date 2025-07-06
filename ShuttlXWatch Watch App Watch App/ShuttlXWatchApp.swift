@@ -11,9 +11,9 @@ struct ShuttlXWatchApp: App {
     init() {
         logger.info("🚀 ShuttlXWatchApp initialization starting...")
         
-        logger.info("📱 Creating SharedDataManager...")
-        let dataManager = SharedDataManager()
-        logger.info("✅ SharedDataManager created successfully")
+        logger.info("📱 Using SharedDataManager.shared...")
+        let dataManager = SharedDataManager.shared
+        logger.info("✅ SharedDataManager.shared retrieved successfully")
         
         logger.info("⌚ Creating WatchWorkoutManager...")
         let manager = WatchWorkoutManager()
