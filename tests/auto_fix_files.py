@@ -45,25 +45,20 @@ def generate_uuid():
     return str(uuid.uuid4()).replace('-', '').upper()[:24]
 
 def create_backup(project_file):
-    """Create timestamped backup of project file"""
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_file = f"{project_file}.backup_python_{timestamp}"
-    shutil.copy2(project_file, backup_file)
-    print(f"📦 Backup created: {backup_file}")
-    return backup_file
+    """Create a temporary backup in memory only, no file is written"""
+    print("📝 Analyzing project file without creating backups")
+    with open(project_file, 'r') as f:
+        content = f.read()
+    return content
 
 def add_files_to_project(missing_files):
     """Add missing files to project.pbxproj using simple append method"""
     project_file = "ShuttlX.xcodeproj/project.pbxproj"
     
-    # Create backup first
-    backup_file = create_backup(project_file)
+    # No backup creation, just analyze
+    content = create_backup(project_file)
     
     try:
-        # Read project file
-        with open(project_file, 'r') as f:
-            content = f.read()
-        
         # For each missing file, add basic entries
         for file_path in missing_files:
             filename = os.path.basename(file_path)
@@ -91,9 +86,6 @@ def add_files_to_project(missing_files):
         
     except Exception as e:
         print(f"❌ Error processing project file: {e}")
-        # Restore backup
-        shutil.copy2(backup_file, project_file)
-        print(f"🔄 Restored from backup: {backup_file}")
         return False
 
 def main():

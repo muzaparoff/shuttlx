@@ -34,13 +34,25 @@ class DataManager: ObservableObject, @unchecked Sendable {
             saveSessionsToAppGroup()
         }
         
-        // Set DataManager reference in SharedDataManager
-        Task { @MainActor in
-            SharedDataManager.shared.setDataManager(self)
-            // Initial sync to ensure watch is up-to-date
-            SharedDataManager.shared.syncProgramsToWatch(programs)
+        // FIXED: Modified to prevent potential MainActor deadlocks
+        // Set DataManager reference in SharedDataManager using detached task
+        Task.detached {
+            // Set data manager reference first
+            await MainActor.run {
+                SharedDataManager.shared.setDataManager(self)
+            }
+            
+            // Small delay to ensure proper initialization order
+            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 seconds
+            
+            // Then sync programs after a brief delay to avoid startup contention
+            await MainActor.run {
+                print("🔄 Initial sync to watch (delayed to prevent deadlock)...")
+                SharedDataManager.shared.syncProgramsToWatch(self.programs)
+            }
         }
         
+        // Setup bindings on main actor
         Task { @MainActor in
             setupBindings()
         }
@@ -67,7 +79,7 @@ class DataManager: ObservableObject, @unchecked Sendable {
             .store(in: &cancellables)
     }
     
-    private func handleReceivedSessions(_ receivedSessions: [TrainingSession]) {
+    func handleReceivedSessions(_ receivedSessions: [TrainingSession]) {
         var hasChanges = false
         for session in receivedSessions {
             if !sessions.contains(where: { $0.id == session.id }) {
@@ -272,7 +284,7 @@ class DataManager: ObservableObject, @unchecked Sendable {
         }
     }
     
-    private func loadSessionsFromAppGroup() {
+    func loadSessionsFromAppGroup() {
         guard let containerURL = getWorkingContainer() else {
             print("⚠️ No valid container URL available for loading sessions")
             return

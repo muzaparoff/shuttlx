@@ -1,9 +1,9 @@
 import Foundation
-@preconcurrency import WatchConnectivity
+import WatchConnectivity
 import os.log
 
 @MainActor
-class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDelegate {
+class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = SharedDataManager()
     @Published var syncedPrograms: [TrainingProgram] = []
     @Published var syncStatus: String = "Not synced"
@@ -16,7 +16,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     @Published var backgroundSyncEnabled: Bool = true
     
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
-    private let appGroupIdentifier = "group.com.shuttlx.shared" // Changed to match iOS app
+    private let appGroupIdentifier = "group.com.shuttlx.ShuttlX" // Match the test identifier
     private var retryCount = 0
     private let maxRetries = 5 // Increased from 3
     
@@ -57,10 +57,12 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     private func setupBackgroundTasks() {
         // Periodic sync check (every 15 seconds)
         backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
-            guard let self = self, self.backgroundSyncEnabled else { return }
+            guard let self = self else { return }
             
             Task { @MainActor in
-                self.performBackgroundSync()
+                if self.backgroundSyncEnabled {
+                    self.performBackgroundSync()
+                }
             }
         }
         
@@ -105,9 +107,9 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     }
     
     private func retryPendingSessions() {
-        guard !pendingSessions.isEmpty else { return }
+        guard !self.pendingSessions.isEmpty else { return }
         
-        logger.info("🔄 Attempting to sync \(pendingSessions.count) pending sessions")
+        logger.info("🔄 Attempting to sync \(self.pendingSessions.count) pending sessions")
         
         if WCSession.default.isReachable {
             let sessionsToSync = pendingSessions
@@ -268,27 +270,87 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         updateSyncStatus("🔄 Requesting sync from iPhone...")
         lastSyncAttempt = Date()
         
-        // Always try App Group first
+        // Always try App Group first - this is reliable and doesn't require connectivity
+        let programsBefore = syncedPrograms.count
         loadPrograms()
+        let programsAfter = syncedPrograms.count
         
-        // Then try WatchConnectivity if available
-        guard WCSession.default.isReachable else {
-            logger.warning("⚠️ iPhone not reachable for direct sync")
-            updateSyncStatus("⚠️ Using locally cached data")
+        if programsAfter > programsBefore {
+            logger.info("✅ Loaded \(programsAfter - programsBefore) new programs from App Group")
+            updateSyncStatus("✅ Loaded new programs from App Group")
+        }
+        
+        // Then try WatchConnectivity for real-time sync
+        if !verifySessionActive() {
+            logger.warning("⚠️ WatchConnectivity session not active")
+            updateSyncStatus("⚠️ Using App Group data only - session not active")
             return
         }
         
-        // Request fresh data from iPhone
-        let message = ["action": "requestPrograms", "timestamp": Date().timeIntervalSince1970]
+        guard WCSession.default.isReachable else {
+            logger.warning("⚠️ iPhone not reachable for direct sync")
+            updateSyncStatus("⚠️ Using App Group data - iPhone not reachable")
+            return
+        }
+        
+        // Request fresh data from iPhone with improved tracking
+        let requestID = UUID().uuidString
+        let message: [String: Any] = [
+            "action": "requestPrograms", 
+            "timestamp": Date().timeIntervalSince1970,
+            "requestID": requestID
+        ]
+        
+        logger.info("📤 Sending sync request to iPhone with ID: \(requestID)")
+        updateSyncStatus("📤 Requesting latest data from iPhone...")
+        
         WCSession.default.sendMessage(message, replyHandler: { [weak self] reply in
             Task { @MainActor in
+                self?.logger.info("📥 Received sync response for request \(requestID)")
                 self?.handleSyncResponse(reply)
             }
         }, errorHandler: { [weak self] error in
             Task { @MainActor in
+                self?.logger.error("❌ Sync request failed: \(error.localizedDescription)")
                 self?.handleSyncError(error)
+                
+                // Try App Group as fallback after error
+                self?.loadPrograms()
             }
         })
+        
+        // Set a timeout to check if we got a response
+        DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) { [weak self] in
+            guard let self = self else { return }
+            
+            if Date().timeIntervalSince(self.lastSyncAttempt ?? Date()) >= 5.0 {
+                logger.warning("⚠️ Sync request timed out, using App Group data")
+                updateSyncStatus("⚠️ Sync timed out - using locally cached data")
+                
+                // Load from App Group again as fallback
+                self.loadPrograms()
+            }
+        }
+    }
+    
+    // Verify session is active and handle activation if needed
+    private func verifySessionActive() -> Bool {
+        let session = WCSession.default
+        
+        if session.activationState == .activated {
+            return true
+        }
+        
+        if session.activationState == .notActivated {
+            logger.info("🔄 Activating WatchConnectivity session...")
+            session.activate()
+            // Can't wait for activation in this method as it's async
+            // Just return false and rely on App Group sync
+            return false
+        }
+        
+        logger.warning("⚠️ Session in invalid state: \(session.activationState.rawValue)")
+        return false
     }
     
     // MARK: - Session Management
@@ -307,7 +369,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
             
             // 1. Try sending via WCSession if available
             if WCSession.default.isReachable {
-                let message = [
+                let message: [String: Any] = [
                     "action": "saveSession",
                     "sessionData": sessionData.base64EncodedString(),
                     "timestamp": Date().timeIntervalSince1970
@@ -403,17 +465,39 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
             
             if let error = error {
                 self.logger.error("❌ WCSession activation failed: \(error.localizedDescription)")
-                self.updateSyncStatus("❌ Connection failed")
+                self.updateSyncStatus("❌ Connection failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
-            } else {
-                self.logger.info("✅ WCSession activated successfully")
-                self.updateSyncStatus("✅ Connected to iPhone")
-                self.consecutiveFailures = 0
                 
-                // Load programs after successful activation
+                // Still try to load from App Group as fallback
                 self.loadPrograms()
+            } else {
+                if activationState == .activated {
+                    self.logger.info("✅ WCSession activated successfully")
+                    self.updateSyncStatus("✅ Connected to iPhone")
+                    self.consecutiveFailures = 0
+                    
+                    // Always load from App Group first (reliable)
+                    self.loadPrograms()
+                    
+                    // Then attempt to get fresh data after a brief delay
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                        self.syncFromiPhone() // Try active sync now that session is activated
+                    }
+                } else if activationState == .inactive {
+                    self.logger.warning("⚠️ WCSession inactive - possibly companion app not running")
+                    self.updateSyncStatus("⚠️ iPhone app may not be running")
+                    
+                    // Load from App Group as fallback
+                    self.loadPrograms()
+                } else {
+                    self.logger.warning("⚠️ WCSession in unknown state: \(activationState.rawValue)")
+                    self.updateSyncStatus("⚠️ Connection in unknown state")
+                    
+                    // Load from App Group as fallback
+                    self.loadPrograms()
+                }
                 
-                // Try to sync any pending sessions
+                // Try to sync any pending sessions after a short delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
                     Task { @MainActor in
                         self.retryPendingSessions()
@@ -519,6 +603,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         }
     }
     
+    #if os(iOS)
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
         Task { @MainActor in
             self.isConnected = false
@@ -539,6 +624,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
             self.updateConnectivityHealth()
         }
     }
+    #endif
     
     // MARK: - Private Helper Methods
     
@@ -704,9 +790,6 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         return """
         Activation State: \(session.activationState.rawValue)
         Reachable: \(session.isReachable)
-        Paired: \(session.isPaired)
-        App Installed: \(session.isWatchAppInstalled)
-        Complication Enabled: \(session.isComplicationEnabled)
         Connectivity Health: \(Int(connectivityHealth * 100))%
         App Group Access: \(FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) != nil)
         Programs Synced: \(syncedPrograms.count)

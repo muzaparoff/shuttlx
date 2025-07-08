@@ -2,7 +2,7 @@ import Foundation
 import HealthKit
 import CloudKit
 
-struct TrainingSession: Identifiable, Codable {
+struct TrainingSession: Identifiable, Codable, Hashable {
     let id = UUID()
     var programID: UUID
     var programName: String
@@ -22,9 +22,20 @@ struct TrainingSession: Identifiable, Codable {
     enum CodingKeys: String, CodingKey {
         case id, programID, programName, startDate, endDate, duration, averageHeartRate, maxHeartRate, caloriesBurned, distance, completedIntervals
     }
+    
+    // Hashable implementation
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+        hasher.combine(programID)
+        hasher.combine(startDate)
+    }
+    
+    static func == (lhs: TrainingSession, rhs: TrainingSession) -> Bool {
+        return lhs.id == rhs.id && lhs.programID == rhs.programID && lhs.startDate == rhs.startDate
+    }
 }
 
-struct CompletedInterval: Identifiable, Codable {
+struct CompletedInterval: Identifiable, Codable, Hashable {
     let id: UUID
     var intervalID: UUID
     var actualDuration: TimeInterval

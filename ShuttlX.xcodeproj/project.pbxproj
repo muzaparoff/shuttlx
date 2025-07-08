@@ -11,6 +11,18 @@
 		71909D46 /* (null) in Resources */ = {isa = PBXBuildFile; };
 		A56D91122E0940EF00E19F06 /* ShuttlXWatch Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
+		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
+		A5923504 /* TrainingProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923504F /* TrainingProgram.swift */; };
+		A5923505 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
+		A5923506 /* TrainingInterval.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923506F /* TrainingInterval.swift */; };
+		A5923507B /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507F /* DataManager.swift */; };
+		A5923508B /* SharedDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508F /* SharedDataManager.swift */; };
+		A5923509B /* ProgramRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923509F /* ProgramRowView.swift */; };
+		A5923510B /* TrainingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923510F /* TrainingHistoryView.swift */; };
+		A5923511B /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923511F /* SessionRowView.swift */; };
+		A5923512B /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923512F /* ProgramListView.swift */; };
+		A5923513B /* ProgramEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923513F /* ProgramEditorView.swift */; };
+		A5923514B /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923514F /* DebugView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -40,14 +52,21 @@
 /* Begin PBXFileReference section */
 		A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlXWatch Watch App Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A5923504F /* TrainingProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgram.swift; sourceTree = "<group>"; };
+		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
+		A5923506F /* TrainingInterval.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingInterval.swift; sourceTree = "<group>"; };
 		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
+		A5923507F /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 		A5923508 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A5923508F /* SharedDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDataManager.swift; sourceTree = "<group>"; };
 		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A5923509F /* ProgramRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramRowView.swift; sourceTree = "<group>"; };
 		A592350A /* ShuttlX.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlX.entitlements; sourceTree = "<group>"; };
-		PERF1111 /* PerformanceOptimizationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceOptimizationService.swift; sourceTree = "<group>"; };
-		PERF2222 /* AdvancedPerformanceMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdvancedPerformanceMonitor.swift; sourceTree = "<group>"; };
-		PERF3333 /* ViewPerformanceModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewPerformanceModifiers.swift; sourceTree = "<group>"; };
-		TRAIN111 /* TrainingProgramDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgramDetailView.swift; sourceTree = "<group>"; };
+		A5923510F /* TrainingHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHistoryView.swift; sourceTree = "<group>"; };
+		A5923511F /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
+		A5923512F /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
+		A5923513F /* ProgramEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramEditorView.swift; sourceTree = "<group>"; };
+		A5923514F /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -125,8 +144,8 @@
 		A5923600 /* Services */ = {
 			isa = PBXGroup;
 			children = (
-				PERF1111 /* PerformanceOptimizationService.swift */,
-				PERF2222 /* AdvancedPerformanceMonitor.swift */,
+				A5923507F /* DataManager.swift */,
+				A5923508F /* SharedDataManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -134,6 +153,9 @@
 		A5923700 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				A5923504F /* TrainingProgram.swift */,
+				A5923505F /* TrainingSession.swift */,
+				A5923506F /* TrainingInterval.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -141,8 +163,12 @@
 		A5923800 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				TRAIN111 /* TrainingProgramDetailView.swift */,
-				PERF3333 /* ViewPerformanceModifiers.swift */,
+				A5923509F /* ProgramRowView.swift */,
+				A5923510F /* TrainingHistoryView.swift */,
+				A5923511F /* SessionRowView.swift */,
+				A5923512F /* ProgramListView.swift */,
+				A5923513F /* ProgramEditorView.swift */,
+				A5923514F /* DebugView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -268,6 +294,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				A5923502 /* ContentView.swift in Sources */,
+				A5923503 /* ShuttlXApp.swift in Sources */,
+				A5923504 /* TrainingProgram.swift in Sources */,
+				A5923505 /* TrainingSession.swift in Sources */,
+				A5923506 /* TrainingInterval.swift in Sources */,
+				A5923507B /* DataManager.swift in Sources */,
+				A5923508B /* SharedDataManager.swift in Sources */,
+				A5923509B /* ProgramRowView.swift in Sources */,
+				A5923510B /* TrainingHistoryView.swift in Sources */,
+				A5923511B /* SessionRowView.swift in Sources */,
+				A5923512B /* ProgramListView.swift in Sources */,
+				A5923513B /* ProgramEditorView.swift in Sources */,
+				A5923514B /* DebugView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

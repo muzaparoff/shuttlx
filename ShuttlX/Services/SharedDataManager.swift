@@ -1,19 +1,24 @@
-@preconcurrency import WatchConnectivity
+import WatchConnectivity
 import Foundation
 import Combine
+import os.log
 
 @MainActor
-class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDelegate {
+class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = SharedDataManager()
     
     @Published var syncedSessions: [TrainingSession] = []
     @Published var syncLog: [String] = []
     @Published var connectivityHealth: Double = 1.0 // 0.0-1.0 health score
     @Published var lastSyncTime: Date?
+    
+    private var consecutiveFailures: Int = 0
+    private var pendingOperations: [String: Any] = [:]
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SharedDataManager")
 
     private let programsKey = "programs.json"
     private let sessionsKey = "sessions.json"
-    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
+    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.ShuttlX")
     
     // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
     private var fallbackContainer: URL {
@@ -22,9 +27,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     
     // Enhanced sync management
     private var lastPingTime: Date?
-    private var consecutiveFailures = 0
     private var backgroundSyncTimer: Timer?
-    private var pendingOperations = [UUID: Date]()
     
     // Weak reference to DataManager to avoid retain cycles
     private weak var dataManager: DataManager?
@@ -50,17 +53,35 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     // MARK: - Background Tasks
     
     private func setupBackgroundTasks() {
-        // Check for new sessions and connectivity health periodically
-        backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+        // FIXED: Delay timer setup to avoid startup contention which could cause UI freezes
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
             guard let self = self else { return }
             
-            Task { @MainActor in
-                self.performBackgroundSync()
+            print("⏱️ Setting up background sync timer (delayed start)")
+            self.backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+                guard let self = self else { return }
+                
+                // Use detached task to prevent MainActor contention
+                Task.detached {
+                    await MainActor.run {
+                        self.performBackgroundSync()
+                    }
+                }
             }
         }
     }
     
     private func performBackgroundSync() {
+        // FIXED: Add safety check for Main Thread to prevent potential deadlocks
+        if !Thread.isMainThread {
+            // We're supposed to be on the main thread since this is a @MainActor method
+            // Schedule work properly on main thread to avoid deadlocks
+            DispatchQueue.main.async { [weak self] in
+                self?.performBackgroundSync()
+            }
+            return
+        }
+        
         // Check for new sessions in shared storage
         checkForNewSessions()
         
@@ -170,7 +191,12 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     
     private func cleanupPendingOperations() {
         let now = Date()
-        let expiredKeys = pendingOperations.filter { now.timeIntervalSince($0.value) > 300 }.keys
+        let expiredKeys = pendingOperations.filter { 
+            if let date = $0.value as? Date {
+                return now.timeIntervalSince(date) > 300
+            }
+            return true // Remove any non-Date values
+        }.keys
         
         for key in expiredKeys {
             pendingOperations.removeValue(forKey: key)
@@ -190,19 +216,59 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         return dataManager
     }
 
+    // MARK: - Helper Functions
+    
     private func log(_ message: String) {
-        let timestamp = DateFormatter.localizedString(from: Date(), dateStyle: .none, timeStyle: .medium)
-        let logMessage = "\(timestamp): \(message)"
-        print(logMessage)
-        syncLog.insert(logMessage, at: 0)
+        logger.info("\(message)")
+        syncLog.append("[\(dateFormatter.string(from: Date()))] \(message)")
         if syncLog.count > 100 {
-            syncLog.removeLast()
+            syncLog.removeFirst()
+        }
+        
+        // Print to console for debugging
+        print("📱 \(message)")
+    }
+    
+    private var dateFormatter: DateFormatter {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .short
+        formatter.timeStyle = .medium
+        return formatter
+    }
+    
+    private func getWorkingContainer() -> URL? {
+        // Try shared container first
+        if let container = sharedContainer {
+            return container
+        }
+        
+        // Fallback to local documents directory
+        do {
+            try FileManager.default.createDirectory(at: fallbackContainer, withIntermediateDirectories: true)
+            return fallbackContainer
+        } catch {
+            log("❌ Failed to create fallback container: \(error)")
+            return nil
         }
     }
+    
+    // Secondary updateConnectivityHealth implementation removed
     
     // MARK: - Program Sync
     func syncProgramsToWatch(_ programs: [TrainingProgram]) {
         log("📱➡️⌚ Syncing \(programs.count) programs to watch.")
+        
+        // Always check pairing and show user feedback if needed
+        if !checkWatchAppAvailability() {
+            log("⚠️ Watch app not installed or paired - sync will use App Groups only")
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                            object: nil, 
+                                            userInfo: ["status": "watchNotAvailable"])
+            // Still save to App Groups as fallback
+            saveProgramsToSharedStorage(programs)
+            saveProgramsToFallback(programs)
+            return
+        }
         
         // Enhanced WatchConnectivity session diagnostics
         let sessionStatus = getSessionStatus()
@@ -214,14 +280,18 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         // Also save to fallback location
         saveProgramsToFallback(programs)
         
-        // Enhanced session activation check
-        if !ensureSessionActivated() {
-            log("❌ Session activation failed, sync may not work optimally")
+        // Enhanced session activation check with improved waiting logic
+        let activated = waitForSessionActivation(timeout: 5.0)
+        if !activated {
+            log("❌ Session activation failed or timed out - using App Groups only")
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                           object: nil, 
+                                           userInfo: ["status": "activationFailed"])
             consecutiveFailures += 1
-            // Still continue with the other methods
+            return
         }
         
-        // Try WatchConnectivity with enhanced reliability
+        // Try WatchConnectivity with enhanced reliability only if session is activated
         sendProgramsToWatchWithRetry(programs)
         
         // Update connectivity health
@@ -229,7 +299,8 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         
         // Track this sync operation
         let operationID = UUID()
-        pendingOperations[operationID] = Date()
+        let operationKey = operationID.uuidString
+        pendingOperations[operationKey] = Date()
         
         // Debug: Print program details
         for (index, program) in programs.enumerated() {
@@ -238,6 +309,11 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         
         // Set last sync time
         lastSyncTime = Date()
+        
+        // Notify UI of successful sync attempt
+        NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                       object: nil, 
+                                       userInfo: ["status": "syncAttempted"])
     }
     
     private func getSessionStatus() -> String {
@@ -251,47 +327,82 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         """
     }
     
-    private func ensureSessionActivated() -> Bool {
+    // Check if the watch app is available and paired
+    private func checkWatchAppAvailability() -> Bool {
         let session = WCSession.default
         
+        // Check if watch app is installed
+        guard session.isWatchAppInstalled else {
+            log("❌ Watch app is not installed")
+            return false
+        }
+        
+        // Check if watch is paired
+        guard session.isPaired else {
+            log("❌ Watch is not paired with this iPhone")
+            return false
+        }
+        
+        log("✅ Watch app is installed and paired")
+        return true
+    }
+    
+    // New implementation with better waiting logic
+    private func waitForSessionActivation(timeout: TimeInterval) -> Bool {
+        let session = WCSession.default
+        
+        // Already activated
         if session.activationState == .activated {
+            log("✅ Session already activated")
             return true
         }
         
+        // Activate if not activated yet
         if session.activationState == .notActivated {
             log("🔄 Activating WatchConnectivity session...")
             session.activate()
-            
-            // Wait briefly for activation (blocking approach for critical sync)
-            let semaphore = DispatchSemaphore(value: 0)
-            var activated = false
-            
-            // Set up a timeout
-            DispatchQueue.global().asyncAfter(deadline: .now() + 3.0) {
-                semaphore.signal()
+        } else if session.activationState == .inactive {
+            log("⚠️ Session inactive - possibly Apple Watch is not reachable")
+        }
+        
+        // Create a more robust waiting mechanism
+        let startTime = Date()
+        
+        // Use a dispatch group for cleaner waiting
+        let waitGroup = DispatchGroup()
+        waitGroup.enter()
+        
+        // Flag for activation success
+        var activationSuccess = false
+        
+        // Check activation periodically
+        Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
+            if session.activationState == .activated {
+                activationSuccess = true
+                timer.invalidate()
+                waitGroup.leave()
+            } else if Date().timeIntervalSince(startTime) > timeout {
+                // Timeout reached
+                timer.invalidate()
+                waitGroup.leave()
             }
-            
-            // Monitor activation state
-            let timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { timer in
-                if session.activationState == .activated {
-                    activated = true
-                    timer.invalidate()
-                    semaphore.signal()
-                }
-            }
-            
-            semaphore.wait()
-            timer.invalidate()
-            
-            if activated {
-                log("✅ Session activated successfully")
-                consecutiveFailures = 0
-                return true
+        }
+        
+        // Wait with timeout
+        let result = waitGroup.wait(timeout: .now() + timeout)
+        
+        if activationSuccess {
+            log("✅ Session successfully activated")
+            consecutiveFailures = 0
+            return true
+        } else {
+            if result == .timedOut {
+                log("⚠️ Session activation timed out after \(timeout) seconds")
             } else {
-                log("⚠️ Session activation timeout")
-                consecutiveFailures += 1
-                return false
+                log("⚠️ Session activation failed with state: \(session.activationState.rawValue)")
             }
+            consecutiveFailures += 1
+            return false
         }
         
         return false
@@ -300,8 +411,23 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
     private func sendProgramsToWatchWithRetry(_ programs: [TrainingProgram], attempt: Int = 1) {
         guard session.activationState == .activated else {
             log("❌ WC Session not activated. State: \(session.activationState.rawValue)")
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                           object: nil, 
+                                           userInfo: ["status": "notActivated"])
             return
         }
+        
+        // Verify watch reachability
+        if !session.isReachable && attempt == 1 {
+            log("⚠️ Watch is currently not reachable - will use reliable methods and retry")
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                           object: nil, 
+                                           userInfo: ["status": "watchNotReachable"])
+            // Continue anyway since transferUserInfo works even when watch is not reachable
+        }
+        
+        // Create a unique operation ID for tracking
+        let operationID = UUID()
         
         // Use multiple methods to maximize reliability
         do {
@@ -313,12 +439,18 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
                 "programs": encodedString,
                 "timestamp": Date().timeIntervalSince1970,
                 "count": programs.count,
-                "attempt": attempt
+                "attempt": attempt,
+                "operationID": operationID.uuidString,
+                "checksum": calculateChecksum(for: encodedData) // Add checksum for verification
             ]
+            
+            // Track this sync operation
+            let operationKey = operationID.uuidString
+            pendingOperations[operationKey] = Date()
             
             // Method 1: transferUserInfo (reliable, works when watch is locked)
             session.transferUserInfo(userInfo)
-            log("✅ Sent programs via transferUserInfo (attempt \(attempt))")
+            log("✅ Sent programs via transferUserInfo (attempt \(attempt), ID: \(operationID.uuidString))")
             
             // Method 2: updateApplicationContext (overwrites previous context but ensures latest data)
             do {
@@ -326,9 +458,11 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
                     "action": "syncPrograms",
                     "programs": encodedString,
                     "timestamp": Date().timeIntervalSince1970,
-                    "count": programs.count
+                    "count": programs.count,
+                    "operationID": operationID.uuidString,
+                    "checksum": calculateChecksum(for: encodedData)
                 ])
-                log("✅ Updated application context with latest programs")
+                log("✅ Updated application context with latest programs (ID: \(operationID.uuidString))")
             } catch {
                 log("⚠️ Failed to update application context: \(error.localizedDescription)")
             }
@@ -337,13 +471,17 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
             if session.isReachable {
                 session.sendMessage(userInfo, replyHandler: { reply in
                     Task { @MainActor in
-                        self.log("✅ Immediate message sent successfully")
+                        self.log("✅ Immediate message sent successfully with reply: \(reply)")
                         self.consecutiveFailures = 0
                         
-                        // Success - remove from pending operations
-                        if let operationID = reply["operationID"] as? UUID {
-                            self.pendingOperations.removeValue(forKey: operationID)
-                        }
+                        // Success notification
+                        NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                                      object: nil, 
+                                                      userInfo: ["status": "syncSuccessful"])
+                        
+                        // Remove from pending operations
+                        let operationKey = operationID.uuidString
+                        self.pendingOperations.removeValue(forKey: operationKey)
                     }
                 }, errorHandler: { error in
                     Task { @MainActor in
@@ -351,21 +489,43 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
                         self.consecutiveFailures += 1
                         
                         // Retry with exponential backoff if this is not the final attempt
-                        if attempt < 5 { // Increased from 3 to 5 max retries
+                        if attempt < 5 { // Maximum 5 retries
                             let delay = min(pow(2.0, Double(attempt)), 30.0) // Exponential backoff: 2, 4, 8, 16, 30 seconds max
                             self.log("🔄 Will retry in \(Int(delay))s (attempt \(attempt)/5)")
+                            
+                            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                                          object: nil, 
+                                                          userInfo: ["status": "retrying", 
+                                                                    "attempt": attempt,
+                                                                    "nextAttemptIn": delay])
+                            
                             DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
                                 self.sendProgramsToWatchWithRetry(programs, attempt: attempt + 1)
                             }
                         } else {
                             self.log("⚠️ Failed after 5 attempts, but programs are saved to App Group")
+                            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
+                                                          object: nil, 
+                                                          userInfo: ["status": "retriesExhausted"])
                             // Even if immediate sync fails, watch will pick up from App Group eventually
                         }
                     }
                 })
             } else {
                 log("⚠️ Watch not reachable for immediate message, using transferUserInfo only")
-                // Not an error, just informational. Watch will get updates when it becomes available
+                
+                // Schedule a sync check
+                DispatchQueue.main.asyncAfter(deadline: .now() + 10.0) {
+                    let operationKey = operationID.uuidString
+                    if self.pendingOperations[operationKey] != nil {
+                        self.log("🔍 Checking if sync operation \(operationID.uuidString) completed...")
+                        // Still pending after 10s, might need retry
+                        if attempt < 3 {
+                            self.log("🔄 Auto-retrying sync operation")
+                            self.sendProgramsToWatchWithRetry(programs, attempt: attempt + 1)
+                        }
+                    }
+                }
             }
         } catch {
             log("❌ Failed to encode programs for transfer: \(error)")
@@ -475,40 +635,42 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         log("ℹ️ No saved sessions found in any location.")
     }
     
-    private func loadSessionsFromAppGroup() -> [TrainingSession] {
+    func loadSessionsFromAppGroup() -> [TrainingSession] {
         guard let containerURL = getWorkingContainer() else {
-            log("⚠️ No valid container URL available for loading sessions")
+            log("⚠️ [Debug] No valid container URL available")
             return []
         }
         
-        let url = containerURL.appendingPathComponent(sessionsKey)
         do {
+            let url = containerURL.appendingPathComponent(sessionsKey)
             let data = try Data(contentsOf: url)
             let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            log("✅ Loaded \(sessions.count) sessions from App Group.")
+            log("✅ [Debug] Loaded \(sessions.count) sessions from storage")
             return sessions
         } catch {
-            log("⚠️ Failed to load sessions from App Group: \(error)")
-            return []
-        }
-    }
-    
-    private func loadSessionsFromFallback() -> [TrainingSession] {
-        let fileManager = FileManager.default
-        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let fallbackURL = docsURL.appendingPathComponent("backup_sessions.json")
-        
-        do {
-            let data = try Data(contentsOf: fallbackURL)
-            let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            log("✅ Loaded \(sessions.count) sessions from fallback location")
-            return sessions
-        } catch {
-            log("⚠️ Failed to load sessions from fallback: \(error)")
+            log("⚠️ [Debug] Failed to load sessions from storage: \(error)")
             return []
         }
     }
 
+    // Load sessions from fallback storage (if App Group container is not available)
+    private func loadSessionsFromFallback() -> [TrainingSession] {
+        var fallbackSessions: [TrainingSession] = []
+        
+        do {
+            let fallbackURL = fallbackContainer.appendingPathComponent(sessionsKey)
+            if FileManager.default.fileExists(atPath: fallbackURL.path) {
+                let data = try Data(contentsOf: fallbackURL)
+                fallbackSessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+                log("📥 Loaded \(fallbackSessions.count) sessions from fallback storage")
+            }
+        } catch {
+            log("⚠️ Failed to load sessions from fallback: \(error.localizedDescription)")
+        }
+        
+        return fallbackSessions
+    }
+    
     // MARK: - Public accessors for Debugging
     func loadProgramsFromAppGroup() -> [TrainingProgram] {
         guard let containerURL = getWorkingContainer() else {
@@ -516,8 +678,8 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
             return []
         }
         
-        let url = containerURL.appendingPathComponent(programsKey)
         do {
+            let url = containerURL.appendingPathComponent(programsKey)
             let data = try Data(contentsOf: url)
             let programs = try JSONDecoder().decode([TrainingProgram].self, from: data)
             log("✅ [Debug] Loaded \(programs.count) programs from storage")
@@ -527,7 +689,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
             return []
         }
     }
-
+    
     // MARK: - Public Debug/Diagnostic Methods
     
     func checkConnectivity() -> String {
@@ -579,7 +741,7 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         loadSessionsFromAppGroup().forEach { allSessions.insert($0) }
         
         // From fallback
-        loadSessionsFromFallback().forEach { allSessions.insert($0) }
+        allSessions.formUnion(Set(loadSessionsFromFallback()))
         
         // Update syncedSessions with all unique sessions
         syncedSessions = Array(allSessions)
@@ -590,6 +752,21 @@ class SharedDataManager: NSObject, ObservableObject, @preconcurrency WCSessionDe
         
         log("🔄 Reloaded \(syncedSessions.count) unique sessions from all sources")
     }
+    
+    // Ensure the WCSession is activated and ready
+    private func ensureSessionActivated() -> Bool {
+        if WCSession.isSupported() {
+            let session = WCSession.default
+            if session.activationState != .activated {
+                session.delegate = self
+                session.activate()
+                log("🔄 WCSession activation requested")
+                return false
+            }
+            return session.activationState == .activated
+        }
+        return false
+    }
 }
 
 // MARK: - WCSessionDelegate
@@ -599,15 +776,89 @@ extension SharedDataManager {
             if let error = error {
                 log("❌ WC Session activation failed: \(activationState.rawValue), error: \(error.localizedDescription)")
                 consecutiveFailures += 1
+                
+                // Notify UI of activation failure
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("WatchSessionStatus"),
+                    object: nil,
+                    userInfo: [
+                        "status": "activationFailed",
+                        "error": error.localizedDescription,
+                        "activationState": activationState.rawValue
+                    ]
+                )
             } else {
                 log("✅ WC Session activated with state: \(activationState.rawValue)")
                 consecutiveFailures = 0
                 
+                // Notify UI of successful activation
+                NotificationCenter.default.post(
+                    name: NSNotification.Name("WatchSessionStatus"),
+                    object: nil,
+                    userInfo: [
+                        "status": "activated",
+                        "activationState": activationState.rawValue
+                    ]
+                )
+                
                 // Try to resync immediately after successful activation
                 if let dataManager = getDataManager(), activationState == .activated {
-                    syncProgramsToWatch(dataManager.programs)
+                    // Small delay to ensure session is fully ready
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.syncProgramsToWatch(dataManager.programs)
+                    }
                 }
             }
+            
+            updateConnectivityHealth()
+        }
+    }
+    
+    // Handle session reachability changes
+    nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
+        Task { @MainActor in
+            log("📱 Watch reachability changed: \(session.isReachable)")
+            
+            // Notify UI of reachability change
+            NotificationCenter.default.post(
+                name: NSNotification.Name("WatchSessionStatus"),
+                object: nil,
+                userInfo: [
+                    "status": "reachabilityChanged",
+                    "isReachable": session.isReachable
+                ]
+            )
+            
+            // If watch becomes reachable, try to sync
+            if session.isReachable {
+                log("📱 Watch became reachable - attempting sync")
+                if let dataManager = getDataManager() {
+                    // Small delay to ensure reachability is stable
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        self.syncProgramsToWatch(dataManager.programs)
+                    }
+                }
+            }
+            
+            updateConnectivityHealth()
+        }
+    }
+    
+    // Handle watch state changes
+    nonisolated func sessionWatchStateDidChange(_ session: WCSession) {
+        Task { @MainActor in
+            log("📱 Watch state changed - isPaired: \(session.isPaired), isWatchAppInstalled: \(session.isWatchAppInstalled)")
+            
+            // Notify UI of watch state change
+            NotificationCenter.default.post(
+                name: NSNotification.Name("WatchSessionStatus"),
+                object: nil,
+                userInfo: [
+                    "status": "watchStateChanged",
+                    "isPaired": session.isPaired,
+                    "isWatchAppInstalled": session.isWatchAppInstalled
+                ]
+            )
             
             updateConnectivityHealth()
         }
@@ -757,36 +1008,18 @@ extension SharedDataManager {
 
 // MARK: - Container Management
 extension SharedDataManager {
-    private func getWorkingContainer() -> URL? {
-        // First try the App Group container
-        if let appGroupContainer = sharedContainer {
-            // Check if the directory exists or can be created
-            let fileManager = FileManager.default
-            var isDirectory: ObjCBool = false
-            
-            if fileManager.fileExists(atPath: appGroupContainer.path, isDirectory: &isDirectory) && isDirectory.boolValue {
-                return appGroupContainer
-            } else {
-                // Try to create the App Group directory
-                do {
-                    try fileManager.createDirectory(at: appGroupContainer, withIntermediateDirectories: true, attributes: nil)
-                    log("✅ Created App Group container directory")
-                    return appGroupContainer
-                } catch {
-                    log("⚠️ Failed to create App Group container, using fallback: \(error.localizedDescription)")
-                }
-            }
-        }
-        
-        // Fallback to Documents directory
-        let fileManager = FileManager.default
-        do {
-            try fileManager.createDirectory(at: fallbackContainer, withIntermediateDirectories: true, attributes: nil)
-            log("ℹ️ Using fallback container: \(fallbackContainer.path)")
-            return fallbackContainer
-        } catch {
-            log("❌ Failed to create fallback container: \(error.localizedDescription)")
-            return nil
-        }
+    // Second implementation of getWorkingContainer removed - using the one at line 216
+}
+
+// Calculate checksum for data verification
+private func calculateChecksum(for data: Data) -> String {
+    // Simple XOR-based checksum for verification
+    var checksum: UInt32 = 0
+    let buffer = [UInt8](data)
+    
+    for byte in buffer {
+        checksum ^= UInt32(byte)
     }
+    
+    return String(format: "%08x", checksum)
 }

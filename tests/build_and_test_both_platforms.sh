@@ -15,6 +15,7 @@ TEST=false
 LAUNCH=false
 IOS_ONLY=false
 WATCHOS_ONLY=false
+DEBUG_MODE=false  # New flag for debugging freezing issues
 
 # If no arguments provided, default to build and install
 if [ $# -eq 0 ]; then
@@ -50,6 +51,11 @@ while [[ $# -gt 0 ]]; do
             ;;
         --watchos-only)
             WATCHOS_ONLY=true
+            shift
+            ;;
+        --debug-freeze)
+            DEBUG_MODE=true
+            echo "🐞 DEBUG MODE: Enabled for freeze troubleshooting"
             shift
             ;;
         *)
@@ -120,10 +126,19 @@ build_target() {
     
     # Create a temporary script to capture the exact exit code from xcodebuild
     local temp_script="/tmp/build_${platform_name}_script.sh"
+    
+    # Debug mode configuration
+    local debug_flags=""
+    if [ "$DEBUG_MODE" = true ]; then
+        echo "🐞 Adding debug flags for freeze troubleshooting..."
+        debug_flags="OTHER_SWIFT_FLAGS='-D DEBUG_FREEZE'"
+    fi
+    
     cat > "$temp_script" << EOF
 #!/bin/bash
 timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \\
     CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \\
+    $debug_flags \\
     $build_action
 echo "XCODEBUILD_EXIT_CODE: \$?" >&2
 EOF
@@ -236,7 +251,7 @@ auto_fix_missing_files() {
     echo "🔍 Checking for missing Swift files in iOS project target..."
     
     PROJECT_FILE="ShuttlX.xcodeproj/project.pbxproj"
-    BACKUP_FILE="ShuttlX.xcodeproj/project.pbxproj.backup_auto_$(date +%Y%m%d_%H%M%S)"
+    # Removed backup file creation - direct modifications only
     
     # Find all Swift files in the ShuttlX/ directory (excluding test files)
     local missing_files=()
@@ -265,9 +280,8 @@ auto_fix_missing_files() {
     
     echo "🔧 Automatically adding missing files to iOS project target..."
     
-    # Create backup
-    cp "$PROJECT_FILE" "$BACKUP_FILE"
-    echo "📦 Backup created: $BACKUP_FILE"
+    # No backup created - direct modifications only
+    echo "� Modifying project file directly (no backup)"
     
     # Generate unique IDs for new files
     local base_id_num=5923520  # Start after likely existing IDs
@@ -387,10 +401,9 @@ $group_entries" "$temp_file"
             echo "  ✅ $file"
         done
         
-        echo "🔄 Backup available at: $BACKUP_FILE"
         return 0
     else
-        echo "❌ Project file validation failed, restoring from backup"
+        echo "❌ Project file validation failed"
         rm "$temp_file"
         return 1
     fi

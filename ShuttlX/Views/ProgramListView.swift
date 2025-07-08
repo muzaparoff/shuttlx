@@ -9,31 +9,7 @@ struct ProgramListView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // HealthKit Permission Status
-                if !dataManager.healthKitAuthorized {
-                    HStack {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(.red)
-                        VStack(alignment: .leading) {
-                            Text("HealthKit Access Required")
-                                .font(.headline)
-                            Text("Grant access to sync workout data with Apple Watch")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
-                        Button("Grant Access") {
-                            Task {
-                                await dataManager.requestHealthKitPermissions()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                    .padding()
-                    .background(Color(.systemGray6))
-                    .cornerRadius(10)
-                    .padding(.horizontal)
-                }
+                // Banner removed - HealthKit permissions handled at first launch
                 
                 List {
                     ForEach(dataManager.programs) { program in
