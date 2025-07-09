@@ -12,11 +12,6 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var connectivityHealth: Double = 1.0 // 0.0-1.0 health score
     @Published var lastSyncTime: Date?
     
-    // Added to prevent redundant syncing
-    private var lastSyncedProgramsHash: String?
-    private var lastSyncAttemptTime: Date?
-    private var minimumSyncInterval: TimeInterval = 60.0 // At least 60 seconds between syncs
-    
     private var consecutiveFailures: Int = 0
     private var pendingOperations: [String: Any] = [:]
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SharedDataManager")
@@ -263,6 +258,24 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     
     // MARK: - Program Sync
     func syncProgramsToWatch(_ programs: [TrainingProgram]) {
+        // CRITICAL FIX: Check if we're trying to sync the exact same programs too frequently
+        if let lastSyncTime = self.lastSyncAttemptTime, 
+           Date().timeIntervalSince(lastSyncTime) < minimumSyncInterval {
+            
+            // Calculate hash of programs to detect changes
+            let programsHash = calculateProgramsHash(programs)
+            
+            // If programs haven't changed since last sync, don't sync again
+            if programsHash == lastSyncedProgramsHash {
+                log("🔄 Skipping sync - same programs synced recently (within \(Int(minimumSyncInterval))s)")
+                return
+            }
+        }
+        
+        // Update sync tracking
+        lastSyncAttemptTime = Date()
+        lastSyncedProgramsHash = calculateProgramsHash(programs)
+        
         log("📱➡️⌚ Syncing \(programs.count) programs to watch.")
         
         // Always check pairing and show user feedback if needed
@@ -1030,3 +1043,19 @@ private func calculateChecksum(for data: Data) -> String {
     
     return String(format: "%08x", checksum)
 }
+
+// Calculate hash for programs array to detect changes
+private func calculateProgramsHash(_ programs: [TrainingProgram]) -> String {
+    let encoder = JSONEncoder()
+    if let encoded = try? encoder.encode(programs) {
+        return calculateChecksum(for: encoded)
+    }
+    return ""
+}
+
+// Minimum interval between sync attempts (in seconds)
+private let minimumSyncInterval: TimeInterval = 10.0
+
+// Track the last sync attempt time and the hash of the last synced programs
+private var lastSyncAttemptTime: Date?
+private var lastSyncedProgramsHash: String = ""
