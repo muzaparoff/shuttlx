@@ -12,13 +12,20 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var connectivityHealth: Double = 1.0 // 0.0-1.0 health score
     @Published var lastSyncTime: Date?
     
+    // Added to prevent redundant syncing
+    private var lastSyncedProgramsHash: String?
+    private var lastSyncAttemptTime: Date?
+    private var minimumSyncInterval: TimeInterval = 60.0 // At least 60 seconds between syncs
+    
     private var consecutiveFailures: Int = 0
     private var pendingOperations: [String: Any] = [:]
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SharedDataManager")
 
     private let programsKey = "programs.json"
     private let sessionsKey = "sessions.json"
-    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.ShuttlX")
+    // FIXED: Make the App Group identifier consistent with watchOS
+    private let appGroupIdentifier = "group.com.shuttlx.shared"
+    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
     
     // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
     private var fallbackContainer: URL {
@@ -191,7 +198,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     
     private func cleanupPendingOperations() {
         let now = Date()
-        let expiredKeys = pendingOperations.filter { 
+        let expiredKeys = pendingOperations.filter {
             if let date = $0.value as? Date {
                 return now.timeIntervalSince(date) > 300
             }
@@ -261,8 +268,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // Always check pairing and show user feedback if needed
         if !checkWatchAppAvailability() {
             log("⚠️ Watch app not installed or paired - sync will use App Groups only")
-            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                            object: nil, 
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                            object: nil,
                                             userInfo: ["status": "watchNotAvailable"])
             // Still save to App Groups as fallback
             saveProgramsToSharedStorage(programs)
@@ -284,8 +291,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let activated = waitForSessionActivation(timeout: 5.0)
         if !activated {
             log("❌ Session activation failed or timed out - using App Groups only")
-            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                           object: nil, 
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                           object: nil,
                                            userInfo: ["status": "activationFailed"])
             consecutiveFailures += 1
             return
@@ -311,8 +318,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         lastSyncTime = Date()
         
         // Notify UI of successful sync attempt
-        NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                       object: nil, 
+        NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                       object: nil,
                                        userInfo: ["status": "syncAttempted"])
     }
     
@@ -411,8 +418,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private func sendProgramsToWatchWithRetry(_ programs: [TrainingProgram], attempt: Int = 1) {
         guard session.activationState == .activated else {
             log("❌ WC Session not activated. State: \(session.activationState.rawValue)")
-            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                           object: nil, 
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                           object: nil,
                                            userInfo: ["status": "notActivated"])
             return
         }
@@ -420,8 +427,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // Verify watch reachability
         if !session.isReachable && attempt == 1 {
             log("⚠️ Watch is currently not reachable - will use reliable methods and retry")
-            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                           object: nil, 
+            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                           object: nil,
                                            userInfo: ["status": "watchNotReachable"])
             // Continue anyway since transferUserInfo works even when watch is not reachable
         }
@@ -475,8 +482,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                         self.consecutiveFailures = 0
                         
                         // Success notification
-                        NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                                      object: nil, 
+                        NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                                      object: nil,
                                                       userInfo: ["status": "syncSuccessful"])
                         
                         // Remove from pending operations
@@ -493,9 +500,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                             let delay = min(pow(2.0, Double(attempt)), 30.0) // Exponential backoff: 2, 4, 8, 16, 30 seconds max
                             self.log("🔄 Will retry in \(Int(delay))s (attempt \(attempt)/5)")
                             
-                            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                                          object: nil, 
-                                                          userInfo: ["status": "retrying", 
+                            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                                          object: nil,
+                                                          userInfo: ["status": "retrying",
                                                                     "attempt": attempt,
                                                                     "nextAttemptIn": delay])
                             
@@ -504,8 +511,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                             }
                         } else {
                             self.log("⚠️ Failed after 5 attempts, but programs are saved to App Group")
-                            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"), 
-                                                          object: nil, 
+                            NotificationCenter.default.post(name: NSNotification.Name("WatchSyncStatus"),
+                                                          object: nil,
                                                           userInfo: ["status": "retriesExhausted"])
                             // Even if immediate sync fails, watch will pick up from App Group eventually
                         }

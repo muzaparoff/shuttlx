@@ -2,8 +2,25 @@
 
 # ShuttlX - Build and Test Script for iOS and watchOS
 # This script builds and tests both platforms as per the phased rewrite plan
+#
 # Usage: ./build_and_test_both_platforms.sh [flags]
-# Flags: --clean, --build, --install, --test, --launch, --ios-only, --watchos-only
+#
+# Basic Flags:
+#   --clean          Clean before build
+#   --build          Build the project (default if no flags provided)
+#   --install        Install on simulators (default if no flags provided)
+#   --test           Run tests
+#   --launch         Launch apps after installation
+#   --ios-only       Only build iOS targets
+#   --watchos-only   Only build watchOS targets
+#
+# Debug Flags:
+#   --debug-freeze   Enable freeze debugging instrumentation (automatically enables build and install)
+
+# Get the directory where this script is located
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+# Define the project root as the parent of SCRIPT_DIR
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # Note: We handle errors manually rather than using 'set -e' for better control
 
@@ -55,7 +72,9 @@ while [[ $# -gt 0 ]]; do
             ;;
         --debug-freeze)
             DEBUG_MODE=true
-            echo "🐞 DEBUG MODE: Enabled for freeze troubleshooting"
+            BUILD=true
+            INSTALL=true
+            echo "🐞 DEBUG MODE: Enabled for freeze troubleshooting (automatically enabling build and install)"
             shift
             ;;
         *)
@@ -99,19 +118,19 @@ build_target() {
     
     echo "Command line invocation:"
     if [ "$clean_first" = true ]; then
-        echo "    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean"
-        echo "    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build"
+        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean)"
+        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)"
     else
-        echo "    /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build"
+        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)"
     fi
     echo ""
     
     # Clean first if requested
     if [ "$clean_first" = true ]; then
         echo "🧹 Cleaning $platform_name target..."
-        timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
+        (cd "$PROJECT_ROOT" && timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
-            clean 2>&1 | tee "/tmp/clean_${platform_name}.log"
+            clean 2>&1 | tee "/tmp/clean_${platform_name}.log")
         local clean_exit_code=$?
         if [ $clean_exit_code -ne 0 ]; then
             echo "⚠️  Clean failed (exit code: $clean_exit_code), but continuing with build..."
@@ -409,8 +428,34 @@ $group_entries" "$temp_file"
     fi
 }
 
+function run_preflight_checks() {
+    echo "🔍 Running preflight checks..."
+    
+    # Check for Info.plist resources in Copy Bundle Resources
+    if [ -f "$SCRIPT_DIR/remove_infoplist_from_resources.py" ]; then
+        echo "  - Checking for Info.plist duplication in resources..."
+        python3 "$SCRIPT_DIR/remove_infoplist_from_resources.py"
+    else
+        echo "  - ⚠️ Script remove_infoplist_from_resources.py not found, skipping check"
+    fi
+    
+    # Check for conflicting WatchKit keys in Info.plist
+    if [ -f "$SCRIPT_DIR/fix_watchkit_infoplist_keys.py" ]; then
+        echo "  - Checking for conflicting WatchKit keys in Info.plist..."
+        python3 "$SCRIPT_DIR/fix_watchkit_infoplist_keys.py"
+    else
+        echo "  - ⚠️ Script fix_watchkit_infoplist_keys.py not found, skipping check"
+    fi
+    
+    echo "✅ Preflight checks completed"
+    echo ""
+}
+
 # Main build logic
 if [ "$BUILD" = true ]; then
+    # Run preflight checks before building
+    run_preflight_checks
+    
     build_failed=false
     
     if [ "$IOS_ONLY" != true ]; then
@@ -440,9 +485,9 @@ if [ "$BUILD" = true ]; then
         if ! auto_fix_missing_files; then
             echo "⚠️  Advanced project file manipulation failed, trying Python alternative..."
             if command -v python3 >/dev/null 2>&1; then
-                python3 auto_fix_files.py
+                python3 "${SCRIPT_DIR}/auto_fix_files.py"
             else
-                echo "💡 Alternative: Run 'python3 auto_fix_files.py' to get detailed manual instructions"
+                echo "💡 Alternative: Run 'python3 ${SCRIPT_DIR}/auto_fix_files.py' to get detailed manual instructions"
             fi
         fi
         

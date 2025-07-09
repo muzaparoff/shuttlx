@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		 = {isa = PBXBuildFile; };
+		 = {isa = PBXBuildFile; };
 		A56D91122E0940EF00E19F06 /* ShuttlXWatch Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
@@ -72,7 +74,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Assets.xcassets,
-				Info.plist,
 			);
 			target = A56D91072E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */;
 		};
@@ -266,6 +267,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				
+				
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

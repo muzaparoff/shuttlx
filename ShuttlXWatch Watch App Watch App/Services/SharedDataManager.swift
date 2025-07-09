@@ -16,7 +16,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var backgroundSyncEnabled: Bool = true
     
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
-    private let appGroupIdentifier = "group.com.shuttlx.ShuttlX" // Match the test identifier
+    private let appGroupIdentifier = "group.com.shuttlx.shared" // Updated to match iOS app
     private var retryCount = 0
     private let maxRetries = 5 // Increased from 3
     
@@ -296,7 +296,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // Request fresh data from iPhone with improved tracking
         let requestID = UUID().uuidString
         let message: [String: Any] = [
-            "action": "requestPrograms", 
+            "action": "requestPrograms",
             "timestamp": Date().timeIntervalSince1970,
             "requestID": requestID
         ]
@@ -418,15 +418,16 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
     
-    private func sendSessionViaUserInfo(_ session: TrainingSession, sessionData: Data) {
+    private func sendSessionViaUserInfo(_ session: TrainingSession, sessionData: Data, transferID: String = UUID().uuidString) {
         let userInfo = [
             "action": "saveSession",
             "sessionData": sessionData.base64EncodedString(),
             "timestamp": Date().timeIntervalSince1970,
-            "sessionID": session.id.uuidString
+            "sessionID": session.id.uuidString,
+            "transferID": transferID
         ] as [String : Any]
         
-        let transferID = WCSession.default.transferUserInfo(userInfo)
+        let transfer = WCSession.default.transferUserInfo(userInfo)
         logger.info("📤 Session queued via transferUserInfo (ID: \(transferID))")
         updateSyncStatus("📤 Session queued for background sync")
     }
