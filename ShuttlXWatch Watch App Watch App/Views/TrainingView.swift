@@ -2,25 +2,205 @@ import SwiftUI
 
 struct TrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @State private var selectedTab = 0
+    @State private var showingSaveConfirmation = false
+    @State private var showingErrorMessage = false
+    @State private var errorMessage = ""
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode // Added for redundant dismissal
+    @State private var shouldDismiss = false // Flag to trigger dismissal
     
     var body: some View {
-        VStack(spacing: 6) {
-            if let program = workoutManager.currentProgram,
-               let currentInterval = workoutManager.currentInterval {
-                CurrentPhaseView(
-                    programType: program.type,
-                    currentInterval: currentInterval,
-                    workLabel: program.type.workPhaseLabel,
-                    restLabel: program.type.restPhaseLabel
-                )
+        TabView(selection: $selectedTab) {
+            // Tab 1: Main Timer View
+            VStack(spacing: 0) {
+                // Current interval indicator at the top with clear visibility
+                if let program = workoutManager.currentProgram,
+                   let currentInterval = workoutManager.currentInterval {
+                    
+                    // Phase indicator (Run/Walk) at the very top
+                    CurrentPhaseView(
+                        programType: program.type,
+                        currentInterval: currentInterval,
+                        workLabel: program.type.workPhaseLabel,
+                        restLabel: program.type.restPhaseLabel
+                    )
+                    .padding(.top, 2)
+                    .padding(.bottom, 4)
+                }
+                
+                Spacer(minLength: 0)
+                
+                // Large Apple-style timer with consistent monospaced digits
+                AppleStyleTimerView()
+                
+                Spacer(minLength: 0)
+                
+                // Metrics grid with consistent styling
+                MetricsGridView()
+                
+                // Emergency exit button for when other dismiss methods fail
+                if shouldDismiss {
+                    Button("Return to Home") {
+                        forceDismiss()
+                    }
+                    .foregroundColor(.blue)
+                    .padding(.bottom, 5)
+                }
             }
+            .tag(0)
             
-            AppleStyleTimerView()
-            MetricsGridView()
-            WorkoutControlsView()
+            // Tab 2: Full Controls View
+            VStack(spacing: 16) {
+                Text("Workout Controls")
+                    .font(.system(size: 16, weight: .semibold))
+                
+                Spacer()
+                
+                // Main control buttons with clear labels
+                VStack(spacing: 20) {
+                    Button(action: {
+                        if workoutManager.isWorkoutActive {
+                            workoutManager.pauseWorkout()
+                        } else {
+                            workoutManager.resumeWorkout()
+                        }
+                    }) {
+                        HStack {
+                            Image(systemName: workoutManager.isWorkoutActive ? "pause.fill" : "play.fill")
+                            Text(workoutManager.isWorkoutActive ? "Pause" : "Resume")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(workoutManager.isWorkoutActive ? .orange : .green)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.black.opacity(0.2))
+                        )
+                    }
+                    
+                    Button(action: {
+                        showingSaveConfirmation = true
+                    }) {
+                        HStack {
+                            Image(systemName: "xmark.circle.fill")
+                            Text("End Training")
+                        }
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.red)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color.black.opacity(0.2))
+                        )
+                    }
+                    
+                    // Emergency exit button when all other dismissal methods fail
+                    if shouldDismiss {
+                        Button("Return to Home") {
+                            forceDismiss()
+                        }
+                        .foregroundColor(.blue)
+                    }
+                }
+                .padding(.horizontal)
+                
+                Spacer()
+                
+                // Training progress information
+                if let program = workoutManager.currentProgram {
+                    VStack(spacing: 8) {
+                        Text("Program: \(program.name)")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                        
+                        // Use program.intervals.count instead of totalIntervals
+                        Text("Interval \(workoutManager.currentIntervalIndex + 1)/\(program.intervals.count)")
+                            .font(.footnote)
+                            .foregroundColor(.secondary)
+                    }
+                }
+            }
+            .tag(1)
         }
         .navigationTitle(workoutManager.currentProgram?.name ?? "Training")
         .navigationBarTitleDisplayMode(.inline)
+        .tabViewStyle(PageTabViewStyle())
+        .alert("End Training", isPresented: $showingSaveConfirmation) {
+            Button(role: .destructive, action: {
+                print("🔄 End & Save button pressed")
+                // Save data first (this always works even without HealthKit)
+                workoutManager.saveWorkoutData()
+                
+                // Try to end workout (might fail due to HealthKit permissions)
+                do {
+                    try workoutManager.stopWorkout()
+                    print("✅ Workout ended successfully")
+                } catch {
+                    print("⚠️ Error ending workout: \(error)")
+                    // We'll still proceed with dismissal
+                }
+                
+                // Use multiple dismiss techniques to ensure we exit
+                forceDismiss()
+            }) {
+                Text("End & Save")
+            }
+            
+            Button(role: .cancel, action: {
+                print("🔄 Cancel button pressed")
+                // Just dismiss without saving
+                forceDismiss()
+            }) {
+                Text("Cancel")
+            }
+        } message: {
+            Text("Do you want to save this training session?")
+        }
+        .alert("Error", isPresented: $showingErrorMessage) {
+            Button("OK") {
+                // Always dismiss view after error
+                forceDismiss()
+            }
+        } message: {
+            Text(errorMessage)
+        }
+        .onAppear {
+            // Enable emergency exit after a delay if something goes wrong
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5.0) {
+                shouldDismiss = true
+            }
+        }
+    }
+    
+    // Force dismissal using multiple techniques to ensure it works
+    private func forceDismiss() {
+        print("🔄 Attempting to force dismiss the view")
+        
+        // First try the SwiftUI dismissal
+        dismiss()
+        
+        // Also try presentation mode dismissal as fallback
+        presentationMode.wrappedValue.dismiss()
+        
+        // Add a small delay and try again in case the first attempt doesn't work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            dismiss()
+            presentationMode.wrappedValue.dismiss()
+            
+            // Set state variables that might prevent dismissal
+            workoutManager.isWorkoutActive = false
+            
+            // Try one more time after another delay
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                dismiss()
+                presentationMode.wrappedValue.dismiss()
+                
+                print("🏠 Multiple dismiss attempts completed")
+            }
+        }
     }
 }
 
@@ -29,34 +209,58 @@ struct CurrentPhaseView: View {
     let currentInterval: TrainingInterval
     let workLabel: String
     let restLabel: String
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
     
     private var phaseLabel: String {
         currentInterval.phase == .work ? workLabel : restLabel
     }
     
     private var phaseColor: Color {
-        currentInterval.phase == .work ? .red : .blue
+        currentInterval.phase == .work ? .green : .orange
+    }
+    
+    private var phaseIcon: String {
+        currentInterval.phase == .work ? "figure.run" : "figure.walk"
     }
     
     var body: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(phaseColor)
-                .frame(width: 8, height: 8)
+        VStack(spacing: 2) {
+            // Phase indicator with icon and label
+            HStack(spacing: 6) {
+                Image(systemName: phaseIcon)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(phaseColor)
+                
+                Text(phaseLabel.uppercased())
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundColor(phaseColor)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 2)
             
-            Text(phaseLabel.uppercased())
-                .font(.caption2)
-                .fontWeight(.semibold)
-                .foregroundColor(phaseColor)
-            
-            Text("•")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-            
-            Text(currentInterval.intensity.rawValue)
-                .font(.caption2)
-                .foregroundColor(.secondary)
+            // Intensity and elapsed time info
+            HStack {
+                Text(currentInterval.intensity.rawValue)
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                
+                Spacer()
+                
+                // Show elapsed workout time using the new public property
+                Text("Total: \(formatElapsedTime(workoutManager.elapsedWorkoutTime))")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 8)
         }
+        .padding(.vertical, 4)
+        .background(Color.black.opacity(0.2))
+    }
+    
+    private func formatElapsedTime(_ elapsed: TimeInterval) -> String {
+        let minutes = Int(elapsed / 60)
+        let seconds = Int(elapsed.truncatingRemainder(dividingBy: 60))
+        return String(format: "%02d:%02d", minutes, seconds)
     }
 }
 
@@ -64,16 +268,80 @@ struct AppleStyleTimerView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     
     var body: some View {
-        VStack(spacing: 4) {
-            Text(formatTime(workoutManager.timeRemaining))
-                .font(.system(size: 48, weight: .light, design: .rounded))
-                .foregroundColor(.primary)
-                .monospacedDigit()
+        ZStack {
+            // Circular progress ring - background
+            Circle()
+                .stroke(lineWidth: 12)
+                .opacity(0.3)
+                .foregroundColor(Color.gray)
             
-            Text("Interval \(workoutManager.currentIntervalIndex + 1)")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            // Progress indicator - fills as time counts down
+            Circle()
+                .trim(from: 0.0, to: progressFraction)
+                .stroke(style: StrokeStyle(
+                    lineWidth: 12,
+                    lineCap: .round
+                ))
+                .foregroundColor(ringColor)
+                .rotationEffect(Angle(degrees: 270.0))
+                .animation(.linear(duration: 0.3), value: progressFraction)
+            
+            // Timer and interval information
+            VStack(spacing: 4) {
+                // Large, bold digital timer in the center
+                Text(formatTime(workoutManager.timeRemaining))
+                    .font(.system(size: 54, weight: .semibold, design: .monospaced))
+                    .foregroundColor(.white)
+                    .minimumScaleFactor(0.8)
+                    .frame(maxWidth: .infinity)
+                
+                // Interval information below timer
+                if let program = workoutManager.currentProgram {
+                    VStack(spacing: 2) {
+                        // Current interval number
+                        Text("Interval \(workoutManager.currentIntervalIndex + 1)/\(program.intervals.count)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundColor(.gray)
+                        
+                        // Next interval preview if available
+                        if workoutManager.currentIntervalIndex + 1 < program.intervals.count {
+                            let nextInterval = program.intervals[workoutManager.currentIntervalIndex + 1]
+                            let nextPhaseLabel = nextInterval.phase == .work ?
+                                program.type.workPhaseLabel : program.type.restPhaseLabel
+                            
+                            HStack(spacing: 4) {
+                                Image(systemName: nextInterval.phase == .work ? "figure.run" : "figure.walk")
+                                    .font(.system(size: 10))
+                                
+                                Text("Next: \(nextPhaseLabel) \(formatTime(nextInterval.duration))")
+                                    .font(.system(size: 12))
+                            }
+                            .foregroundColor(.gray.opacity(0.8))
+                        }
+                    }
+                }
+            }
         }
+        .padding(.horizontal, 8)
+    }
+    
+    // Calculate progress fraction for the ring (0.0 to 1.0)
+    private var progressFraction: CGFloat {
+        guard let currentInterval = workoutManager.currentInterval else { return 0 }
+        let totalDuration = currentInterval.duration
+        let remaining = workoutManager.timeRemaining
+        
+        // Ensure we don't divide by zero
+        guard totalDuration > 0 else { return 0 }
+        
+        // Calculate how much of the interval has completed (0.0 - 1.0)
+        return CGFloat(1.0 - (remaining / totalDuration))
+    }
+    
+    // Dynamic color based on current phase
+    private var ringColor: Color {
+        guard let currentInterval = workoutManager.currentInterval else { return .blue }
+        return currentInterval.phase == .work ? .green : .orange
     }
     
     private func formatTime(_ timeInterval: TimeInterval) -> String {
@@ -87,7 +355,7 @@ struct MetricsGridView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     
     var body: some View {
-        HStack(spacing: 16) {
+        HStack(spacing: 12) {
             MetricView(
                 value: workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "--",
                 unit: "BPM",
@@ -102,6 +370,7 @@ struct MetricsGridView: View {
                 color: .orange
             )
         }
+        .padding(.horizontal)
     }
 }
 
@@ -113,55 +382,25 @@ struct MetricView: View {
     
     var body: some View {
         VStack(spacing: 2) {
-            Image(systemName: icon)
-                .font(.caption2)
-                .foregroundColor(color)
-            
-            Text(value)
-                .font(.system(size: 16, weight: .semibold, design: .rounded))
-                .monospacedDigit()
+            HStack(alignment: .center, spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 12))
+                    .foregroundColor(color)
+                
+                Text(value)
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+            }
             
             Text(unit)
-                .font(.caption2)
+                .font(.system(size: 10))
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
     }
 }
 
-struct WorkoutControlsView: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
-    
-    var body: some View {
-        HStack(spacing: 20) {
-            Button(action: {
-                if workoutManager.isWorkoutActive {
-                    workoutManager.pauseWorkout()
-                } else {
-                    workoutManager.resumeWorkout()
-                }
-            }) {
-                Image(systemName: workoutManager.isWorkoutActive ? "pause.fill" : "play.fill")
-                    .font(.title2)
-                    .foregroundColor(workoutManager.isWorkoutActive ? .orange : .green)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .frame(width: 44, height: 44)
-            .background(Circle().fill(Color.gray.opacity(0.3)))
-            
-            Button(action: {
-                workoutManager.stopWorkout()
-            }) {
-                Image(systemName: "stop.fill")
-                    .font(.title2)
-                    .foregroundColor(.red)
-            }
-            .buttonStyle(PlainButtonStyle())
-            .frame(width: 44, height: 44)
-            .background(Circle().fill(Color.gray.opacity(0.3)))
-        }
-    }
-}
+// Note: We're removing the old WorkoutControlsView since its functionality is now integrated directly in the tabs
 
 #Preview {
     NavigationView {

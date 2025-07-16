@@ -296,6 +296,41 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentInterval = program.intervals[currentIntervalIndex]
         startInterval()
     }
+    
+    /// Public accessor for workout start time (if available)
+    var elapsedWorkoutTime: TimeInterval {
+        if let startTime = workoutStartTime {
+            return Date().timeIntervalSince(startTime)
+        }
+        return 0
+    }
+    
+    /// Saves workout data without relying on HealthKit session state
+    func saveWorkoutData() {
+        // Create and save session regardless of workout session state
+        if let program = currentProgram,
+           let startTime = workoutStartTime {
+            
+            print("📊 Sending training session to iOS...")
+            
+            let session = TrainingSession(
+                programID: program.id,
+                programName: program.name,
+                startDate: startTime,
+                endDate: Date(),
+                duration: Date().timeIntervalSince(startTime),
+                averageHeartRate: Double(heartRate),
+                maxHeartRate: Double(heartRate), // TODO: Track actual max heart rate
+                caloriesBurned: Double(calories),
+                distance: 0.0, // TODO: Track actual distance
+                completedIntervals: completedIntervals
+            )
+            
+            // Send session to iPhone via SharedDataManager
+            sharedDataManager?.sendSessionToiOS(session)
+            print("⌚➡️📱 Session sent to iOS: \(session.programName), Duration: \(Int(session.duration))s")
+        }
+    }
 }
 
 // MARK: - HKWorkoutSessionDelegate

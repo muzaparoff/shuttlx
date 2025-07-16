@@ -1,9 +1,76 @@
 import SwiftUI
 import HealthKit
 
+// MARK: - App Settings Model
+
+/// Model for app appearance settings
+enum AppAppearance: String, CaseIterable, Identifiable {
+    case system = "System"
+    case light = "Light"
+    case dark = "Dark"
+    
+    var id: String { self.rawValue }
+    
+    /// Convert to ColorScheme or nil for system default
+    var colorScheme: ColorScheme? {
+        switch self {
+        case .light: return .light
+        case .dark: return .dark
+        case .system: return nil
+        }
+    }
+    
+    var icon: String {
+        switch self {
+        case .system: return "circle.lefthalf.filled"
+        case .light: return "sun.max.fill"
+        case .dark: return "moon.fill"
+        }
+    }
+}
+
+/// Model for managing app settings
+class AppSettings: ObservableObject {
+    /// Keys for UserDefaults
+    private enum Keys {
+        static let appearance = "appearance"
+        static let syncIntervalSeconds = "syncIntervalSeconds"
+    }
+    
+    /// Published properties for UI binding
+    @Published var appearance: AppAppearance {
+        didSet {
+            UserDefaults.standard.set(appearance.rawValue, forKey: Keys.appearance)
+        }
+    }
+    
+    @Published var syncIntervalSeconds: Int {
+        didSet {
+            UserDefaults.standard.set(syncIntervalSeconds, forKey: Keys.syncIntervalSeconds)
+        }
+    }
+    
+    /// Available sync interval options
+    let syncIntervalOptions = [3, 5, 10, 30, 60]
+    
+    init() {
+        // Load appearance setting from UserDefaults or use system default
+        let appearanceString = UserDefaults.standard.string(forKey: Keys.appearance) ?? AppAppearance.system.rawValue
+        self.appearance = AppAppearance(rawValue: appearanceString) ?? .system
+        
+        // Load sync interval settings from UserDefaults or use defaults
+        self.syncIntervalSeconds = UserDefaults.standard.integer(forKey: Keys.syncIntervalSeconds)
+        if self.syncIntervalSeconds == 0 {
+            self.syncIntervalSeconds = 3 // Default to 3 seconds if not set
+        }
+    }
+}
+
+// MARK: - Settings View
+
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
-    @StateObject private var appSettings = AppSettings()
+    @EnvironmentObject var appSettings: AppSettings
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showSuccessMessage = false
@@ -80,10 +147,6 @@ struct SettingsView: View {
                         }
                     }
                 }
-                
-                Button("Show Debug View") {
-                    // Implementation for debug view
-                }
             }
             
             // Data Management Section
@@ -138,7 +201,6 @@ struct SettingsView: View {
             : nil
         )
         .animation(.easeInOut, value: showSuccessMessage)
-        .preferredColorScheme(appSettings.appearance.colorScheme)
     }
     
     private func formatLastSyncTime() -> String {
@@ -154,7 +216,7 @@ struct SettingsView: View {
     }
 }
 
-// Add Toast message view
+// Toast message view
 struct ToastView: View {
     var message: String
     var systemImage: String
@@ -178,7 +240,7 @@ struct ToastView: View {
     }
 }
 
-// Keep the existing HealthPermissionsInfoView
+// Health Permissions Info View
 struct HealthPermissionsInfoView: View {
     var body: some View {
         NavigationView {
@@ -219,15 +281,6 @@ struct HealthPermissionsInfoView: View {
             .navigationBarItems(trailing: Button("Done") {
                 // Dismiss sheet
             })
-        }
-    }
-}
-
-struct SettingsView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            SettingsView()
-                .environmentObject(DataManager())
         }
     }
 }

@@ -7,6 +7,11 @@ class DataManager: ObservableObject, @unchecked Sendable {
     @Published var sessions: [TrainingSession] = []
     @Published var healthKitAuthorized = false
     
+    // CRITICAL FIX: Add timestamp tracking to prevent rapid session processing
+    private var lastSessionProcessTime: Date?
+    private var processedSessionIds = Set<UUID>()
+    private var sessionProcessingLock = false
+    
     private var cancellables = Set<AnyCancellable>()
     private let healthStore = HKHealthStore()
     
@@ -80,8 +85,33 @@ class DataManager: ObservableObject, @unchecked Sendable {
     }
     
     func handleReceivedSessions(_ receivedSessions: [TrainingSession]) {
+        // CRITICAL FIX: Throttle session processing to avoid UI freezes
+        let now = Date()
+        if let lastProcessTime = lastSessionProcessTime {
+            let timeInterval = now.timeIntervalSince(lastProcessTime)
+            // If processing was done less than 0.5 seconds ago, ignore this batch
+            if timeInterval < 0.5 {
+                print("⏱️ Throttled session processing to prevent UI freeze")
+                return
+            }
+        }
+        lastSessionProcessTime = now
+        
         var hasChanges = false
         for session in receivedSessions {
+            // Deduplicate received sessions
+            guard !processedSessionIds.contains(session.id) else {
+                print("🔄 Duplicate session received, ignoring: \(session.id)")
+                continue
+            }
+            processedSessionIds.insert(session.id)
+            
+            // Limit the number of sessions processed at once to avoid spikes
+            guard sessions.count < 100 else {
+                print("⚠️ Session limit reached, not processing: \(session.id)")
+                continue
+            }
+            
             if !sessions.contains(where: { $0.id == session.id }) {
                 sessions.append(session)
                 hasChanges = true

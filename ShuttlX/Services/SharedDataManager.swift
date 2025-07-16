@@ -12,6 +12,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var connectivityHealth: Double = 1.0 // 0.0-1.0 health score
     @Published var lastSyncTime: Date?
     
+    // Added to prevent redundant syncing - moved from global scope
+    private var lastSyncAttemptTime: Date?
+    private var lastSyncedProgramsHash: String = ""
+    private var minimumSyncInterval: TimeInterval = 10.0 // At least 10 seconds between syncs
+    
     private var consecutiveFailures: Int = 0
     private var pendingOperations: [String: Any] = [:]
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SharedDataManager")
@@ -712,6 +717,44 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     
     // MARK: - Public Debug/Diagnostic Methods
     
+    // Added cleanup function to purge excessive sessions
+    func purgeAllSessionsFromStorage() {
+        // Clear in-memory sessions
+        syncedSessions = []
+        
+        // Clear from App Group storage
+        if let containerURL = getWorkingContainer() {
+            let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
+            do {
+                // Save empty array to file
+                try JSONEncoder().encode([TrainingSession]()).write(to: sessionsURL)
+                log("🧹 Purged all sessions from shared storage")
+            } catch {
+                log("⚠️ Failed to purge sessions from shared storage: \(error)")
+            }
+        }
+        
+        // Clear from fallback storage
+        let fileManager = FileManager.default
+        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let fallbackURL = docsURL.appendingPathComponent("backup_sessions.json")
+        
+        do {
+            // Save empty array to file
+            try JSONEncoder().encode([TrainingSession]()).write(to: fallbackURL)
+            log("🧹 Purged all sessions from fallback storage")
+        } catch {
+            log("⚠️ Failed to purge sessions from fallback: \(error)")
+        }
+        
+        // Notify UI of cleanup
+        NotificationCenter.default.post(
+            name: NSNotification.Name("SessionStorageStatus"),
+            object: nil,
+            userInfo: ["status": "purged"]
+        )
+    }
+    
     func checkConnectivity() -> String {
         let session = WCSession.default
         return """
@@ -1052,10 +1095,3 @@ private func calculateProgramsHash(_ programs: [TrainingProgram]) -> String {
     }
     return ""
 }
-
-// Minimum interval between sync attempts (in seconds)
-private let minimumSyncInterval: TimeInterval = 10.0
-
-// Track the last sync attempt time and the hash of the last synced programs
-private var lastSyncAttemptTime: Date?
-private var lastSyncedProgramsHash: String = ""
