@@ -24,7 +24,7 @@ platform :ios do
     scan(
       project: "ShuttlX.xcodeproj",
       scheme: "ShuttlX",
-      device: "iPhone 16 Pro",
+      destination: "generic/platform=iOS Simulator",
       clean: true,
       build_for_testing: true
     )
@@ -33,9 +33,9 @@ platform :ios do
     # so we only verify it compiles)
     xcodebuild(
       project: "ShuttlX.xcodeproj",
-      scheme: "ShuttlXWatch Watch App",
+      scheme: "ShuttlX Watch App",
       sdk: "watchsimulator",
-      destination: "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)",
+      destination: "generic/platform=watchOS Simulator",
       build_settings: {
         "CODE_SIGNING_ALLOWED" => "NO"
       },

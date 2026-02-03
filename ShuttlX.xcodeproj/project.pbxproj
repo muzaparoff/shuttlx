@@ -7,7 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		A56D91122E0940EF00E19F06 /* ShuttlXWatch Watch App Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A56D91122E0940EF00E19F06 /* ShuttlX Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
 		A5923504 /* TrainingProgram.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923504F /* TrainingProgram.swift */; };
@@ -34,7 +34,7 @@
 			containerPortal = A59234D6 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = A56D91072E0940ED00E19F06;
-			remoteInfo = "ShuttlXWatch Watch App Watch App";
+			remoteInfo = "ShuttlX Watch App";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -45,7 +45,7 @@
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolderSpec = 16;
 			files = (
-				A56D91122E0940EF00E19F06 /* ShuttlXWatch Watch App Watch App.app in Embed Watch Content */,
+				A56D91122E0940EF00E19F06 /* ShuttlX Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -53,7 +53,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlXWatch Watch App Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlX Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5923504F /* TrainingProgram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingProgram.swift; sourceTree = "<group>"; };
 		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
@@ -79,23 +79,23 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		A56D91222E09470F00E19F06 /* Exceptions for "ShuttlXWatch Watch App Watch App" folder in "ShuttlXWatch Watch App Watch App" target */ = {
+		A56D91222E09470F00E19F06 /* Exceptions for "ShuttlX Watch App" folder in "ShuttlX Watch App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Assets.xcassets,
 				Info.plist,
 			);
-			target = A56D91072E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */;
+			target = A56D91072E0940ED00E19F06 /* ShuttlX Watch App */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
-		A56D91092E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */ = {
+		A56D91092E0940ED00E19F06 /* ShuttlX Watch App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				A56D91222E09470F00E19F06 /* Exceptions for "ShuttlXWatch Watch App Watch App" folder in "ShuttlXWatch Watch App Watch App" target */,
+				A56D91222E09470F00E19F06 /* Exceptions for "ShuttlX Watch App" folder in "ShuttlX Watch App" target */,
 			);
-			path = "ShuttlXWatch Watch App Watch App";
+			path = "ShuttlX Watch App";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -122,7 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				A59234E0 /* ShuttlX */,
-				A56D91092E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */,
+				A56D91092E0940ED00E19F06 /* ShuttlX Watch App */,
 				A59234DF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -131,7 +131,7 @@
 			isa = PBXGroup;
 			children = (
 				A59234DE /* ShuttlX.app */,
-				A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */,
+				A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -199,9 +199,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		A56D91072E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */ = {
+		A56D91072E0940ED00E19F06 /* ShuttlX Watch App */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = A56D91132E0940EF00E19F06 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch App Watch App" */;
+			buildConfigurationList = A56D91132E0940EF00E19F06 /* Build configuration list for PBXNativeTarget "ShuttlX Watch App" */;
 			buildPhases = (
 				A56D91042E0940ED00E19F06 /* Sources */,
 				A56D91052E0940ED00E19F06 /* Frameworks */,
@@ -212,13 +212,13 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				A56D91092E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */,
+				A56D91092E0940ED00E19F06 /* ShuttlX Watch App */,
 			);
-			name = "ShuttlXWatch Watch App Watch App";
+			name = "ShuttlX Watch App";
 			packageProductDependencies = (
 			);
-			productName = "ShuttlXWatch Watch App Watch App";
-			productReference = A56D91082E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App.app */;
+			productName = "ShuttlX Watch App";
+			productReference = A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */;
 			productType = "com.apple.product-type.application";
 		};
 		A59234DD /* ShuttlX */ = {
@@ -273,7 +273,7 @@
 			projectRoot = "";
 			targets = (
 				A59234DD /* ShuttlX */,
-				A56D91072E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */,
+				A56D91072E0940ED00E19F06 /* ShuttlX Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -333,7 +333,7 @@
 /* Begin PBXTargetDependency section */
 		A56D91112E0940EF00E19F06 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = A56D91072E0940ED00E19F06 /* ShuttlXWatch Watch App Watch App */;
+			target = A56D91072E0940ED00E19F06 /* ShuttlX Watch App */;
 			targetProxy = A56D91102E0940EF00E19F06 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -344,14 +344,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "ShuttlXWatch Watch App Watch App/ShuttlXWatch Watch App Watch App.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/ShuttlXWatch Watch App Watch App/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "ShuttlXWatch Watch App";
+				INFOPLIST_FILE = "$(SRCROOT)/ShuttlX Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = ShuttlX;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to read your workout data to track your training progress.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app needs access to save your workout data to track your training progress.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
@@ -377,14 +377,14 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "ShuttlXWatch Watch App Watch App/ShuttlXWatch Watch App Watch App.entitlements";
+				CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "$(SRCROOT)/ShuttlXWatch Watch App Watch App/Info.plist";
-				INFOPLIST_KEY_CFBundleDisplayName = "ShuttlXWatch Watch App";
+				INFOPLIST_FILE = "$(SRCROOT)/ShuttlX Watch App/Info.plist";
+				INFOPLIST_KEY_CFBundleDisplayName = ShuttlX;
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to read your workout data to track your training progress.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app needs access to save your workout data to track your training progress.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
@@ -595,7 +595,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		A56D91132E0940EF00E19F06 /* Build configuration list for PBXNativeTarget "ShuttlXWatch Watch App Watch App" */ = {
+		A56D91132E0940EF00E19F06 /* Build configuration list for PBXNativeTarget "ShuttlX Watch App" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				A56D91142E0940EF00E19F06 /* Debug */,

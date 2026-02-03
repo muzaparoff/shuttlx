@@ -27,7 +27,7 @@ jobs:
         uses: actions/checkout@v4
 
       # ------------------------------------------------------------------
-      # 2. Select Xcode 16.x
+      # 2. Select Xcode and list available destinations
       # ------------------------------------------------------------------
       - name: Select Xcode version
         run: |
@@ -38,6 +38,8 @@ jobs:
           echo "Using Xcode at: $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
           xcodebuild -version
+          echo "--- Available schemes ---"
+          xcodebuild -project ShuttlX.xcodeproj -list
 
       # ------------------------------------------------------------------
       # 3. Build iOS target
@@ -48,10 +50,10 @@ jobs:
             -project ShuttlX.xcodeproj \
             -scheme ShuttlX \
             -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
+            -destination "generic/platform=iOS Simulator" \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty --color || true
+            clean build | xcpretty --color
 
       # ------------------------------------------------------------------
       # 4. Build watchOS target
@@ -60,23 +62,9 @@ jobs:
         run: |
           xcodebuild \
             -project ShuttlX.xcodeproj \
-            -scheme "ShuttlXWatch Watch App" \
+            -scheme "ShuttlX Watch App" \
             -sdk watchsimulator \
-            -destination "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)" \
+            -destination "generic/platform=watchOS Simulator" \
             -configuration Debug \
             CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty --color || true
-
-      # ------------------------------------------------------------------
-      # 5. Run tests (if test targets exist)
-      # ------------------------------------------------------------------
-      - name: Run tests
-        run: |
-          xcodebuild \
-            -project ShuttlX.xcodeproj \
-            -scheme ShuttlX \
-            -sdk iphonesimulator \
-            -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            test 2>&1 | xcpretty --color || echo "No test targets found or tests completed."
+            clean build | xcpretty --color
