@@ -1,0 +1,144 @@
+# =============================================================================
+# ShuttlX — Deploy to TestFlight on push to main
+# =============================================================================
+#
+# Required GitHub Secrets:
+#
+#   APP_STORE_CONNECT_API_KEY_ID      App Store Connect API Key ID
+#                                     (e.g., "XXXXXXXXXX")
+#
+#   APP_STORE_CONNECT_ISSUER_ID       App Store Connect Issuer ID (UUID)
+#                                     (e.g., "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
+#
+#   APP_STORE_CONNECT_API_KEY_CONTENT Base64-encoded contents of the .p8 private key
+#                                     Generate: base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy
+#
+#   KEYCHAIN_PASSWORD                 Password for the temporary CI keychain
+#                                     (any random string, e.g., generate with `openssl rand -hex 20`)
+#
+#   MATCH_PASSWORD          (optional) Encryption password for match certificates repo
+#   MATCH_GIT_URL           (optional) Git URL for match certificates repo
+#                                     (e.g., "git@github.com:yourorg/certificates.git")
+#
+# =============================================================================
+
+name: Deploy to TestFlight
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:     # Allow manual trigger
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Build & Upload to TestFlight
+    runs-on: macos-15
+    timeout-minutes: 45
+    env:
+      FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 120
+      FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 5
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Checkout
+      # ------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Full history for build number calculation
+
+      # ------------------------------------------------------------------
+      # 2. Select Xcode 16.x (ships with iOS 18 / watchOS 11 SDKs)
+      # ------------------------------------------------------------------
+      - name: Select Xcode version
+        run: |
+          # List available Xcode versions and pick the latest 16.x
+          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          echo "Using Xcode at: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      # ------------------------------------------------------------------
+      # 3. Install Ruby & Fastlane
+      # ------------------------------------------------------------------
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.2"
+          bundler-cache: true   # Caches gems from Gemfile.lock
+
+      # ------------------------------------------------------------------
+      # 4. Set up App Store Connect API Key
+      # ------------------------------------------------------------------
+      - name: Decode API key
+        env:
+          API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$API_KEY_CONTENT" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8
+
+      # ------------------------------------------------------------------
+      # 5. Create temporary keychain for CI
+      # ------------------------------------------------------------------
+      - name: Set up keychain
+        env:
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
+
+      # ------------------------------------------------------------------
+      # 6. Run tests
+      # ------------------------------------------------------------------
+      - name: Run tests
+        run: bundle exec fastlane test
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+
+      # ------------------------------------------------------------------
+      # 7. Build and upload to TestFlight
+      # ------------------------------------------------------------------
+      - name: Build and upload to TestFlight
+        run: bundle exec fastlane beta
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+
+      # ------------------------------------------------------------------
+      # 8. Clean up keychain
+      # ------------------------------------------------------------------
+      - name: Clean up keychain
+        if: always()
+        run: |
+          if [ -f "$KEYCHAIN_PATH" ]; then
+            security delete-keychain "$KEYCHAIN_PATH" || true
+          fi
+
+      # ------------------------------------------------------------------
+      # 9. Upload build artifacts
+      # ------------------------------------------------------------------
+      - name: Upload IPA artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShuttlX-${{ github.sha }}
+          path: build/ShuttlX.ipa
+          retention-days: 30

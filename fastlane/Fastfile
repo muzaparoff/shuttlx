@@ -1,0 +1,143 @@
+default_platform(:ios)
+
+# ---------------------------------------------------------------------------
+# Helper: Create App Store Connect API key from environment variables
+# ---------------------------------------------------------------------------
+def api_key
+  app_store_connect_api_key(
+    key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+    issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+    key_content: ENV["APP_STORE_CONNECT_API_KEY_CONTENT"],
+    is_key_content_base64: true,
+    in_house: false
+  )
+end
+
+platform :ios do
+
+  # --------------------------------------------------------------------------
+  # test — Build and run tests on iOS and watchOS simulators
+  # --------------------------------------------------------------------------
+  desc "Build and test both iOS and watchOS targets on simulators"
+  lane :test do
+    # Build and test iOS
+    scan(
+      project: "ShuttlX.xcodeproj",
+      scheme: "ShuttlX",
+      device: "iPhone 16 Pro",
+      clean: true,
+      build_for_testing: true
+    )
+
+    # Build watchOS (watchOS does not support XCTest execution on simulators,
+    # so we only verify it compiles)
+    xcodebuild(
+      project: "ShuttlX.xcodeproj",
+      scheme: "ShuttlXWatch Watch App",
+      sdk: "watchsimulator",
+      destination: "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)",
+      build_settings: {
+        "CODE_SIGNING_ALLOWED" => "NO"
+      },
+      xcargs: "clean build"
+    )
+
+    UI.success("Both iOS and watchOS targets built successfully.")
+  end
+
+  # --------------------------------------------------------------------------
+  # beta — Build, sign, and upload to TestFlight
+  # --------------------------------------------------------------------------
+  desc "Build the app and upload to TestFlight"
+  lane :beta do
+    setup_ci if is_ci
+
+    key = api_key
+
+    # Auto-increment build number based on latest TestFlight build
+    latest = latest_testflight_build_number(api_key: key)
+    increment_build_number(
+      build_number: (latest + 1).to_s,
+      xcodeproj: "ShuttlX.xcodeproj"
+    )
+
+    # Build the archive (iOS app, which embeds the watchOS companion)
+    build_app(
+      project: "ShuttlX.xcodeproj",
+      scheme: "ShuttlX",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "ShuttlX.ipa",
+      clean: true,
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    # Upload to TestFlight
+    upload_to_testflight(
+      api_key: key,
+      ipa: "./build/ShuttlX.ipa",
+      skip_waiting_for_build_processing: true,
+      distribute_external: false
+    )
+
+    UI.success("Successfully uploaded build to TestFlight!")
+  end
+
+  # --------------------------------------------------------------------------
+  # release — Build, sign, and upload for App Store distribution
+  # --------------------------------------------------------------------------
+  desc "Build the app and upload for App Store review"
+  lane :release do
+    setup_ci if is_ci
+
+    key = api_key
+
+    # Auto-increment build number based on latest TestFlight build
+    latest = latest_testflight_build_number(api_key: key)
+    increment_build_number(
+      build_number: (latest + 1).to_s,
+      xcodeproj: "ShuttlX.xcodeproj"
+    )
+
+    # Build the archive
+    build_app(
+      project: "ShuttlX.xcodeproj",
+      scheme: "ShuttlX",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "ShuttlX.ipa",
+      clean: true,
+      xcargs: "-allowProvisioningUpdates"
+    )
+
+    # Upload to App Store Connect for review
+    upload_to_app_store(
+      api_key: key,
+      ipa: "./build/ShuttlX.ipa",
+      skip_metadata: true,
+      skip_screenshots: true,
+      precheck_include_in_app_purchases: false,
+      force: true,
+      submit_for_review: false,
+      automatic_release: false
+    )
+
+    UI.success("Successfully uploaded build to App Store Connect!")
+  end
+
+  # --------------------------------------------------------------------------
+  # match_signing — Fetch certificates and profiles via match (optional)
+  # --------------------------------------------------------------------------
+  desc "Sync code signing certificates and profiles using match"
+  lane :match_signing do
+    match(
+      type: "appstore",
+      app_identifier: [
+        "com.shuttlx.ShuttlX",
+        "com.shuttlx.ShuttlX.watchkitapp"
+      ],
+      readonly: is_ci
+    )
+  end
+
+end

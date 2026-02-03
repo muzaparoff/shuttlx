@@ -1,5 +1,6 @@
 import SwiftUI
 
+#if DEBUG
 struct DebugView: View {
     @ObservedObject var sharedDataManager = SharedDataManager.shared
     @EnvironmentObject var dataManager: DataManager
@@ -24,26 +25,24 @@ struct DebugView: View {
                                     .foregroundColor(.red)
                             }
                         }
-                        .alert(isPresented: $showingCleanupAlert) {
-                            Alert(
-                                title: Text("Clear All Sessions"),
-                                message: Text("This will delete all saved training sessions. This action cannot be undone."),
-                                primaryButton: .destructive(Text("Clear All")) {
-                                    // Clear all sessions
-                                    sharedDataManager.purgeAllSessionsFromStorage()
-                                    cleanupMessage = "All sessions cleared!"
-                                    showMessage = true
-                                    
-                                    // Force DataManager to reload
-                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                                        dataManager.sessions = []
-                                        refreshData()
-                                    }
-                                },
-                                secondaryButton: .cancel()
-                            )
+                        .alert("Clear All Sessions", isPresented: $showingCleanupAlert) {
+                            Button("Clear All", role: .destructive) {
+                                // Clear all sessions
+                                sharedDataManager.purgeAllSessionsFromStorage()
+                                cleanupMessage = "All sessions cleared!"
+                                showMessage = true
+
+                                // Force DataManager to reload
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                                    dataManager.sessions = []
+                                    refreshData()
+                                }
+                            }
+                            Button("Cancel", role: .cancel) { }
+                        } message: {
+                            Text("This will delete all saved training sessions. This action cannot be undone.")
                         }
-                        
+
                         Button(action: {
                             sharedDataManager.forceSyncNow()
                             cleanupMessage = "Force sync triggered!"
@@ -79,12 +78,12 @@ struct DebugView: View {
                     } header: {
                         Text("Training Sessions (App Group)")
                     }
-                    
+
                     Section(header: Text("Sync Status")) {
                         Text(sharedDataManager.checkConnectivity())
                             .font(.system(.footnote, design: .monospaced))
                     }
-                    
+
                     Section(header: Text("Sync Log")) {
                         ForEach(sharedDataManager.syncLog, id: \.self) { log in
                             Text(log)
@@ -135,7 +134,7 @@ struct DebugView: View {
         programs = sharedDataManager.loadProgramsFromAppGroup()
         sessions = sharedDataManager.loadSessionsFromAppGroup()
     }
-    
+
     private var itemFormatter: DateFormatter {
         let formatter = DateFormatter()
         formatter.dateStyle = .short
@@ -149,3 +148,4 @@ struct DebugView_Previews: PreviewProvider {
         DebugView()
     }
 }
+#endif

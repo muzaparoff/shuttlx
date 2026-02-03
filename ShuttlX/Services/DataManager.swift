@@ -2,7 +2,8 @@ import Foundation
 import Combine
 import HealthKit
 
-class DataManager: ObservableObject, @unchecked Sendable {
+@MainActor
+class DataManager: ObservableObject {
     @Published var programs: [TrainingProgram] = []
     @Published var sessions: [TrainingSession] = []
     @Published var healthKitAuthorized = false
@@ -21,8 +22,11 @@ class DataManager: ObservableObject, @unchecked Sendable {
     private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
     
     // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
-    private var fallbackContainer: URL {
-        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("SharedData")
+    private var fallbackContainer: URL? {
+        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return docsURL.appendingPathComponent("SharedData")
     }
 
     init() {
@@ -57,13 +61,10 @@ class DataManager: ObservableObject, @unchecked Sendable {
             }
         }
         
-        // Setup bindings on main actor
-        Task { @MainActor in
-            setupBindings()
-        }
+        // Setup bindings
+        setupBindings()
     }
     
-    @MainActor
     private func setupBindings() {
         // When local programs change, save to App Group and notify watch
         $programs
@@ -238,16 +239,23 @@ class DataManager: ObservableObject, @unchecked Sendable {
             return
         }
         
+        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate),
+              let activeEnergyType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+              let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning) else {
+            print("❌ Failed to create HealthKit quantity types")
+            return
+        }
+
         let typesToRead: Set<HKQuantityType> = [
-            HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
+            heartRateType,
+            activeEnergyType,
+            distanceType
         ]
-        
+
         let typesToWrite: Set<HKSampleType> = [
             HKWorkoutType.workoutType(),
-            HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned)!,
-            HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning)!
+            activeEnergyType,
+            distanceType
         ]
         
         do {
@@ -357,11 +365,15 @@ class DataManager: ObservableObject, @unchecked Sendable {
         }
         
         // Fallback to Documents directory
+        guard let fallback = fallbackContainer else {
+            print("❌ Failed to get documents directory for fallback container")
+            return nil
+        }
         let fileManager = FileManager.default
         do {
-            try fileManager.createDirectory(at: fallbackContainer, withIntermediateDirectories: true, attributes: nil)
-            print("ℹ️ Using fallback container: \(fallbackContainer.path)")
-            return fallbackContainer
+            try fileManager.createDirectory(at: fallback, withIntermediateDirectories: true, attributes: nil)
+            print("ℹ️ Using fallback container: \(fallback.path)")
+            return fallback
         } catch {
             print("❌ Failed to create fallback container: \(error.localizedDescription)")
             return nil

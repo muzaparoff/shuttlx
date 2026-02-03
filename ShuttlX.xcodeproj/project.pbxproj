@@ -21,6 +21,11 @@
 		A5923512B /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923512F /* ProgramListView.swift */; };
 		A5923513B /* ProgramEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923513F /* ProgramEditorView.swift */; };
 		A5923514B /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923514F /* DebugView.swift */; };
+		A5923515B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A5923515F /* PrivacyInfo.xcprivacy */; };
+		A5923516B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923516F /* OnboardingView.swift */; };
+		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
+		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
+		A5923519B /* SettingsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923519F /* SettingsSupport.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +70,12 @@
 		A5923512F /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
 		A5923513F /* ProgramEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramEditorView.swift; sourceTree = "<group>"; };
 		A5923514F /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
+		A5923515F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A5923516F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
+		A5923519F /* SettingsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupport.swift; sourceTree = "<group>"; };
+		A5923520F /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -130,8 +141,10 @@
 			children = (
 				A5923507 /* ShuttlXApp.swift */,
 				A5923508 /* ContentView.swift */,
+				A5923519F /* SettingsSupport.swift */,
 				A5923509 /* Info.plist */,
 				A592350A /* ShuttlX.entitlements */,
+				A5923515F /* PrivacyInfo.xcprivacy */,
 				A5923600 /* Services */,
 				A5923700 /* Models */,
 				A5923800 /* Views */,
@@ -155,6 +168,7 @@
 				A5923504F /* TrainingProgram.swift */,
 				A5923505F /* TrainingSession.swift */,
 				A5923506F /* TrainingInterval.swift */,
+				A5923520F /* AppSettings.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -168,6 +182,9 @@
 				A5923512F /* ProgramListView.swift */,
 				A5923513F /* ProgramEditorView.swift */,
 				A5923514F /* DebugView.swift */,
+				A5923516F /* OnboardingView.swift */,
+				A5923517F /* SettingsView.swift */,
+				A5923518F /* SyncDebugView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -273,6 +290,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A5923515B /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -303,6 +321,10 @@
 				A5923512B /* ProgramListView.swift in Sources */,
 				A5923513B /* ProgramEditorView.swift in Sources */,
 				A5923514B /* DebugView.swift in Sources */,
+				A5923516B /* OnboardingView.swift in Sources */,
+				A5923517B /* SettingsView.swift in Sources */,
+				A5923518B /* SyncDebugView.swift in Sources */,
+				A5923519B /* SettingsSupport.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -338,7 +360,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -371,7 +393,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = watchos;
@@ -523,7 +545,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
@@ -557,7 +579,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";

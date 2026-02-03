@@ -1,5 +1,6 @@
 import SwiftUI
 
+#if DEBUG
 struct DebugView: View {
     @ObservedObject var sharedDataManager = SharedDataManager.shared
     @State private var sessions: [TrainingSession] = []
@@ -10,7 +11,7 @@ struct DebugView: View {
                 Text("Sync Status")
                     .font(.headline)
                     .padding(.bottom, 2)
-                
+
                 // Current Sync Status
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Current Status")
@@ -21,7 +22,7 @@ struct DebugView: View {
                         .foregroundColor(getSyncStatusColor())
                 }
                 .padding(.vertical, 2)
-                
+
                 // Connection Status
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Connection")
@@ -36,7 +37,7 @@ struct DebugView: View {
                     }
                 }
                 .padding(.vertical, 2)
-                
+
                 // Last Sync Time
                 if let lastSync = sharedDataManager.lastSyncTime {
                     VStack(alignment: .leading, spacing: 2) {
@@ -49,9 +50,9 @@ struct DebugView: View {
                     }
                     .padding(.vertical, 2)
                 }
-                
+
                 Divider()
-                
+
                 // App Group Status
                 VStack(alignment: .leading, spacing: 2) {
                     Text("App Group")
@@ -63,18 +64,18 @@ struct DebugView: View {
                         .minimumScaleFactor(0.7)
                 }
                 .padding(.vertical, 2)
-                
+
                 Divider()
-                
+
                 // Programs Status
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Programs (\(sharedDataManager.syncedPrograms.count))")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     if !sharedDataManager.syncedPrograms.isEmpty {
                         ForEach(sharedDataManager.syncedPrograms.prefix(2), id: \.id) { program in
-                            Text("• \(program.name)")
+                            Text("- \(program.name)")
                                 .font(.system(.caption2))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.8)
@@ -91,15 +92,15 @@ struct DebugView: View {
                     }
                 }
                 .padding(.vertical, 2)
-                
+
                 Divider()
-                
+
                 // Recent Sync Log
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Recent Activity")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    
+
                     ForEach(sharedDataManager.syncLog.prefix(2), id: \.self) { logEntry in
                         Text(logEntry)
                             .font(.system(.caption2))
@@ -107,7 +108,7 @@ struct DebugView: View {
                             .minimumScaleFactor(0.7)
                             .foregroundColor(.secondary)
                     }
-                    
+
                     if sharedDataManager.syncLog.isEmpty {
                         Text("No recent activity")
                             .font(.system(.caption2))
@@ -124,7 +125,7 @@ struct DebugView: View {
             sharedDataManager.loadPrograms()
         }
     }
-    
+
     private func getSyncStatusColor() -> Color {
         let status = sharedDataManager.syncStatus
         if status.contains("✅") {
@@ -137,7 +138,7 @@ struct DebugView: View {
             return .primary
         }
     }
-    
+
     private func formatSyncTime(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateStyle = .none
@@ -151,3 +152,4 @@ struct DebugView_Previews: PreviewProvider {
         DebugView()
     }
 }
+#endif

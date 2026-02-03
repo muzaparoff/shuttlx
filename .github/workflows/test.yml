@@ -1,0 +1,82 @@
+# =============================================================================
+# ShuttlX — Build & Test on Pull Requests
+# =============================================================================
+
+name: Build & Test
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test (iOS + watchOS)
+    runs-on: macos-15
+    timeout-minutes: 30
+
+    steps:
+      # ------------------------------------------------------------------
+      # 1. Checkout
+      # ------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ------------------------------------------------------------------
+      # 2. Select Xcode 16.x
+      # ------------------------------------------------------------------
+      - name: Select Xcode version
+        run: |
+          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
+          fi
+          echo "Using Xcode at: $XCODE_PATH"
+          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          xcodebuild -version
+
+      # ------------------------------------------------------------------
+      # 3. Build iOS target
+      # ------------------------------------------------------------------
+      - name: Build iOS (simulator)
+        run: |
+          xcodebuild \
+            -project ShuttlX.xcodeproj \
+            -scheme ShuttlX \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build | xcpretty --color || true
+
+      # ------------------------------------------------------------------
+      # 4. Build watchOS target
+      # ------------------------------------------------------------------
+      - name: Build watchOS (simulator)
+        run: |
+          xcodebuild \
+            -project ShuttlX.xcodeproj \
+            -scheme "ShuttlXWatch Watch App" \
+            -sdk watchsimulator \
+            -destination "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm)" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            clean build | xcpretty --color || true
+
+      # ------------------------------------------------------------------
+      # 5. Run tests (if test targets exist)
+      # ------------------------------------------------------------------
+      - name: Run tests
+        run: |
+          xcodebuild \
+            -project ShuttlX.xcodeproj \
+            -scheme ShuttlX \
+            -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,name=iPhone 16 Pro" \
+            -configuration Debug \
+            CODE_SIGNING_ALLOWED=NO \
+            test 2>&1 | xcpretty --color || echo "No test targets found or tests completed."

@@ -2,25 +2,31 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
-    
+
     var body: some View {
         TabView {
             ProgramListView()
                 .tabItem {
                     Label("Programs", systemImage: "list.bullet")
                 }
-            
+                .accessibilityLabel("Programs tab")
+                .accessibilityHint("View and manage your training programs")
+
             TrainingHistoryView()
                 .tabItem {
                     Label("History", systemImage: "calendar")
                 }
-            
+                .accessibilityLabel("History tab")
+                .accessibilityHint("View your past training sessions")
+
             NavigationView {
                 SimpleSettingsView()
             }
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
+            .accessibilityLabel("Settings tab")
+            .accessibilityHint("Adjust app preferences and health integration")
         }
     }
 }
@@ -34,10 +40,10 @@ struct SimpleSettingsView: View {
     @State private var successMessage = ""
     @AppStorage("appearance") private var appearance: String = "System"
     @AppStorage("syncIntervalSeconds") private var syncIntervalSeconds: Int = 3
-    
+
     private let appearanceOptions = ["System", "Light", "Dark"]
     private let syncIntervalOptions = [3, 5, 10, 30, 60]
-    
+
     var body: some View {
         List {
             // Appearance Section
@@ -51,39 +57,51 @@ struct SimpleSettingsView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .accessibilityLabel("Theme")
+                .accessibilityValue(appearance)
+                .accessibilityHint("Select light, dark, or system appearance")
             }
-            
+
             // Health Integration Section
             Section(header: Text("Health Integration")) {
                 HStack {
                     Image(systemName: "heart.fill")
                         .foregroundColor(.red)
+                        .accessibilityHidden(true)
                     Text("HealthKit Status")
                     Spacer()
                     Text(dataManager.healthKitAuthorized ? "Connected" : "Not Connected")
                         .foregroundColor(dataManager.healthKitAuthorized ? .green : .red)
                 }
-                
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("HealthKit Status")
+                .accessibilityValue(dataManager.healthKitAuthorized ? "Connected" : "Not Connected")
+
                 if !dataManager.healthKitAuthorized {
                     Button("Request HealthKit Access") {
                         Task {
                             await dataManager.requestHealthKitPermissions()
                         }
                     }
+                    .accessibilityHint("Opens the HealthKit permission dialog")
                 }
-                
+
                 Button("Why We Need Access") {
                     showingHealthPermissionsInfo = true
                 }
-                
+                .accessibilityHint("Shows information about how health data is used")
+
                 // Sync Interval Setting
                 Picker("Sync Interval", selection: $syncIntervalSeconds) {
                     ForEach(syncIntervalOptions, id: \.self) { seconds in
                         Text(seconds == 1 ? "1 second" : "\(seconds) seconds")
                     }
                 }
+                .accessibilityLabel("Sync Interval")
+                .accessibilityValue("\(syncIntervalSeconds) seconds")
+                .accessibilityHint("Choose how often data syncs with Apple Watch")
             }
-            
+
             // Sync Section
             Section(header: Text("Sync")) {
                 HStack {
@@ -92,29 +110,34 @@ struct SimpleSettingsView: View {
                     Text(formatLastSyncTime())
                         .foregroundColor(.secondary)
                 }
-                
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Last Synced")
+                .accessibilityValue(formatLastSyncTime())
+
                 Button("Force Sync with Watch") {
                     if let programs = dataManager.programs as? [TrainingProgram] {
                         SharedDataManager.shared.syncProgramsToWatch(programs)
                         UserDefaults.standard.set(Date(), forKey: "lastSyncTime")
                         successMessage = "Sync completed!"
                         showSuccessMessage = true
-                        
+
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                             showSuccessMessage = false
                         }
                     }
                 }
+                .accessibilityHint("Manually sends all programs to Apple Watch")
             }
-            
+
             // Data Management Section
             Section(header: Text("Data Management")) {
                 Button("Clear All Training Sessions") {
                     showingDeleteConfirmation = true
                 }
                 .foregroundColor(.red)
+                .accessibilityHint("Permanently deletes all training session data")
             }
-            
+
             // App Information Section
             Section(header: Text("App Information")) {
                 HStack {
@@ -123,6 +146,9 @@ struct SimpleSettingsView: View {
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
                         .foregroundColor(.secondary)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("App Version")
+                .accessibilityValue(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "Unknown")
             }
         }
         .navigationTitle("Settings")
@@ -143,6 +169,9 @@ struct SimpleSettingsView: View {
                         .cornerRadius(8)
                         .shadow(radius: 4)
                         .padding(.bottom, 50)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(successMessage)
+                        .accessibilityAddTraits(.updatesFrequently)
                     }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                     .animation(.easeInOut(duration: 0.3), value: showSuccessMessage)
@@ -160,7 +189,7 @@ struct SimpleSettingsView: View {
                 dataManager.sessions = []
                 successMessage = "All sessions cleared!"
                 showSuccessMessage = true
-                
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     showSuccessMessage = false
                 }
@@ -171,7 +200,7 @@ struct SimpleSettingsView: View {
         }
         .preferredColorScheme(colorSchemeForAppearance(appearance))
     }
-    
+
     private func iconForAppearance(_ appearance: String) -> String {
         switch appearance {
         case "Light": return "sun.max.fill"
@@ -179,7 +208,7 @@ struct SimpleSettingsView: View {
         default: return "circle.lefthalf.filled"
         }
     }
-    
+
     private func colorSchemeForAppearance(_ appearance: String) -> ColorScheme? {
         switch appearance {
         case "Light": return .light
@@ -187,7 +216,7 @@ struct SimpleSettingsView: View {
         default: return nil
         }
     }
-    
+
     private func formatLastSyncTime() -> String {
         if let lastSync = UserDefaults.standard.object(forKey: "lastSyncTime") as? Date {
             let formatter = RelativeDateTimeFormatter()

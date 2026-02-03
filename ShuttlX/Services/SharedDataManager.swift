@@ -28,8 +28,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
     
     // Fallback container for when App Groups is not available (e.g., in simulator without provisioning)
-    private var fallbackContainer: URL {
-        return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!.appendingPathComponent("SharedData")
+    private var fallbackContainer: URL? {
+        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            return nil
+        }
+        return docsURL.appendingPathComponent("SharedData")
     }
     
     // Enhanced sync management
@@ -250,9 +253,13 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
         
         // Fallback to local documents directory
+        guard let fallback = fallbackContainer else {
+            log("❌ Failed to get documents directory for fallback container")
+            return nil
+        }
         do {
-            try FileManager.default.createDirectory(at: fallbackContainer, withIntermediateDirectories: true)
-            return fallbackContainer
+            try FileManager.default.createDirectory(at: fallback, withIntermediateDirectories: true)
+            return fallback
         } catch {
             log("❌ Failed to create fallback container: \(error)")
             return nil
@@ -576,7 +583,10 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private func saveProgramsToFallback(_ programs: [TrainingProgram]) {
         let fileManager = FileManager.default
-        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            log("❌ Failed to get documents directory for programs fallback")
+            return
+        }
         let fallbackURL = docsURL.appendingPathComponent("backup_programs.json")
         
         do {
@@ -626,7 +636,10 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     
     private func saveSessionsToFallback(_ sessions: [TrainingSession]) {
         let fileManager = FileManager.default
-        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            log("❌ Failed to get documents directory for sessions fallback")
+            return
+        }
         let fallbackURL = docsURL.appendingPathComponent("backup_sessions.json")
         
         do {
@@ -681,9 +694,13 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // Load sessions from fallback storage (if App Group container is not available)
     private func loadSessionsFromFallback() -> [TrainingSession] {
         var fallbackSessions: [TrainingSession] = []
-        
+        guard let fallback = fallbackContainer else {
+            log("⚠️ Failed to get documents directory for fallback session loading")
+            return fallbackSessions
+        }
+
         do {
-            let fallbackURL = fallbackContainer.appendingPathComponent(sessionsKey)
+            let fallbackURL = fallback.appendingPathComponent(sessionsKey)
             if FileManager.default.fileExists(atPath: fallbackURL.path) {
                 let data = try Data(contentsOf: fallbackURL)
                 fallbackSessions = try JSONDecoder().decode([TrainingSession].self, from: data)
@@ -736,7 +753,10 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         
         // Clear from fallback storage
         let fileManager = FileManager.default
-        let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
+            log("⚠️ Failed to get documents directory for purge fallback")
+            return
+        }
         let fallbackURL = docsURL.appendingPathComponent("backup_sessions.json")
         
         do {
@@ -1007,6 +1027,24 @@ extension SharedDataManager {
             
             if let action = message["action"] as? String {
                 switch action {
+                case "saveSession":
+                    // Handle watch sending a completed training session with reply
+                    if let sessionDataString = message["sessionData"] as? String,
+                       let sessionData = Data(base64Encoded: sessionDataString) {
+                        do {
+                            let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
+                            handleReceivedSession(trainingSession)
+                            log("✅ Received and processed training session from watch (with reply)")
+                            consecutiveFailures = 0
+                            replyHandler(["status": "saved", "timestamp": Date().timeIntervalSince1970])
+                        } catch {
+                            log("❌ Failed to decode training session: \(error.localizedDescription)")
+                            consecutiveFailures += 1
+                            replyHandler(["error": "Failed to decode session: \(error.localizedDescription)"])
+                        }
+                    } else {
+                        replyHandler(["error": "Missing or invalid sessionData"])
+                    }
                 case "requestPrograms":
                     // Handle watch requesting programs with reply
                     if let dataManager = getDataManager() {
@@ -1018,12 +1056,12 @@ extension SharedDataManager {
                                 "count": programs.count,
                                 "timestamp": Date().timeIntervalSince1970
                             ] as [String : Any]
-                            
+
                             // Record this successful interaction
                             lastSyncTime = Date()
                             consecutiveFailures = 0
                             replyHandler(reply)
-                            
+
                             log("✅ Sent \(programs.count) programs to watch via reply")
                         } catch {
                             log("❌ Failed to encode programs for reply: \(error)")

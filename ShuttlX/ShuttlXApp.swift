@@ -9,14 +9,9 @@ struct ShuttlXApp: App {
     var body: some Scene {
         WindowGroup {
             if isFirstLaunch {
-                // Temporarily use ContentView until OnboardingView is properly added to the project
-                ContentView()
+                OnboardingView(isFirstLaunch: $isFirstLaunch)
                     .environmentObject(dataManager)
                     .environmentObject(sharedDataManager)
-                    .onAppear {
-                        // Uncomment the following line once OnboardingView is added to project
-                        // isFirstLaunch = false
-                    }
             } else {
                 ContentView()
                     .environmentObject(dataManager)
