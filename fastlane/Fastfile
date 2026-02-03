@@ -70,7 +70,7 @@ platform :ios do
     build_app(
       project: "ShuttlX.xcodeproj",
       scheme: "ShuttlX",
-      export_method: "app-store",
+      export_method: "app-store-connect",
       output_directory: "./build",
       output_name: "ShuttlX.ipa",
       clean: true,
@@ -113,7 +113,7 @@ platform :ios do
     build_app(
       project: "ShuttlX.xcodeproj",
       scheme: "ShuttlX",
-      export_method: "app-store",
+      export_method: "app-store-connect",
       output_directory: "./build",
       output_name: "ShuttlX.ipa",
       clean: true,
