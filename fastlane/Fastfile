@@ -54,6 +54,11 @@ platform :ios do
 
     key = api_key
 
+    # Write the API key to a file for xcodebuild authentication
+    api_key_path = "#{Dir.tmpdir}/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"
+    require 'base64'
+    File.write(api_key_path, Base64.decode64(ENV['APP_STORE_CONNECT_API_KEY_CONTENT']))
+
     # Auto-increment build number based on latest TestFlight build
     latest = latest_testflight_build_number(api_key: key)
     increment_build_number(
@@ -69,7 +74,7 @@ platform :ios do
       output_directory: "./build",
       output_name: "ShuttlX.ipa",
       clean: true,
-      xcargs: "-allowProvisioningUpdates"
+      xcargs: "-allowProvisioningUpdates -authenticationKeyPath '#{api_key_path}' -authenticationKeyID '#{ENV['APP_STORE_CONNECT_API_KEY_ID']}' -authenticationKeyIssuerID '#{ENV['APP_STORE_CONNECT_ISSUER_ID']}'"
     )
 
     # Upload to TestFlight
@@ -92,6 +97,11 @@ platform :ios do
 
     key = api_key
 
+    # Write the API key to a file for xcodebuild authentication
+    api_key_path = "#{Dir.tmpdir}/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"
+    require 'base64'
+    File.write(api_key_path, Base64.decode64(ENV['APP_STORE_CONNECT_API_KEY_CONTENT']))
+
     # Auto-increment build number based on latest TestFlight build
     latest = latest_testflight_build_number(api_key: key)
     increment_build_number(
@@ -107,7 +117,7 @@ platform :ios do
       output_directory: "./build",
       output_name: "ShuttlX.ipa",
       clean: true,
-      xcargs: "-allowProvisioningUpdates"
+      xcargs: "-allowProvisioningUpdates -authenticationKeyPath '#{api_key_path}' -authenticationKeyID '#{ENV['APP_STORE_CONNECT_API_KEY_ID']}' -authenticationKeyIssuerID '#{ENV['APP_STORE_CONNECT_ISSUER_ID']}'"
     )
 
     # Upload to App Store Connect for review
