@@ -70,15 +70,10 @@ platform :ios do
     build_app(
       project: "ShuttlX.xcodeproj",
       scheme: "ShuttlX",
-      export_method: "app-store",
+      export_method: "app-store-connect",
       export_options: {
         signingStyle: "automatic",
-        teamID: "83HPSY452Y",
-        signingCertificate: "Apple Distribution",
-        provisioningProfiles: {
-          "com.shuttlx.ShuttlX" => "XC com shuttlx ShuttlX",
-          "com.shuttlx.ShuttlX.watchkitapp" => "XC com shuttlx ShuttlX watchkitapp"
-        }
+        teamID: "83HPSY452Y"
       },
       output_directory: "./build",
       output_name: "ShuttlX.ipa",
@@ -122,15 +117,10 @@ platform :ios do
     build_app(
       project: "ShuttlX.xcodeproj",
       scheme: "ShuttlX",
-      export_method: "app-store",
+      export_method: "app-store-connect",
       export_options: {
         signingStyle: "automatic",
-        teamID: "83HPSY452Y",
-        signingCertificate: "Apple Distribution",
-        provisioningProfiles: {
-          "com.shuttlx.ShuttlX" => "XC com shuttlx ShuttlX",
-          "com.shuttlx.ShuttlX.watchkitapp" => "XC com shuttlx ShuttlX watchkitapp"
-        }
+        teamID: "83HPSY452Y"
       },
       output_directory: "./build",
       output_name: "ShuttlX.ipa",
