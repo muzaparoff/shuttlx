@@ -4,21 +4,14 @@
 #
 # Required GitHub Secrets:
 #
-#   APP_STORE_CONNECT_API_KEY_ID      App Store Connect API Key ID
-#                                     (e.g., "XXXXXXXXXX")
-#
-#   APP_STORE_CONNECT_ISSUER_ID       App Store Connect Issuer ID (UUID)
-#                                     (e.g., "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
-#
-#   APP_STORE_CONNECT_API_KEY_CONTENT Base64-encoded contents of the .p8 private key
-#                                     Generate: base64 -i AuthKey_XXXXXXXXXX.p8 | pbcopy
-#
-#   KEYCHAIN_PASSWORD                 Password for the temporary CI keychain
-#                                     (any random string, e.g., generate with `openssl rand -hex 20`)
-#
-#   MATCH_PASSWORD          (optional) Encryption password for match certificates repo
-#   MATCH_GIT_URL           (optional) Git URL for match certificates repo
-#                                     (e.g., "git@github.com:yourorg/certificates.git")
+#   APP_STORE_CONNECT_API_KEY_ID       App Store Connect API Key ID
+#   APP_STORE_CONNECT_ISSUER_ID        App Store Connect Issuer ID (UUID)
+#   APP_STORE_CONNECT_API_KEY_CONTENT  Base64-encoded .p8 private key
+#   KEYCHAIN_PASSWORD                  Password for the temporary CI keychain
+#   BUILD_CERTIFICATE_BASE64           Base64-encoded .p12 distribution certificate
+#   P12_PASSWORD                       Password for the .p12 certificate
+#   IOS_PROVISIONING_PROFILE_BASE64    Base64 App Store profile for com.shuttlx.ShuttlX
+#   WATCH_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.watchkitapp
 #
 # =============================================================================
 
@@ -27,7 +20,10 @@ name: Deploy to TestFlight
 on:
   push:
     branches: [main]
-  workflow_dispatch:     # Allow manual trigger
+    paths-ignore:
+      - '**.md'
+      - '.github/workflows/test.yml'
+  workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -38,9 +34,6 @@ jobs:
     name: Build & Upload to TestFlight
     runs-on: macos-15
     timeout-minutes: 45
-    env:
-      FASTLANE_XCODEBUILD_SETTINGS_TIMEOUT: 120
-      FASTLANE_XCODEBUILD_SETTINGS_RETRIES: 5
 
     steps:
       # ------------------------------------------------------------------
@@ -49,14 +42,13 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Full history for build number calculation
+          fetch-depth: 0
 
       # ------------------------------------------------------------------
-      # 2. Select Xcode 16.x (ships with iOS 18 / watchOS 11 SDKs)
+      # 2. Select Xcode 16.x
       # ------------------------------------------------------------------
       - name: Select Xcode version
         run: |
-          # List available Xcode versions and pick the latest 16.x
           XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE_PATH" ]; then
             XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
@@ -64,81 +56,210 @@ jobs:
           echo "Using Xcode at: $XCODE_PATH"
           sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
           xcodebuild -version
-          xcrun simctl list runtimes
 
       # ------------------------------------------------------------------
-      # 3. Install Ruby & Fastlane
+      # 3. Import Code Signing Certificate
       # ------------------------------------------------------------------
-      - name: Set up Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: "3.2"
-          bundler-cache: true   # Caches gems from Gemfile.lock
-
-      # ------------------------------------------------------------------
-      # 4. Set up App Store Connect API Key
-      # ------------------------------------------------------------------
-      - name: Decode API key
+      - name: Import code signing certificate
         env:
-          API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-          API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "$API_KEY_CONTENT" | base64 --decode > ~/.appstoreconnect/private_keys/AuthKey_${API_KEY_ID}.p8
-
-      # ------------------------------------------------------------------
-      # 5. Create temporary keychain for CI
-      # ------------------------------------------------------------------
-      - name: Set up keychain
-        env:
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
-          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
-          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
-          security list-keychains -d user -s "$KEYCHAIN_PATH" $(security list-keychains -d user | tr -d '"')
+          KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+
+          # Create temporary keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          # Import certificate
+          echo "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
+          security import certificate.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+          # Allow codesign to access the keychain
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
 
-      # ------------------------------------------------------------------
-      # 6. Run tests
-      # ------------------------------------------------------------------
-      - name: Run tests
-        run: bundle exec fastlane test
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
+          # Verify
+          security find-identity -v -p codesigning $KEYCHAIN_PATH
 
       # ------------------------------------------------------------------
-      # 7. Build and upload to TestFlight
+      # 4. Install Provisioning Profiles
       # ------------------------------------------------------------------
-      - name: Build and upload to TestFlight
-        run: bundle exec fastlane beta
-        env:
-          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
-          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
-          APP_STORE_CONNECT_API_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
-          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
-          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+      - name: Install provisioning profiles
+        id: install_profiles
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+
+          install_profile() {
+            local profile_base64=$1
+            local profile_label=$2
+
+            echo "$profile_base64" | base64 --decode > "temp_${profile_label}.mobileprovision"
+
+            UUID=$(security cms -D -i "temp_${profile_label}.mobileprovision" | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/<[^>]*>//g' | tr -d '[:space:]')
+            PROFILE_NAME=$(security cms -D -i "temp_${profile_label}.mobileprovision" | grep -A1 '<key>Name</key>' | grep '<string>' | sed 's/<[^>]*>//g' | xargs)
+
+            mv "temp_${profile_label}.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
+
+            echo "  Installed $profile_label: $PROFILE_NAME (UUID: $UUID)" >&2
+            echo "$UUID|$PROFILE_NAME"
+          }
+
+          IOS_INFO=$(install_profile "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" "iOS")
+          WATCH_INFO=$(install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE_BASE64 }}" "Watch")
+
+          IOS_NAME=$(echo "$IOS_INFO" | cut -d'|' -f2)
+          WATCH_NAME=$(echo "$WATCH_INFO" | cut -d'|' -f2)
+
+          echo "ios_name=$IOS_NAME" >> $GITHUB_OUTPUT
+          echo "watch_name=$WATCH_NAME" >> $GITHUB_OUTPUT
+
+          echo "Installed profiles:"
+          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
 
       # ------------------------------------------------------------------
-      # 8. Clean up keychain
+      # 5. Setup App Store Connect API key
       # ------------------------------------------------------------------
-      - name: Clean up keychain
+      - name: Setup App Store Connect API key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 --decode \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      # ------------------------------------------------------------------
+      # 6. Calculate build number
+      # ------------------------------------------------------------------
+      - name: Calculate build number
+        id: build_number
+        run: |
+          CURRENT_BUILD=$(agvtool what-version -terse 2>/dev/null || echo "1")
+          BUILD_NUMBER=$((CURRENT_BUILD + 1))
+          echo "number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "Build number: $BUILD_NUMBER"
+
+      # ------------------------------------------------------------------
+      # 7. Update build number in project
+      # ------------------------------------------------------------------
+      - name: Update build number
+        run: |
+          BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
+          agvtool new-version -all "$BUILD_NUMBER"
+
+      # ------------------------------------------------------------------
+      # 8. Create ExportOptions.plist
+      # ------------------------------------------------------------------
+      - name: Create ExportOptions.plist
+        run: |
+          IOS_NAME="${{ steps.install_profiles.outputs.ios_name }}"
+          WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
+
+          cat > ExportOptions.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>method</key>
+              <string>app-store-connect</string>
+              <key>teamID</key>
+              <string>83HPSY452Y</string>
+              <key>uploadBitcode</key>
+              <false/>
+              <key>uploadSymbols</key>
+              <true/>
+              <key>compileBitcode</key>
+              <false/>
+              <key>destination</key>
+              <string>export</string>
+              <key>signingStyle</key>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string>Apple Distribution</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.shuttlx.ShuttlX</key>
+                  <string>$IOS_NAME</string>
+                  <key>com.shuttlx.ShuttlX.watchkitapp</key>
+                  <string>$WATCH_NAME</string>
+              </dict>
+          </dict>
+          </plist>
+          EOF
+
+          echo "ExportOptions.plist created"
+          echo "  com.shuttlx.ShuttlX -> $IOS_NAME"
+          echo "  com.shuttlx.ShuttlX.watchkitapp -> $WATCH_NAME"
+
+      # ------------------------------------------------------------------
+      # 9. Archive (without signing)
+      # ------------------------------------------------------------------
+      - name: Build and archive
+        run: |
+          xcodebuild \
+            -project ShuttlX.xcodeproj \
+            -scheme ShuttlX \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            -archivePath "./build/ShuttlX.xcarchive" \
+            CODE_SIGN_IDENTITY="-" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            archive
+
+      # ------------------------------------------------------------------
+      # 10. Export (with signing via ExportOptions.plist)
+      # ------------------------------------------------------------------
+      - name: Export archive
+        run: |
+          xcodebuild \
+            -exportArchive \
+            -archivePath "./build/ShuttlX.xcarchive" \
+            -exportPath "./build/export" \
+            -exportOptionsPlist "./ExportOptions.plist"
+
+          if [ -f "./build/export/ShuttlX.ipa" ]; then
+            echo "IPA created: $(ls -lh ./build/export/ShuttlX.ipa)"
+          else
+            echo "ERROR: IPA file not found!"
+            exit 1
+          fi
+
+      # ------------------------------------------------------------------
+      # 11. Upload to App Store Connect
+      # ------------------------------------------------------------------
+      - name: Upload to App Store Connect
+        run: |
+          xcrun altool \
+            --upload-app \
+            --type ios \
+            --file "./build/export/ShuttlX.ipa" \
+            --apiKey "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            --verbose
+
+      # ------------------------------------------------------------------
+      # 12. Cleanup
+      # ------------------------------------------------------------------
+      - name: Cleanup
         if: always()
         run: |
+          rm -f certificate.p12 ExportOptions.plist
+          rm -rf ~/.appstoreconnect
+          rm -rf ~/Library/MobileDevice/Provisioning\ Profiles
           if [ -f "$KEYCHAIN_PATH" ]; then
             security delete-keychain "$KEYCHAIN_PATH" || true
           fi
 
       # ------------------------------------------------------------------
-      # 9. Upload build artifacts
+      # 13. Upload build artifacts
       # ------------------------------------------------------------------
       - name: Upload IPA artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
           name: ShuttlX-${{ github.sha }}
-          path: build/ShuttlX.ipa
+          path: build/export/ShuttlX.ipa
           retention-days: 30
