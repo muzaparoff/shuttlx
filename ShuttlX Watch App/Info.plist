@@ -26,7 +26,7 @@
 	<string>We need access to your health data to record your workouts</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>We need to be able to save your workout data to your health records</string>
-	<key>UIBackgroundModes</key>
+	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
 	</array>
