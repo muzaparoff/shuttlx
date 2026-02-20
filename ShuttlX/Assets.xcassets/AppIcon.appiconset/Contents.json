@@ -3,7 +3,7 @@
     {
       "filename" : "icon_2_app_store.png",
       "idiom" : "universal",
-      "platform" : "watchos",
+      "platform" : "ios",
       "size" : "1024x1024"
     }
   ],

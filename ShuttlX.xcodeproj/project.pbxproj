@@ -22,6 +22,7 @@
 		A5923513B /* ProgramEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923513F /* ProgramEditorView.swift */; };
 		A5923514B /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923514F /* DebugView.swift */; };
 		A5923515B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A5923515F /* PrivacyInfo.xcprivacy */; };
+		A5923521B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5923521F /* Assets.xcassets */; };
 		A5923516B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923516F /* OnboardingView.swift */; };
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
@@ -76,13 +77,13 @@
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		A5923519F /* SettingsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupport.swift; sourceTree = "<group>"; };
 		A5923520F /* AppSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppSettings.swift; sourceTree = "<group>"; };
+		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
 		A56D91222E09470F00E19F06 /* Exceptions for "ShuttlX Watch App" folder in "ShuttlX Watch App" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Assets.xcassets,
 				Info.plist,
 			);
 			target = A56D91072E0940ED00E19F06 /* ShuttlX Watch App */;
@@ -145,6 +146,7 @@
 				A5923509 /* Info.plist */,
 				A592350A /* ShuttlX.entitlements */,
 				A5923515F /* PrivacyInfo.xcprivacy */,
+				A5923521F /* Assets.xcassets */,
 				A5923600 /* Services */,
 				A5923700 /* Models */,
 				A5923800 /* Views */,
@@ -291,6 +293,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A5923515B /* PrivacyInfo.xcprivacy in Resources */,
+				A5923521B /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -527,6 +530,8 @@
 		A59234FF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
@@ -561,6 +566,8 @@
 		A5923510 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
