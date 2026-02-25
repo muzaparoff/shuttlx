@@ -198,26 +198,32 @@ jobs:
       # 9. Configure manual signing in project
       # ------------------------------------------------------------------
       - name: Configure manual signing
+        env:
+          IOS_PROFILE_NAME: ${{ steps.install_profiles.outputs.ios_name }}
+          WATCH_PROFILE_NAME: ${{ steps.install_profiles.outputs.watch_name }}
         run: |
-          IOS_NAME="${{ steps.install_profiles.outputs.ios_name }}"
-          WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
-
-          # Switch all targets from Automatic to Manual signing
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ShuttlX.xcodeproj/project.pbxproj
-
-          # Add provisioning profile specifier for iOS target configs
-          sed -i '' '/CODE_SIGN_ENTITLEMENTS = ShuttlX\/ShuttlX.entitlements/a\
-				PROVISIONING_PROFILE_SPECIFIER = "'"$IOS_NAME"'";
-          ' ShuttlX.xcodeproj/project.pbxproj
-
-          # Add provisioning profile specifier for Watch target configs
-          sed -i '' '/CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App\/ShuttlX Watch App.entitlements"/a\
-				PROVISIONING_PROFILE_SPECIFIER = "'"$WATCH_NAME"'";
-          ' ShuttlX.xcodeproj/project.pbxproj
-
-          echo "Configured manual signing"
-          echo "  iOS profile: $IOS_NAME"
-          echo "  Watch profile: $WATCH_NAME"
+          python3 -c "
+          import os
+          ios_profile = os.environ['IOS_PROFILE_NAME']
+          watch_profile = os.environ['WATCH_PROFILE_NAME']
+          pbx = 'ShuttlX.xcodeproj/project.pbxproj'
+          with open(pbx, 'r') as f:
+              content = f.read()
+          content = content.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
+          content = content.replace(
+              'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;',
+              'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;' +
+              '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"' + ios_profile + '\";')
+          content = content.replace(
+              'CODE_SIGN_ENTITLEMENTS = \"ShuttlX Watch App/ShuttlX Watch App.entitlements\";',
+              'CODE_SIGN_ENTITLEMENTS = \"ShuttlX Watch App/ShuttlX Watch App.entitlements\";' +
+              '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"' + watch_profile + '\";')
+          with open(pbx, 'w') as f:
+              f.write(content)
+          print(f'Configured manual signing')
+          print(f'  iOS profile: {ios_profile}')
+          print(f'  Watch profile: {watch_profile}')
+          "
 
       # ------------------------------------------------------------------
       # 10. Archive (with manual signing)
