@@ -195,7 +195,32 @@ jobs:
           echo "  com.shuttlx.ShuttlX.watchkitapp -> $WATCH_NAME"
 
       # ------------------------------------------------------------------
-      # 9. Archive (with signing)
+      # 9. Configure manual signing in project
+      # ------------------------------------------------------------------
+      - name: Configure manual signing
+        run: |
+          IOS_NAME="${{ steps.install_profiles.outputs.ios_name }}"
+          WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
+
+          # Switch all targets from Automatic to Manual signing
+          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' ShuttlX.xcodeproj/project.pbxproj
+
+          # Add provisioning profile specifier for iOS target configs
+          sed -i '' '/CODE_SIGN_ENTITLEMENTS = ShuttlX\/ShuttlX.entitlements/a\
+				PROVISIONING_PROFILE_SPECIFIER = "'"$IOS_NAME"'";
+          ' ShuttlX.xcodeproj/project.pbxproj
+
+          # Add provisioning profile specifier for Watch target configs
+          sed -i '' '/CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App\/ShuttlX Watch App.entitlements"/a\
+				PROVISIONING_PROFILE_SPECIFIER = "'"$WATCH_NAME"'";
+          ' ShuttlX.xcodeproj/project.pbxproj
+
+          echo "Configured manual signing"
+          echo "  iOS profile: $IOS_NAME"
+          echo "  Watch profile: $WATCH_NAME"
+
+      # ------------------------------------------------------------------
+      # 10. Archive (with manual signing)
       # ------------------------------------------------------------------
       - name: Build and archive
         run: |
@@ -205,14 +230,12 @@ jobs:
             -configuration Release \
             -destination generic/platform=iOS \
             -archivePath "./build/ShuttlX.xcarchive" \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$HOME/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8" \
-            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             archive
 
       # ------------------------------------------------------------------
-      # 10. Export (with signing via ExportOptions.plist)
+      # 11. Export (with signing via ExportOptions.plist)
       # ------------------------------------------------------------------
       - name: Export archive
         run: |
@@ -230,7 +253,7 @@ jobs:
           fi
 
       # ------------------------------------------------------------------
-      # 11. Upload to App Store Connect
+      # 12. Upload to App Store Connect
       # ------------------------------------------------------------------
       - name: Upload to App Store Connect
         run: |
@@ -243,7 +266,7 @@ jobs:
             --verbose
 
       # ------------------------------------------------------------------
-      # 12. Cleanup
+      # 13. Cleanup
       # ------------------------------------------------------------------
       - name: Cleanup
         if: always()
@@ -256,7 +279,7 @@ jobs:
           fi
 
       # ------------------------------------------------------------------
-      # 13. Upload build artifacts
+      # 14. Upload build artifacts
       # ------------------------------------------------------------------
       - name: Upload IPA artifact
         if: success()
