@@ -206,24 +206,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Close final segment
         closeCurrentSegment()
 
-        // Build and send session
-        if let startTime = workoutStartTime {
-            let now = Date()
-            let session = TrainingSession(
-                startDate: startTime,
-                endDate: now,
-                duration: now.timeIntervalSince(startTime),
-                averageHeartRate: heartRateSamples.isEmpty ? nil : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count),
-                maxHeartRate: maxHeartRateValue > 0 ? maxHeartRateValue : nil,
-                caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
-                distance: totalDistance > 0 ? totalDistance : nil,
-                totalSteps: totalSteps > 0 ? totalSteps : nil,
-                segments: segments
-            )
-
-            sharedDataManager?.sendSessionToiOS(session)
-            logger.info("Session sent to iOS: Duration \(Int(session.duration))s, \(self.segments.count) segments")
-        }
+        // Note: session is sent to iOS by saveWorkoutData() which is called before stopWorkout()
+        // stopWorkout() only cleans up state — no duplicate send
 
         // Reset state
         isWorkoutActive = false

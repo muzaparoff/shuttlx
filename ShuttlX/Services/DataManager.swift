@@ -7,7 +7,6 @@ class DataManager: ObservableObject {
     @Published var sessions: [TrainingSession] = []
     @Published var healthKitAuthorized = false
 
-    private var lastSessionProcessTime: Date?
     private var processedSessionIds = Set<UUID>()
     private var cancellables = Set<AnyCancellable>()
     private let healthStore = HKHealthStore()
@@ -45,14 +44,6 @@ class DataManager: ObservableObject {
     }
 
     func handleReceivedSessions(_ receivedSessions: [TrainingSession]) {
-        let now = Date()
-        if let lastProcessTime = lastSessionProcessTime {
-            if now.timeIntervalSince(lastProcessTime) < 0.5 {
-                return
-            }
-        }
-        lastSessionProcessTime = now
-
         var hasChanges = false
         for session in receivedSessions {
             guard !processedSessionIds.contains(session.id) else { continue }

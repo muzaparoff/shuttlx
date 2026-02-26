@@ -18,7 +18,7 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var completedIntervals: [LegacyCompletedInterval]?
 
     var displayName: String {
-        programName ?? "Free Training"
+        programName ?? "Run+Walk"
     }
 
     var totalRunningDuration: TimeInterval {
