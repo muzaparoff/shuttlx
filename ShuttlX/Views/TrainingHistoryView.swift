@@ -28,7 +28,6 @@ struct TrainingHistoryView: View {
     var body: some View {
         NavigationView {
             VStack {
-                // Time Period Selector
                 Picker("View Mode", selection: $viewMode) {
                     ForEach(HistoryViewMode.allCases, id: \.self) { mode in
                         Text(mode.rawValue).tag(mode)
@@ -38,9 +37,7 @@ struct TrainingHistoryView: View {
                 .padding()
                 .accessibilityLabel("Time period")
                 .accessibilityValue(viewMode.rawValue)
-                .accessibilityHint("Filter training sessions by day, week, or month")
 
-                // Date Navigation
                 HStack {
                     Button(action: { changeDate(-1) }) {
                         Image(systemName: "chevron.left")
@@ -65,7 +62,6 @@ struct TrainingHistoryView: View {
                 }
                 .padding(.horizontal)
 
-                // Sessions List
                 if filteredSessions.isEmpty {
                     VStack(spacing: 16) {
                         Spacer()
@@ -94,8 +90,7 @@ struct TrainingHistoryView: View {
                                     .foregroundColor(.secondary)
                             }
                             .accessibilityElement(children: .combine)
-                            .accessibilityLabel("Total Sessions")
-                            .accessibilityValue("\(filteredSessions.count)")
+                            .accessibilityLabel("Total Sessions: \(filteredSessions.count)")
 
                             HStack {
                                 Text("Total Duration")
@@ -104,8 +99,31 @@ struct TrainingHistoryView: View {
                                     .foregroundColor(.secondary)
                             }
                             .accessibilityElement(children: .combine)
-                            .accessibilityLabel("Total Duration")
-                            .accessibilityValue(formatTotalDuration(filteredSessions))
+                            .accessibilityLabel("Total Duration: \(formatTotalDuration(filteredSessions))")
+
+                            // Running / Walking summary
+                            let totalRunning = filteredSessions.reduce(0.0) { $0 + $1.totalRunningDuration }
+                            let totalWalking = filteredSessions.reduce(0.0) { $0 + $1.totalWalkingDuration }
+
+                            if totalRunning > 0 {
+                                HStack {
+                                    Label("Running", systemImage: "figure.run")
+                                        .foregroundColor(.green)
+                                    Spacer()
+                                    Text(formatTotalDurationFromSeconds(totalRunning))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            if totalWalking > 0 {
+                                HStack {
+                                    Label("Walking", systemImage: "figure.walk")
+                                        .foregroundColor(.orange)
+                                    Spacer()
+                                    Text(formatTotalDurationFromSeconds(totalWalking))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
 
                             if let avgHeartRate = averageHeartRate(filteredSessions) {
                                 HStack {
@@ -115,15 +133,54 @@ struct TrainingHistoryView: View {
                                         .foregroundColor(.red)
                                 }
                                 .accessibilityElement(children: .combine)
-                                .accessibilityLabel("Average Heart Rate")
-                                .accessibilityValue("\(Int(avgHeartRate)) beats per minute")
+                                .accessibilityLabel("Average Heart Rate: \(Int(avgHeartRate)) BPM")
+                            }
+
+                            let totalCalories = filteredSessions.compactMap { $0.caloriesBurned }.reduce(0, +)
+                            if totalCalories > 0 {
+                                HStack {
+                                    Label("Calories", systemImage: "flame.fill")
+                                        .foregroundColor(.orange)
+                                    Spacer()
+                                    Text("\(Int(totalCalories)) CAL")
+                                        .foregroundColor(.secondary)
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("Total Calories: \(Int(totalCalories))")
+                            }
+
+                            let totalSteps = filteredSessions.compactMap { $0.totalSteps }.reduce(0, +)
+                            if totalSteps > 0 {
+                                HStack {
+                                    Label("Steps", systemImage: "shoeprints.fill")
+                                        .foregroundColor(.blue)
+                                    Spacer()
+                                    Text("\(totalSteps)")
+                                        .foregroundColor(.secondary)
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("Total Steps: \(totalSteps)")
+                            }
+
+                            let totalDist = filteredSessions.compactMap { $0.distance }.reduce(0, +)
+                            if totalDist > 0 {
+                                HStack {
+                                    Label("Distance", systemImage: "location.fill")
+                                        .foregroundColor(.green)
+                                    Spacer()
+                                    Text(String(format: "%.1f km", totalDist))
+                                        .foregroundColor(.secondary)
+                                }
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel(String(format: "Total Distance: %.1f kilometers", totalDist))
                             }
                         }
 
-                        // Sessions
                         Section("Training Sessions") {
                             ForEach(filteredSessions) { session in
-                                SessionRowView(session: session)
+                                NavigationLink(destination: SessionDetailView(session: session)) {
+                                    SessionRowView(session: session)
+                                }
                             }
                         }
                     }
@@ -157,12 +214,9 @@ struct TrainingHistoryView: View {
         let component: Calendar.Component
 
         switch viewMode {
-        case .day:
-            component = .day
-        case .week:
-            component = .weekOfYear
-        case .month:
-            component = .month
+        case .day: component = .day
+        case .week: component = .weekOfYear
+        case .month: component = .month
         }
 
         if let newDate = calendar.date(byAdding: component, value: direction, to: selectedDate) {
@@ -171,10 +225,11 @@ struct TrainingHistoryView: View {
     }
 
     private func formatTotalDuration(_ sessions: [TrainingSession]) -> String {
-        let totalSeconds = sessions.compactMap { session in
-            session.endDate?.timeIntervalSince(session.startDate) ?? session.duration
-        }.reduce(0, +)
+        let totalSeconds = sessions.map { $0.duration }.reduce(0, +)
+        return formatTotalDurationFromSeconds(totalSeconds)
+    }
 
+    private func formatTotalDurationFromSeconds(_ totalSeconds: TimeInterval) -> String {
         let hours = Int(totalSeconds / 3600)
         let minutes = Int((totalSeconds.truncatingRemainder(dividingBy: 3600)) / 60)
 

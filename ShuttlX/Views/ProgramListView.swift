@@ -1,126 +1,61 @@
 import SwiftUI
 
-struct ProgramListView: View {
-    @EnvironmentObject var dataManager: DataManager
-    @State private var showingEditor = false
-    @State private var selectedProgram: TrainingProgram?
-    #if DEBUG
-    @State private var showingDebugView = false
-    #endif
-    @State private var isCreatingNewProgram = false
-
+struct WatchPromptView: View {
     var body: some View {
         NavigationView {
-            VStack {
-                // Banner removed - HealthKit permissions handled at first launch
+            VStack(spacing: 24) {
+                Spacer()
 
-                List {
-                    ForEach(dataManager.programs) { program in
-                        ProgramRowView(program: program)
-                            .onTapGesture {
-                                selectedProgram = program
-                                isCreatingNewProgram = false
-                                showingEditor = true
-                            }
-                            .accessibilityElement(children: .combine)
-                            .accessibilityLabel("\(program.name), \(program.type.displayName)")
-                            .accessibilityValue("\(program.intervals.count) intervals")
-                            .accessibilityHint("Double tap to edit this program")
-                            .accessibilityAddTraits(.isButton)
-                    }
-                    .onDelete(perform: deletePrograms)
-                }
-                .listStyle(InsetGroupedListStyle())
-                .overlay(
-                    Group {
-                        if dataManager.programs.isEmpty {
-                            VStack(spacing: 16) {
-                                Image(systemName: "figure.run")
-                                    .font(.system(size: 60))
-                                    .foregroundColor(.secondary)
-                                    .accessibilityHidden(true)
+                Image(systemName: "applewatch")
+                    .font(.system(size: 64))
+                    .foregroundColor(.accentColor)
+                    .accessibilityHidden(true)
 
-                                Text("No Training Programs")
-                                    .font(.title3)
-                                    .fontWeight(.semibold)
-                                    .accessibilityAddTraits(.isHeader)
+                Text("Start Training on your Apple Watch")
+                    .font(.title2)
+                    .fontWeight(.semibold)
+                    .multilineTextAlignment(.center)
 
-                                Text("Create your first training program to get started")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                                    .multilineTextAlignment(.center)
-                                    .padding(.horizontal, 40)
+                Text("ShuttlX auto-detects running and walking.\nJust press Start on your Watch.")
+                    .font(.body)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
 
-                                Button(action: {
-                                    selectedProgram = nil
-                                    isCreatingNewProgram = true
-                                    showingEditor = true
-                                }) {
-                                    Label("Create Program", systemImage: "plus")
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 8)
-                                        .background(Color.accentColor)
-                                        .foregroundColor(.white)
-                                        .cornerRadius(8)
-                                }
-                                .accessibilityLabel("Create Program")
-                                .accessibilityHint("Opens the program editor to create a new training program")
-                                .padding(.top, 8)
-                            }
-                        }
-                    }
-                )
-            }
-            .navigationTitle("Training Programs")
-            .toolbar {
-                #if DEBUG
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button(action: {
-                        showingDebugView = true
-                    }) {
-                        Image(systemName: "ladybug")
+                Spacer()
+
+                HStack(spacing: 32) {
+                    VStack {
+                        Image(systemName: "figure.run")
+                            .font(.title2)
+                            .foregroundColor(.green)
+                        Text("Running")
+                            .font(.caption)
                             .foregroundColor(.secondary)
                     }
-                    .accessibilityLabel("Debug")
-                    .accessibilityHint("Opens the debug information view")
-                }
-                #endif
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        selectedProgram = nil
-                        isCreatingNewProgram = true
-                        showingEditor = true
-                    }) {
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .bold))
-                    }
-                    .accessibilityLabel("Create new program")
-                    .accessibilityHint("Opens the program editor to create a new training program")
-                }
-            }
-            .sheet(isPresented: $showingEditor) {
-                if isCreatingNewProgram {
-                    ProgramEditorView(program: nil)
-                } else {
-                    ProgramEditorView(program: selectedProgram)
-                }
-            }
-            #if DEBUG
-            .sheet(isPresented: $showingDebugView) {
-                DebugView()
-            }
-            #endif
-        }
-    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Auto-detects running")
 
-    private func deletePrograms(offsets: IndexSet) {
-        for index in offsets {
-            dataManager.deleteProgram(dataManager.programs[index])
+                    VStack {
+                        Image(systemName: "figure.walk")
+                            .font(.title2)
+                            .foregroundColor(.orange)
+                        Text("Walking")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Auto-detects walking")
+                }
+
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Training")
         }
     }
 }
 
 #Preview {
-    ProgramListView()
-        .environmentObject(DataManager())
+    WatchPromptView()
 }

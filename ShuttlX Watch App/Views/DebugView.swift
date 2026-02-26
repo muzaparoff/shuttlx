@@ -3,7 +3,6 @@ import SwiftUI
 #if DEBUG
 struct DebugView: View {
     @ObservedObject var sharedDataManager = SharedDataManager.shared
-    @State private var sessions: [TrainingSession] = []
 
     var body: some View {
         ScrollView {
@@ -12,7 +11,6 @@ struct DebugView: View {
                     .font(.headline)
                     .padding(.bottom, 2)
 
-                // Current Sync Status
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Current Status")
                         .font(.caption2)
@@ -23,7 +21,6 @@ struct DebugView: View {
                 }
                 .padding(.vertical, 2)
 
-                // Connection Status
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Connection")
                         .font(.caption2)
@@ -38,7 +35,6 @@ struct DebugView: View {
                 }
                 .padding(.vertical, 2)
 
-                // Last Sync Time
                 if let lastSync = sharedDataManager.lastSyncTime {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Last Sync")
@@ -53,55 +49,23 @@ struct DebugView: View {
 
                 Divider()
 
-                // App Group Status
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("App Group")
+                    Text("Connectivity Health")
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                    Text("group.com.shuttlx.shared")
+                    Text("\(Int(sharedDataManager.connectivityHealth * 100))%")
                         .font(.system(.caption2, design: .monospaced))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
                 }
                 .padding(.vertical, 2)
 
                 Divider()
 
-                // Programs Status
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Programs (\(sharedDataManager.syncedPrograms.count))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    if !sharedDataManager.syncedPrograms.isEmpty {
-                        ForEach(sharedDataManager.syncedPrograms.prefix(2), id: \.id) { program in
-                            Text("- \(program.name)")
-                                .font(.system(.caption2))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                        if sharedDataManager.syncedPrograms.count > 2 {
-                            Text("... +\(sharedDataManager.syncedPrograms.count - 2) more")
-                                .font(.system(.caption2))
-                                .foregroundColor(.secondary)
-                        }
-                    } else {
-                        Text("No programs available")
-                            .font(.system(.caption2))
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding(.vertical, 2)
-
-                Divider()
-
-                // Recent Sync Log
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Recent Activity")
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    ForEach(sharedDataManager.syncLog.prefix(2), id: \.self) { logEntry in
+                    ForEach(sharedDataManager.syncLog.prefix(3), id: \.self) { logEntry in
                         Text(logEntry)
                             .font(.system(.caption2))
                             .lineLimit(1)
@@ -120,19 +84,15 @@ struct DebugView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
         }
-        .onAppear {
-            // Auto-load programs when view appears
-            sharedDataManager.loadPrograms()
-        }
     }
 
     private func getSyncStatusColor() -> Color {
         let status = sharedDataManager.syncStatus
-        if status.contains("✅") {
+        if status.contains("saved") || status.contains("verified") || status.contains("Connected") {
             return .green
-        } else if status.contains("❌") {
+        } else if status.contains("failed") || status.contains("error") {
             return .red
-        } else if status.contains("🔄") || status.contains("Syncing") {
+        } else if status.contains("Syncing") || status.contains("queued") {
             return .blue
         } else {
             return .primary

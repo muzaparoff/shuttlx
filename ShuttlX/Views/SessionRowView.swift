@@ -6,7 +6,7 @@ struct SessionRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
-                Text(session.programName)
+                Text(session.displayName)
                     .font(.headline)
                     .foregroundColor(.primary)
 
@@ -18,25 +18,44 @@ struct SessionRowView: View {
             }
 
             HStack {
-                // Duration
                 Label(formatDuration(session.duration), systemImage: "clock")
                     .font(.caption)
                     .foregroundColor(.secondary)
 
                 Spacer()
 
-                // Calories if available
+                // Running duration
+                if session.totalRunningDuration > 0 {
+                    Label(formatDuration(session.totalRunningDuration), systemImage: "figure.run")
+                        .font(.caption)
+                        .foregroundColor(.green)
+                }
+
+                // Walking duration
+                if session.totalWalkingDuration > 0 {
+                    Label(formatDuration(session.totalWalkingDuration), systemImage: "figure.walk")
+                        .font(.caption)
+                        .foregroundColor(.orange)
+                }
+            }
+
+            HStack {
                 if let calories = session.caloriesBurned {
                     Label("\(Int(calories)) cal", systemImage: "flame.fill")
                         .font(.caption)
                         .foregroundColor(.orange)
                 }
 
-                // Heart rate if available
                 if let heartRate = session.averageHeartRate {
                     Label("\(Int(heartRate)) bpm", systemImage: "heart.fill")
                         .font(.caption)
                         .foregroundColor(.red)
+                }
+
+                if let steps = session.totalSteps {
+                    Label("\(steps)", systemImage: "shoeprints.fill")
+                        .font(.caption)
+                        .foregroundColor(.blue)
                 }
             }
         }
@@ -47,10 +66,16 @@ struct SessionRowView: View {
 
     private var sessionAccessibilityLabel: String {
         var parts: [String] = [
-            session.programName,
+            session.displayName,
             formatDate(session.startDate),
             "duration \(formatDuration(session.duration))"
         ]
+        if session.totalRunningDuration > 0 {
+            parts.append("running \(formatDuration(session.totalRunningDuration))")
+        }
+        if session.totalWalkingDuration > 0 {
+            parts.append("walking \(formatDuration(session.totalWalkingDuration))")
+        }
         if let calories = session.caloriesBurned {
             parts.append("\(Int(calories)) calories")
         }
@@ -81,8 +106,6 @@ struct SessionRowView: View {
 
 #Preview {
     SessionRowView(session: TrainingSession(
-        programID: UUID(),
-        programName: "Beginner Walk-Run",
         startDate: Date(),
         endDate: Date(),
         duration: 1800,
@@ -90,6 +113,10 @@ struct SessionRowView: View {
         maxHeartRate: 165,
         caloriesBurned: 245,
         distance: 2.1,
-        completedIntervals: []
+        totalSteps: 3500,
+        segments: [
+            ActivitySegment(activityType: .running, startDate: Date().addingTimeInterval(-1200), endDate: Date().addingTimeInterval(-600)),
+            ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-600), endDate: Date())
+        ]
     ))
 }

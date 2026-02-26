@@ -24,6 +24,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSMotionUsageDescription</key>
+	<string>ShuttlX uses motion data to automatically detect whether you are running or walking during your workout.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>We need access to your health data to record your workouts</string>
 	<key>NSHealthUpdateUsageDescription</key>

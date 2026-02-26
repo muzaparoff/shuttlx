@@ -57,50 +57,6 @@ struct SettingsView: View {
                 }
                 .accessibilityHint("Shows information about how health data is used")
 
-                // Sync Interval Setting
-                Picker("Sync Interval", selection: $appSettings.syncIntervalSeconds) {
-                    ForEach(appSettings.syncIntervalOptions, id: \.self) { seconds in
-                        Text(seconds == 1 ? "1 second" : "\(seconds) seconds")
-                    }
-                }
-                .accessibilityLabel("Sync Interval")
-                .accessibilityValue("\(appSettings.syncIntervalSeconds) seconds")
-                .accessibilityHint("Choose how often data syncs with Apple Watch")
-            }
-
-            // Sync Section
-            Section(header: Text("Sync")) {
-                HStack {
-                    Text("Last Synced")
-                    Spacer()
-                    Text(formatLastSyncTime())
-                        .foregroundColor(.secondary)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Last Synced")
-                .accessibilityValue(formatLastSyncTime())
-
-                Button("Force Sync with Watch") {
-                    if let programs = dataManager.programs as? [TrainingProgram] {
-                        SharedDataManager.shared.syncProgramsToWatch(programs)
-                        // Update last sync time
-                        UserDefaults.standard.set(Date(), forKey: "lastSyncTime")
-                        // Show success message
-                        successMessage = "Sync completed!"
-                        showSuccessMessage = true
-
-                        // Hide message after delay
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            showSuccessMessage = false
-                        }
-                    }
-                }
-                .accessibilityHint("Manually sends all programs to Apple Watch")
-
-                Button("Show Debug View") {
-                    // Implementation for debug view
-                }
-                .accessibilityHint("Opens the debug information view")
             }
 
             // Data Management Section
@@ -142,6 +98,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
             Button("Delete All", role: .destructive) {
                 SharedDataManager.shared.purgeAllSessionsFromStorage()
+                dataManager.sessions = []
                 // Show success message
                 successMessage = "All sessions cleared!"
                 showSuccessMessage = true
@@ -167,17 +124,6 @@ struct SettingsView: View {
         .preferredColorScheme(appSettings.appearance.colorScheme)
     }
 
-    private func formatLastSyncTime() -> String {
-        let lastSync = UserDefaults.standard.object(forKey: "lastSyncTime") as? Date ?? Date.distantPast
-
-        if lastSync == Date.distantPast {
-            return "Never"
-        } else {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .full
-            return formatter.localizedString(for: lastSync, relativeTo: Date())
-        }
-    }
 }
 
 // Add Toast message view

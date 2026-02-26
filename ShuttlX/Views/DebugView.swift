@@ -4,7 +4,6 @@ import SwiftUI
 struct DebugView: View {
     @ObservedObject var sharedDataManager = SharedDataManager.shared
     @EnvironmentObject var dataManager: DataManager
-    @State private var programs: [TrainingProgram] = []
     @State private var sessions: [TrainingSession] = []
     @State private var showingCleanupAlert = false
     @State private var cleanupMessage = ""
@@ -27,12 +26,10 @@ struct DebugView: View {
                         }
                         .alert("Clear All Sessions", isPresented: $showingCleanupAlert) {
                             Button("Clear All", role: .destructive) {
-                                // Clear all sessions
                                 sharedDataManager.purgeAllSessionsFromStorage()
                                 cleanupMessage = "All sessions cleared!"
                                 showMessage = true
 
-                                // Force DataManager to reload
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                                     dataManager.sessions = []
                                     refreshData()
@@ -42,29 +39,6 @@ struct DebugView: View {
                         } message: {
                             Text("This will delete all saved training sessions. This action cannot be undone.")
                         }
-
-                        Button(action: {
-                            sharedDataManager.forceSyncNow()
-                            cleanupMessage = "Force sync triggered!"
-                            showMessage = true
-                        }) {
-                            HStack {
-                                Image(systemName: "arrow.clockwise")
-                                    .foregroundColor(.blue)
-                                Text("Force Sync Now")
-                                    .foregroundColor(.blue)
-                            }
-                        }
-                    }
-
-                    Section(header: Text("Training Programs (App Group)")) {
-                        if programs.isEmpty {
-                            Text("No programs found.")
-                        } else {
-                            ForEach(programs) { program in
-                                Text(program.name)
-                            }
-                        }
                     }
 
                     Section {
@@ -72,7 +46,14 @@ struct DebugView: View {
                             Text("No sessions found.")
                         } else {
                             ForEach(sessions) { session in
-                                Text("Session at \(session.startDate, formatter: itemFormatter)")
+                                VStack(alignment: .leading) {
+                                    Text("Session at \(session.startDate, formatter: itemFormatter)")
+                                    if !session.segments.isEmpty {
+                                        Text("\(session.segments.count) segments")
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
                             }
                         }
                     } header: {
@@ -112,7 +93,6 @@ struct DebugView: View {
                             .shadow(radius: 3)
                             .transition(.move(edge: .top))
                             .onAppear {
-                                // Hide message after a few seconds
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                                     showMessage = false
                                 }
@@ -120,18 +100,11 @@ struct DebugView: View {
                     }
                 }
             )
-            .onReceive(NotificationCenter.default.publisher(for: Notification.Name("SessionStorageStatus"))) { notification in
-                if let status = notification.userInfo?["status"] as? String, status == "purged" {
-                    cleanupMessage = "All sessions successfully purged!"
-                    showMessage = true
-                }
-            }
         }
         .onAppear(perform: refreshData)
     }
 
     private func refreshData() {
-        programs = sharedDataManager.loadProgramsFromAppGroup()
         sessions = sharedDataManager.loadSessionsFromAppGroup()
     }
 

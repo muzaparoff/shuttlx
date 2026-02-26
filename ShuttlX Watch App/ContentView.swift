@@ -7,24 +7,20 @@ struct ContentView: View {
 
     var body: some View {
         NavigationView {
-            if workoutManager.isWorkoutActive && workoutManager.currentProgram != nil {
+            if workoutManager.isWorkoutActive {
                 TrainingView()
                     .onAppear {
-                        logger.info("TrainingView appeared - workout is active")
-                        logger.info("Current program: \(workoutManager.currentProgram?.name ?? "nil")")
-                        logger.info("Current interval: \(workoutManager.currentInterval?.phase.rawValue ?? "nil")")
+                        logger.info("TrainingView appeared - workout active")
                     }
             } else {
-                ProgramSelectionView()
+                StartTrainingView()
                     .onAppear {
-                        logger.info("ProgramSelectionView appeared successfully")
-                        logger.info("Workout active: \(workoutManager.isWorkoutActive)")
+                        logger.info("StartTrainingView appeared")
                     }
-                    .accessibilityLabel("Program Selection")
             }
         }
         .onAppear {
-            logger.info("NavigationView appeared - ContentView rendered successfully")
+            logger.info("ContentView rendered")
         }
     }
 }

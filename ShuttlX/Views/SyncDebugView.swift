@@ -28,10 +28,6 @@ struct SyncDebugView: View {
                 }
 
                 Section(header: Text("Actions")) {
-                    Button("Force Sync Now") {
-                        SharedDataManager.shared.syncProgramsToWatch(DataManager().programs)
-                    }
-
                     Button("Clear Logs") {
                         syncMonitor.clearLogs()
                     }
@@ -103,14 +99,7 @@ class SyncMonitor: ObservableObject {
         }
     }
 
-    private init() {
-        // Set up notification observers
-        NotificationCenter.default.addObserver(self, selector: #selector(handleWatchSessionStatus(_:)),
-                                              name: NSNotification.Name("WatchSessionStatus"), object: nil)
-
-        NotificationCenter.default.addObserver(self, selector: #selector(handleWatchSyncStatus(_:)),
-                                              name: NSNotification.Name("WatchSyncStatus"), object: nil)
-    }
+    private init() { }
 
     func startMonitoring() {
         updateStatus()
@@ -173,73 +162,6 @@ class SyncMonitor: ObservableObject {
         }
     }
 
-    @objc private func handleWatchSessionStatus(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let status = userInfo["status"] as? String else {
-            return
-        }
-
-        addLog("Session: \(status)")
-
-        // Update UI based on status
-        DispatchQueue.main.async {
-            switch status {
-            case "activated":
-                self.addLog("Session activated successfully")
-            case "activationFailed":
-                if let error = userInfo["error"] as? String {
-                    self.addLog("Activation failed: \(error)")
-                }
-            case "reachabilityChanged":
-                if let isReachable = userInfo["isReachable"] as? Bool {
-                    self.isReachable = isReachable
-                    self.addLog("Reachability changed to \(isReachable ? "reachable" : "unreachable")")
-                }
-            case "watchStateChanged":
-                if let isPaired = userInfo["isPaired"] as? Bool {
-                    self.isPaired = isPaired
-                }
-                if let isWatchAppInstalled = userInfo["isWatchAppInstalled"] as? Bool {
-                    self.isWatchAppInstalled = isWatchAppInstalled
-                }
-                self.addLog("Watch state: paired=\(self.isPaired), installed=\(self.isWatchAppInstalled)")
-            default:
-                break
-            }
-        }
-    }
-
-    @objc private func handleWatchSyncStatus(_ notification: Notification) {
-        guard let userInfo = notification.userInfo,
-              let status = userInfo["status"] as? String else {
-            return
-        }
-
-        addLog("Sync: \(status)")
-
-        // Update UI based on sync status
-        DispatchQueue.main.async {
-            switch status {
-            case "syncAttempted":
-                self.syncStatus = "Sync attempted"
-            case "syncSuccessful":
-                self.syncStatus = "Sync successful"
-                self.lastSyncTime = Date()
-            case "watchNotAvailable":
-                self.syncStatus = "Watch not available"
-            case "activationFailed":
-                self.syncStatus = "Activation failed"
-            case "retrying":
-                if let attempt = userInfo["attempt"] as? Int {
-                    self.syncStatus = "Retrying (attempt \(attempt))"
-                }
-            case "retriesExhausted":
-                self.syncStatus = "Failed after retries"
-            default:
-                self.syncStatus = status
-            }
-        }
-    }
 }
 
 struct SyncDebugView_Previews: PreviewProvider {

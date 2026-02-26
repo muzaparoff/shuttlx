@@ -21,7 +21,7 @@ struct OnboardingView: View {
                         .fontWeight(.bold)
                         .accessibilityAddTraits(.isHeader)
 
-                    Text("Your personal training assistant for running, cycling, and more")
+                    Text("Auto-detect running and walking with your Apple Watch")
                         .font(.title3)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
@@ -56,7 +56,7 @@ struct OnboardingView: View {
                         .fontWeight(.bold)
                         .accessibilityAddTraits(.isHeader)
 
-                    Text("ShuttlX uses HealthKit to read and store your workout data to provide personalized training insights.")
+                    Text("ShuttlX uses HealthKit to track your heart rate, calories, and workout data during training sessions.")
                         .font(.title3)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
