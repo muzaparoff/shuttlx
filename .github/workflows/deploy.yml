@@ -36,6 +36,9 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: write
+
 jobs:
   deploy:
     name: Build & Upload to TestFlight
