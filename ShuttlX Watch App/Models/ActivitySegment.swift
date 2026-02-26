@@ -11,8 +11,7 @@ enum DetectedActivity: String, Codable, CaseIterable {
         switch self {
         case .running: return "Running"
         case .walking: return "Walking"
-        case .stationary: return "Stationary"
-        case .unknown: return "Unknown"
+        case .stationary, .unknown: return "Stationary"
         }
     }
 
@@ -20,8 +19,7 @@ enum DetectedActivity: String, Codable, CaseIterable {
         switch self {
         case .running: return "figure.run"
         case .walking: return "figure.walk"
-        case .stationary: return "pause.circle"
-        case .unknown: return "questionmark.circle"
+        case .stationary, .unknown: return "figure.stand"
         }
     }
 
@@ -29,8 +27,7 @@ enum DetectedActivity: String, Codable, CaseIterable {
         switch self {
         case .running: return .green
         case .walking: return .orange
-        case .stationary: return .gray
-        case .unknown: return .secondary
+        case .stationary, .unknown: return .gray
         }
     }
 }

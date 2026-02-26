@@ -8,13 +8,8 @@ struct TrainingView: View {
 
     var body: some View {
         TabView(selection: $selectedTab) {
-            // Tab 1: Activity + Metrics
+            // Tab 1: Timer + Metrics
             VStack(spacing: 0) {
-                // Activity indicator
-                ActivityIndicatorView()
-                    .padding(.top, 2)
-                    .padding(.bottom, 4)
-
                 Spacer(minLength: 0)
 
                 // Elapsed time (counts UP)
