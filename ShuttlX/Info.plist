@@ -26,6 +26,8 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMotionUsageDescription</key>
+	<string>ShuttlX uses motion data to track your steps and detect activity type during workouts.</string>
 	<key>NSHealthShareUsageDescription</key>
 	<string>ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
