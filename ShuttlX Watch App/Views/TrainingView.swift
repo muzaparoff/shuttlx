@@ -80,8 +80,7 @@ struct TrainingView: View {
             }
             .tag(1)
         }
-        .navigationTitle("Training")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarHidden(true)
         .tabViewStyle(PageTabViewStyle())
         .alert("End Training", isPresented: $showingStopConfirmation) {
             Button(role: .destructive) {
