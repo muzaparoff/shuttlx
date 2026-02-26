@@ -2,6 +2,12 @@
 # ShuttlX — Deploy to TestFlight on push to main
 # =============================================================================
 #
+# Build number strategy:
+#   - Reads the latest `build/N` git tag to determine the last uploaded build
+#   - Increments by 1 for the new build
+#   - After successful upload, creates and pushes `build/N` tag
+#   - Falls back to build 3 if no tags exist (builds 1-2 already uploaded)
+#
 # Required GitHub Secrets:
 #
 #   APP_STORE_CONNECT_API_KEY_ID       App Store Connect API Key ID
@@ -38,12 +44,13 @@ jobs:
 
     steps:
       # ------------------------------------------------------------------
-      # 1. Checkout
+      # 1. Checkout (with full history and tags)
       # ------------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
 
       # ------------------------------------------------------------------
       # 2. Select Xcode 16.x
@@ -132,15 +139,26 @@ jobs:
           chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
 
       # ------------------------------------------------------------------
-      # 6. Calculate build number
+      # 6. Calculate build number from latest build/ tag
       # ------------------------------------------------------------------
       - name: Calculate build number
         id: build_number
         run: |
-          CURRENT_BUILD=$(agvtool what-version -terse 2>/dev/null || echo "1")
-          BUILD_NUMBER=$((CURRENT_BUILD + 1))
+          # Find the latest build/N tag
+          LAST_BUILD_TAG=$(git tag -l 'build/*' --sort=-version:refname | head -1)
+
+          if [ -n "$LAST_BUILD_TAG" ]; then
+            LAST_BUILD=${LAST_BUILD_TAG#build/}
+            echo "Last uploaded build tag: $LAST_BUILD_TAG (build $LAST_BUILD)"
+          else
+            # No build tags yet — builds 1 and 2 are already on App Store Connect
+            LAST_BUILD=2
+            echo "No build tags found, starting after known uploaded build $LAST_BUILD"
+          fi
+
+          BUILD_NUMBER=$((LAST_BUILD + 1))
           echo "number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
-          echo "Build number: $BUILD_NUMBER"
+          echo "New build number: $BUILD_NUMBER"
 
       # ------------------------------------------------------------------
       # 7. Update build number in project
@@ -149,6 +167,7 @@ jobs:
         run: |
           BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
           agvtool new-version -all "$BUILD_NUMBER"
+          echo "Set CFBundleVersion to $BUILD_NUMBER in all targets"
 
       # ------------------------------------------------------------------
       # 8. Create ExportOptions.plist
@@ -272,7 +291,20 @@ jobs:
             --verbose
 
       # ------------------------------------------------------------------
-      # 13. Cleanup
+      # 13. Tag successful build
+      # ------------------------------------------------------------------
+      - name: Tag successful build
+        run: |
+          BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
+          TAG="build/${BUILD_NUMBER}"
+
+          git tag "$TAG"
+          git push origin "$TAG"
+
+          echo "Tagged successful upload as $TAG"
+
+      # ------------------------------------------------------------------
+      # 14. Cleanup
       # ------------------------------------------------------------------
       - name: Cleanup
         if: always()
@@ -285,12 +317,12 @@ jobs:
           fi
 
       # ------------------------------------------------------------------
-      # 14. Upload build artifacts
+      # 15. Upload build artifacts
       # ------------------------------------------------------------------
       - name: Upload IPA artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: ShuttlX-${{ github.sha }}
+          name: ShuttlX-v${{ steps.build_number.outputs.number }}-${{ github.sha }}
           path: build/export/ShuttlX.ipa
           retention-days: 30
