@@ -24,6 +24,7 @@ class DataManager: ObservableObject {
 
     init() {
         loadSessionsFromAppGroup()
+        checkHealthKitAuthorizationStatus()
 
         Task.detached {
             await MainActor.run {
@@ -62,6 +63,13 @@ class DataManager: ObservableObject {
     }
 
     // MARK: - HealthKit
+    private func checkHealthKitAuthorizationStatus() {
+        guard HKHealthStore.isHealthDataAvailable() else { return }
+        // Check a write type — HealthKit reports accurate status for share types
+        let workoutType = HKWorkoutType.workoutType()
+        healthKitAuthorized = healthStore.authorizationStatus(for: workoutType) == .sharingAuthorized
+    }
+
     func requestHealthKitPermissions() async {
         guard HKHealthStore.isHealthDataAvailable() else { return }
 
