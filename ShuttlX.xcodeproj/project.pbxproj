@@ -40,6 +40,8 @@
 		B5923013 /* PaceTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923003 /* PaceTrendChart.swift */; };
 		B5923014 /* HRZoneChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923004 /* HRZoneChart.swift */; };
 		B5923015 /* WeekStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923005 /* WeekStripView.swift */; };
+		C5923011 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
+		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -103,6 +105,8 @@
 		B5923003 /* PaceTrendChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceTrendChart.swift; sourceTree = "<group>"; };
 		B5923004 /* HRZoneChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZoneChart.swift; sourceTree = "<group>"; };
 		B5923005 /* WeekStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStripView.swift; sourceTree = "<group>"; };
+		C5923001 /* RoutePoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePoint.swift; sourceTree = "<group>"; };
+		C5923002 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -198,6 +202,7 @@
 				A5923505F /* TrainingSession.swift */,
 				A5923530F /* ActivitySegment.swift */,
 				B5923001 /* ChartData.swift */,
+				C5923001 /* RoutePoint.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -214,6 +219,7 @@
 				A5923517F /* SettingsView.swift */,
 				A5923518F /* SyncDebugView.swift */,
 				A5923D01 /* DashboardView.swift */,
+				C5923002 /* RouteMapView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
 			);
@@ -418,6 +424,8 @@
 				B5923013 /* PaceTrendChart.swift in Sources */,
 				B5923014 /* HRZoneChart.swift in Sources */,
 				B5923015 /* WeekStripView.swift in Sources */,
+				C5923011 /* RoutePoint.swift in Sources */,
+				C5923012 /* RouteMapView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

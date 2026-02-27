@@ -19,6 +19,11 @@ struct SessionDetailView: View {
                     ActivityTimelineView(segments: session.segments, totalDuration: session.duration)
                 }
 
+                // Route map
+                if let route = session.route, !route.isEmpty {
+                    RouteMapView(route: route, segments: session.segments)
+                }
+
                 // Metric cards grid
                 metricGrid
 
@@ -222,6 +227,14 @@ struct ActivityTimelineView: View {
                 ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-1800), endDate: Date().addingTimeInterval(-1500)),
                 ActivitySegment(activityType: .running, startDate: Date().addingTimeInterval(-1500), endDate: Date().addingTimeInterval(-900)),
                 ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-900), endDate: Date())
+            ],
+            route: [
+                RoutePoint(latitude: 55.7558, longitude: 37.6173, timestamp: Date().addingTimeInterval(-1800)),
+                RoutePoint(latitude: 55.7562, longitude: 37.6183, timestamp: Date().addingTimeInterval(-1600)),
+                RoutePoint(latitude: 55.7570, longitude: 37.6200, timestamp: Date().addingTimeInterval(-1400)),
+                RoutePoint(latitude: 55.7575, longitude: 37.6195, timestamp: Date().addingTimeInterval(-1100)),
+                RoutePoint(latitude: 55.7580, longitude: 37.6185, timestamp: Date().addingTimeInterval(-800)),
+                RoutePoint(latitude: 55.7585, longitude: 37.6170, timestamp: Date().addingTimeInterval(-500)),
             ]
         ))
     }

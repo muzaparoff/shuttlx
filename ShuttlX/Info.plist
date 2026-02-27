@@ -26,6 +26,8 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ShuttlX uses your location during workouts to track your route and display it on a map.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>ShuttlX uses motion data to track your steps and detect activity type during workouts.</string>
 	<key>NSHealthShareUsageDescription</key>

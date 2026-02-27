@@ -11,6 +11,7 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var distance: Double?
     var totalSteps: Int?
     var segments: [ActivitySegment]
+    var route: [RoutePoint]?
 
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
@@ -39,7 +40,8 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         caloriesBurned: Double? = nil,
         distance: Double? = nil,
         totalSteps: Int? = nil,
-        segments: [ActivitySegment] = []
+        segments: [ActivitySegment] = [],
+        route: [RoutePoint]? = nil
     ) {
         self.id = id
         self.startDate = startDate
@@ -51,6 +53,7 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         self.distance = distance
         self.totalSteps = totalSteps
         self.segments = segments
+        self.route = route
         self.programID = nil
         self.programName = nil
         self.completedIntervals = nil

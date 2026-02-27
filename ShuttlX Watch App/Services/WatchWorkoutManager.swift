@@ -1,6 +1,7 @@
 import Foundation
 import HealthKit
 import CoreMotion
+import CoreLocation
 import WatchConnectivity
 #if os(watchOS)
 import WatchKit
@@ -56,6 +57,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Live metrics broadcast
     private var lastLiveUpdateTime: Date?
 
+    // CoreLocation
+    private let locationManager = CLLocationManager()
+    private var routePoints: [RoutePoint] = []
+
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
     private let pedometer = CMPedometer()
@@ -71,6 +76,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
+        locationManager.delegate = self
         logger.info("WatchWorkoutManager initialized")
     }
 
@@ -167,6 +173,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateAnchor = nil
         caloriesAnchor = nil
 
+        routePoints = []
+
         // Start first segment as unknown
         segments.append(ActivitySegment(activityType: .unknown, startDate: now))
 
@@ -176,6 +184,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         startPedometerUpdates()
         startHeartRateQuery()
         startCaloriesQuery()
+        requestLocationAndStartUpdates()
 
         logger.info("Workout started")
     }
@@ -189,6 +198,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopPedometerUpdates()
         stopHeartRateQuery()
         stopCaloriesQuery()
+        stopLocationUpdates()
 
         workoutSession?.pause()
         saveWorkoutDataToLocalStorage()
@@ -211,6 +221,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         startPedometerUpdates()
         startHeartRateQuery()
         startCaloriesQuery()
+        startLocationUpdates()
         logger.info("Workout resumed")
     }
 
@@ -222,6 +233,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopPedometerUpdates()
         stopHeartRateQuery()
         stopCaloriesQuery()
+        stopLocationUpdates()
 
         workoutSession?.end()
         workoutSession = nil
@@ -257,6 +269,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateAnchor = nil
         caloriesAnchor = nil
         lastLiveUpdateTime = nil
+        routePoints = []
 
         // Notify iOS that workout ended
         if WCSession.default.isReachable {
@@ -439,6 +452,32 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let now = Date()
         guard !segments.isEmpty else { return }
         segments[segments.count - 1].endDate = now
+    }
+
+    // MARK: - Location Tracking
+
+    private func requestLocationAndStartUpdates() {
+        let status = locationManager.authorizationStatus
+        if status == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+        } else if status == .authorizedWhenInUse || status == .authorizedAlways {
+            startLocationUpdates()
+        } else {
+            logger.warning("Location permission denied — route will not be recorded")
+        }
+    }
+
+    private func startLocationUpdates() {
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.distanceFilter = 10
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.startUpdatingLocation()
+        logger.info("Location updates started")
+    }
+
+    private func stopLocationUpdates() {
+        locationManager.stopUpdatingLocation()
+        logger.info("Location updates stopped")
     }
 
     // MARK: - Pedometer
@@ -655,7 +694,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
-            segments: segmentsCopy
+            segments: segmentsCopy,
+            route: routePoints.isEmpty ? nil : routePoints
         )
 
         do {
@@ -697,7 +737,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
-            segments: segmentsCopy
+            segments: segmentsCopy,
+            route: routePoints.isEmpty ? nil : routePoints
         )
 
         sharedDataManager?.sendSessionToiOS(session)
@@ -732,3 +773,33 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
     }
 }
 #endif
+
+// MARK: - CLLocationManagerDelegate
+extension WatchWorkoutManager: CLLocationManagerDelegate {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        let filtered = locations.filter { $0.horizontalAccuracy >= 0 && $0.horizontalAccuracy <= 50 }
+        guard !filtered.isEmpty else { return }
+
+        let points = filtered.map { RoutePoint(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude, altitude: $0.altitude, timestamp: $0.timestamp) }
+
+        Task { @MainActor [weak self] in
+            self?.routePoints.append(contentsOf: points)
+        }
+    }
+
+    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            let status = manager.authorizationStatus
+            if (status == .authorizedWhenInUse || status == .authorizedAlways) && self.isWorkoutActive && !self.isPaused {
+                self.startLocationUpdates()
+            }
+        }
+    }
+
+    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+        Task { @MainActor [weak self] in
+            self?.logger.error("Location error: \(error.localizedDescription)")
+        }
+    }
+}

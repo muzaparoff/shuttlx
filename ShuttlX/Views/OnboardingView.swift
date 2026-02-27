@@ -84,7 +84,7 @@ struct OnboardingView: View {
             HStack(spacing: 24) {
                 OnboardingMetric(icon: "heart.circle", label: "Heart Rate", color: ShuttlXColor.heartRate)
                 OnboardingMetric(icon: "flame.circle", label: "Calories", color: ShuttlXColor.calories)
-                OnboardingMetric(icon: "figure.walk.circle", label: "Steps", color: ShuttlXColor.steps)
+                OnboardingMetric(icon: "location.circle", label: "Route", color: ShuttlXColor.running)
             }
 
             Spacer()

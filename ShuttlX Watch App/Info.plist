@@ -24,6 +24,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>ShuttlX uses your location during workouts to track your route and display it on a map.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>ShuttlX uses motion data to automatically detect whether you are running or walking during your workout.</string>
 	<key>NSHealthShareUsageDescription</key>
