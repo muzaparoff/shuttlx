@@ -7,7 +7,7 @@ struct SyncDebugView: View {
     @ObservedObject private var sharedDataManager: SharedDataManager = .shared
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             List {
                 Section(header: Text("Session Status")) {
                     statusRow(title: "Activation State", value: syncMonitor.activationState)
@@ -164,9 +164,7 @@ class SyncMonitor: ObservableObject {
 
 }
 
-struct SyncDebugView_Previews: PreviewProvider {
-    static var previews: some View {
-        SyncDebugView()
-    }
+#Preview {
+    SyncDebugView()
 }
 #endif

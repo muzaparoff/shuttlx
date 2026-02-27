@@ -2,7 +2,7 @@ import SwiftUI
 
 struct WatchPromptView: View {
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack(spacing: 24) {
                 Spacer()
 

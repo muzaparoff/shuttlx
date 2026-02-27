@@ -10,7 +10,7 @@ struct DebugView: View {
     @State private var showMessage = false
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             VStack {
                 List {
                     Section(header: Text("Maintenance Actions")) {
@@ -89,7 +89,7 @@ struct DebugView: View {
                             .padding()
                             .background(Color.green.opacity(0.8))
                             .foregroundColor(.white)
-                            .cornerRadius(10)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
                             .shadow(radius: 3)
                             .transition(.move(edge: .top))
                             .onAppear {
@@ -116,9 +116,7 @@ struct DebugView: View {
     }
 }
 
-struct DebugView_Previews: PreviewProvider {
-    static var previews: some View {
-        DebugView()
-    }
+#Preview {
+    DebugView()
 }
 #endif

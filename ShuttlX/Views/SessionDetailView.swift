@@ -4,153 +4,211 @@ struct SessionDetailView: View {
     let session: TrainingSession
 
     var body: some View {
-        List {
-            // Summary section
-            Section("Summary") {
-                LabeledRow(label: "Date", value: formatDate(session.startDate))
-                LabeledRow(label: "Duration", value: formatDuration(session.duration))
+        ScrollView {
+            VStack(spacing: 20) {
+                // Duration header
+                durationHeader
 
-                if session.totalRunningDuration > 0 {
-                    HStack {
-                        Label("Running", systemImage: "figure.run")
-                            .foregroundColor(.green)
-                        Spacer()
-                        Text(formatDuration(session.totalRunningDuration))
-                            .foregroundColor(.secondary)
-                    }
+                // Activity badges
+                if session.totalRunningDuration > 0 || session.totalWalkingDuration > 0 {
+                    activityBadges
                 }
 
-                if session.totalWalkingDuration > 0 {
-                    HStack {
-                        Label("Walking", systemImage: "figure.walk")
-                            .foregroundColor(.orange)
-                        Spacer()
-                        Text(formatDuration(session.totalWalkingDuration))
-                            .foregroundColor(.secondary)
-                    }
+                // Activity timeline bar
+                if !session.segments.isEmpty {
+                    ActivityTimelineView(segments: session.segments, totalDuration: session.duration)
+                }
+
+                // Metric cards grid
+                metricGrid
+
+                // Segments list
+                if !session.segments.isEmpty {
+                    segmentsList
                 }
             }
-
-            // Metrics section
-            Section("Metrics") {
-                if let steps = session.totalSteps {
-                    LabeledRow(label: "Steps", value: "\(steps)", icon: "shoeprints.fill", color: .blue)
-                }
-
-                if let distance = session.distance, distance > 0 {
-                    LabeledRow(label: "Distance", value: String(format: "%.2f km", distance), icon: "location.fill", color: .green)
-                }
-
-                if let hr = session.averageHeartRate {
-                    LabeledRow(label: "Avg Heart Rate", value: "\(Int(hr)) BPM", icon: "heart.fill", color: .red)
-                }
-
-                if let maxHR = session.maxHeartRate {
-                    LabeledRow(label: "Max Heart Rate", value: "\(Int(maxHR)) BPM", icon: "heart.fill", color: .red)
-                }
-
-                if let cal = session.caloriesBurned {
-                    LabeledRow(label: "Calories", value: "\(Int(cal)) cal", icon: "flame.fill", color: .orange)
-                }
-            }
-
-            // Segments section
-            if !session.segments.isEmpty {
-                Section("Activity Segments") {
-                    ForEach(session.segments) { segment in
-                        HStack {
-                            Image(systemName: segment.activityType.systemImage)
-                                .foregroundColor(segment.activityType.color)
-                                .frame(width: 24)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(segment.activityType.displayName)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-
-                                Text(formatTimeRange(start: segment.startDate, end: segment.endDate))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            Text(formatDuration(segment.duration))
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .monospacedDigit()
-                        }
-                        .accessibilityElement(children: .combine)
-                        .accessibilityLabel("\(segment.activityType.displayName), \(formatDuration(segment.duration))")
-                    }
-                }
-            }
+            .padding()
         }
         .navigationTitle("Session Details")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // MARK: - Formatting
+    // MARK: - Duration Header
 
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
+    private var durationHeader: some View {
+        VStack(spacing: 4) {
+            Text(FormattingUtils.formatDuration(session.duration))
+                .font(ShuttlXFont.metricLarge)
+                .contentTransition(.numericText())
+
+            Text(FormattingUtils.formatSessionDate(session.startDate))
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Duration \(FormattingUtils.formatDuration(session.duration)), \(FormattingUtils.formatSessionDate(session.startDate))")
     }
 
-    private func formatDuration(_ seconds: TimeInterval) -> String {
-        let h = Int(seconds / 3600)
-        let m = Int((seconds.truncatingRemainder(dividingBy: 3600)) / 60)
-        let s = Int(seconds.truncatingRemainder(dividingBy: 60))
+    // MARK: - Activity Badges
 
-        if h > 0 {
-            return String(format: "%dh %02dm", h, m)
-        } else if m > 0 {
-            return String(format: "%dm %02ds", m, s)
-        } else {
-            return "\(s)s"
+    private var activityBadges: some View {
+        HStack(spacing: 8) {
+            if session.totalRunningDuration > 0 {
+                ActivityBadge(activity: .running, duration: session.totalRunningDuration)
+            }
+            if session.totalWalkingDuration > 0 {
+                ActivityBadge(activity: .walking, duration: session.totalWalkingDuration)
+            }
+        }
+    }
+
+    // MARK: - Metric Grid
+
+    private var metricGrid: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+            if let distance = session.distance, distance > 0 {
+                MetricCard(
+                    icon: "location.fill",
+                    value: FormattingUtils.formatDistance(distance),
+                    label: "Distance",
+                    color: ShuttlXColor.running
+                )
+            }
+
+            if let hr = session.averageHeartRate {
+                MetricCard(
+                    icon: "heart.fill",
+                    value: "\(Int(hr)) BPM",
+                    label: "Avg Heart Rate",
+                    color: ShuttlXColor.heartRate
+                )
+            }
+
+            if let maxHR = session.maxHeartRate {
+                MetricCard(
+                    icon: "heart.fill",
+                    value: "\(Int(maxHR)) BPM",
+                    label: "Max Heart Rate",
+                    color: ShuttlXColor.heartRate
+                )
+            }
+
+            if let cal = session.caloriesBurned {
+                MetricCard(
+                    icon: "flame.fill",
+                    value: "\(Int(cal))",
+                    label: "Calories",
+                    color: ShuttlXColor.calories
+                )
+            }
+
+            if let steps = session.totalSteps {
+                MetricCard(
+                    icon: "shoeprints.fill",
+                    value: "\(steps)",
+                    label: "Steps",
+                    color: ShuttlXColor.steps
+                )
+            }
+        }
+    }
+
+    // MARK: - Segments List
+
+    private var segmentsList: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Activity Segments")
+                .font(ShuttlXFont.sectionHeader)
+                .padding(.top, 4)
+
+            ForEach(session.segments) { segment in
+                HStack {
+                    Image(systemName: segment.activityType.systemImage)
+                        .foregroundStyle(segment.activityType.themeColor)
+                        .frame(width: 24)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(segment.activityType.displayName)
+                            .font(.subheadline.weight(.medium))
+
+                        Text(formatTimeRange(start: segment.startDate, end: segment.endDate))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Text(FormattingUtils.formatDuration(segment.duration))
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
+            }
         }
     }
 
     private func formatTimeRange(start: Date, end: Date?) -> String {
-        let formatter = DateFormatter()
-        formatter.timeStyle = .short
-        let startStr = formatter.string(from: start)
+        let f = DateFormatter()
+        f.timeStyle = .short
+        let startStr = f.string(from: start)
         if let end = end {
-            return "\(startStr) - \(formatter.string(from: end))"
+            return "\(startStr) - \(f.string(from: end))"
         }
         return startStr
     }
 }
 
-// MARK: - Helper Views
+// MARK: - Activity Timeline View
 
-private struct LabeledRow: View {
-    let label: String
-    let value: String
-    var icon: String? = nil
-    var color: Color = .primary
+struct ActivityTimelineView: View {
+    let segments: [ActivitySegment]
+    let totalDuration: TimeInterval
 
     var body: some View {
-        HStack {
-            if let icon = icon {
-                Image(systemName: icon)
-                    .foregroundColor(color)
-                    .frame(width: 20)
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Activity Timeline")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            GeometryReader { geometry in
+                HStack(spacing: 1) {
+                    ForEach(segments) { segment in
+                        let fraction = totalDuration > 0 ? segment.duration / totalDuration : 0
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(segment.activityType.themeColor)
+                            .frame(width: max(4, geometry.size.width * fraction))
+                    }
+                }
             }
-            Text(label)
-            Spacer()
-            Text(value)
-                .foregroundColor(.secondary)
+            .frame(height: 12)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+
+            // Legend
+            HStack(spacing: 12) {
+                let activities = Set(segments.map(\.activityType))
+                ForEach(Array(activities), id: \.self) { activity in
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(activity.themeColor)
+                            .frame(width: 6, height: 6)
+                        Text(activity.displayName)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label): \(value)")
+        .accessibilityLabel("Activity timeline showing workout segments")
     }
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         SessionDetailView(session: TrainingSession(
             startDate: Date().addingTimeInterval(-1800),
             endDate: Date(),

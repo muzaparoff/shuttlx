@@ -23,11 +23,13 @@ enum DetectedActivity: String, Codable, CaseIterable {
         }
     }
 
-    var color: Color {
+    var color: Color { themeColor }
+
+    var themeColor: Color {
         switch self {
-        case .running: return .green
-        case .walking: return .orange
-        case .stationary, .unknown: return .gray
+        case .running: return ShuttlXColor.running
+        case .walking: return ShuttlXColor.walking
+        case .stationary, .unknown: return ShuttlXColor.stationary
         }
     }
 }

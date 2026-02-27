@@ -6,7 +6,7 @@ struct ContentView: View {
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "ContentView")
 
     var body: some View {
-        NavigationView {
+        NavigationStack {
             if workoutManager.isWorkoutActive {
                 TrainingView()
                     .onAppear {

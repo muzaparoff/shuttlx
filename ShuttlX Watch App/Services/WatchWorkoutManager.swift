@@ -53,6 +53,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Pace & split tracking
     private var timeAtLastKm: TimeInterval = 0
 
+    // Live metrics broadcast
+    private var lastLiveUpdateTime: Date?
+
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
     private let pedometer = CMPedometer()
@@ -253,6 +256,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
+        lastLiveUpdateTime = nil
+
+        // Notify iOS that workout ended
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(
+                ["action": "workoutStopped", "timestamp": Date().timeIntervalSince1970],
+                replyHandler: nil, errorHandler: nil
+            )
+        }
 
         clearWorkoutBackup()
     }
@@ -313,6 +325,40 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Check debounce for pending activity transitions
         checkPendingActivityTransition()
+
+        // Broadcast live metrics to iOS every 3 seconds
+        broadcastLiveMetricsIfNeeded()
+    }
+
+    // MARK: - Live Metrics Broadcast
+
+    private func broadcastLiveMetricsIfNeeded() {
+        let now = Date()
+        if let lastUpdate = lastLiveUpdateTime, now.timeIntervalSince(lastUpdate) < 3.0 {
+            return
+        }
+        lastLiveUpdateTime = now
+
+        guard WCSession.default.isReachable else { return }
+
+        let payload: [String: Any] = [
+            "action": "liveMetrics",
+            "elapsedTime": elapsedTime,
+            "heartRate": heartRate,
+            "distance": totalDistance,
+            "calories": calories,
+            "steps": totalSteps,
+            "currentActivity": currentActivity.rawValue,
+            "isPaused": isPaused,
+            "pace": currentPace ?? 0,
+            "timestamp": now.timeIntervalSince1970
+        ]
+
+        WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
+            Task { @MainActor [weak self] in
+                self?.logger.debug("Live metrics send failed: \(error.localizedDescription)")
+            }
+        }
     }
 
     // MARK: - CoreMotion Activity Detection

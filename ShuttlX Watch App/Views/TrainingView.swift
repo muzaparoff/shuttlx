@@ -25,7 +25,7 @@ struct TrainingView: View {
             // Tab 2: Controls
             VStack(spacing: 16) {
                 Text("Workout Controls")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.headline)
                     .accessibilityAddTraits(.isHeader)
 
                 Spacer()
@@ -43,7 +43,7 @@ struct TrainingView: View {
                             Image(systemName: workoutManager.isPaused ? "play.fill" : "pause.fill")
                             Text(workoutManager.isPaused ? "Resume" : "Pause")
                         }
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(workoutManager.isPaused ? .green : .orange)
                         .padding()
                         .frame(maxWidth: .infinity)
@@ -62,7 +62,7 @@ struct TrainingView: View {
                             Image(systemName: "xmark.circle.fill")
                             Text("End Training")
                         }
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.subheadline.weight(.semibold))
                         .foregroundColor(.red)
                         .padding()
                         .frame(maxWidth: .infinity)
@@ -103,7 +103,7 @@ struct TrainingView: View {
 struct WorkoutMetricsView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
 
-    private let metricFont = Font.system(size: 28, weight: .bold, design: .rounded)
+    private let metricFont = Font.system(.title2, design: .rounded).weight(.bold)
 
     var body: some View {
         VStack(spacing: 4) {
@@ -193,7 +193,7 @@ struct ElapsedTimerView: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(formatTime(workoutManager.elapsedTime))
-                .font(.system(size: 46, weight: .semibold, design: .monospaced))
+                .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
                 .foregroundColor(.primary)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
@@ -202,7 +202,7 @@ struct ElapsedTimerView: View {
 
             if workoutManager.isPaused {
                 Text("PAUSED")
-                    .font(.system(size: 14, weight: .bold))
+                    .font(.caption.bold())
                     .foregroundColor(.orange)
             }
         }
@@ -223,7 +223,7 @@ struct ElapsedTimerView: View {
 }
 
 #Preview {
-    NavigationView {
+    NavigationStack {
         TrainingView()
             .environmentObject(WatchWorkoutManager())
     }

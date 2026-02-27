@@ -5,12 +5,12 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            WatchPromptView()
+            DashboardView()
                 .tabItem {
                     Label("Training", systemImage: "figure.run")
                 }
                 .accessibilityLabel("Training tab")
-                .accessibilityHint("Start training on your Apple Watch")
+                .accessibilityHint("Dashboard with workout status and quick start")
 
             TrainingHistoryView()
                 .tabItem {
@@ -19,7 +19,7 @@ struct ContentView: View {
                 .accessibilityLabel("History tab")
                 .accessibilityHint("View your past training sessions")
 
-            NavigationView {
+            NavigationStack {
                 SettingsView()
             }
             .tabItem {
@@ -27,6 +27,17 @@ struct ContentView: View {
             }
             .accessibilityLabel("Settings tab")
             .accessibilityHint("Adjust app preferences")
+        }
+        .modifier(TabBarMinimizeModifier())
+    }
+}
+
+private struct TabBarMinimizeModifier: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 26, *) {
+            content.tabBarMinimizeBehavior(.onScrollDown)
+        } else {
+            content
         }
     }
 }

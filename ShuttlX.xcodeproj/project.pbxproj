@@ -25,6 +25,21 @@
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
 		A5923519B /* SettingsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923519F /* SettingsSupport.swift */; };
+		A5923B01 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
+		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
+		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
+		A5923B04 /* StreakBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A04 /* StreakBadge.swift */; };
+		A5923B05 /* FormattingUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A05 /* FormattingUtils.swift */; };
+		A5923E01 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D01 /* DashboardView.swift */; };
+		A5923E02 /* LiveWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D02 /* LiveWorkoutCard.swift */; };
+		A5923E03 /* StartOnWatchCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D03 /* StartOnWatchCard.swift */; };
+		A5923E04 /* LastWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D04 /* LastWorkoutCard.swift */; };
+		A5923E05 /* WeekSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D05 /* WeekSummaryCard.swift */; };
+		B5923011 /* ChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923001 /* ChartData.swift */; };
+		B5923012 /* WeeklyDistanceChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923002 /* WeeklyDistanceChart.swift */; };
+		B5923013 /* PaceTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923003 /* PaceTrendChart.swift */; };
+		B5923014 /* HRZoneChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923004 /* HRZoneChart.swift */; };
+		B5923015 /* WeekStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923005 /* WeekStripView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -73,6 +88,21 @@
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		A5923519F /* SettingsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupport.swift; sourceTree = "<group>"; };
 		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A5923A01 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXTheme.swift; sourceTree = "<group>"; };
+		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
+		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
+		A5923A04 /* StreakBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadge.swift; sourceTree = "<group>"; };
+		A5923A05 /* FormattingUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormattingUtils.swift; sourceTree = "<group>"; };
+		A5923D01 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		A5923D02 /* LiveWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkoutCard.swift; sourceTree = "<group>"; };
+		A5923D03 /* StartOnWatchCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartOnWatchCard.swift; sourceTree = "<group>"; };
+		A5923D04 /* LastWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutCard.swift; sourceTree = "<group>"; };
+		A5923D05 /* WeekSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekSummaryCard.swift; sourceTree = "<group>"; };
+		B5923001 /* ChartData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartData.swift; sourceTree = "<group>"; };
+		B5923002 /* WeeklyDistanceChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyDistanceChart.swift; sourceTree = "<group>"; };
+		B5923003 /* PaceTrendChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceTrendChart.swift; sourceTree = "<group>"; };
+		B5923004 /* HRZoneChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZoneChart.swift; sourceTree = "<group>"; };
+		B5923005 /* WeekStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStripView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -146,6 +176,9 @@
 				A5923700 /* Models */,
 				A5923800 /* Views */,
 				A5923900 /* ViewModels */,
+				A5923C01 /* Theme */,
+				A5923C02 /* Components */,
+				A5923C03 /* Utilities */,
 			);
 			path = ShuttlX;
 			sourceTree = "<group>";
@@ -164,6 +197,7 @@
 			children = (
 				A5923505F /* TrainingSession.swift */,
 				A5923530F /* ActivitySegment.swift */,
+				B5923001 /* ChartData.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -179,8 +213,33 @@
 				A5923516F /* OnboardingView.swift */,
 				A5923517F /* SettingsView.swift */,
 				A5923518F /* SyncDebugView.swift */,
+				A5923D01 /* DashboardView.swift */,
+				A5923D10 /* Dashboard */,
+				B5923020 /* Charts */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		B5923020 /* Charts */ = {
+			isa = PBXGroup;
+			children = (
+				B5923002 /* WeeklyDistanceChart.swift */,
+				B5923003 /* PaceTrendChart.swift */,
+				B5923004 /* HRZoneChart.swift */,
+				B5923005 /* WeekStripView.swift */,
+			);
+			path = Charts;
+			sourceTree = "<group>";
+		};
+		A5923D10 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				A5923D02 /* LiveWorkoutCard.swift */,
+				A5923D03 /* StartOnWatchCard.swift */,
+				A5923D04 /* LastWorkoutCard.swift */,
+				A5923D05 /* WeekSummaryCard.swift */,
+			);
+			path = Dashboard;
 			sourceTree = "<group>";
 		};
 		A5923900 /* ViewModels */ = {
@@ -188,6 +247,32 @@
 			children = (
 			);
 			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		A5923C01 /* Theme */ = {
+			isa = PBXGroup;
+			children = (
+				A5923A01 /* ShuttlXTheme.swift */,
+			);
+			path = Theme;
+			sourceTree = "<group>";
+		};
+		A5923C02 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				A5923A02 /* MetricCard.swift */,
+				A5923A03 /* ActivityBadge.swift */,
+				A5923A04 /* StreakBadge.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		A5923C03 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+				A5923A05 /* FormattingUtils.swift */,
+			);
+			path = Utilities;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -318,6 +403,21 @@
 				A5923517B /* SettingsView.swift in Sources */,
 				A5923518B /* SyncDebugView.swift in Sources */,
 				A5923519B /* SettingsSupport.swift in Sources */,
+				A5923B01 /* ShuttlXTheme.swift in Sources */,
+				A5923B02 /* MetricCard.swift in Sources */,
+				A5923B03 /* ActivityBadge.swift in Sources */,
+				A5923B04 /* StreakBadge.swift in Sources */,
+				A5923B05 /* FormattingUtils.swift in Sources */,
+				A5923E01 /* DashboardView.swift in Sources */,
+				A5923E02 /* LiveWorkoutCard.swift in Sources */,
+				A5923E03 /* StartOnWatchCard.swift in Sources */,
+				A5923E04 /* LastWorkoutCard.swift in Sources */,
+				A5923E05 /* WeekSummaryCard.swift in Sources */,
+				B5923011 /* ChartData.swift in Sources */,
+				B5923012 /* WeeklyDistanceChart.swift in Sources */,
+				B5923013 /* PaceTrendChart.swift in Sources */,
+				B5923014 /* HRZoneChart.swift in Sources */,
+				B5923015 /* WeekStripView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

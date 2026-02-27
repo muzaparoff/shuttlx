@@ -1,5 +1,6 @@
 import SwiftUI
 import HealthKit
+import WatchConnectivity
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
@@ -12,7 +13,7 @@ struct SettingsView: View {
     var body: some View {
         List {
             // Appearance Section
-            Section(header: Text("Appearance")) {
+            Section("Appearance") {
                 Picker("Theme", selection: $appSettings.appearance) {
                     ForEach(AppAppearance.allCases) { option in
                         Label {
@@ -28,16 +29,47 @@ struct SettingsView: View {
                 .accessibilityHint("Select light, dark, or system appearance")
             }
 
+            // Watch Connection Section
+            Section("Apple Watch") {
+                HStack {
+                    Image(systemName: "applewatch")
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    Text("Watch Status")
+                    Spacer()
+                    Text(watchStatusText)
+                        .foregroundStyle(watchPaired ? .green : .secondary)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Watch Status")
+                .accessibilityValue(watchStatusText)
+
+                HStack {
+                    Text("Connectivity")
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(watchReachable ? Color.green : Color.secondary)
+                            .frame(width: 8, height: 8)
+                        Text(watchReachable ? "Reachable" : "Not Reachable")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Connectivity: \(watchReachable ? "Reachable" : "Not Reachable")")
+            }
+
             // Health Integration Section
-            Section(header: Text("Health Integration")) {
+            Section("Health Integration") {
                 HStack {
                     Image(systemName: "heart.fill")
-                        .foregroundColor(.red)
+                        .foregroundStyle(ShuttlXColor.heartRate)
                         .accessibilityHidden(true)
                     Text("HealthKit Status")
                     Spacer()
                     Text(dataManager.healthKitAuthorized ? "Connected" : "Not Connected")
-                        .foregroundColor(dataManager.healthKitAuthorized ? .green : .red)
+                        .foregroundStyle(dataManager.healthKitAuthorized ? .green : .secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("HealthKit Status")
@@ -56,24 +88,24 @@ struct SettingsView: View {
                     showingHealthPermissionsInfo = true
                 }
                 .accessibilityHint("Shows information about how health data is used")
-
             }
 
             // Data Management Section
-            Section(header: Text("Data Management")) {
+            Section("Data Management") {
                 Button("Clear All Training Sessions", role: .destructive) {
                     showingDeleteConfirmation = true
                 }
-                .foregroundColor(.red)
+                .foregroundStyle(ShuttlXColor.ctaDestructive)
                 .accessibilityHint("Permanently deletes all training session data")
             }
 
             // About Section
-            Section(header: Text("About")) {
+            Section("About") {
                 HStack {
                     Text("Version")
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
+                        .foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("App Version")
@@ -83,13 +115,14 @@ struct SettingsView: View {
                     Text("Build")
                     Spacer()
                     Text(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "101")
+                        .foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Build Number")
                 .accessibilityValue(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "101")
             }
         }
-        .listStyle(InsetGroupedListStyle())
+        .listStyle(.insetGrouped)
         .navigationTitle("Settings")
         .sheet(isPresented: $showingHealthPermissionsInfo) {
             HealthPermissionsInfoView()
@@ -99,11 +132,8 @@ struct SettingsView: View {
             Button("Delete All", role: .destructive) {
                 SharedDataManager.shared.purgeAllSessionsFromStorage()
                 dataManager.sessions = []
-                // Show success message
                 successMessage = "All sessions cleared!"
                 showSuccessMessage = true
-
-                // Hide message after delay
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
                     showSuccessMessage = false
                 }
@@ -111,22 +141,41 @@ struct SettingsView: View {
         } message: {
             Text("This will delete all your training history. This action cannot be undone.")
         }
-        .overlay(
-            showSuccessMessage ?
-            ToastView(message: successMessage, systemImage: "checkmark.circle.fill")
-                .transition(.move(edge: .top).combined(with: .opacity))
-                .padding(.top, 60)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(successMessage)
-            : nil
-        )
-        .animation(.easeInOut, value: showSuccessMessage)
+        .overlay(alignment: .top) {
+            if showSuccessMessage {
+                ToastView(message: successMessage, systemImage: "checkmark.circle.fill")
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .padding(.top, 60)
+                    .accessibilityLabel(successMessage)
+            }
+        }
+        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSuccessMessage)
         .preferredColorScheme(appSettings.appearance.colorScheme)
     }
 
+    // MARK: - Watch Helpers
+
+    private var watchPaired: Bool {
+        WCSession.isSupported() && WCSession.default.isPaired
+    }
+
+    private var watchReachable: Bool {
+        WCSession.isSupported() && WCSession.default.isReachable
+    }
+
+    private var watchStatusText: String {
+        guard WCSession.isSupported() else { return "Not Supported" }
+        if WCSession.default.isPaired && WCSession.default.isWatchAppInstalled {
+            return "Connected"
+        } else if WCSession.default.isPaired {
+            return "Paired (App Not Installed)"
+        } else {
+            return "Not Paired"
+        }
+    }
 }
 
-// Add Toast message view
+// Toast message view
 struct ToastView: View {
     var message: String
     var systemImage: String
@@ -135,30 +184,26 @@ struct ToastView: View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
                 .font(.title3)
-                .foregroundColor(.green)
+                .foregroundStyle(.green)
             Text(message)
                 .font(.callout)
-                .foregroundColor(.primary)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(Color(UIColor.systemBackground))
-                .shadow(color: Color.primary.opacity(0.2), radius: 3, x: 0, y: 2)
-        )
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
     }
 }
 
-// Keep the existing HealthPermissionsInfoView
+// HealthPermissionsInfoView
 struct HealthPermissionsInfoView: View {
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
-        NavigationView {
+        NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     Text("Why ShuttlX Needs HealthKit Access")
-                        .font(.largeTitle)
-                        .fontWeight(.bold)
+                        .font(.largeTitle.bold())
                         .padding(.bottom)
                         .accessibilityAddTraits(.isHeader)
 
@@ -186,23 +231,24 @@ struct HealthPermissionsInfoView: View {
 
                     Text("Your health data remains private and is only used within the app to enhance your training experience. We never share your health information with third parties.")
                         .italic()
-                        .padding(.bottom)
+                        .foregroundStyle(.secondary)
                 }
                 .padding()
             }
-            .navigationBarTitle("Health Permissions", displayMode: .inline)
-            .navigationBarItems(trailing: Button("Done") {
-                // Dismiss sheet
-            })
+            .navigationTitle("Health Permissions")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
         }
     }
 }
 
-struct SettingsView_Previews: PreviewProvider {
-    static var previews: some View {
-        NavigationView {
-            SettingsView()
-                .environmentObject(DataManager())
-        }
+#Preview {
+    NavigationStack {
+        SettingsView()
+            .environmentObject(DataManager())
     }
 }

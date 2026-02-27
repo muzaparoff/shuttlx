@@ -12,6 +12,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var connectivityHealth: Double = 1.0
     @Published var lastSyncTime: Date?
 
+    // Live workout state from Watch
+    @Published var isWorkoutActiveOnWatch = false
+    @Published var liveElapsedTime: TimeInterval = 0
+    @Published var liveHeartRate: Int = 0
+    @Published var liveDistance: Double = 0
+    @Published var liveCalories: Int = 0
+    @Published var liveSteps: Int = 0
+    @Published var liveCurrentActivity: String = "unknown"
+    @Published var liveIsPaused: Bool = false
+    @Published var livePace: TimeInterval = 0
+
+    private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SharedDataManager")
 
@@ -154,6 +166,42 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             lastSyncTime = Date()
             updateConnectivityHealth()
         }
+    }
+
+    // MARK: - Live Workout Metrics
+
+    func handleLiveMetrics(_ message: [String: Any]) {
+        isWorkoutActiveOnWatch = true
+        liveElapsedTime = message["elapsedTime"] as? TimeInterval ?? 0
+        liveHeartRate = message["heartRate"] as? Int ?? 0
+        liveDistance = message["distance"] as? Double ?? 0
+        liveCalories = message["calories"] as? Int ?? 0
+        liveSteps = message["steps"] as? Int ?? 0
+        liveCurrentActivity = message["currentActivity"] as? String ?? "unknown"
+        liveIsPaused = message["isPaused"] as? Bool ?? false
+        livePace = message["pace"] as? TimeInterval ?? 0
+
+        // Reset timeout — if no update in 10 seconds, clear live state
+        liveMetricsTimeoutTimer?.invalidate()
+        liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.clearLiveWorkoutState()
+            }
+        }
+    }
+
+    func clearLiveWorkoutState() {
+        isWorkoutActiveOnWatch = false
+        liveElapsedTime = 0
+        liveHeartRate = 0
+        liveDistance = 0
+        liveCalories = 0
+        liveSteps = 0
+        liveCurrentActivity = "unknown"
+        liveIsPaused = false
+        livePace = 0
+        liveMetricsTimeoutTimer?.invalidate()
+        liveMetricsTimeoutTimer = nil
     }
 
     // MARK: - Session Storage
@@ -317,6 +365,10 @@ extension SharedDataManager {
                             self.consecutiveFailures += 1
                         }
                     }
+                case "liveMetrics":
+                    self.handleLiveMetrics(message)
+                case "workoutStopped":
+                    self.clearLiveWorkoutState()
                 case "ping":
                     self.consecutiveFailures = 0
                 default:
@@ -346,6 +398,12 @@ extension SharedDataManager {
                     } else {
                         replyHandler(["error": "Missing sessionData"])
                     }
+                case "liveMetrics":
+                    self.handleLiveMetrics(message)
+                    replyHandler(["status": "received"])
+                case "workoutStopped":
+                    self.clearLiveWorkoutState()
+                    replyHandler(["status": "received"])
                 case "ping":
                     replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
                     self.consecutiveFailures = 0
