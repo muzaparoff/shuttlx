@@ -471,7 +471,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 10
         locationManager.activityType = .fitness
-        locationManager.allowsBackgroundLocationUpdates = true
         locationManager.startUpdatingLocation()
         logger.info("Location updates started")
     }
