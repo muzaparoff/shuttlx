@@ -9,7 +9,7 @@ struct TrainingView: View {
     var body: some View {
         TabView(selection: $selectedTab) {
             // Tab 1: Timer + Metrics
-            VStack(spacing: 0) {
+            VStack(spacing: 6) {
                 Spacer(minLength: 0)
 
                 // Elapsed time (counts UP)
@@ -17,8 +17,8 @@ struct TrainingView: View {
 
                 Spacer(minLength: 0)
 
-                // 2x2 Metrics grid
-                MetricsGridView()
+                // Vertical metrics
+                WorkoutMetricsView()
             }
             .tag(0)
 
@@ -98,45 +98,90 @@ struct TrainingView: View {
     }
 }
 
-// MARK: - Activity Indicator
+// MARK: - Workout Metrics (Vertical Stack)
 
-struct ActivityIndicatorView: View {
+struct WorkoutMetricsView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
 
+    private let metricFont = Font.system(size: 28, weight: .bold, design: .rounded)
+
     var body: some View {
-        VStack(spacing: 2) {
-            HStack(spacing: 6) {
-                Image(systemName: workoutManager.currentActivity.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(workoutManager.currentActivity.color)
+        VStack(spacing: 4) {
+            // Line 1: Split count + Distance
+            Text(splitDistanceText)
+                .font(metricFont)
+                .monospacedDigit()
+                .foregroundColor(.primary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Split \(workoutManager.lastCompletedKm), distance \(accessibleDistance)")
 
-                Text(workoutManager.currentActivity.displayName.uppercased())
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .foregroundColor(workoutManager.currentActivity.color)
-            }
-            .frame(maxWidth: .infinity)
+            // Line 2: Heart Rate
+            Text(heartRateText)
+                .font(metricFont)
+                .monospacedDigit()
+                .foregroundColor(.primary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute" : "Heart rate no data")
+                .accessibilityAddTraits(.updatesFrequently)
 
-            // Segment time
-            Text("Segment: \(formatTime(workoutManager.currentSegmentTime))")
-                .font(.system(size: 12))
-                .foregroundColor(.secondary)
+            // Line 3: Average Pace
+            Text(paceText)
+                .font(metricFont)
+                .monospacedDigit()
+                .foregroundColor(.primary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(accessiblePace)
         }
-        .padding(.vertical, 4)
-        .background(Color.secondary.opacity(0.2))
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(workoutManager.currentActivity.displayName), segment time \(formatTimeAccessible(workoutManager.currentSegmentTime))")
+        .padding(.horizontal, 8)
     }
 
-    private func formatTime(_ interval: TimeInterval) -> String {
-        let m = Int(interval / 60)
-        let s = Int(interval.truncatingRemainder(dividingBy: 60))
-        return String(format: "%02d:%02d", m, s)
+    private var splitDistanceText: String {
+        let km = workoutManager.lastCompletedKm
+        let dist = workoutManager.totalDistance
+        let distStr: String
+        if dist < 1.0 {
+            distStr = "\(Int(dist * 1000)) m"
+        } else {
+            distStr = String(format: "%.2f km", dist)
+        }
+        return "\(km) / \(distStr)"
     }
 
-    private func formatTimeAccessible(_ interval: TimeInterval) -> String {
-        let m = Int(interval / 60)
-        let s = Int(interval.truncatingRemainder(dividingBy: 60))
-        return m > 0 ? "\(m) minutes \(s) seconds" : "\(s) seconds"
+    private var accessibleDistance: String {
+        let dist = workoutManager.totalDistance
+        if dist < 1.0 {
+            return "\(Int(dist * 1000)) meters"
+        } else {
+            return String(format: "%.2f kilometers", dist)
+        }
+    }
+
+    private var heartRateText: String {
+        workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) BPM" : "-- BPM"
+    }
+
+    private var paceText: String {
+        guard let pace = workoutManager.currentPace else {
+            return "-- Av.Pace"
+        }
+        let minutes = Int(pace) / 60
+        let seconds = Int(pace) % 60
+        return String(format: "%d'%02d\" Av.Pace", minutes, seconds)
+    }
+
+    private var accessiblePace: String {
+        guard let pace = workoutManager.currentPace else {
+            return "Average pace no data"
+        }
+        let minutes = Int(pace) / 60
+        let seconds = Int(pace) % 60
+        return "Average pace \(minutes) minutes \(seconds) seconds per kilometer"
     }
 }
 
@@ -148,7 +193,7 @@ struct ElapsedTimerView: View {
     var body: some View {
         VStack(spacing: 4) {
             Text(formatTime(workoutManager.elapsedTime))
-                .font(.system(size: 54, weight: .semibold, design: .monospaced))
+                .font(.system(size: 46, weight: .semibold, design: .monospaced))
                 .foregroundColor(.primary)
                 .minimumScaleFactor(0.8)
                 .frame(maxWidth: .infinity)
@@ -174,83 +219,6 @@ struct ElapsedTimerView: View {
         let m = Int(interval / 60)
         let s = Int(interval.truncatingRemainder(dividingBy: 60))
         return m > 0 ? "\(m) minutes \(s) seconds" : "\(s) seconds"
-    }
-}
-
-// MARK: - Metrics Grid (2x2)
-
-struct MetricsGridView: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
-
-    var body: some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-            MetricView(
-                value: workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "--",
-                unit: "BPM",
-                icon: "heart.fill",
-                color: .red
-            )
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Heart rate")
-            .accessibilityValue(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) BPM" : "no data")
-
-            MetricView(
-                value: "\(workoutManager.calories)",
-                unit: "CAL",
-                icon: "flame.fill",
-                color: .orange
-            )
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Calories")
-            .accessibilityValue("\(workoutManager.calories)")
-
-            MetricView(
-                value: "\(workoutManager.totalSteps)",
-                unit: "STEPS",
-                icon: "shoeprints.fill",
-                color: .blue
-            )
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Steps")
-            .accessibilityValue("\(workoutManager.totalSteps)")
-
-            MetricView(
-                value: String(format: "%.2f", workoutManager.totalDistance),
-                unit: "KM",
-                icon: "location.fill",
-                color: .green
-            )
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Distance")
-            .accessibilityValue(String(format: "%.2f kilometers", workoutManager.totalDistance))
-        }
-        .padding(.horizontal)
-    }
-}
-
-struct MetricView: View {
-    let value: String
-    let unit: String
-    let icon: String
-    let color: Color
-
-    var body: some View {
-        VStack(spacing: 2) {
-            HStack(alignment: .center, spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 12))
-                    .foregroundColor(color)
-
-                Text(value)
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
-                    .monospacedDigit()
-            }
-
-            Text(unit)
-                .font(.system(size: 10))
-                .foregroundColor(.secondary)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

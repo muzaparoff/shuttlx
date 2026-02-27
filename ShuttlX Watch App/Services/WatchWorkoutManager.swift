@@ -2,7 +2,17 @@ import Foundation
 import HealthKit
 import CoreMotion
 import WatchConnectivity
+#if os(watchOS)
+import WatchKit
+#endif
 import os.log
+
+struct KmSplit: Identifiable {
+    let id = UUID()
+    let kmNumber: Int
+    let splitTime: TimeInterval
+    let cumulativeTime: TimeInterval
+}
 
 @MainActor
 class WatchWorkoutManager: NSObject, ObservableObject {
@@ -16,6 +26,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var calories: Int = 0
     @Published var totalSteps: Int = 0
     @Published var totalDistance: Double = 0
+    @Published var currentPace: TimeInterval? = nil   // seconds per km (average)
+    @Published var completedKmSplits: [KmSplit] = []
+    @Published var lastCompletedKm: Int = 0
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
 
@@ -36,6 +49,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var heartRateSamples: [Double] = []
     private var maxHeartRateValue: Double = 0
     private var totalCaloriesAccumulated: Double = 0
+
+    // Pace & split tracking
+    private var timeAtLastKm: TimeInterval = 0
 
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
@@ -134,6 +150,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         calories = 0
         totalSteps = 0
         totalDistance = 0
+        currentPace = nil
+        completedKmSplits = []
+        lastCompletedKm = 0
+        timeAtLastKm = 0
         segments = []
         currentActivity = .unknown
         pendingActivity = nil
@@ -219,6 +239,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         calories = 0
         totalSteps = 0
         totalDistance = 0
+        currentPace = nil
+        completedKmSplits = []
+        lastCompletedKm = 0
+        timeAtLastKm = 0
         segments = []
         workoutStartTime = nil
         currentSegmentStartTime = nil
@@ -386,9 +410,41 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 guard let self = self, let data = data else { return }
                 self.totalSteps = data.numberOfSteps.intValue
                 if let dist = data.distance {
-                    self.totalDistance = dist.doubleValue / 1000.0 // meters to km
+                    let distanceKm = dist.doubleValue / 1000.0
+                    self.totalDistance = distanceKm
+                    self.updatePaceAndSplits(distanceKm: distanceKm)
                 }
             }
+        }
+    }
+
+    private func updatePaceAndSplits(distanceKm: Double) {
+        guard distanceKm >= 0.01 else {
+            currentPace = nil
+            return
+        }
+
+        // Average pace: seconds per km
+        currentPace = elapsedTime / distanceKm
+
+        // Km split detection
+        let completedKm = Int(floor(distanceKm))
+        while completedKm > lastCompletedKm {
+            lastCompletedKm += 1
+            let splitTime = elapsedTime - timeAtLastKm
+            let split = KmSplit(
+                kmNumber: lastCompletedKm,
+                splitTime: splitTime,
+                cumulativeTime: elapsedTime
+            )
+            completedKmSplits.append(split)
+            timeAtLastKm = elapsedTime
+
+            // Haptic feedback at each km milestone
+            #if os(watchOS)
+            WKInterfaceDevice.current().play(.notification)
+            #endif
+            logger.info("Km split \(self.lastCompletedKm): \(Int(splitTime))s")
         }
     }
 
