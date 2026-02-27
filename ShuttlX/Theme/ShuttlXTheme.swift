@@ -45,10 +45,14 @@ enum ShuttlXFont {
 extension View {
     @ViewBuilder
     func glassBackground(cornerRadius: CGFloat = 16) -> some View {
+        #if compiler(>=6.2)
         if #available(iOS 26, watchOS 26, *) {
             self.glassEffect(in: .rect(cornerRadius: cornerRadius))
         } else {
             self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
         }
+        #else
+        self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        #endif
     }
 }
