@@ -76,7 +76,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     override init() {
         super.init()
-        locationManager.delegate = self
         logger.info("WatchWorkoutManager initialized")
     }
 
@@ -457,6 +456,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Location Tracking
 
     private func requestLocationAndStartUpdates() {
+        locationManager.delegate = self
         let status = locationManager.authorizationStatus
         if status == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
@@ -470,6 +470,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private func startLocationUpdates() {
         locationManager.desiredAccuracy = kCLLocationAccuracyBest
         locationManager.distanceFilter = 10
+        locationManager.activityType = .fitness
         locationManager.allowsBackgroundLocationUpdates = true
         locationManager.startUpdatingLocation()
         logger.info("Location updates started")

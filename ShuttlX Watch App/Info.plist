@@ -35,6 +35,7 @@
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>
+		<string>location</string>
 	</array>
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
