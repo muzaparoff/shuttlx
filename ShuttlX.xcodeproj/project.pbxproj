@@ -24,7 +24,6 @@
 		A5923516B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923516F /* OnboardingView.swift */; };
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
-		A5923519B /* SettingsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923519F /* SettingsSupport.swift */; };
 		A5923B01 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
@@ -88,7 +87,6 @@
 		A5923516F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
-		A5923519F /* SettingsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsSupport.swift; sourceTree = "<group>"; };
 		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A5923A01 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXTheme.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
@@ -171,7 +169,6 @@
 			children = (
 				A5923507 /* ShuttlXApp.swift */,
 				A5923508 /* ContentView.swift */,
-				A5923519F /* SettingsSupport.swift */,
 				A5923509 /* Info.plist */,
 				A592350A /* ShuttlX.entitlements */,
 				A5923515F /* PrivacyInfo.xcprivacy */,
@@ -408,7 +405,6 @@
 				A5923516B /* OnboardingView.swift in Sources */,
 				A5923517B /* SettingsView.swift in Sources */,
 				A5923518B /* SyncDebugView.swift in Sources */,
-				A5923519B /* SettingsSupport.swift in Sources */,
 				A5923B01 /* ShuttlXTheme.swift in Sources */,
 				A5923B02 /* MetricCard.swift in Sources */,
 				A5923B03 /* ActivityBadge.swift in Sources */,

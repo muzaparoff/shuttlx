@@ -4,7 +4,6 @@ import WatchConnectivity
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
-    @EnvironmentObject var appSettings: AppSettings
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showSuccessMessage = false
@@ -12,23 +11,6 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            // Appearance Section
-            Section("Appearance") {
-                Picker("Theme", selection: $appSettings.appearance) {
-                    ForEach(AppAppearance.allCases) { option in
-                        Label {
-                            Text(option.rawValue)
-                        } icon: {
-                            Image(systemName: option.icon)
-                        }
-                    }
-                }
-                .pickerStyle(.menu)
-                .accessibilityLabel("Theme")
-                .accessibilityValue(appSettings.appearance.rawValue)
-                .accessibilityHint("Select light, dark, or system appearance")
-            }
-
             // Watch Connection Section
             Section("Apple Watch") {
                 HStack {
@@ -249,6 +231,5 @@ struct HealthPermissionsInfoView: View {
     NavigationStack {
         SettingsView()
             .environmentObject(DataManager())
-            .environmentObject(AppSettings())
     }
 }
