@@ -4,7 +4,7 @@ import WatchConnectivity
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
-    @StateObject private var appSettings = AppSettings()
+    @EnvironmentObject var appSettings: AppSettings
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showSuccessMessage = false
@@ -37,27 +37,33 @@ struct SettingsView: View {
                         .accessibilityHidden(true)
                     Text("Watch Status")
                     Spacer()
-                    Text(watchStatusText)
-                        .foregroundStyle(watchPaired ? .green : .secondary)
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(watchPaired ? Color.green : Color.secondary)
+                            .frame(width: 8, height: 8)
+                        Text(watchStatusText)
+                            .foregroundStyle(.secondary)
+                    }
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Watch Status")
                 .accessibilityValue(watchStatusText)
 
-                HStack {
-                    Text("Connectivity")
-                    Spacer()
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(watchReachable ? Color.green : Color.secondary)
-                            .frame(width: 8, height: 8)
-                        Text(watchReachable ? "Reachable" : "Not Reachable")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
+                if watchPaired {
+                    HStack {
+                        Text("App Installed")
+                        Spacer()
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(watchAppInstalled ? Color.green : Color.orange)
+                                .frame(width: 8, height: 8)
+                            Text(watchAppInstalled ? "Yes" : "Not Installed")
+                                .foregroundStyle(.secondary)
+                        }
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Watch App: \(watchAppInstalled ? "Installed" : "Not Installed")")
                 }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Connectivity: \(watchReachable ? "Reachable" : "Not Reachable")")
             }
 
             // Health Integration Section
@@ -150,7 +156,6 @@ struct SettingsView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSuccessMessage)
-        .preferredColorScheme(appSettings.appearance.colorScheme)
     }
 
     // MARK: - Watch Helpers
@@ -159,19 +164,13 @@ struct SettingsView: View {
         WCSession.isSupported() && WCSession.default.isPaired
     }
 
-    private var watchReachable: Bool {
-        WCSession.isSupported() && WCSession.default.isReachable
+    private var watchAppInstalled: Bool {
+        WCSession.isSupported() && WCSession.default.isWatchAppInstalled
     }
 
     private var watchStatusText: String {
         guard WCSession.isSupported() else { return "Not Supported" }
-        if WCSession.default.isPaired && WCSession.default.isWatchAppInstalled {
-            return "Connected"
-        } else if WCSession.default.isPaired {
-            return "Paired (App Not Installed)"
-        } else {
-            return "Not Paired"
-        }
+        return WCSession.default.isPaired ? "Paired" : "Not Paired"
     }
 }
 
@@ -250,5 +249,6 @@ struct HealthPermissionsInfoView: View {
     NavigationStack {
         SettingsView()
             .environmentObject(DataManager())
+            .environmentObject(AppSettings())
     }
 }
