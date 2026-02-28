@@ -84,19 +84,15 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func checkForNewSessions() {
-        let newSessions = loadSessionsFromAppGroup()
-        let newSessionsToAdd = newSessions.filter { newSession in
-            !self.syncedSessions.contains { $0.id == newSession.id }
-        }
+        guard let dataManager = dataManager else { return }
 
-        if !newSessionsToAdd.isEmpty {
-            log("Found \(newSessionsToAdd.count) new session(s) in shared storage")
-            for session in newSessionsToAdd {
-                syncedSessions.append(session)
-                if let dataManager = dataManager {
-                    dataManager.handleReceivedSessions([session])
-                }
-            }
+        // Check if SharedDataManager has sessions that DataManager is missing
+        let dmSessionIds = Set(dataManager.sessions.map { $0.id })
+        let missingSessions = syncedSessions.filter { !dmSessionIds.contains($0.id) }
+
+        if !missingSessions.isEmpty {
+            log("Found \(missingSessions.count) session(s) missing from DataManager — forwarding")
+            dataManager.handleReceivedSessions(missingSessions)
         }
     }
 
@@ -166,6 +162,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             consecutiveFailures = 0
             lastSyncTime = Date()
             updateConnectivityHealth()
+
+            // Directly forward to DataManager — don't rely solely on Combine binding
+            dataManager?.handleReceivedSessions([session])
         }
     }
 
@@ -278,6 +277,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let allSessions = Set(loadSessionsFromAppGroup())
         syncedSessions = Array(allSessions)
         saveSessionsToSharedStorage(syncedSessions)
+    }
+
+    /// Called when app comes to foreground — reconcile any missing sessions
+    func reconcileWithDataManager() {
+        checkForNewSessions()
     }
 
     // MARK: - Helpers

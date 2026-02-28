@@ -17,6 +17,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private var pendingSessions: [TrainingSession] = []
     private var consecutiveFailures = 0
     private var backgroundSyncTimer: Timer?
+    private let pendingSessionsFileName = "pending_sync_sessions.json"
 
     // MARK: - Initialization
 
@@ -30,6 +31,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             logger.info("WCSession activated")
         }
 
+        loadPendingSessionsFromDisk()
         setupBackgroundTasks()
     }
 
@@ -54,12 +56,12 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         logger.info("Retrying \(self.pendingSessions.count) pending sessions")
 
-        if WCSession.default.isReachable {
-            let sessionsToSync = pendingSessions
-            pendingSessions = []
-            for session in sessionsToSync {
-                sendSessionToiOS(session)
-            }
+        let sessionsToSync = pendingSessions
+        pendingSessions = []
+        savePendingSessionsToDisk()
+
+        for session in sessionsToSync {
+            sendSessionToiOS(session)
         }
     }
 
@@ -100,7 +102,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         do {
             let sessionData = try JSONEncoder().encode(session)
 
+            // Always queue via transferUserInfo first — it survives app termination
+            sendSessionViaUserInfo(session, sessionData: sessionData)
+
             if WCSession.default.isReachable {
+                // Also try sendMessage for immediate delivery
                 let message: [String: Any] = [
                     "action": "saveSession",
                     "sessionData": sessionData.base64EncodedString(),
@@ -110,17 +116,17 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
                     Task { @MainActor in
                         guard let self = self else { return }
-                        self.logger.info("Session sent to iOS")
+                        self.logger.info("Session sent to iOS via sendMessage")
                         self.updateSyncStatus("Session saved to iPhone")
                         self.consecutiveFailures = 0
                         self.lastSyncTime = Date()
+                        self.removePendingSession(session.id)
                         self.updateConnectivityHealth()
                     }
                 }, errorHandler: { [weak self] error in
                     Task { @MainActor in
                         guard let self = self else { return }
-                        self.logger.error("Message failed: \(error.localizedDescription)")
-                        self.sendSessionViaUserInfo(session, sessionData: sessionData)
+                        self.logger.error("sendMessage failed: \(error.localizedDescription)")
                         self.consecutiveFailures += 1
                         self.updateConnectivityHealth()
                     }
@@ -128,15 +134,16 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             } else {
                 if !pendingSessions.contains(where: { $0.id == session.id }) {
                     pendingSessions.append(session)
-                    logger.warning("iPhone not reachable, session queued")
+                    savePendingSessionsToDisk()
+                    logger.warning("iPhone not reachable, session queued to disk")
                     updateSyncStatus("Session queued for sync")
                 }
-                sendSessionViaUserInfo(session, sessionData: sessionData)
             }
         } catch {
             logger.error("Failed to encode session: \(error.localizedDescription)")
             if !pendingSessions.contains(where: { $0.id == session.id }) {
                 pendingSessions.append(session)
+                savePendingSessionsToDisk()
             }
         }
     }
@@ -152,6 +159,49 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.transferUserInfo(userInfo)
         logger.info("Session queued via transferUserInfo")
         updateSyncStatus("Session queued for background sync")
+    }
+
+    // MARK: - Pending Sessions Persistence
+
+    private func removePendingSession(_ id: UUID) {
+        pendingSessions.removeAll { $0.id == id }
+        savePendingSessionsToDisk()
+    }
+
+    private func savePendingSessionsToDisk() {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            return
+        }
+        let url = containerURL.appendingPathComponent(pendingSessionsFileName)
+        do {
+            if pendingSessions.isEmpty {
+                try? FileManager.default.removeItem(at: url)
+            } else {
+                let data = try JSONEncoder().encode(pendingSessions)
+                try data.write(to: url)
+            }
+        } catch {
+            logger.error("Failed to save pending sessions: \(error.localizedDescription)")
+        }
+    }
+
+    private func loadPendingSessionsFromDisk() {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            return
+        }
+        let url = containerURL.appendingPathComponent(pendingSessionsFileName)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+
+        do {
+            let data = try Data(contentsOf: url)
+            let loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
+            if !loaded.isEmpty {
+                pendingSessions = loaded
+                logger.info("Loaded \(loaded.count) pending session(s) from disk")
+            }
+        } catch {
+            logger.error("Failed to load pending sessions: \(error.localizedDescription)")
+        }
     }
 
     // MARK: - App Group Storage
@@ -255,6 +305,12 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 self.logger.info("UserInfo transfer completed")
                 self.consecutiveFailures = 0
                 self.lastSyncTime = Date()
+
+                // Remove from pending if it was a session transfer
+                if let sessionID = userInfoTransfer.userInfo["sessionID"] as? String,
+                   let uuid = UUID(uuidString: sessionID) {
+                    self.removePendingSession(uuid)
+                }
             }
         }
     }

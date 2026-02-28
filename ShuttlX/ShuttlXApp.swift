@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct ShuttlXApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var dataManager = DataManager()
     @StateObject private var sharedDataManager = SharedDataManager.shared
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
@@ -17,6 +18,11 @@ struct ShuttlXApp: App {
             }
             .environmentObject(dataManager)
             .environmentObject(sharedDataManager)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                sharedDataManager.reconcileWithDataManager()
+            }
         }
     }
 }
