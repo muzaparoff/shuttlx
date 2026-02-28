@@ -232,57 +232,13 @@ jobs:
           echo "  LiveActivity: ${LIVEACTIVITY_NAME:-auto-provisioned}"
 
       # ------------------------------------------------------------------
-      # 9. Auto-provision LiveActivity extension (if no profile secret)
-      #    Uses ASC API to register App ID and create distribution profile
-      # ------------------------------------------------------------------
-      - name: Auto-provision LiveActivity extension
-        if: ${{ steps.install_profiles.outputs.liveactivity_name == '' }}
-        id: autoprovision
-        run: |
-          API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
-          BUNDLE_ID="com.shuttlx.ShuttlX.ShuttlXLiveActivity"
-
-          # Use a temporary Xcode project build to trigger auto-provisioning
-          # for the LiveActivity target specifically
-          echo "Auto-provisioning $BUNDLE_ID..."
-
-          # Try to build just the LiveActivity target with automatic signing
-          # to trigger Xcode's auto-provisioning
-          xcodebuild \
-            -project ShuttlX.xcodeproj \
-            -target ShuttlXLiveActivity \
-            -configuration Release \
-            -destination generic/platform=iOS \
-            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
-            CODE_SIGN_STYLE=Automatic \
-            -allowProvisioningUpdates \
-            -authenticationKeyPath "$API_KEY_PATH" \
-            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
-            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
-            build 2>&1 || true
-
-          # Now find the auto-created profile
-          PROFILE_PATH=$(ls -t ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
-          if [ -n "$PROFILE_PATH" ]; then
-            for PROFILE in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
-              PROFILE_BUNDLE=$(security cms -D -i "$PROFILE" 2>/dev/null | grep -A1 "application-identifier" | grep string | sed 's/<[^>]*>//g' | xargs | sed "s/^[A-Z0-9]*\.//" || true)
-              if [ "$PROFILE_BUNDLE" = "$BUNDLE_ID" ]; then
-                PROFILE_NAME=$(security cms -D -i "$PROFILE" | grep -A1 '<key>Name</key>' | grep '<string>' | sed 's/<[^>]*>//g' | xargs)
-                echo "Found auto-provisioned profile: $PROFILE_NAME"
-                echo "liveactivity_name=$PROFILE_NAME" >> $GITHUB_OUTPUT
-                break
-              fi
-            done
-          fi
-
-      # ------------------------------------------------------------------
-      # 10. Configure manual signing in project
+      # 9. Configure manual signing in project
       # ------------------------------------------------------------------
       - name: Configure manual signing
         env:
           IOS_PROFILE: ${{ steps.install_profiles.outputs.ios_name }}
           WATCH_PROFILE: ${{ steps.install_profiles.outputs.watch_name }}
-          LIVEACTIVITY_PROFILE: ${{ steps.install_profiles.outputs.liveactivity_name || steps.autoprovision.outputs.liveactivity_name || '' }}
+          LIVEACTIVITY_PROFILE: ${{ steps.install_profiles.outputs.liveactivity_name }}
         run: |
           python3 << 'PYEOF'
           import os
@@ -325,10 +281,18 @@ jobs:
 
           print(f'  iOS: {ios_profile}')
           print(f'  Watch: {watch_profile}')
+
+          if not liveactivity_profile:
+              print()
+              print('ERROR: LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 secret is not set!')
+              print('Create an App Store distribution profile for bundle ID:')
+              print('  com.shuttlx.ShuttlX.ShuttlXLiveActivity')
+              print('Then add it as a base64-encoded GitHub secret.')
+              import sys; sys.exit(1)
           PYEOF
 
       # ------------------------------------------------------------------
-      # 10. Archive
+      # 10. Archive (manual signing)
       # ------------------------------------------------------------------
       - name: Build and archive
         run: |
