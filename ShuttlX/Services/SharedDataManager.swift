@@ -282,60 +282,77 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         saveSessionsToSharedStorage(syncedSessions)
     }
 
-    /// Request all sessions from Watch via sendMessage (works when both apps are open)
+    /// Request all sessions from Watch via sendMessage with automatic retries.
+    /// Always attempts sendMessage regardless of isReachable — the property can lag behind
+    /// actual connectivity, and sendMessage's errorHandler is the reliable failure path.
     func requestSessionsFromWatch(completion: @escaping (Int) -> Void) {
-        guard WCSession.default.isReachable else {
-            log("Watch not reachable — open ShuttlX on your Watch and try again")
-            completion(0)
-            return
-        }
+        log("Requesting sessions from Watch (reachable: \(WCSession.default.isReachable))")
+        attemptSessionRequest(retriesLeft: 3, completion: completion)
+    }
 
+    private func attemptSessionRequest(retriesLeft: Int, completion: @escaping (Int) -> Void) {
         WCSession.default.sendMessage(
             ["action": "requestAllSessions"],
             replyHandler: { [weak self] reply in
                 Task { @MainActor in
                     guard let self = self else { return }
-
-                    if let sessionsDataString = reply["sessionsData"] as? String,
-                       let sessionsData = Data(base64Encoded: sessionsDataString) {
-                        do {
-                            let sessions = try JSONDecoder().decode([TrainingSession].self, from: sessionsData)
-                            var newCount = 0
-                            for session in sessions {
-                                if !self.syncedSessions.contains(where: { $0.id == session.id }) {
-                                    self.syncedSessions.append(session)
-                                    newCount += 1
-                                }
-                            }
-                            if newCount > 0 {
-                                self.saveSessionsToSharedStorage(self.syncedSessions)
-                                self.dataManager?.handleReceivedSessions(sessions)
-                                self.log("Pulled \(newCount) new session(s) from Watch")
-                            }
-                            self.consecutiveFailures = 0
-                            self.lastSyncTime = Date()
-                            self.updateConnectivityHealth()
-                            completion(newCount)
-                        } catch {
-                            self.log("Failed to decode sessions from Watch: \(error.localizedDescription)")
-                            completion(0)
-                        }
-                    } else {
-                        let count = reply["count"] as? Int ?? 0
-                        self.log("Watch returned \(count) sessions (no new data)")
-                        completion(0)
-                    }
+                    self.handleSessionRequestReply(reply, completion: completion)
                 }
             },
             errorHandler: { [weak self] error in
                 Task { @MainActor in
-                    self?.log("requestSessionsFromWatch failed: \(error.localizedDescription)")
-                    self?.consecutiveFailures += 1
-                    self?.updateConnectivityHealth()
-                    completion(0)
+                    guard let self = self else {
+                        completion(0)
+                        return
+                    }
+                    self.log("Sync attempt failed: \(error.localizedDescription)")
+
+                    if retriesLeft > 0 {
+                        self.log("Retrying in 1.5s (\(retriesLeft) attempts left)…")
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+                            self?.attemptSessionRequest(retriesLeft: retriesLeft - 1, completion: completion)
+                        }
+                    } else {
+                        self.log("All sync attempts failed")
+                        self.consecutiveFailures += 1
+                        self.updateConnectivityHealth()
+                        completion(0)
+                    }
                 }
             }
         )
+    }
+
+    private func handleSessionRequestReply(_ reply: [String: Any], completion: @escaping (Int) -> Void) {
+        if let sessionsDataString = reply["sessionsData"] as? String,
+           let sessionsData = Data(base64Encoded: sessionsDataString) {
+            do {
+                let sessions = try JSONDecoder().decode([TrainingSession].self, from: sessionsData)
+                var newCount = 0
+                for session in sessions {
+                    if !syncedSessions.contains(where: { $0.id == session.id }) {
+                        syncedSessions.append(session)
+                        newCount += 1
+                    }
+                }
+                if newCount > 0 {
+                    saveSessionsToSharedStorage(syncedSessions)
+                    dataManager?.handleReceivedSessions(sessions)
+                    log("Pulled \(newCount) new session(s) from Watch")
+                }
+                consecutiveFailures = 0
+                lastSyncTime = Date()
+                updateConnectivityHealth()
+                completion(newCount)
+            } catch {
+                log("Failed to decode sessions from Watch: \(error.localizedDescription)")
+                completion(0)
+            }
+        } else {
+            let count = reply["count"] as? Int ?? 0
+            log("Watch returned \(count) sessions (no new data)")
+            completion(0)
+        }
     }
 
     /// Called when app comes to foreground — reconcile any missing sessions
@@ -383,6 +400,17 @@ extension SharedDataManager {
             } else {
                 self.log("WC Session activated: \(activationState.rawValue)")
                 self.consecutiveFailures = 0
+
+                // After activation, try pulling sessions if Watch is reachable
+                if session.isReachable {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
+                        self?.requestSessionsFromWatch { count in
+                            if count > 0 {
+                                self?.log("Post-activation sync pulled \(count) session(s)")
+                            }
+                        }
+                    }
+                }
             }
             self.updateConnectivityHealth()
         }
@@ -392,6 +420,16 @@ extension SharedDataManager {
         Task { @MainActor in
             self.log("Watch reachability changed: \(session.isReachable)")
             self.updateConnectivityHealth()
+
+            // When Watch becomes reachable, automatically pull any new sessions
+            if session.isReachable {
+                self.log("Watch became reachable — auto-pulling sessions")
+                self.requestSessionsFromWatch { count in
+                    if count > 0 {
+                        self.log("Auto-sync pulled \(count) session(s)")
+                    }
+                }
+            }
         }
     }
 

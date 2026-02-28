@@ -251,6 +251,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                     Task { @MainActor in
                         self?.retryPendingSessions()
+                        self?.sendAllStoredSessions()
                     }
                 }
             }

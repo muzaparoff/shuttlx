@@ -42,12 +42,10 @@ struct SettingsView: View {
                                 dataManager.loadSessionsFromAppGroup()
                                 successMessage = "Synced \(count) session\(count == 1 ? "" : "s") from Watch"
                             } else {
-                                successMessage = WCSession.default.isReachable
-                                    ? "Already up to date"
-                                    : "Open ShuttlX on Watch and try again"
+                                successMessage = "No new sessions found. Keep both apps open and retry."
                             }
                             showSuccessMessage = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
                                 showSuccessMessage = false
                             }
                         }
