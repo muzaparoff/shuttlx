@@ -253,7 +253,7 @@ jobs:
           LIVEACTIVITY_PROFILE_NAME: ${{ steps.install_profiles.outputs.liveactivity_name }}
         run: |
           python3 << 'PYEOF'
-          import os, re
+          import os
 
           ios_profile = os.environ['IOS_PROFILE_NAME']
           watch_profile = os.environ['WATCH_PROFILE_NAME']
@@ -263,66 +263,36 @@ jobs:
           with open(pbx, 'r') as f:
               content = f.read()
 
-          # Switch iOS and Watch targets to manual signing (identified by their entitlements)
-          # iOS target build configs contain: CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements
-          # Watch target build configs contain: CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements"
-          # LiveActivity target build configs contain: PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity
+          # Switch ALL targets to manual signing (required because the archive step
+          # passes CODE_SIGN_IDENTITY="Apple Distribution" globally, which conflicts
+          # with Automatic signing)
+          content = content.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
 
-          # Helper: replace CODE_SIGN_STYLE in a build config block containing a marker
-          def set_manual_in_block(content, marker, profile_name):
-              """Find build config blocks containing `marker` and switch them to Manual + add profile."""
-              # Find the marker, then walk backwards to find the enclosing buildSettings block
-              pos = 0
-              while True:
-                  idx = content.find(marker, pos)
-                  if idx == -1:
-                      break
-                  # Find the CODE_SIGN_STYLE in the same block (search backwards from marker)
-                  block_start = content.rfind('buildSettings = {', 0, idx)
-                  if block_start == -1:
-                      pos = idx + 1
-                      continue
-                  block_end = content.find('};', idx)
-                  if block_end == -1:
-                      pos = idx + 1
-                      continue
-                  block = content[block_start:block_end]
-                  new_block = block.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
-                  if profile_name:
-                      new_block = new_block.replace(
-                          marker,
-                          marker + '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + profile_name + '";')
-                  content = content[:block_start] + new_block + content[block_start + len(block):]
-                  pos = block_start + len(new_block) + 1
-              return content
-
-          # Configure iOS target
-          content = set_manual_in_block(
-              content,
+          # Add provisioning profile specifiers for iOS and Watch targets
+          content = content.replace(
               'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;',
-              ios_profile)
-
-          # Configure Watch target
-          content = set_manual_in_block(
-              content,
+              'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;'
+              + '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + ios_profile + '";')
+          content = content.replace(
               'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";',
-              watch_profile)
+              'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";'
+              + '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + watch_profile + '";')
 
-          # Configure LiveActivity target — only switch to Manual if profile is provided
+          # Add LiveActivity profile specifier if available
           if liveactivity_profile:
-              content = set_manual_in_block(
-                  content,
+              content = content.replace(
                   'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;',
-                  liveactivity_profile)
-              print(f'  LiveActivity profile: {liveactivity_profile} (manual signing)')
+                  'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;'
+                  + '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + liveactivity_profile + '";')
+              print(f'  LiveActivity profile: {liveactivity_profile}')
           else:
-              print('  LiveActivity: no profile provided, keeping Automatic signing')
-              print('  (will use -allowProvisioningUpdates to auto-provision)')
+              # No profile specified — -allowProvisioningUpdates will auto-provision
+              print('  LiveActivity: no profile, relying on -allowProvisioningUpdates')
 
           with open(pbx, 'w') as f:
               f.write(content)
 
-          print('Configured signing:')
+          print('Configured manual signing:')
           print(f'  iOS profile: {ios_profile}')
           print(f'  Watch profile: {watch_profile}')
           PYEOF
