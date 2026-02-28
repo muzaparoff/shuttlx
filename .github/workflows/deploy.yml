@@ -98,9 +98,10 @@ jobs:
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
       # ------------------------------------------------------------------
-      # 4. Install Provisioning Profiles (pre-cache for faster builds)
+      # 4. Install Provisioning Profiles
       # ------------------------------------------------------------------
       - name: Install provisioning profiles
+        id: install_profiles
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
 
@@ -109,6 +110,7 @@ jobs:
             local profile_label=$2
             if [ -z "$profile_base64" ]; then
               echo "  Skipping $profile_label (secret not set)" >&2
+              echo "|"
               return
             fi
 
@@ -120,11 +122,16 @@ jobs:
             mv "temp_${profile_label}.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
 
             echo "  Installed $profile_label: $PROFILE_NAME (UUID: $UUID)" >&2
+            echo "$UUID|$PROFILE_NAME"
           }
 
-          install_profile "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" "iOS"
-          install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE_BASE64 }}" "Watch"
-          install_profile "${{ secrets.LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 }}" "LiveActivity"
+          IOS_INFO=$(install_profile "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" "iOS")
+          WATCH_INFO=$(install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE_BASE64 }}" "Watch")
+          LIVEACTIVITY_INFO=$(install_profile "${{ secrets.LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 }}" "LiveActivity")
+
+          echo "ios_name=$(echo "$IOS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
+          echo "watch_name=$(echo "$WATCH_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
+          echo "liveactivity_name=$(echo "$LIVEACTIVITY_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
 
           echo "Installed profiles:"
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
@@ -175,6 +182,17 @@ jobs:
       # ------------------------------------------------------------------
       - name: Create ExportOptions.plist
         run: |
+          IOS_NAME="${{ steps.install_profiles.outputs.ios_name }}"
+          WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
+          LIVEACTIVITY_NAME="${{ steps.install_profiles.outputs.liveactivity_name }}"
+
+          # Build LiveActivity entry only if profile exists
+          LIVEACTIVITY_PLIST=""
+          if [ -n "$LIVEACTIVITY_NAME" ]; then
+            LIVEACTIVITY_PLIST="            <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key>
+                      <string>$LIVEACTIVITY_NAME</string>"
+          fi
+
           cat > ExportOptions.plist <<EXPORTEOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -193,15 +211,124 @@ jobs:
               <key>destination</key>
               <string>export</string>
               <key>signingStyle</key>
-              <string>automatic</string>
+              <string>manual</string>
+              <key>signingCertificate</key>
+              <string>Apple Distribution</string>
+              <key>provisioningProfiles</key>
+              <dict>
+                  <key>com.shuttlx.ShuttlX</key>
+                  <string>$IOS_NAME</string>
+                  <key>com.shuttlx.ShuttlX.watchkitapp</key>
+                  <string>$WATCH_NAME</string>
+          $LIVEACTIVITY_PLIST
+              </dict>
           </dict>
           </plist>
           EXPORTEOF
 
-          echo "ExportOptions.plist created (automatic signing)"
+          echo "ExportOptions.plist created"
+          echo "  iOS: $IOS_NAME"
+          echo "  Watch: $WATCH_NAME"
+          echo "  LiveActivity: ${LIVEACTIVITY_NAME:-auto-provisioned}"
 
       # ------------------------------------------------------------------
-      # 9. Archive (automatic signing + auto-provisioning)
+      # 9. Auto-provision LiveActivity extension (if no profile secret)
+      #    Uses ASC API to register App ID and create distribution profile
+      # ------------------------------------------------------------------
+      - name: Auto-provision LiveActivity extension
+        if: ${{ steps.install_profiles.outputs.liveactivity_name == '' }}
+        id: autoprovision
+        run: |
+          API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+          BUNDLE_ID="com.shuttlx.ShuttlX.ShuttlXLiveActivity"
+
+          # Use a temporary Xcode project build to trigger auto-provisioning
+          # for the LiveActivity target specifically
+          echo "Auto-provisioning $BUNDLE_ID..."
+
+          # Try to build just the LiveActivity target with automatic signing
+          # to trigger Xcode's auto-provisioning
+          xcodebuild \
+            -project ShuttlX.xcodeproj \
+            -target ShuttlXLiveActivity \
+            -configuration Release \
+            -destination generic/platform=iOS \
+            DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            CODE_SIGN_STYLE=Automatic \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
+            build 2>&1 || true
+
+          # Now find the auto-created profile
+          PROFILE_PATH=$(ls -t ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision 2>/dev/null | head -1)
+          if [ -n "$PROFILE_PATH" ]; then
+            for PROFILE in ~/Library/MobileDevice/Provisioning\ Profiles/*.mobileprovision; do
+              PROFILE_BUNDLE=$(security cms -D -i "$PROFILE" 2>/dev/null | grep -A1 "application-identifier" | grep string | sed 's/<[^>]*>//g' | xargs | sed "s/^[A-Z0-9]*\.//" || true)
+              if [ "$PROFILE_BUNDLE" = "$BUNDLE_ID" ]; then
+                PROFILE_NAME=$(security cms -D -i "$PROFILE" | grep -A1 '<key>Name</key>' | grep '<string>' | sed 's/<[^>]*>//g' | xargs)
+                echo "Found auto-provisioned profile: $PROFILE_NAME"
+                echo "liveactivity_name=$PROFILE_NAME" >> $GITHUB_OUTPUT
+                break
+              fi
+            done
+          fi
+
+      # ------------------------------------------------------------------
+      # 10. Configure manual signing in project
+      # ------------------------------------------------------------------
+      - name: Configure manual signing
+        env:
+          IOS_PROFILE: ${{ steps.install_profiles.outputs.ios_name }}
+          WATCH_PROFILE: ${{ steps.install_profiles.outputs.watch_name }}
+          LIVEACTIVITY_PROFILE: ${{ steps.install_profiles.outputs.liveactivity_name || steps.autoprovision.outputs.liveactivity_name || '' }}
+        run: |
+          python3 << 'PYEOF'
+          import os
+
+          ios_profile = os.environ['IOS_PROFILE']
+          watch_profile = os.environ['WATCH_PROFILE']
+          liveactivity_profile = os.environ.get('LIVEACTIVITY_PROFILE', '')
+
+          pbx = 'ShuttlX.xcodeproj/project.pbxproj'
+          with open(pbx, 'r') as f:
+              content = f.read()
+
+          # Switch ALL targets to manual signing
+          content = content.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
+
+          # Add profile specifiers for iOS target
+          content = content.replace(
+              'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;',
+              'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;\n'
+              '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + ios_profile + '";')
+
+          # Add profile specifiers for Watch target
+          content = content.replace(
+              'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";',
+              'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";\n'
+              '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + watch_profile + '";')
+
+          # Add profile specifier for LiveActivity target
+          if liveactivity_profile:
+              content = content.replace(
+                  'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;',
+                  'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;\n'
+                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + liveactivity_profile + '";')
+              print(f'  LiveActivity: {liveactivity_profile}')
+          else:
+              print('  WARNING: No LiveActivity profile available!')
+
+          with open(pbx, 'w') as f:
+              f.write(content)
+
+          print(f'  iOS: {ios_profile}')
+          print(f'  Watch: {watch_profile}')
+          PYEOF
+
+      # ------------------------------------------------------------------
+      # 10. Archive
       # ------------------------------------------------------------------
       - name: Build and archive
         run: |
@@ -213,6 +340,7 @@ jobs:
             -configuration Release \
             -destination generic/platform=iOS \
             -archivePath "./build/ShuttlX.xcarchive" \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
             -allowProvisioningUpdates \
             -authenticationKeyPath "$API_KEY_PATH" \
@@ -221,7 +349,7 @@ jobs:
             archive
 
       # ------------------------------------------------------------------
-      # 11. Export (with signing via ExportOptions.plist)
+      # 11. Export
       # ------------------------------------------------------------------
       - name: Export archive
         run: |
