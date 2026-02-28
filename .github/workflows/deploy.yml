@@ -57,11 +57,11 @@ jobs:
           fetch-tags: true
 
       # ------------------------------------------------------------------
-      # 2. Select Xcode 16.x
+      # 2. Select Xcode 26 (iOS 26 SDK required for App Store)
       # ------------------------------------------------------------------
       - name: Select Xcode version
         run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -1)
+          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE_PATH" ]; then
             XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           fi
