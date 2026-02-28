@@ -122,11 +122,20 @@ jobs:
 
           IOS_INFO=$(install_profile "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" "iOS")
           WATCH_INFO=$(install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE_BASE64 }}" "Watch")
-          LIVEACTIVITY_INFO=$(install_profile "${{ secrets.LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 }}" "LiveActivity")
+
+          # LiveActivity profile is optional — if the secret is not set,
+          # -allowProvisioningUpdates in the archive step will auto-create it
+          LIVEACTIVITY_BASE64="${{ secrets.LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 }}"
+          if [ -n "$LIVEACTIVITY_BASE64" ]; then
+            LIVEACTIVITY_INFO=$(install_profile "$LIVEACTIVITY_BASE64" "LiveActivity")
+            LIVEACTIVITY_NAME=$(echo "$LIVEACTIVITY_INFO" | cut -d'|' -f2)
+          else
+            echo "  WARNING: LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 secret not set — will use automatic provisioning" >&2
+            LIVEACTIVITY_NAME=""
+          fi
 
           IOS_NAME=$(echo "$IOS_INFO" | cut -d'|' -f2)
           WATCH_NAME=$(echo "$WATCH_INFO" | cut -d'|' -f2)
-          LIVEACTIVITY_NAME=$(echo "$LIVEACTIVITY_INFO" | cut -d'|' -f2)
 
           echo "ios_name=$IOS_NAME" >> $GITHUB_OUTPUT
           echo "watch_name=$WATCH_NAME" >> $GITHUB_OUTPUT
@@ -185,7 +194,14 @@ jobs:
           WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
           LIVEACTIVITY_NAME="${{ steps.install_profiles.outputs.liveactivity_name }}"
 
-          cat > ExportOptions.plist << EOF
+          # Build LiveActivity profile entry only if the profile was installed
+          LIVEACTIVITY_PLIST_ENTRY=""
+          if [ -n "$LIVEACTIVITY_NAME" ]; then
+            LIVEACTIVITY_PLIST_ENTRY="            <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key>
+                      <string>$LIVEACTIVITY_NAME</string>"
+          fi
+
+          cat > ExportOptions.plist <<EXPORTEOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
@@ -212,17 +228,20 @@ jobs:
                   <string>$IOS_NAME</string>
                   <key>com.shuttlx.ShuttlX.watchkitapp</key>
                   <string>$WATCH_NAME</string>
-                  <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key>
-                  <string>$LIVEACTIVITY_NAME</string>
+          $LIVEACTIVITY_PLIST_ENTRY
               </dict>
           </dict>
           </plist>
-          EOF
+          EXPORTEOF
 
           echo "ExportOptions.plist created"
           echo "  com.shuttlx.ShuttlX -> $IOS_NAME"
           echo "  com.shuttlx.ShuttlX.watchkitapp -> $WATCH_NAME"
-          echo "  com.shuttlx.ShuttlX.ShuttlXLiveActivity -> $LIVEACTIVITY_NAME"
+          if [ -n "$LIVEACTIVITY_NAME" ]; then
+            echo "  com.shuttlx.ShuttlX.ShuttlXLiveActivity -> $LIVEACTIVITY_NAME"
+          else
+            echo "  com.shuttlx.ShuttlX.ShuttlXLiveActivity -> (automatic provisioning)"
+          fi
 
       # ------------------------------------------------------------------
       # 9. Configure manual signing in project
@@ -233,40 +252,88 @@ jobs:
           WATCH_PROFILE_NAME: ${{ steps.install_profiles.outputs.watch_name }}
           LIVEACTIVITY_PROFILE_NAME: ${{ steps.install_profiles.outputs.liveactivity_name }}
         run: |
-          python3 -c "
-          import os
+          python3 << 'PYEOF'
+          import os, re
+
           ios_profile = os.environ['IOS_PROFILE_NAME']
           watch_profile = os.environ['WATCH_PROFILE_NAME']
-          liveactivity_profile = os.environ['LIVEACTIVITY_PROFILE_NAME']
+          liveactivity_profile = os.environ.get('LIVEACTIVITY_PROFILE_NAME', '')
+
           pbx = 'ShuttlX.xcodeproj/project.pbxproj'
           with open(pbx, 'r') as f:
               content = f.read()
-          content = content.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
-          content = content.replace(
+
+          # Switch iOS and Watch targets to manual signing (identified by their entitlements)
+          # iOS target build configs contain: CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements
+          # Watch target build configs contain: CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements"
+          # LiveActivity target build configs contain: PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity
+
+          # Helper: replace CODE_SIGN_STYLE in a build config block containing a marker
+          def set_manual_in_block(content, marker, profile_name):
+              """Find build config blocks containing `marker` and switch them to Manual + add profile."""
+              # Find the marker, then walk backwards to find the enclosing buildSettings block
+              pos = 0
+              while True:
+                  idx = content.find(marker, pos)
+                  if idx == -1:
+                      break
+                  # Find the CODE_SIGN_STYLE in the same block (search backwards from marker)
+                  block_start = content.rfind('buildSettings = {', 0, idx)
+                  if block_start == -1:
+                      pos = idx + 1
+                      continue
+                  block_end = content.find('};', idx)
+                  if block_end == -1:
+                      pos = idx + 1
+                      continue
+                  block = content[block_start:block_end]
+                  new_block = block.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
+                  if profile_name:
+                      new_block = new_block.replace(
+                          marker,
+                          marker + '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + profile_name + '";')
+                  content = content[:block_start] + new_block + content[block_start + len(block):]
+                  pos = block_start + len(new_block) + 1
+              return content
+
+          # Configure iOS target
+          content = set_manual_in_block(
+              content,
               'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;',
-              'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;' +
-              '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"' + ios_profile + '\";')
-          content = content.replace(
-              'CODE_SIGN_ENTITLEMENTS = \"ShuttlX Watch App/ShuttlX Watch App.entitlements\";',
-              'CODE_SIGN_ENTITLEMENTS = \"ShuttlX Watch App/ShuttlX Watch App.entitlements\";' +
-              '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"' + watch_profile + '\";')
-          content = content.replace(
-              'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;',
-              'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;' +
-              '\n\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = \"' + liveactivity_profile + '\";')
+              ios_profile)
+
+          # Configure Watch target
+          content = set_manual_in_block(
+              content,
+              'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";',
+              watch_profile)
+
+          # Configure LiveActivity target — only switch to Manual if profile is provided
+          if liveactivity_profile:
+              content = set_manual_in_block(
+                  content,
+                  'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;',
+                  liveactivity_profile)
+              print(f'  LiveActivity profile: {liveactivity_profile} (manual signing)')
+          else:
+              print('  LiveActivity: no profile provided, keeping Automatic signing')
+              print('  (will use -allowProvisioningUpdates to auto-provision)')
+
           with open(pbx, 'w') as f:
               f.write(content)
-          print(f'Configured manual signing')
+
+          print('Configured signing:')
           print(f'  iOS profile: {ios_profile}')
           print(f'  Watch profile: {watch_profile}')
-          print(f'  LiveActivity profile: {liveactivity_profile}')
-          "
+          PYEOF
 
       # ------------------------------------------------------------------
       # 10. Archive (with manual signing)
       # ------------------------------------------------------------------
       - name: Build and archive
         run: |
+          API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
           xcodebuild \
             -project ShuttlX.xcodeproj \
             -scheme ShuttlX \
@@ -275,6 +342,10 @@ jobs:
             -archivePath "./build/ShuttlX.xcarchive" \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             DEVELOPMENT_TEAM="${{ secrets.APPLE_TEAM_ID }}" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
             archive
 
       # ------------------------------------------------------------------
@@ -282,11 +353,17 @@ jobs:
       # ------------------------------------------------------------------
       - name: Export archive
         run: |
+          API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
           xcodebuild \
             -exportArchive \
             -archivePath "./build/ShuttlX.xcarchive" \
             -exportPath "./build/export" \
-            -exportOptionsPlist "./ExportOptions.plist"
+            -exportOptionsPlist "./ExportOptions.plist" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$API_KEY_PATH" \
+            -authenticationKeyID "${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}" \
+            -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}"
 
           if [ -f "./build/export/ShuttlX.ipa" ]; then
             echo "IPA created: $(ls -lh ./build/export/ShuttlX.ipa)"
