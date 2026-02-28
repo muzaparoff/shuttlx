@@ -261,10 +261,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     nonisolated func sessionReachabilityDidChange(_ session: WCSession) {
         Task { @MainActor in
-            self.isConnected = session.isReachable
+            self.isConnected = session.isReachable || session.activationState == .activated
             if session.isReachable {
                 self.updateSyncStatus("iPhone became reachable")
                 self.retryPendingSessions()
+                self.sendAllStoredSessions()
             } else {
                 self.updateSyncStatus("iPhone not reachable")
             }
@@ -285,12 +286,30 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         Task { @MainActor in
-            if let action = message["action"] as? String, action == "ping" {
-                replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
-                self.updateSyncStatus("Connection verified")
-                self.consecutiveFailures = 0
+            if let action = message["action"] as? String {
+                switch action {
+                case "ping":
+                    replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
+                    self.updateSyncStatus("Connection verified")
+                    self.consecutiveFailures = 0
+                case "requestAllSessions":
+                    let sessions = self.loadAllLocalSessions()
+                    if sessions.isEmpty {
+                        replyHandler(["status": "empty", "count": 0])
+                    } else {
+                        do {
+                            let data = try JSONEncoder().encode(sessions)
+                            replyHandler(["status": "ok", "count": sessions.count, "sessionsData": data.base64EncodedString()])
+                            self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone")
+                        } catch {
+                            replyHandler(["error": "encode_failed"])
+                        }
+                    }
+                default:
+                    replyHandler(["error": "Unknown action"])
+                }
             } else {
-                replyHandler(["error": "Unknown action"])
+                replyHandler(["error": "No action"])
             }
             self.updateConnectivityHealth()
         }
@@ -331,6 +350,57 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
     #endif
+
+    // MARK: - Bulk Session Sync
+
+    /// Send all locally stored sessions to iPhone when connectivity is available
+    func sendAllStoredSessions() {
+        guard WCSession.default.isReachable else { return }
+
+        let sessions = loadAllLocalSessions()
+        guard !sessions.isEmpty else { return }
+
+        logger.info("Sending all \(sessions.count) stored session(s) to iPhone")
+
+        for session in sessions {
+            do {
+                let sessionData = try JSONEncoder().encode(session)
+                let message: [String: Any] = [
+                    "action": "saveSession",
+                    "sessionData": sessionData.base64EncodedString(),
+                    "timestamp": Date().timeIntervalSince1970
+                ]
+                WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
+                    Task { @MainActor in
+                        self?.consecutiveFailures = 0
+                        self?.lastSyncTime = Date()
+                    }
+                }, errorHandler: { [weak self] error in
+                    Task { @MainActor in
+                        self?.logger.error("Bulk send failed: \(error.localizedDescription)")
+                    }
+                })
+            } catch {
+                logger.error("Failed to encode session for bulk send: \(error.localizedDescription)")
+            }
+        }
+        updateSyncStatus("Sent \(sessions.count) session(s) to iPhone")
+    }
+
+    private func loadAllLocalSessions() -> [TrainingSession] {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            return []
+        }
+        let url = containerURL.appendingPathComponent("sessions.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        do {
+            let data = try Data(contentsOf: url)
+            return try JSONDecoder().decode([TrainingSession].self, from: data)
+        } catch {
+            logger.error("Failed to load local sessions: \(error.localizedDescription)")
+            return []
+        }
+    }
 
     // MARK: - Helpers
 

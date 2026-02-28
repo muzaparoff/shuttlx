@@ -133,20 +133,8 @@ class DataManager: ObservableObject {
 
     // MARK: - Container Management
     private func getWorkingContainer() -> URL? {
-        if let appGroupContainer = sharedContainer {
-            let fileManager = FileManager.default
-            var isDirectory: ObjCBool = false
-
-            if fileManager.fileExists(atPath: appGroupContainer.path, isDirectory: &isDirectory) && isDirectory.boolValue {
-                return appGroupContainer
-            } else {
-                do {
-                    try fileManager.createDirectory(at: appGroupContainer, withIntermediateDirectories: true, attributes: nil)
-                    return appGroupContainer
-                } catch {
-                    // Fall through to fallback
-                }
-            }
+        if let container = sharedContainer {
+            return container
         }
 
         guard let fallback = fallbackContainer else { return nil }

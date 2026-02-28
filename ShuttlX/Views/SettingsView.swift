@@ -4,10 +4,12 @@ import WatchConnectivity
 
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var sharedDataManager: SharedDataManager
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showSuccessMessage = false
     @State private var successMessage = ""
+    @State private var isSyncing = false
 
     var body: some View {
         List {
@@ -32,19 +34,35 @@ struct SettingsView: View {
                 .accessibilityValue(watchStatusText)
 
                 if watchPaired {
-                    HStack {
-                        Text("App Installed")
-                        Spacer()
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(watchAppInstalled ? Color.green : Color.orange)
-                                .frame(width: 8, height: 8)
-                            Text(watchAppInstalled ? "Yes" : "Not Installed")
-                                .foregroundStyle(.secondary)
+                    Button {
+                        isSyncing = true
+                        sharedDataManager.requestSessionsFromWatch { count in
+                            isSyncing = false
+                            if count > 0 {
+                                dataManager.loadSessionsFromAppGroup()
+                                successMessage = "Synced \(count) session\(count == 1 ? "" : "s") from Watch"
+                            } else {
+                                successMessage = WCSession.default.isReachable
+                                    ? "Already up to date"
+                                    : "Open ShuttlX on Watch and try again"
+                            }
+                            showSuccessMessage = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                                showSuccessMessage = false
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text("Sync from Watch")
+                            Spacer()
+                            if isSyncing {
+                                ProgressView()
+                            }
                         }
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Watch App: \(watchAppInstalled ? "Installed" : "Not Installed")")
+                    .disabled(isSyncing)
+                    .accessibilityHint("Pulls training sessions directly from your Apple Watch")
                 }
             }
 
@@ -146,10 +164,6 @@ struct SettingsView: View {
         WCSession.isSupported() && WCSession.default.isPaired
     }
 
-    private var watchAppInstalled: Bool {
-        WCSession.isSupported() && WCSession.default.isWatchAppInstalled
-    }
-
     private var watchStatusText: String {
         guard WCSession.isSupported() else { return "Not Supported" }
         return WCSession.default.isPaired ? "Paired" : "Not Paired"
@@ -231,5 +245,6 @@ struct HealthPermissionsInfoView: View {
     NavigationStack {
         SettingsView()
             .environmentObject(DataManager())
+            .environmentObject(SharedDataManager.shared)
     }
 }

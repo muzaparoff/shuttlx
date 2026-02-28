@@ -282,6 +282,62 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         saveSessionsToSharedStorage(syncedSessions)
     }
 
+    /// Request all sessions from Watch via sendMessage (works when both apps are open)
+    func requestSessionsFromWatch(completion: @escaping (Int) -> Void) {
+        guard WCSession.default.isReachable else {
+            log("Watch not reachable — open ShuttlX on your Watch and try again")
+            completion(0)
+            return
+        }
+
+        WCSession.default.sendMessage(
+            ["action": "requestAllSessions"],
+            replyHandler: { [weak self] reply in
+                Task { @MainActor in
+                    guard let self = self else { return }
+
+                    if let sessionsDataString = reply["sessionsData"] as? String,
+                       let sessionsData = Data(base64Encoded: sessionsDataString) {
+                        do {
+                            let sessions = try JSONDecoder().decode([TrainingSession].self, from: sessionsData)
+                            var newCount = 0
+                            for session in sessions {
+                                if !self.syncedSessions.contains(where: { $0.id == session.id }) {
+                                    self.syncedSessions.append(session)
+                                    newCount += 1
+                                }
+                            }
+                            if newCount > 0 {
+                                self.saveSessionsToSharedStorage(self.syncedSessions)
+                                self.dataManager?.handleReceivedSessions(sessions)
+                                self.log("Pulled \(newCount) new session(s) from Watch")
+                            }
+                            self.consecutiveFailures = 0
+                            self.lastSyncTime = Date()
+                            self.updateConnectivityHealth()
+                            completion(newCount)
+                        } catch {
+                            self.log("Failed to decode sessions from Watch: \(error.localizedDescription)")
+                            completion(0)
+                        }
+                    } else {
+                        let count = reply["count"] as? Int ?? 0
+                        self.log("Watch returned \(count) sessions (no new data)")
+                        completion(0)
+                    }
+                }
+            },
+            errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    self?.log("requestSessionsFromWatch failed: \(error.localizedDescription)")
+                    self?.consecutiveFailures += 1
+                    self?.updateConnectivityHealth()
+                    completion(0)
+                }
+            }
+        )
+    }
+
     /// Called when app comes to foreground — reconcile any missing sessions
     func reconcileWithDataManager() {
         // Reload from disk first — picks up sessions saved while app was backgrounded

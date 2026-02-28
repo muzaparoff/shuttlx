@@ -87,7 +87,8 @@ struct StartTrainingView: View {
     }
 
     private var isConnected: Bool {
-        WCSession.isSupported() && WCSession.default.isReachable
+        guard WCSession.isSupported() else { return false }
+        return WCSession.default.activationState == .activated
     }
 
     private func loadSessions() {
