@@ -444,6 +444,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentSegmentTime = 0
         segments.append(ActivitySegment(activityType: newActivity, startDate: now))
 
+        // Haptic feedback on activity change
+        #if os(watchOS)
+        WKInterfaceDevice.current().play(.start)
+        #endif
+
         logger.info("Activity changed to \(newActivity.rawValue)")
     }
 
@@ -685,6 +690,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             segmentsCopy[segmentsCopy.count - 1].endDate = Date()
         }
 
+        let backupSplits: [KmSplitData]? = completedKmSplits.isEmpty ? nil : completedKmSplits.map {
+            KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
+        }
+
         let session = TrainingSession(
             startDate: startTime,
             endDate: Date(),
@@ -695,7 +704,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
-            route: routePoints.isEmpty ? nil : routePoints
+            route: routePoints.isEmpty ? nil : routePoints,
+            kmSplits: backupSplits
         )
 
         do {
@@ -728,6 +738,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             segmentsCopy[segmentsCopy.count - 1].endDate = Date()
         }
 
+        let splits: [KmSplitData]? = completedKmSplits.isEmpty ? nil : completedKmSplits.map {
+            KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
+        }
+
         let session = TrainingSession(
             startDate: startTime,
             endDate: Date(),
@@ -738,7 +752,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
-            route: routePoints.isEmpty ? nil : routePoints
+            route: routePoints.isEmpty ? nil : routePoints,
+            kmSplits: splits
         )
 
         sharedDataManager?.sendSessionToiOS(session)

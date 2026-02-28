@@ -5,6 +5,7 @@ import WatchConnectivity
 struct StartTrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @State private var lastSession: TrainingSession?
+    @State private var weekSessions: [TrainingSession] = []
     #if DEBUG
     @State private var showingDebugView = false
     #endif
@@ -31,11 +32,14 @@ struct StartTrainingView: View {
                     )
                 }
 
-                Spacer(minLength: 8)
+                // Weekly stats
+                if !weekSessions.isEmpty {
+                    WeekStatsCard(sessions: weekSessions)
+                }
 
-                // Last workout mini-summary
+                // Last workout expanded summary
                 if let last = lastSession, !workoutManager.authorizationDenied {
-                    LastWorkoutMini(session: last)
+                    LastWorkoutCard(session: last)
                 }
 
                 // Start button
@@ -79,14 +83,14 @@ struct StartTrainingView: View {
             .padding(.horizontal, 8)
         }
         .navigationTitle("ShuttlX")
-        .onAppear { loadLastSession() }
+        .onAppear { loadSessions() }
     }
 
     private var isConnected: Bool {
         WCSession.isSupported() && WCSession.default.isReachable
     }
 
-    private func loadLastSession() {
+    private func loadSessions() {
         let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
         guard let url = container?.appendingPathComponent("sessions.json"),
               FileManager.default.fileExists(atPath: url.path),
@@ -94,37 +98,142 @@ struct StartTrainingView: View {
               let sessions = try? JSONDecoder().decode([TrainingSession].self, from: data) else {
             return
         }
-        lastSession = sessions.sorted(by: { $0.startDate > $1.startDate }).first
+
+        let sorted = sessions.sorted(by: { $0.startDate > $1.startDate })
+        lastSession = sorted.first
+
+        // This week's sessions
+        let calendar = Calendar.current
+        let startOfWeek = calendar.dateInterval(of: .weekOfYear, for: Date())?.start ?? Date()
+        weekSessions = sorted.filter { $0.startDate >= startOfWeek }
     }
 }
 
-// MARK: - Last Workout Mini-Summary
+// MARK: - Weekly Stats Card
 
-private struct LastWorkoutMini: View {
-    let session: TrainingSession
+private struct WeekStatsCard: View {
+    let sessions: [TrainingSession]
+
+    private var totalDistance: Double {
+        sessions.compactMap(\.distance).reduce(0, +)
+    }
+
+    private var totalDuration: TimeInterval {
+        sessions.reduce(0) { $0 + $1.duration }
+    }
+
+    private var streakDays: Int {
+        let calendar = Calendar.current
+        let uniqueDays = Set(sessions.map { calendar.startOfDay(for: $0.startDate) })
+        return uniqueDays.count
+    }
 
     var body: some View {
-        VStack(spacing: 4) {
-            Text("Last Workout")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+        VStack(spacing: 6) {
+            HStack {
+                Text("This Week")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text("\(sessions.count) session\(sessions.count == 1 ? "" : "s")")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
 
             HStack(spacing: 12) {
+                // Duration
                 HStack(spacing: 3) {
                     Image(systemName: "clock")
                         .font(.caption2)
-                    Text(FormattingUtils.formatDuration(session.duration))
-                        .font(.caption.monospacedDigit())
+                        .foregroundColor(.primary)
+                    Text(FormattingUtils.formatDuration(totalDuration))
+                        .font(.caption.monospacedDigit().weight(.medium))
                 }
 
+                // Distance
+                if totalDistance > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "location.fill")
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                        Text(FormattingUtils.formatDistance(totalDistance))
+                            .font(.caption.monospacedDigit().weight(.medium))
+                    }
+                }
+
+                // Streak
+                if streakDays > 1 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame.fill")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                        Text("\(streakDays)d")
+                            .font(.caption.monospacedDigit().weight(.medium))
+                    }
+                }
+            }
+        }
+        .padding(8)
+        .frame(maxWidth: .infinity)
+        .background(Color.blue.opacity(0.1), in: RoundedRectangle(cornerRadius: 8))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("This week, \(sessions.count) sessions, \(FormattingUtils.formatDuration(totalDuration))")
+    }
+}
+
+// MARK: - Last Workout Card (Expanded)
+
+private struct LastWorkoutCard: View {
+    let session: TrainingSession
+
+    var body: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text("Last Workout")
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Text(relativeDate)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            // Duration
+            Text(FormattingUtils.formatDuration(session.duration))
+                .font(.system(.body, design: .rounded).weight(.bold))
+                .monospacedDigit()
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Metrics row
+            HStack(spacing: 10) {
                 if let distance = session.distance, distance > 0 {
                     HStack(spacing: 3) {
                         Image(systemName: "location.fill")
                             .font(.caption2)
+                            .foregroundColor(.green)
                         Text(FormattingUtils.formatDistance(distance))
                             .font(.caption.monospacedDigit())
                     }
-                    .foregroundStyle(ShuttlXColor.running)
+                }
+
+                if let hr = session.averageHeartRate, hr > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "heart.fill")
+                            .font(.caption2)
+                            .foregroundColor(.red)
+                        Text("\(Int(hr))")
+                            .font(.caption.monospacedDigit())
+                    }
+                }
+
+                if let cal = session.caloriesBurned, cal > 0 {
+                    HStack(spacing: 3) {
+                        Image(systemName: "flame.fill")
+                            .font(.caption2)
+                            .foregroundColor(.orange)
+                        Text("\(Int(cal))")
+                            .font(.caption.monospacedDigit())
+                    }
                 }
             }
         }
@@ -133,6 +242,15 @@ private struct LastWorkoutMini: View {
         .background(Color(.darkGray).opacity(0.3), in: RoundedRectangle(cornerRadius: 8))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Last workout, \(FormattingUtils.formatDuration(session.duration))")
+    }
+
+    private var relativeDate: String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(session.startDate) { return "Today" }
+        if calendar.isDateInYesterday(session.startDate) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: session.startDate)
     }
 }
 

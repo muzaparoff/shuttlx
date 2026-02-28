@@ -11,10 +11,15 @@ enum FormattingUtils {
         return "\(s)s"
     }
 
-    /// "02:30" for timer display
+    /// "02:30" or "1:05:30" for timer display
     static func formatTimer(_ interval: TimeInterval) -> String {
-        let m = Int(interval / 60)
-        let s = Int(interval.truncatingRemainder(dividingBy: 60))
+        let totalSeconds = Int(interval)
+        let h = totalSeconds / 3600
+        let m = (totalSeconds % 3600) / 60
+        let s = totalSeconds % 60
+        if h > 0 {
+            return String(format: "%d:%02d:%02d", h, m, s)
+        }
         return String(format: "%02d:%02d", m, s)
     }
 
@@ -48,10 +53,14 @@ enum FormattingUtils {
         return String(format: "%d'%02d\"", m, s)
     }
 
-    /// Accessible time description: "5 minutes 30 seconds"
+    /// Accessible time description: "1 hour 5 minutes 30 seconds"
     static func formatTimeAccessible(_ interval: TimeInterval) -> String {
-        let m = Int(interval / 60)
-        let s = Int(interval.truncatingRemainder(dividingBy: 60))
-        return m > 0 ? "\(m) minutes \(s) seconds" : "\(s) seconds"
+        let totalSeconds = Int(interval)
+        let h = totalSeconds / 3600
+        let m = (totalSeconds % 3600) / 60
+        let s = totalSeconds % 60
+        if h > 0 { return "\(h) hour\(h == 1 ? "" : "s") \(m) minutes \(s) seconds" }
+        if m > 0 { return "\(m) minutes \(s) seconds" }
+        return "\(s) seconds"
     }
 }
