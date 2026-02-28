@@ -21,6 +21,7 @@ struct ShuttlXApp: App {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
+                dataManager.loadSessionsFromAppGroup()
                 sharedDataManager.reconcileWithDataManager()
             }
         }

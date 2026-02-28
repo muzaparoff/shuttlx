@@ -25,13 +25,7 @@ class DataManager: ObservableObject {
     init() {
         loadSessionsFromAppGroup()
         checkHealthKitAuthorizationStatus()
-
-        Task.detached {
-            await MainActor.run {
-                SharedDataManager.shared.setDataManager(self)
-            }
-        }
-
+        SharedDataManager.shared.setDataManager(self)
         setupBindings()
     }
 
@@ -112,7 +106,26 @@ class DataManager: ObservableObject {
         do {
             guard FileManager.default.fileExists(atPath: url.path) else { return }
             let data = try Data(contentsOf: url)
-            self.sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+            let loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
+
+            // Merge: add sessions from disk that aren't already in memory
+            let existingIds = Set(sessions.map { $0.id })
+            var hasNew = false
+            for session in loaded {
+                processedSessionIds.insert(session.id)
+                if !existingIds.contains(session.id) {
+                    sessions.append(session)
+                    hasNew = true
+                }
+            }
+
+            // If first load (empty), just replace
+            if existingIds.isEmpty {
+                sessions = loaded
+                processedSessionIds = Set(loaded.map { $0.id })
+            } else if hasNew {
+                print("Loaded \(sessions.count - existingIds.count) new session(s) from disk")
+            }
         } catch {
             print("Failed to load sessions: \(error)")
         }

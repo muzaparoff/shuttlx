@@ -84,7 +84,10 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func checkForNewSessions() {
-        guard let dataManager = dataManager else { return }
+        guard let dataManager = dataManager else {
+            log("Warning: dataManager is nil during reconcile")
+            return
+        }
 
         // Check if SharedDataManager has sessions that DataManager is missing
         let dmSessionIds = Set(dataManager.sessions.map { $0.id })
@@ -281,6 +284,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Called when app comes to foreground — reconcile any missing sessions
     func reconcileWithDataManager() {
+        // Reload from disk first — picks up sessions saved while app was backgrounded
+        loadSessionsFromSharedStorage()
         checkForNewSessions()
     }
 

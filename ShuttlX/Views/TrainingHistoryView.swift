@@ -10,7 +10,7 @@ enum HistoryViewMode: String, CaseIterable {
 struct TrainingHistoryView: View {
     @EnvironmentObject var dataManager: DataManager
     @State private var selectedDate = Date()
-    @State private var viewMode: HistoryViewMode = .week
+    @State private var viewMode: HistoryViewMode = .day
 
     private var filteredSessions: [TrainingSession] {
         let calendar = Calendar.current
