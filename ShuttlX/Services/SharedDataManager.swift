@@ -54,6 +54,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
         loadSessionsFromSharedStorage()
         setupBackgroundTasks()
+        LiveActivityManager.shared.cleanupStaleActivities()
     }
 
     deinit {
@@ -181,6 +182,16 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveIsPaused = message["isPaused"] as? Bool ?? false
         livePace = message["pace"] as? TimeInterval ?? 0
 
+        LiveActivityManager.shared.updateActivity(
+            elapsedTime: liveElapsedTime,
+            heartRate: liveHeartRate,
+            distance: liveDistance,
+            calories: liveCalories,
+            currentActivity: liveCurrentActivity,
+            isPaused: liveIsPaused,
+            pace: livePace
+        )
+
         // Reset timeout — if no update in 10 seconds, clear live state
         liveMetricsTimeoutTimer?.invalidate()
         liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
@@ -191,6 +202,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func clearLiveWorkoutState() {
+        LiveActivityManager.shared.endActivity()
         isWorkoutActiveOnWatch = false
         liveElapsedTime = 0
         liveHeartRate = 0

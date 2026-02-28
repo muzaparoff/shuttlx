@@ -8,6 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		A56D91122E0940EF00E19F06 /* ShuttlX Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000001 /* ShuttlXLiveActivityBundle.swift */; };
+		LA000011 /* ShuttlXLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000002 /* ShuttlXLiveActivity.swift */; };
+		LA000012 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000003 /* LockScreenView.swift */; };
+		LA000013 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
+		LA000014 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
+		LA000015 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000005 /* LiveActivityManager.swift */; };
+		LA000016 /* ShuttlXLiveActivity.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = LA000006 /* ShuttlXLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
 		A5923505 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
@@ -51,6 +58,13 @@
 			remoteGlobalIDString = A56D91072E0940ED00E19F06;
 			remoteInfo = "ShuttlX Watch App";
 		};
+		LA000060 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A59234D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = LA000050;
+			remoteInfo = ShuttlXLiveActivity;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -63,6 +77,17 @@
 				A56D91122E0940EF00E19F06 /* ShuttlX Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		LA000070 /* Embed PlugIns */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				LA000016 /* ShuttlXLiveActivity.appex in Embed PlugIns */,
+			);
+			name = "Embed PlugIns";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -105,6 +130,12 @@
 		B5923005 /* WeekStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStripView.swift; sourceTree = "<group>"; };
 		C5923001 /* RoutePoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePoint.swift; sourceTree = "<group>"; };
 		C5923002 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
+		LA000001 /* ShuttlXLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivityBundle.swift; sourceTree = "<group>"; };
+		LA000002 /* ShuttlXLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivity.swift; sourceTree = "<group>"; };
+		LA000003 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
+		LA000004 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+		LA000005 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
+		LA000006 /* ShuttlXLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -143,6 +174,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		LA000031 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -151,6 +189,7 @@
 			children = (
 				A59234E0 /* ShuttlX */,
 				A56D91092E0940ED00E19F06 /* ShuttlX Watch App */,
+				LA000020 /* ShuttlXLiveActivity */,
 				A59234DF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -160,6 +199,7 @@
 			children = (
 				A59234DE /* ShuttlX.app */,
 				A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */,
+				LA000006 /* ShuttlXLiveActivity.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -189,6 +229,7 @@
 			children = (
 				A5923507F /* DataManager.swift */,
 				A5923508F /* SharedDataManager.swift */,
+				LA000005 /* LiveActivityManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -200,6 +241,7 @@
 				A5923530F /* ActivitySegment.swift */,
 				B5923001 /* ChartData.swift */,
 				C5923001 /* RoutePoint.swift */,
+				LA000004 /* WorkoutActivityAttributes.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -278,6 +320,16 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		LA000020 /* ShuttlXLiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				LA000001 /* ShuttlXLiveActivityBundle.swift */,
+				LA000002 /* ShuttlXLiveActivity.swift */,
+				LA000003 /* LockScreenView.swift */,
+			);
+			path = ShuttlXLiveActivity;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -311,16 +363,35 @@
 				A59234DB /* Frameworks */,
 				A59234DC /* Resources */,
 				A56D91162E0940EF00E19F06 /* Embed Watch Content */,
+				LA000070 /* Embed PlugIns */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				A56D91112E0940EF00E19F06 /* PBXTargetDependency */,
+				LA000061 /* PBXTargetDependency */,
 			);
 			name = ShuttlX;
 			productName = ShuttlX;
 			productReference = A59234DE /* ShuttlX.app */;
 			productType = "com.apple.product-type.application";
+		};
+		LA000050 /* ShuttlXLiveActivity */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = LA000042 /* Build configuration list for PBXNativeTarget "ShuttlXLiveActivity" */;
+			buildPhases = (
+				LA000030 /* Sources */,
+				LA000031 /* Frameworks */,
+				LA000032 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShuttlXLiveActivity;
+			productName = ShuttlXLiveActivity;
+			productReference = LA000006 /* ShuttlXLiveActivity.appex */;
+			productType = "com.apple.product-type.app-extension";
 		};
 /* End PBXNativeTarget section */
 
@@ -337,6 +408,9 @@
 					};
 					A59234DD = {
 						CreatedOnToolsVersion = 16.0;
+					};
+					LA000050 = {
+						CreatedOnToolsVersion = 16.4;
 					};
 				};
 			};
@@ -356,6 +430,7 @@
 			targets = (
 				A59234DD /* ShuttlX */,
 				A56D91072E0940ED00E19F06 /* ShuttlX Watch App */,
+				LA000050 /* ShuttlXLiveActivity */,
 			);
 		};
 /* End PBXProject section */
@@ -374,6 +449,13 @@
 			files = (
 				A5923515B /* PrivacyInfo.xcprivacy in Resources */,
 				A5923521B /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		LA000032 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -422,6 +504,19 @@
 				B5923015 /* WeekStripView.swift in Sources */,
 				C5923011 /* RoutePoint.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
+				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
+				LA000015 /* LiveActivityManager.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		LA000030 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */,
+				LA000011 /* ShuttlXLiveActivity.swift in Sources */,
+				LA000012 /* LockScreenView.swift in Sources */,
+				LA000013 /* WorkoutActivityAttributes.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -432,6 +527,11 @@
 			isa = PBXTargetDependency;
 			target = A56D91072E0940ED00E19F06 /* ShuttlX Watch App */;
 			targetProxy = A56D91102E0940EF00E19F06 /* PBXContainerItemProxy */;
+		};
+		LA000061 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = LA000050 /* ShuttlXLiveActivity */;
+			targetProxy = LA000060 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -693,6 +793,64 @@
 			};
 			name = Release;
 		};
+		LA000040 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ShuttlX Live Activity";
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		LA000041 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = "ShuttlX Live Activity";
+				INFOPLIST_KEY_NSExtension_NSExtensionPointIdentifier = "com.apple.widgetkit-extension";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -719,6 +877,15 @@
 			buildConfigurations = (
 				A59234FF /* Debug */,
 				A5923510 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		LA000042 /* Build configuration list for PBXNativeTarget "ShuttlXLiveActivity" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				LA000040 /* Debug */,
+				LA000041 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
