@@ -25,71 +25,12 @@ struct TrainingView: View {
     private var workoutTabView: some View {
         TabView(selection: $selectedTab) {
             // Tab 1: Timer + Metrics
-            VStack(spacing: 6) {
-                Spacer(minLength: 0)
-                ElapsedTimerView()
-                Spacer(minLength: 0)
-                WorkoutMetricsView()
-            }
-            .tag(0)
+            workoutDisplayTab
+                .tag(0)
 
             // Tab 2: Controls
-            VStack(spacing: 16) {
-                Text("Workout Controls")
-                    .font(.headline)
-                    .accessibilityAddTraits(.isHeader)
-
-                Spacer()
-
-                VStack(spacing: 20) {
-                    // Pause / Resume
-                    Button(action: {
-                        if workoutManager.isPaused {
-                            workoutManager.resumeWorkout()
-                        } else {
-                            workoutManager.pauseWorkout()
-                        }
-                    }) {
-                        HStack {
-                            Image(systemName: workoutManager.isPaused ? "play.fill" : "pause.fill")
-                            Text(workoutManager.isPaused ? "Resume" : "Pause")
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(workoutManager.isPaused ? .green : .orange)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.secondary.opacity(0.2))
-                        )
-                    }
-                    .accessibilityLabel(workoutManager.isPaused ? "Resume workout" : "Pause workout")
-
-                    // Finish
-                    Button(action: {
-                        showingStopConfirmation = true
-                    }) {
-                        HStack {
-                            Image(systemName: "flag.checkered")
-                            Text("Finish")
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.red)
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(Color.secondary.opacity(0.2))
-                        )
-                    }
-                    .accessibilityLabel("Finish workout")
-                    .accessibilityHint("Saves the workout and shows your summary")
-                }
-                .padding(.horizontal)
-
-                Spacer()
-            }
-            .tag(1)
+            controlsTab
+                .tag(1)
         }
         .navigationBarHidden(true)
         .tabViewStyle(PageTabViewStyle())
@@ -115,6 +56,86 @@ struct TrainingView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Save this training session?")
+        }
+    }
+
+    // MARK: - Workout Display Tab
+
+    private var workoutDisplayTab: some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            // Large timer — hero element
+            ElapsedTimerView()
+
+            Spacer(minLength: 4)
+
+            // Compact metrics below
+            WorkoutMetricsView()
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    // MARK: - Controls Tab
+
+    private var controlsTab: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            HStack(spacing: 20) {
+                // Pause / Resume — circular button
+                Button(action: {
+                    if workoutManager.isPaused {
+                        workoutManager.resumeWorkout()
+                    } else {
+                        workoutManager.pauseWorkout()
+                    }
+                }) {
+                    Image(systemName: workoutManager.isPaused ? "play.fill" : "pause.fill")
+                        .font(.system(size: 28, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(width: 70, height: 70)
+                        .background(
+                            Circle()
+                                .fill(workoutManager.isPaused ? Color.green : Color.yellow)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(workoutManager.isPaused ? "Resume workout" : "Pause workout")
+
+                // Finish — circular button
+                Button(action: {
+                    showingStopConfirmation = true
+                }) {
+                    Image(systemName: "stop.fill")
+                        .font(.system(size: 26, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(width: 70, height: 70)
+                        .background(
+                            Circle()
+                                .fill(Color.red)
+                        )
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Finish workout")
+                .accessibilityHint("Saves the workout and shows your summary")
+            }
+
+            // Labels
+            HStack(spacing: 20) {
+                Text(workoutManager.isPaused ? "Resume" : "Pause")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 70)
+                Text("End")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .frame(width: 70)
+            }
+            .padding(.top, 6)
+
+            Spacer()
         }
     }
 }
@@ -190,12 +211,12 @@ struct WorkoutSummaryView: View {
                 Button(action: onDismiss) {
                     Text("Done")
                         .font(.headline)
-                        .foregroundColor(.white)
+                        .foregroundColor(.black)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.green)
-                        .cornerRadius(10)
+                        .background(Color.green, in: RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.plain)
                 .padding(.horizontal)
                 .padding(.top, 8)
             }
@@ -221,19 +242,19 @@ struct WorkoutSummaryView: View {
     }
 }
 
-// MARK: - Workout Metrics (Vertical Stack with Icons)
+// MARK: - Workout Metrics (Compact)
 
 struct WorkoutMetricsView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             // Distance
             metricRow(
                 icon: "location.fill",
                 color: .green,
-                text: splitDistanceText,
-                accessibilityLabel: "Split \(workoutManager.lastCompletedKm), distance \(accessibleDistance)"
+                text: distanceText,
+                accessibilityLabel: "Distance \(accessibleDistance)"
             )
 
             // Heart Rate with zone
@@ -255,17 +276,17 @@ struct WorkoutMetricsView: View {
                 accessibilityLabel: accessiblePace
             )
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 8)
     }
 
     private func metricRow(icon: String, color: Color, text: String, accessibilityLabel: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .font(.caption)
+                .font(.system(size: 12))
                 .foregroundColor(color)
-                .frame(width: 16)
+                .frame(width: 14)
             Text(text)
-                .font(.system(.title3, design: .rounded).weight(.bold))
+                .font(.system(.body, design: .rounded).weight(.semibold))
                 .monospacedDigit()
                 .foregroundColor(.primary)
                 .minimumScaleFactor(0.6)
@@ -317,11 +338,8 @@ struct WorkoutMetricsView: View {
 
     // MARK: - Distance & Pace
 
-    private var splitDistanceText: String {
-        let km = workoutManager.lastCompletedKm
-        let dist = workoutManager.totalDistance
-        let distStr = FormattingUtils.formatDistance(dist)
-        return "\(km) / \(distStr)"
+    private var distanceText: String {
+        FormattingUtils.formatDistance(workoutManager.totalDistance)
     }
 
     private var accessibleDistance: String {
@@ -345,28 +363,29 @@ struct WorkoutMetricsView: View {
     }
 }
 
-// MARK: - Elapsed Timer (counts UP)
+// MARK: - Elapsed Timer (Large, Apple Fitness-style)
 
 struct ElapsedTimerView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
+                .font(.system(size: 52, weight: .bold, design: .monospaced))
                 .foregroundColor(.primary)
-                .minimumScaleFactor(0.7)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
                 .frame(maxWidth: .infinity)
                 .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
                 .accessibilityAddTraits(.updatesFrequently)
 
             if workoutManager.isPaused {
                 Text("PAUSED")
-                    .font(.caption.bold())
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.orange)
             }
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 4)
     }
 }
 
