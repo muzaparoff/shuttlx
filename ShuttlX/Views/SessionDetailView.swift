@@ -21,7 +21,12 @@ struct SessionDetailView: View {
 
                 // Route map
                 if let route = session.route, !route.isEmpty {
-                    RouteMapView(route: route, segments: session.segments)
+                    RouteMapView(route: route, segments: session.segments, kmSplits: session.kmSplits)
+
+                    // Elevation profile
+                    if route.contains(where: { $0.altitude != nil }) {
+                        ElevationProfileView(route: route)
+                    }
                 }
 
                 // Interval results (if interval workout)
@@ -56,6 +61,12 @@ struct SessionDetailView: View {
                 Text(name)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.green)
+            }
+
+            if let sport = session.sportType {
+                Label(sport.displayName, systemImage: sport.systemImage)
+                    .font(.caption.weight(.medium))
+                    .foregroundStyle(sport.themeColor)
             }
 
             Text(FormattingUtils.formatDuration(session.duration))

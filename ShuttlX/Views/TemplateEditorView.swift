@@ -4,6 +4,7 @@ struct TemplateEditorView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var name: String
+    @State private var sportType: WorkoutSport
     @State private var intervals: [IntervalStep]
     @State private var repeatCount: Int
     @State private var hasWarmup: Bool
@@ -19,6 +20,7 @@ struct TemplateEditorView: View {
         self.existingTemplate = nil
         self.onSave = onSave
         _name = State(initialValue: "")
+        _sportType = State(initialValue: .running)
         _intervals = State(initialValue: [
             IntervalStep(type: .work, duration: 30),
             IntervalStep(type: .rest, duration: 30)
@@ -35,6 +37,7 @@ struct TemplateEditorView: View {
         self.existingTemplate = template
         self.onSave = onSave
         _name = State(initialValue: template.name)
+        _sportType = State(initialValue: template.sportType ?? .running)
         _intervals = State(initialValue: template.intervals)
         _repeatCount = State(initialValue: template.repeatCount)
         _hasWarmup = State(initialValue: template.warmup != nil)
@@ -58,6 +61,18 @@ struct TemplateEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Sport Type
+                Section {
+                    Picker("Sport", selection: $sportType) {
+                        ForEach(WorkoutSport.allCases) { sport in
+                            Label(sport.displayName, systemImage: sport.systemImage)
+                                .tag(sport)
+                        }
+                    }
+                } header: {
+                    Text("Sport Type")
+                }
+
                 // Name
                 Section {
                     TextField("Program Name", text: $name)
@@ -152,7 +167,8 @@ struct TemplateEditorView: View {
             repeatCount: repeatCount,
             warmup: hasWarmup ? IntervalStep(type: .warmup, duration: warmupDuration) : nil,
             cooldown: hasCooldown ? IntervalStep(type: .cooldown, duration: cooldownDuration) : nil,
-            createdDate: existingTemplate?.createdDate ?? Date()
+            createdDate: existingTemplate?.createdDate ?? Date(),
+            sportType: sportType
         )
         onSave(template)
         dismiss()

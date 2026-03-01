@@ -11,6 +11,13 @@ enum ShuttlXColor {
     static let calories = Color.orange
     static let stationary = Color.secondary
 
+    // Sport colors
+    static let cycling = Color.blue
+    static let swimming = Color.cyan
+    static let hiking = Color.brown
+    static let elliptical = Color.purple
+    static let crossTraining = Color.indigo
+
     // UI element colors
     static let ctaPrimary = Color.green
     static let ctaDestructive = Color.red

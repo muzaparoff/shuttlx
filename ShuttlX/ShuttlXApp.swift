@@ -6,6 +6,7 @@ struct ShuttlXApp: App {
     @StateObject private var dataManager = DataManager()
     @StateObject private var sharedDataManager = SharedDataManager.shared
     @StateObject private var templateManager = TemplateManager()
+    @StateObject private var planManager = PlanManager()
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var cloudKitSync = CloudKitSyncManager.shared
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
@@ -22,6 +23,7 @@ struct ShuttlXApp: App {
             .environmentObject(dataManager)
             .environmentObject(sharedDataManager)
             .environmentObject(templateManager)
+            .environmentObject(planManager)
             .environmentObject(authManager)
             .environmentObject(cloudKitSync)
         }

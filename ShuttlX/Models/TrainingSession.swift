@@ -21,13 +21,19 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     // CloudKit sync
     var modifiedDate: Date?
 
+    // Multi-sport & training plan
+    var sportType: WorkoutSport?
+    var planID: UUID?
+    var planDayIndex: Int?
+
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
     var programName: String?
     var completedIntervals: [LegacyCompletedInterval]?
 
     var displayName: String {
-        programName ?? "Run+Walk"
+        if let name = programName { return name }
+        return sportType?.displayName ?? "Run+Walk"
     }
 
     var totalRunningDuration: TimeInterval {

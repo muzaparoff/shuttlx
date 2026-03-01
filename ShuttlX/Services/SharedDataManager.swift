@@ -23,6 +23,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var liveCurrentActivity: String = "unknown"
     @Published var liveIsPaused: Bool = false
     @Published var livePace: TimeInterval = 0
+    @Published var liveRoutePoints: [RoutePoint] = []
 
     private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
@@ -188,6 +189,21 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveIsPaused = message["isPaused"] as? Bool ?? false
         livePace = message["pace"] as? TimeInterval ?? 0
 
+        // Accumulate live route points for real-time map
+        if let lat = message["latitude"] as? Double, let lon = message["longitude"] as? Double {
+            let point = RoutePoint(latitude: lat, longitude: lon, timestamp: Date())
+            // Avoid duplicates (same location within ~5m)
+            if let last = liveRoutePoints.last {
+                let dLat = abs(lat - last.latitude)
+                let dLon = abs(lon - last.longitude)
+                if dLat > 0.00005 || dLon > 0.00005 {
+                    liveRoutePoints.append(point)
+                }
+            } else {
+                liveRoutePoints.append(point)
+            }
+        }
+
         // Explicitly start the Live Activity on the first metric update
         // (i.e. when isWorkoutActiveOnWatch transitions from false to true).
         // If startActivity() fails, the retry flag inside LiveActivityManager
@@ -228,6 +244,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveCurrentActivity = "unknown"
         liveIsPaused = false
         livePace = 0
+        liveRoutePoints = []
         liveMetricsTimeoutTimer?.invalidate()
         liveMetricsTimeoutTimer = nil
         if wasActive {

@@ -45,6 +45,7 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
     var cooldown: IntervalStep?
     var createdDate: Date
     var modifiedDate: Date?
+    var sportType: WorkoutSport?
 
     init(
         id: UUID = UUID(),
@@ -53,7 +54,8 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
         repeatCount: Int = 1,
         warmup: IntervalStep? = nil,
         cooldown: IntervalStep? = nil,
-        createdDate: Date = Date()
+        createdDate: Date = Date(),
+        sportType: WorkoutSport? = nil
     ) {
         self.id = id
         self.name = name
@@ -62,6 +64,7 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
         self.warmup = warmup
         self.cooldown = cooldown
         self.createdDate = createdDate
+        self.sportType = sportType
     }
 
     /// Flattened list of all steps in execution order

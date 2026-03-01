@@ -66,6 +66,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // CoreLocation
     private let locationManager = CLLocationManager()
     private var routePoints: [RoutePoint] = []
+    private var routeBuilder: HKWorkoutRouteBuilder?
 
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
@@ -185,13 +186,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         startWorkoutSession()
         startDisplayTimer()
-        startMotionUpdates()
-        startPedometerUpdates()
+        let sport = activeTemplate?.sportType ?? .running
+        if sport.supportsAutoDetection {
+            startMotionUpdates()
+            startPedometerUpdates()
+        }
         startHeartRateQuery()
         startCaloriesQuery()
         requestLocationAndStartUpdates()
 
-        logger.info("Workout started")
+        logger.info("Workout started (sport: \(sport.displayName))")
     }
 
     func startIntervalWorkout(template: WorkoutTemplate) {
@@ -235,8 +239,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         workoutSession?.resume()
         startDisplayTimer()
-        startMotionUpdates()
-        startPedometerUpdates()
+        let sport = activeTemplate?.sportType ?? .running
+        if sport.supportsAutoDetection {
+            startMotionUpdates()
+            startPedometerUpdates()
+        }
         startHeartRateQuery()
         startCaloriesQuery()
         startLocationUpdates()
@@ -315,14 +322,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         #if os(watchOS)
         let configuration = HKWorkoutConfiguration()
-        configuration.activityType = .running
-        configuration.locationType = .outdoor
+        let sport = activeTemplate?.sportType ?? .running
+        configuration.activityType = sport.hkActivityType
+        configuration.locationType = sport.hkLocationType
 
         do {
             workoutSession = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
             workoutSession?.delegate = self
             workoutSession?.startActivity(with: Date())
-            logger.info("HKWorkoutSession started")
+            routeBuilder = HKWorkoutRouteBuilder(healthStore: healthStore, device: nil)
+            logger.info("HKWorkoutSession started (sport: \(sport.displayName))")
         } catch {
             logger.error("Failed to start workout session: \(error.localizedDescription)")
         }
@@ -387,7 +396,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         guard WCSession.default.isReachable else { return }
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "action": "liveMetrics",
             "elapsedTime": elapsedTime,
             "heartRate": heartRate,
@@ -399,6 +408,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             "pace": currentPace ?? 0,
             "timestamp": now.timeIntervalSince1970
         ]
+
+        // Include latest route point for live map on iOS
+        if let lastPoint = routePoints.last {
+            payload["latitude"] = lastPoint.latitude
+            payload["longitude"] = lastPoint.longitude
+        }
 
         WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
             Task { @MainActor [weak self] in
@@ -798,9 +813,48 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             session.completedIntervalResults = result.results
         }
 
+        // Set sport type from template
+        session.sportType = activeTemplate?.sportType
+
+        // Finalize HKWorkoutRouteBuilder (saves route to HealthKit)
+        finalizeRouteBuilder()
+
         sharedDataManager?.sendSessionToiOS(session)
         saveWorkoutDataToLocalStorage()
         logger.info("Session saved: Duration \(Int(session.duration))s")
+    }
+
+    private func finalizeRouteBuilder() {
+        guard let builder = routeBuilder else { return }
+        let sport = activeTemplate?.sportType ?? .running
+        let start = workoutStartTime ?? Date()
+
+        Task {
+            do {
+                // Build the HKWorkout using the builder API
+                let config = HKWorkoutConfiguration()
+                config.activityType = sport.hkActivityType
+                config.locationType = sport.hkLocationType
+
+                let workoutBuilder = HKWorkoutBuilder(healthStore: healthStore, configuration: config, device: nil)
+                try await workoutBuilder.beginCollection(at: start)
+                try await workoutBuilder.endCollection(at: Date())
+                let finishedWorkouts = try await workoutBuilder.finishWorkout()
+
+                if let workout = finishedWorkouts {
+                    try await builder.finishRoute(with: workout, metadata: nil)
+                    await MainActor.run {
+                        logger.info("HKWorkoutRoute saved to HealthKit")
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    logger.error("Failed to finalize route: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        routeBuilder = nil
     }
 }
 
@@ -837,10 +891,29 @@ extension WatchWorkoutManager: CLLocationManagerDelegate {
         let filtered = locations.filter { $0.horizontalAccuracy >= 0 && $0.horizontalAccuracy <= 50 }
         guard !filtered.isEmpty else { return }
 
-        let points = filtered.map { RoutePoint(latitude: $0.coordinate.latitude, longitude: $0.coordinate.longitude, altitude: $0.altitude, timestamp: $0.timestamp) }
+        let points = filtered.map {
+            RoutePoint(
+                latitude: $0.coordinate.latitude,
+                longitude: $0.coordinate.longitude,
+                altitude: $0.altitude,
+                timestamp: $0.timestamp,
+                speed: $0.speed >= 0 ? $0.speed : nil,
+                horizontalAccuracy: $0.horizontalAccuracy
+            )
+        }
 
         Task { @MainActor [weak self] in
-            self?.routePoints.append(contentsOf: points)
+            guard let self = self else { return }
+            self.routePoints.append(contentsOf: points)
+
+            // Feed HKWorkoutRouteBuilder for official HealthKit route
+            self.routeBuilder?.insertRouteData(filtered) { success, error in
+                if let error = error {
+                    Task { @MainActor in
+                        self.logger.debug("RouteBuilder insert error: \(error.localizedDescription)")
+                    }
+                }
+            }
         }
     }
 

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DashboardView: View {
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var planManager: PlanManager
     @ObservedObject var sharedData = SharedDataManager.shared
 
     private var lastSession: TrainingSession? {
@@ -46,6 +47,12 @@ struct DashboardView: View {
                                 insertion: .move(edge: .top).combined(with: .opacity),
                                 removal: .opacity
                             ))
+
+                        // Inline live route map
+                        if sharedData.liveRoutePoints.count >= 2 {
+                            LiveRouteView(routePoints: sharedData.liveRoutePoints, compact: true)
+                                .transition(.opacity)
+                        }
                     }
 
                     // 2. Start on Watch card (when idle)
@@ -53,7 +60,20 @@ struct DashboardView: View {
                         StartOnWatchCard()
                     }
 
-                    // 3. Last workout card
+                    // 3. Active plan progress
+                    if let active = planManager.activePlan() {
+                        NavigationLink(destination: PlanDetailView(plan: active.plan)) {
+                            PlanProgressCard(
+                                plan: active.plan,
+                                progress: active.progress,
+                                completion: planManager.completionPercentage(for: active.progress),
+                                nextWorkout: planManager.nextWorkout(for: active.progress)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    // 4. Last workout card
                     if let session = lastSession {
                         NavigationLink(destination: SessionDetailView(session: session)) {
                             LastWorkoutCard(session: session)
@@ -61,10 +81,10 @@ struct DashboardView: View {
                         .buttonStyle(.plain)
                     }
 
-                    // 4. Week summary
+                    // 5. Week summary
                     WeekSummaryCard(sessions: dataManager.sessions)
 
-                    // 5. Streak badge
+                    // 6. Streak badge
                     if currentStreak > 1 {
                         StreakBadge(streakDays: currentStreak)
                     }
@@ -81,4 +101,5 @@ struct DashboardView: View {
 #Preview {
     DashboardView()
         .environmentObject(DataManager())
+        .environmentObject(PlanManager())
 }

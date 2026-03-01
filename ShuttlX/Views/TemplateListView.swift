@@ -55,8 +55,13 @@ struct TemplateListView: View {
 
     private func templateRow(_ template: WorkoutTemplate) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(template.name)
-                .font(.headline)
+            HStack(spacing: 8) {
+                Image(systemName: template.sportType?.systemImage ?? "figure.run")
+                    .foregroundStyle(template.sportType?.themeColor ?? ShuttlXColor.running)
+                    .frame(width: 20)
+                Text(template.name)
+                    .font(.headline)
+            }
 
             HStack(spacing: 12) {
                 Text(template.summaryText)

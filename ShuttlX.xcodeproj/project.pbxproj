@@ -54,6 +54,18 @@
 		D5923005 /* IntervalResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923005F /* IntervalResultsView.swift */; };
 		E5923001 /* AnalyticsEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5923001F /* AnalyticsEngine.swift */; };
 		E5923002 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5923002F /* AnalyticsView.swift */; };
+		H5923001 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		H5923002 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		G5923001 /* TrainingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923001F /* TrainingPlan.swift */; };
+		G5923002 /* BuiltInPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923002F /* BuiltInPlans.swift */; };
+		G5923003 /* PlanManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923003F /* PlanManager.swift */; };
+		P5923001 /* ProgramsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923001F /* ProgramsTabView.swift */; };
+		P5923002 /* PlanListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923002F /* PlanListView.swift */; };
+		P5923003 /* PlanDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923003F /* PlanDetailView.swift */; };
+		P5923004 /* PlanEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923004F /* PlanEditorView.swift */; };
+		P5923005 /* PlanProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923005F /* PlanProgressCard.swift */; };
+		R5923001 /* ElevationProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923001F /* ElevationProfileView.swift */; };
+		R5923002 /* LiveRouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923002F /* LiveRouteView.swift */; };
 		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
 		WG000010 /* ShuttlXWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000001 /* ShuttlXWidgetsBundle.swift */; };
 		WG000011 /* SmallWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000002 /* SmallWidget.swift */; };
@@ -132,6 +144,17 @@
 		D5923005F /* IntervalResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalResultsView.swift; sourceTree = "<group>"; };
 		E5923001F /* AnalyticsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsEngine.swift; sourceTree = "<group>"; };
 		E5923002F /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
+		G5923001F /* TrainingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlan.swift; sourceTree = "<group>"; };
+		G5923002F /* BuiltInPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltInPlans.swift; sourceTree = "<group>"; };
+		G5923003F /* PlanManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanManager.swift; sourceTree = "<group>"; };
+		P5923001F /* ProgramsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsTabView.swift; sourceTree = "<group>"; };
+		P5923002F /* PlanListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanListView.swift; sourceTree = "<group>"; };
+		P5923003F /* PlanDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDetailView.swift; sourceTree = "<group>"; };
+		P5923004F /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
+		P5923005F /* PlanProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressCard.swift; sourceTree = "<group>"; };
+		R5923001F /* ElevationProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevationProfileView.swift; sourceTree = "<group>"; };
+		R5923002F /* LiveRouteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteView.swift; sourceTree = "<group>"; };
+		H5923001F /* WorkoutSport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSport.swift; sourceTree = "<group>"; };
 		A5923530F /* ActivitySegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySegment.swift; sourceTree = "<group>"; };
 		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
 		A5923507F /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
@@ -287,6 +310,7 @@
 				A5923508F /* SharedDataManager.swift */,
 				LA000005 /* LiveActivityManager.swift */,
 				D5923002F /* TemplateManager.swift */,
+				G5923003F /* PlanManager.swift */,
 				E5923001F /* AnalyticsEngine.swift */,
 				WG000007 /* WidgetDataProvider.swift */,
 				F5923001 /* AuthenticationManager.swift */,
@@ -304,6 +328,9 @@
 				C5923001 /* RoutePoint.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
+				H5923001F /* WorkoutSport.swift */,
+				G5923001F /* TrainingPlan.swift */,
+				G5923002F /* BuiltInPlans.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -326,6 +353,12 @@
 				D5923005F /* IntervalResultsView.swift */,
 				E5923002F /* AnalyticsView.swift */,
 				F5923003 /* SignInView.swift */,
+				P5923001F /* ProgramsTabView.swift */,
+				P5923002F /* PlanListView.swift */,
+				P5923003F /* PlanDetailView.swift */,
+				P5923004F /* PlanEditorView.swift */,
+				R5923001F /* ElevationProfileView.swift */,
+				R5923002F /* LiveRouteView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
 			);
@@ -350,6 +383,7 @@
 				A5923D03 /* StartOnWatchCard.swift */,
 				A5923D04 /* LastWorkoutCard.swift */,
 				A5923D05 /* WeekSummaryCard.swift */,
+				P5923005F /* PlanProgressCard.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -612,6 +646,7 @@
 				B5923014 /* HRZoneChart.swift in Sources */,
 				B5923015 /* WeekStripView.swift in Sources */,
 				C5923011 /* RoutePoint.swift in Sources */,
+				H5923001 /* WorkoutSport.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
 				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
 				LA000015 /* LiveActivityManager.swift in Sources */,
@@ -622,6 +657,16 @@
 				D5923005 /* IntervalResultsView.swift in Sources */,
 				E5923001 /* AnalyticsEngine.swift in Sources */,
 				E5923002 /* AnalyticsView.swift in Sources */,
+				G5923001 /* TrainingPlan.swift in Sources */,
+				G5923002 /* BuiltInPlans.swift in Sources */,
+				G5923003 /* PlanManager.swift in Sources */,
+				P5923001 /* ProgramsTabView.swift in Sources */,
+				P5923002 /* PlanListView.swift in Sources */,
+				P5923003 /* PlanDetailView.swift in Sources */,
+				P5923004 /* PlanEditorView.swift in Sources */,
+				P5923005 /* PlanProgressCard.swift in Sources */,
+				R5923001 /* ElevationProfileView.swift in Sources */,
+				R5923002 /* LiveRouteView.swift in Sources */,
 				WG000018 /* WidgetDataProvider.swift in Sources */,
 				F5923011 /* AuthenticationManager.swift in Sources */,
 				F5923012 /* CloudKitSyncManager.swift in Sources */,
@@ -650,6 +695,7 @@
 				WG000013 /* TrainingSession.swift in Sources */,
 				WG000014 /* ActivitySegment.swift in Sources */,
 				WG000015 /* WorkoutTemplate.swift in Sources */,
+				H5923002 /* WorkoutSport.swift in Sources */,
 				WG000016 /* RoutePoint.swift in Sources */,
 				WG000017 /* WidgetDataProvider.swift in Sources */,
 				WG000020B /* ShuttlXTheme.swift in Sources */,
