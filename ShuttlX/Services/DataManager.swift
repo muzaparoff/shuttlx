@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import HealthKit
+import WidgetKit
 
 @MainActor
 class DataManager: ObservableObject {
@@ -94,6 +95,10 @@ class DataManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(sessions)
             try data.write(to: url)
+            WidgetCenter.shared.reloadAllTimelines()
+            if AuthenticationManager.shared.isSignedIn {
+                CloudKitSyncManager.shared.performFullSync(dataManager: self)
+            }
         } catch {
             print("Failed to save sessions: \(error)")
         }

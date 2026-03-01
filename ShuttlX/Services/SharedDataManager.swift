@@ -1,6 +1,7 @@
 import WatchConnectivity
 import Foundation
 import Combine
+import WidgetKit
 import os.log
 
 @MainActor
@@ -165,6 +166,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             consecutiveFailures = 0
             lastSyncTime = Date()
             updateConnectivityHealth()
+            WidgetCenter.shared.reloadAllTimelines()
 
             // Directly forward to DataManager — don't rely solely on Combine binding
             dataManager?.handleReceivedSessions([session])
@@ -174,7 +176,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Live Workout Metrics
 
     func handleLiveMetrics(_ message: [String: Any]) {
+        let wasActive = isWorkoutActiveOnWatch
         isWorkoutActiveOnWatch = true
+
         liveElapsedTime = message["elapsedTime"] as? TimeInterval ?? 0
         liveHeartRate = message["heartRate"] as? Int ?? 0
         liveDistance = message["distance"] as? Double ?? 0
@@ -183,6 +187,15 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveCurrentActivity = message["currentActivity"] as? String ?? "unknown"
         liveIsPaused = message["isPaused"] as? Bool ?? false
         livePace = message["pace"] as? TimeInterval ?? 0
+
+        // Explicitly start the Live Activity on the first metric update
+        // (i.e. when isWorkoutActiveOnWatch transitions from false to true).
+        // If startActivity() fails, the retry flag inside LiveActivityManager
+        // will cause updateActivity() to retry on subsequent metric updates.
+        if !wasActive {
+            log("Workout started on Watch — starting Live Activity")
+            LiveActivityManager.shared.startActivity(activityType: liveCurrentActivity)
+        }
 
         LiveActivityManager.shared.updateActivity(
             elapsedTime: liveElapsedTime,
@@ -204,6 +217,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     func clearLiveWorkoutState() {
+        let wasActive = isWorkoutActiveOnWatch
         LiveActivityManager.shared.endActivity()
         isWorkoutActiveOnWatch = false
         liveElapsedTime = 0
@@ -216,6 +230,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         livePace = 0
         liveMetricsTimeoutTimer?.invalidate()
         liveMetricsTimeoutTimer = nil
+        if wasActive {
+            log("Live workout state cleared — Live Activity ended")
+        }
     }
 
     // MARK: - Session Storage

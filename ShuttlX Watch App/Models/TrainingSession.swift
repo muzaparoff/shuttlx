@@ -18,6 +18,9 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var templateID: UUID?
     var completedIntervalResults: [CompletedInterval]?
 
+    // CloudKit sync
+    var modifiedDate: Date?
+
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
     var programName: String?

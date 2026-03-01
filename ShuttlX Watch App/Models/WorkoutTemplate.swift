@@ -44,6 +44,7 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
     var warmup: IntervalStep?
     var cooldown: IntervalStep?
     var createdDate: Date
+    var modifiedDate: Date?
 
     init(
         id: UUID = UUID(),

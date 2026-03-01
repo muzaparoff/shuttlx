@@ -6,6 +6,8 @@ struct ShuttlXApp: App {
     @StateObject private var dataManager = DataManager()
     @StateObject private var sharedDataManager = SharedDataManager.shared
     @StateObject private var templateManager = TemplateManager()
+    @StateObject private var authManager = AuthenticationManager.shared
+    @StateObject private var cloudKitSync = CloudKitSyncManager.shared
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
 
     var body: some Scene {
@@ -20,11 +22,16 @@ struct ShuttlXApp: App {
             .environmentObject(dataManager)
             .environmentObject(sharedDataManager)
             .environmentObject(templateManager)
+            .environmentObject(authManager)
+            .environmentObject(cloudKitSync)
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 dataManager.loadSessionsFromAppGroup()
                 sharedDataManager.reconcileWithDataManager()
+                if authManager.isSignedIn {
+                    cloudKitSync.performFullSync(dataManager: dataManager)
+                }
             }
         }
     }

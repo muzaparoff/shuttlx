@@ -5,14 +5,80 @@ import WatchConnectivity
 struct SettingsView: View {
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var sharedDataManager: SharedDataManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
+    @State private var showingSignOutConfirmation = false
     @State private var showSuccessMessage = false
     @State private var successMessage = ""
     @State private var isSyncing = false
+    @State private var isCloudSyncing = false
 
     var body: some View {
         List {
+            // Account Section
+            Section("Account") {
+                if authManager.isSignedIn {
+                    HStack {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(.tint)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(authManager.userName ?? "Signed In")
+                                .font(.body)
+                            Text("iCloud sync enabled")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "checkmark.icloud.fill")
+                            .foregroundStyle(.green)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Account")
+                    .accessibilityValue("Signed in as \(authManager.userName ?? "Apple ID")")
+
+                    Button {
+                        isCloudSyncing = true
+                        CloudKitSyncManager.shared.performFullSync(dataManager: dataManager) {
+                            isCloudSyncing = false
+                            successMessage = "Sync complete"
+                            showSuccessMessage = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                                showSuccessMessage = false
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                            Text("Sync Now")
+                            Spacer()
+                            if isCloudSyncing {
+                                ProgressView()
+                            }
+                        }
+                    }
+                    .disabled(isCloudSyncing)
+
+                    Button("Sign Out", role: .destructive) {
+                        showingSignOutConfirmation = true
+                    }
+                } else {
+                    NavigationLink {
+                        SignInView()
+                    } label: {
+                        HStack {
+                            Image(systemName: "person.crop.circle.badge.plus")
+                                .foregroundStyle(.tint)
+                            Text("Sign In with Apple")
+                        }
+                    }
+
+                    Label("Data is stored locally only", systemImage: "exclamationmark.triangle.fill")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+
             // Watch Connection Section
             Section("Apple Watch") {
                 HStack {
@@ -154,6 +220,14 @@ struct SettingsView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSuccessMessage)
+        .alert("Sign Out", isPresented: $showingSignOutConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) {
+                authManager.signOut()
+            }
+        } message: {
+            Text("Your local data will be kept, but it will no longer sync to iCloud.")
+        }
     }
 
     // MARK: - Watch Helpers

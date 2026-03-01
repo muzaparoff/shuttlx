@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 import os.log
 
 @main
@@ -37,6 +38,14 @@ struct ShuttlXWatchApp: App {
             ContentView()
                 .environmentObject(sharedDataManager)
                 .environmentObject(workoutManager)
+                .onOpenURL { url in
+                    if url.scheme == "shuttlx" && url.host == "start-workout" {
+                        logger.info("Deep link received — starting free-form workout")
+                        if !workoutManager.isWorkoutActive {
+                            workoutManager.startWorkout()
+                        }
+                    }
+                }
                 .onAppear {
                     logger.info("📺 ContentView appeared - app launched successfully!")
                 }

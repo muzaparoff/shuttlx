@@ -1,5 +1,6 @@
 import Foundation
 import WatchConnectivity
+import WidgetKit
 import os.log
 
 @MainActor
@@ -229,6 +230,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 let data = try JSONEncoder().encode(sessions)
                 try data.write(to: sessionsURL)
                 logger.info("Session saved to App Group")
+                WidgetCenter.shared.reloadAllTimelines()
             }
         } catch {
             logger.error("Failed to save session to App Group: \(error.localizedDescription)")
