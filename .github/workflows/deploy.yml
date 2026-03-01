@@ -20,6 +20,7 @@
 #   IOS_PROVISIONING_PROFILE_BASE64    Base64 App Store profile for com.shuttlx.ShuttlX
 #   WATCH_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.watchkitapp
 #   LIVEACTIVITY_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.ShuttlXLiveActivity
+#   WIDGETS_PROVISIONING_PROFILE_BASE64      Base64 App Store profile for com.shuttlx.ShuttlX.ShuttlXWidgets
 #
 # =============================================================================
 
@@ -128,10 +129,12 @@ jobs:
           IOS_INFO=$(install_profile "${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}" "iOS")
           WATCH_INFO=$(install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE_BASE64 }}" "Watch")
           LIVEACTIVITY_INFO=$(install_profile "${{ secrets.LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 }}" "LiveActivity")
+          WIDGETS_INFO=$(install_profile "${{ secrets.WIDGETS_PROVISIONING_PROFILE_BASE64 }}" "Widgets")
 
           echo "ios_name=$(echo "$IOS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
           echo "watch_name=$(echo "$WATCH_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
           echo "liveactivity_name=$(echo "$LIVEACTIVITY_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
+          echo "widgets_name=$(echo "$WIDGETS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
 
           echo "Installed profiles:"
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
@@ -185,12 +188,20 @@ jobs:
           IOS_NAME="${{ steps.install_profiles.outputs.ios_name }}"
           WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
           LIVEACTIVITY_NAME="${{ steps.install_profiles.outputs.liveactivity_name }}"
+          WIDGETS_NAME="${{ steps.install_profiles.outputs.widgets_name }}"
 
           # Build LiveActivity entry only if profile exists
           LIVEACTIVITY_PLIST=""
           if [ -n "$LIVEACTIVITY_NAME" ]; then
             LIVEACTIVITY_PLIST="            <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key>
                       <string>$LIVEACTIVITY_NAME</string>"
+          fi
+
+          # Build Widgets entry only if profile exists
+          WIDGETS_PLIST=""
+          if [ -n "$WIDGETS_NAME" ]; then
+            WIDGETS_PLIST="            <key>com.shuttlx.ShuttlX.ShuttlXWidgets</key>
+                      <string>$WIDGETS_NAME</string>"
           fi
 
           cat > ExportOptions.plist <<EXPORTEOF
@@ -221,6 +232,7 @@ jobs:
                   <key>com.shuttlx.ShuttlX.watchkitapp</key>
                   <string>$WATCH_NAME</string>
           $LIVEACTIVITY_PLIST
+          $WIDGETS_PLIST
               </dict>
           </dict>
           </plist>
@@ -230,6 +242,7 @@ jobs:
           echo "  iOS: $IOS_NAME"
           echo "  Watch: $WATCH_NAME"
           echo "  LiveActivity: ${LIVEACTIVITY_NAME:-auto-provisioned}"
+          echo "  Widgets: ${WIDGETS_NAME:-auto-provisioned}"
 
       # ------------------------------------------------------------------
       # 9. Configure manual signing in project
@@ -239,6 +252,7 @@ jobs:
           IOS_PROFILE: ${{ steps.install_profiles.outputs.ios_name }}
           WATCH_PROFILE: ${{ steps.install_profiles.outputs.watch_name }}
           LIVEACTIVITY_PROFILE: ${{ steps.install_profiles.outputs.liveactivity_name }}
+          WIDGETS_PROFILE: ${{ steps.install_profiles.outputs.widgets_name }}
         run: |
           python3 << 'PYEOF'
           import os
@@ -246,6 +260,7 @@ jobs:
           ios_profile = os.environ['IOS_PROFILE']
           watch_profile = os.environ['WATCH_PROFILE']
           liveactivity_profile = os.environ.get('LIVEACTIVITY_PROFILE', '')
+          widgets_profile = os.environ.get('WIDGETS_PROFILE', '')
 
           pbx = 'ShuttlX.xcodeproj/project.pbxproj'
           with open(pbx, 'r') as f:
@@ -276,18 +291,35 @@ jobs:
           else:
               print('  WARNING: No LiveActivity profile available!')
 
+          # Add profile specifier for Widgets target
+          if widgets_profile:
+              content = content.replace(
+                  'CODE_SIGN_ENTITLEMENTS = ShuttlXWidgets/ShuttlXWidgets.entitlements;',
+                  'CODE_SIGN_ENTITLEMENTS = ShuttlXWidgets/ShuttlXWidgets.entitlements;\n'
+                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + widgets_profile + '";')
+              print(f'  Widgets: {widgets_profile}')
+          else:
+              print('  WARNING: No Widgets profile available!')
+
           with open(pbx, 'w') as f:
               f.write(content)
 
           print(f'  iOS: {ios_profile}')
           print(f'  Watch: {watch_profile}')
 
+          missing = []
           if not liveactivity_profile:
+              missing.append(('LIVEACTIVITY_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.ShuttlXLiveActivity'))
+          if not widgets_profile:
+              missing.append(('WIDGETS_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.ShuttlXWidgets'))
+
+          if missing:
               print()
-              print('ERROR: LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 secret is not set!')
-              print('Create an App Store distribution profile for bundle ID:')
-              print('  com.shuttlx.ShuttlX.ShuttlXLiveActivity')
-              print('Then add it as a base64-encoded GitHub secret.')
+              for secret_name, bundle_id in missing:
+                  print(f'ERROR: {secret_name} secret is not set!')
+                  print(f'Create an App Store distribution profile for bundle ID:')
+                  print(f'  {bundle_id}')
+                  print()
               import sys; sys.exit(1)
           PYEOF
 
