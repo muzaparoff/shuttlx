@@ -26,6 +26,13 @@ struct ContentView: View {
                 .accessibilityLabel("History tab")
                 .accessibilityHint("View your past training sessions")
 
+            AnalyticsView()
+                .tabItem {
+                    Label("Analytics", systemImage: "chart.line.uptrend.xyaxis")
+                }
+                .accessibilityLabel("Analytics tab")
+                .accessibilityHint("View training analytics and trends")
+
             NavigationStack {
                 SettingsView()
             }
