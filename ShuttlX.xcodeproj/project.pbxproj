@@ -47,6 +47,11 @@
 		B5923014 /* HRZoneChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923004 /* HRZoneChart.swift */; };
 		B5923015 /* WeekStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923005 /* WeekStripView.swift */; };
 		C5923011 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
+		D5923001 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
+		D5923002 /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923002F /* TemplateManager.swift */; };
+		D5923003 /* TemplateListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923003F /* TemplateListView.swift */; };
+		D5923004 /* TemplateEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923004F /* TemplateEditorView.swift */; };
+		D5923005 /* IntervalResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923005F /* IntervalResultsView.swift */; };
 		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
 /* End PBXBuildFile section */
 
@@ -96,6 +101,11 @@
 		A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlX Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
+		D5923001F /* WorkoutTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplate.swift; sourceTree = "<group>"; };
+		D5923002F /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
+		D5923003F /* TemplateListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateListView.swift; sourceTree = "<group>"; };
+		D5923004F /* TemplateEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateEditorView.swift; sourceTree = "<group>"; };
+		D5923005F /* IntervalResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalResultsView.swift; sourceTree = "<group>"; };
 		A5923530F /* ActivitySegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySegment.swift; sourceTree = "<group>"; };
 		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
 		A5923507F /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
@@ -231,6 +241,7 @@
 				A5923507F /* DataManager.swift */,
 				A5923508F /* SharedDataManager.swift */,
 				LA000005 /* LiveActivityManager.swift */,
+				D5923002F /* TemplateManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -243,6 +254,7 @@
 				B5923001 /* ChartData.swift */,
 				C5923001 /* RoutePoint.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
+				D5923001F /* WorkoutTemplate.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -260,6 +272,9 @@
 				A5923518F /* SyncDebugView.swift */,
 				A5923D01 /* DashboardView.swift */,
 				C5923002 /* RouteMapView.swift */,
+				D5923003F /* TemplateListView.swift */,
+				D5923004F /* TemplateEditorView.swift */,
+				D5923005F /* IntervalResultsView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
 			);
@@ -508,6 +523,11 @@
 				C5923012 /* RouteMapView.swift in Sources */,
 				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
 				LA000015 /* LiveActivityManager.swift in Sources */,
+				D5923001 /* WorkoutTemplate.swift in Sources */,
+				D5923002 /* TemplateManager.swift in Sources */,
+				D5923003 /* TemplateListView.swift in Sources */,
+				D5923004 /* TemplateEditorView.swift in Sources */,
+				D5923005 /* IntervalResultsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

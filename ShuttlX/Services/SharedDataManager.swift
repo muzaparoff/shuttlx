@@ -362,6 +362,31 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         checkForNewSessions()
     }
 
+    // MARK: - Template Sync
+
+    func sendTemplatesToWatch(_ templates: [WorkoutTemplate]) {
+        guard WCSession.isSupported() else { return }
+
+        do {
+            let data = try JSONEncoder().encode(templates)
+            let payload: [String: Any] = [
+                "action": "syncTemplates",
+                "templatesData": data.base64EncodedString(),
+                "timestamp": Date().timeIntervalSince1970
+            ]
+
+            // Application context — Watch gets latest on next launch
+            try session.updateApplicationContext(payload)
+            log("Templates sent via applicationContext (\(templates.count))")
+
+            // Also transfer via userInfo for guaranteed delivery
+            session.transferUserInfo(payload)
+            log("Templates queued via transferUserInfo (\(templates.count))")
+        } catch {
+            log("Failed to send templates: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Helpers
 
     private func log(_ message: String) {

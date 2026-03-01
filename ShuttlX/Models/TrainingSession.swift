@@ -14,6 +14,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var route: [RoutePoint]?
     var kmSplits: [KmSplitData]?
 
+    // Interval workout fields
+    var templateID: UUID?
+    var completedIntervalResults: [CompletedInterval]?
+
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
     var programName: String?
@@ -57,6 +61,8 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         self.segments = segments
         self.route = route
         self.kmSplits = kmSplits
+        self.templateID = nil
+        self.completedIntervalResults = nil
         self.programID = nil
         self.programName = nil
         self.completedIntervals = nil
@@ -87,6 +93,34 @@ struct LegacyCompletedInterval: Identifiable, Codable, Hashable {
         self.actualDuration = actualDuration
         self.averageHeartRate = averageHeartRate
         self.maxHeartRate = maxHeartRate
+    }
+}
+
+// Per-interval result from an interval workout
+struct CompletedInterval: Identifiable, Codable, Hashable {
+    let id: UUID
+    var intervalType: IntervalType
+    var label: String?
+    var targetDuration: TimeInterval
+    var actualDuration: TimeInterval
+    var averageHeartRate: Double?
+    var distance: Double?
+
+    init(
+        intervalType: IntervalType,
+        label: String? = nil,
+        targetDuration: TimeInterval,
+        actualDuration: TimeInterval,
+        averageHeartRate: Double? = nil,
+        distance: Double? = nil
+    ) {
+        self.id = UUID()
+        self.intervalType = intervalType
+        self.label = label
+        self.targetDuration = targetDuration
+        self.actualDuration = actualDuration
+        self.averageHeartRate = averageHeartRate
+        self.distance = distance
     }
 }
 

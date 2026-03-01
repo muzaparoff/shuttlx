@@ -4,6 +4,7 @@ import WatchConnectivity
 
 struct StartTrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @EnvironmentObject var sharedDataManager: SharedDataManager
     @State private var lastSession: TrainingSession?
     #if DEBUG
     @State private var showingDebugView = false
@@ -12,60 +13,91 @@ struct StartTrainingView: View {
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "StartTrainingView")
 
     var body: some View {
-        VStack(spacing: 0) {
-            Spacer()
-
-            // Error states
-            if workoutManager.authorizationDenied {
-                ErrorBanner(
-                    icon: "heart.slash.fill",
-                    message: "HealthKit access denied. Open Settings to enable.",
-                    color: ShuttlXColor.heartRate
-                )
-                .padding(.horizontal, 8)
-                .padding(.bottom, 8)
-            }
-
-            // Start button — the hero
-            Button(action: {
-                logger.info("Start Training tapped")
-                workoutManager.startWorkout()
-            }) {
-                VStack(spacing: 6) {
-                    Image(systemName: "figure.run")
-                        .font(.system(size: 32, weight: .medium))
-                    Text("Start")
-                        .font(.system(.title3, design: .rounded).weight(.semibold))
+        ScrollView {
+            VStack(spacing: 12) {
+                // Error states
+                if workoutManager.authorizationDenied {
+                    ErrorBanner(
+                        icon: "heart.slash.fill",
+                        message: "HealthKit access denied. Open Settings to enable.",
+                        color: ShuttlXColor.heartRate
+                    )
+                    .padding(.horizontal, 8)
                 }
-                .foregroundStyle(.black)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 16))
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 16)
-            .accessibilityLabel("Start Training")
-            .accessibilityHint("Begins a free-form workout that auto-detects running and walking")
 
-            Spacer()
+                // Free Run button — the hero
+                Button(action: {
+                    logger.info("Start Free Run tapped")
+                    workoutManager.startWorkout()
+                }) {
+                    VStack(spacing: 6) {
+                        Image(systemName: "figure.run")
+                            .font(.system(size: 32, weight: .medium))
+                        Text("Free Run")
+                            .font(.system(.title3, design: .rounded).weight(.semibold))
+                    }
+                    .foregroundStyle(.black)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 16))
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 16)
+                .accessibilityLabel("Start Free Run")
+                .accessibilityHint("Begins a free-form workout that auto-detects running and walking")
 
-            // Last workout — compact inline
-            if let last = lastSession, !workoutManager.authorizationDenied {
-                lastWorkoutRow(last)
-                    .padding(.horizontal, 12)
-                    .padding(.bottom, 4)
-            }
+                // Templates list
+                if !sharedDataManager.workoutTemplates.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Programs")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 16)
 
-            #if DEBUG
-            Button(action: { showingDebugView = true }) {
-                Image(systemName: "ant")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+                        ForEach(sharedDataManager.workoutTemplates) { template in
+                            Button(action: {
+                                logger.info("Starting interval workout: \(template.name)")
+                                workoutManager.startIntervalWorkout(template: template)
+                            }) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(template.name)
+                                        .font(.system(.body, design: .rounded).weight(.semibold))
+                                        .foregroundStyle(.primary)
+                                    Text(template.summaryText)
+                                        .font(.caption2)
+                                        .foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 10)
+                                .background(Color(.darkGray), in: RoundedRectangle(cornerRadius: 12))
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 16)
+                            .accessibilityLabel("\(template.name), \(template.summaryText)")
+                            .accessibilityHint("Start this interval workout")
+                        }
+                    }
+                }
+
+                // Last workout — compact inline
+                if let last = lastSession, !workoutManager.authorizationDenied {
+                    lastWorkoutRow(last)
+                        .padding(.horizontal, 12)
+                }
+
+                #if DEBUG
+                Button(action: { showingDebugView = true }) {
+                    Image(systemName: "ant")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .sheet(isPresented: $showingDebugView) {
+                    DebugView()
+                }
+                #endif
             }
-            .sheet(isPresented: $showingDebugView) {
-                DebugView()
-            }
-            #endif
+            .padding(.vertical, 4)
         }
         .navigationTitle("ShuttlX")
         .onAppear { loadLastSession() }
@@ -166,5 +198,6 @@ private struct ErrorBanner: View {
     NavigationStack {
         StartTrainingView()
             .environmentObject(WatchWorkoutManager())
+            .environmentObject(SharedDataManager.shared)
     }
 }

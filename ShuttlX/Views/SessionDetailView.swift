@@ -24,6 +24,11 @@ struct SessionDetailView: View {
                     RouteMapView(route: route, segments: session.segments)
                 }
 
+                // Interval results (if interval workout)
+                if let results = session.completedIntervalResults, !results.isEmpty {
+                    IntervalResultsView(intervals: results)
+                }
+
                 // Metric cards grid
                 metricGrid
 
@@ -47,6 +52,12 @@ struct SessionDetailView: View {
 
     private var durationHeader: some View {
         VStack(spacing: 4) {
+            if let name = session.programName {
+                Text(name)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.green)
+            }
+
             Text(FormattingUtils.formatDuration(session.duration))
                 .font(ShuttlXFont.metricLarge)
                 .contentTransition(.numericText())

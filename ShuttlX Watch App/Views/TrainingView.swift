@@ -65,13 +65,18 @@ struct TrainingView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
 
-            // Large timer — hero element
-            ElapsedTimerView()
+            if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
+                // Interval mode: countdown timer + step info
+                IntervalTimerView(engine: engine)
+            } else {
+                // Free run mode: elapsed timer
+                ElapsedTimerView()
+            }
 
             Spacer(minLength: 4)
 
-            // Compact metrics below
-            WorkoutMetricsView()
+            // Large bold metrics — Apple Fitness style
+            MetricsStackView()
 
             Spacer(minLength: 0)
         }
@@ -242,59 +247,47 @@ struct WorkoutSummaryView: View {
     }
 }
 
-// MARK: - Workout Metrics (Compact)
+// MARK: - Metrics Stack (Large Bold, Apple Fitness Style)
 
-struct WorkoutMetricsView: View {
+struct MetricsStackView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 2) {
             // Distance
-            metricRow(
-                icon: "location.fill",
-                color: .green,
-                text: distanceText,
-                accessibilityLabel: "Distance \(accessibleDistance)"
-            )
-
-            // Heart Rate with zone
-            metricRow(
-                icon: "heart.fill",
-                color: heartRateColor,
-                text: heartRateText,
-                accessibilityLabel: workoutManager.heartRate > 0
-                    ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
-                    : "Heart rate no data"
-            )
-            .accessibilityAddTraits(.updatesFrequently)
-
-            // Pace
-            metricRow(
-                icon: "gauge.with.dots.needle.33percent",
-                color: .purple,
-                text: paceText,
-                accessibilityLabel: accessiblePace
-            )
-        }
-        .padding(.horizontal, 8)
-    }
-
-    private func metricRow(icon: String, color: Color, text: String, accessibilityLabel: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 12))
-                .foregroundColor(color)
-                .frame(width: 14)
-            Text(text)
-                .font(.system(.body, design: .rounded).weight(.semibold))
+            Text(distanceText)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundColor(.primary)
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Distance \(accessibleDistance)")
+
+            // Heart Rate — colored by zone
+            Text(heartRateText)
+                .font(.system(size: 28, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(heartRateZoneColor)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(workoutManager.heartRate > 0
+                    ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
+                    : "Heart rate no data")
+                .accessibilityAddTraits(.updatesFrequently)
+
+            // Pace
+            Text(paceText)
+                .font(.system(size: 24, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .foregroundColor(.primary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(accessiblePace)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityLabel)
+        .padding(.horizontal, 8)
     }
 
     // MARK: - Heart Rate Zone
@@ -320,7 +313,7 @@ struct WorkoutMetricsView: View {
         }
     }
 
-    private var heartRateColor: Color {
+    private var heartRateZoneColor: Color {
         switch heartRateZone {
         case 1: return .blue
         case 2: return .green
@@ -333,7 +326,7 @@ struct WorkoutMetricsView: View {
 
     private var heartRateText: String {
         guard workoutManager.heartRate > 0 else { return "-- BPM" }
-        return "Z\(heartRateZone) \(workoutManager.heartRate) BPM"
+        return "\(workoutManager.heartRate) BPM"
     }
 
     // MARK: - Distance & Pace
@@ -351,8 +344,8 @@ struct WorkoutMetricsView: View {
     }
 
     private var paceText: String {
-        guard let pace = workoutManager.currentPace else { return "-- Av.Pace" }
-        return "\(FormattingUtils.formatPace(pace)) Av.Pace"
+        guard let pace = workoutManager.currentPace else { return "-- /KM" }
+        return "\(FormattingUtils.formatPace(pace)) /KM"
     }
 
     private var accessiblePace: String {
@@ -360,6 +353,64 @@ struct WorkoutMetricsView: View {
         let minutes = Int(pace) / 60
         let seconds = Int(pace) % 60
         return "Average pace \(minutes) minutes \(seconds) seconds per kilometer"
+    }
+}
+
+// MARK: - Interval Timer (Countdown)
+
+struct IntervalTimerView: View {
+    @ObservedObject var engine: IntervalEngine
+    @EnvironmentObject var workoutManager: WatchWorkoutManager
+
+    var body: some View {
+        VStack(spacing: 2) {
+            // Step type + progress
+            if let step = engine.currentStep {
+                HStack {
+                    Text(step.type.displayName.uppercased())
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(stepColor(step.type))
+                    Spacer()
+                    Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 8)
+            }
+
+            // Countdown timer — big and bold
+            Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+                .font(.system(size: 52, weight: .bold, design: .monospaced))
+                .foregroundColor(engine.currentStep.map { stepColor($0.type) } ?? .primary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel("Time remaining \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining))")
+                .accessibilityAddTraits(.updatesFrequently)
+
+            // Next step preview
+            if let next = engine.nextStep {
+                Text("Next: \(next.type.displayName)")
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+            }
+
+            if workoutManager.isPaused {
+                Text("PAUSED")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.orange)
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private func stepColor(_ type: IntervalType) -> Color {
+        switch type {
+        case .work: return .green
+        case .rest: return .orange
+        case .warmup: return .blue
+        case .cooldown: return .blue
+        }
     }
 }
 

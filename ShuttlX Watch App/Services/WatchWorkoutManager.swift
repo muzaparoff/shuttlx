@@ -33,6 +33,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
 
+    // MARK: - Interval Mode
+    enum WorkoutMode { case freeRun, interval }
+    @Published var workoutMode: WorkoutMode = .freeRun
+    var intervalEngine: IntervalEngine?
+    private var activeTemplate: WorkoutTemplate?
+
     // MARK: - Private State
     private var workoutSession: HKWorkoutSession?
     private var healthStore = HKHealthStore()
@@ -188,6 +194,19 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         logger.info("Workout started")
     }
 
+    func startIntervalWorkout(template: WorkoutTemplate) {
+        guard !isWorkoutActive else {
+            logger.warning("Workout already active")
+            return
+        }
+        logger.info("Starting interval workout: \(template.name)")
+        workoutMode = .interval
+        activeTemplate = template
+        intervalEngine = IntervalEngine()
+        intervalEngine!.configure(template: template)
+        startWorkout()
+    }
+
     func pauseWorkout() {
         guard isWorkoutActive, !isPaused else { return }
         isPaused = true
@@ -278,6 +297,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             )
         }
 
+        // Reset interval mode
+        workoutMode = .freeRun
+        intervalEngine = nil
+        activeTemplate = nil
+
         clearWorkoutBackup()
     }
 
@@ -337,6 +361,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Check debounce for pending activity transitions
         checkPendingActivityTransition()
+
+        // Tick interval engine if in interval mode
+        if workoutMode == .interval, let engine = intervalEngine {
+            engine.tick(heartRate: heartRate, distance: totalDistance)
+            if engine.isComplete {
+                saveWorkoutData()
+                stopWorkout()
+                return
+            }
+        }
 
         // Broadcast live metrics to iOS every 3 seconds
         broadcastLiveMetricsIfNeeded()
@@ -742,7 +776,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
         }
 
-        let session = TrainingSession(
+        var session = TrainingSession(
             startDate: startTime,
             endDate: Date(),
             duration: Date().timeIntervalSince(startTime),
@@ -755,6 +789,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             route: routePoints.isEmpty ? nil : routePoints,
             kmSplits: splits
         )
+
+        // Attach interval results if this was an interval workout
+        if workoutMode == .interval, let engine = intervalEngine {
+            let result = engine.stop(finalDistance: totalDistance)
+            session.templateID = result.templateID
+            session.programName = result.templateName
+            session.completedIntervalResults = result.results
+        }
 
         sharedDataManager?.sendSessionToiOS(session)
         saveWorkoutDataToLocalStorage()

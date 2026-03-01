@@ -10,6 +10,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var lastSyncTime: Date?
     @Published var syncLog: [String] = []
     @Published var connectivityHealth: Double = 1.0
+    @Published var workoutTemplates: [WorkoutTemplate] = []
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
     private let appGroupIdentifier = "group.com.shuttlx.shared"
@@ -32,6 +33,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
 
         loadPendingSessionsFromDisk()
+        loadTemplatesFromDisk()
         setupBackgroundTasks()
     }
 
@@ -335,6 +337,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
+        Task { @MainActor in
+            self.handleIncomingPayload(userInfo)
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
+        Task { @MainActor in
+            self.handleIncomingPayload(applicationContext)
+        }
+    }
+
     #if os(iOS)
     nonisolated func sessionDidBecomeInactive(_ session: WCSession) {
         Task { @MainActor in
@@ -400,6 +414,51 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         } catch {
             logger.error("Failed to load local sessions: \(error.localizedDescription)")
             return []
+        }
+    }
+
+    // MARK: - Template Sync
+
+    private func handleIncomingPayload(_ payload: [String: Any]) {
+        guard let action = payload["action"] as? String, action == "syncTemplates" else { return }
+        guard let base64 = payload["templatesData"] as? String,
+              let data = Data(base64Encoded: base64) else {
+            logger.error("Failed to decode templates payload")
+            return
+        }
+
+        do {
+            let templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+            workoutTemplates = templates
+            saveTemplatesToDisk(templates)
+            logger.info("Received \(templates.count) template(s) from iPhone")
+            updateSyncStatus("Synced \(templates.count) program(s)")
+        } catch {
+            logger.error("Failed to decode templates: \(error.localizedDescription)")
+        }
+    }
+
+    private func saveTemplatesToDisk(_ templates: [WorkoutTemplate]) {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else { return }
+        let url = containerURL.appendingPathComponent("workout_templates.json")
+        do {
+            let data = try JSONEncoder().encode(templates)
+            try data.write(to: url)
+        } catch {
+            logger.error("Failed to save templates to disk: \(error.localizedDescription)")
+        }
+    }
+
+    private func loadTemplatesFromDisk() {
+        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else { return }
+        let url = containerURL.appendingPathComponent("workout_templates.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            let data = try Data(contentsOf: url)
+            workoutTemplates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+            logger.info("Loaded \(self.workoutTemplates.count) template(s) from disk")
+        } catch {
+            logger.error("Failed to load templates from disk: \(error.localizedDescription)")
         }
     }
 

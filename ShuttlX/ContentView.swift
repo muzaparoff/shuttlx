@@ -12,6 +12,13 @@ struct ContentView: View {
                 .accessibilityLabel("Training tab")
                 .accessibilityHint("Dashboard with workout status and quick start")
 
+            TemplateListView()
+                .tabItem {
+                    Label("Programs", systemImage: "timer")
+                }
+                .accessibilityLabel("Programs tab")
+                .accessibilityHint("Create and manage interval workout programs")
+
             TrainingHistoryView()
                 .tabItem {
                     Label("History", systemImage: "calendar")
