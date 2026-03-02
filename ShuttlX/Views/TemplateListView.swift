@@ -73,8 +73,8 @@ struct TemplateListView: View {
                         .font(.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.15), in: Capsule())
-                        .foregroundStyle(.blue)
+                        .background(ShuttlXColor.stepWarmup.opacity(0.15), in: Capsule())
+                        .foregroundStyle(ShuttlXColor.stepWarmup)
                 }
 
                 if template.cooldown != nil {
@@ -82,8 +82,8 @@ struct TemplateListView: View {
                         .font(.caption2)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Color.blue.opacity(0.15), in: Capsule())
-                        .foregroundStyle(.blue)
+                        .background(ShuttlXColor.stepCooldown.opacity(0.15), in: Capsule())
+                        .foregroundStyle(ShuttlXColor.stepCooldown)
                 }
             }
 
@@ -110,8 +110,8 @@ struct TemplateListView: View {
             .monospacedDigit()
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(stepColor(step.type).opacity(0.15), in: Capsule())
-            .foregroundStyle(stepColor(step.type))
+            .background(ShuttlXColor.forStepType(step.type).opacity(0.15), in: Capsule())
+            .foregroundStyle(ShuttlXColor.forStepType(step.type))
     }
 
     // MARK: - Empty State
@@ -119,7 +119,7 @@ struct TemplateListView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "timer")
-                .font(.system(size: 48))
+                .font(ShuttlXFont.heroIcon)
                 .foregroundStyle(.secondary)
 
             Text("No Programs Yet")
@@ -144,15 +144,6 @@ struct TemplateListView: View {
     }
 
     // MARK: - Helpers
-
-    private func stepColor(_ type: IntervalType) -> Color {
-        switch type {
-        case .work: return .green
-        case .rest: return .orange
-        case .warmup: return .blue
-        case .cooldown: return .blue
-        }
-    }
 
     private func formatStepDuration(_ duration: TimeInterval) -> String {
         let seconds = Int(duration)

@@ -14,7 +14,7 @@ struct StartTrainingView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 12) {
+            VStack(spacing: ShuttlXSpacing.lg) {
                 // Error states
                 if workoutManager.authorizationDenied {
                     ErrorBanner(
@@ -22,7 +22,7 @@ struct StartTrainingView: View {
                         message: "HealthKit access denied. Open Settings to enable.",
                         color: ShuttlXColor.heartRate
                     )
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, ShuttlXSpacing.md)
                 }
 
                 // Free Run button — the hero
@@ -30,29 +30,27 @@ struct StartTrainingView: View {
                     logger.info("Start Free Run tapped")
                     workoutManager.startWorkout()
                 }) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: ShuttlXSpacing.sm) {
                         Image(systemName: "figure.run")
-                            .font(.system(size: 32, weight: .medium))
+                            .font(ShuttlXFont.watchHeroIcon)
                         Text("Free Run")
-                            .font(.system(.title3, design: .rounded).weight(.semibold))
+                            .font(ShuttlXFont.watchHeroTitle)
                     }
-                    .foregroundStyle(.black)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 16)
-                    .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 16))
+                    .foregroundStyle(ShuttlXColor.iconOnCTA)
+                    .padding(.vertical, ShuttlXSpacing.xl)
                 }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 16)
+                .buttonStyle(ShuttlXPrimaryCTAStyle())
+                .padding(.horizontal, ShuttlXSpacing.xl)
                 .accessibilityLabel("Start Free Run")
                 .accessibilityHint("Begins a free-form workout that auto-detects running and walking")
 
                 // Templates list
                 if !sharedDataManager.workoutTemplates.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: ShuttlXSpacing.md) {
                         Text("Programs")
                             .font(.caption.weight(.semibold))
                             .foregroundStyle(.secondary)
-                            .padding(.horizontal, 16)
+                            .padding(.horizontal, ShuttlXSpacing.xl)
 
                         ForEach(sharedDataManager.workoutTemplates) { template in
                             Button(action: {
@@ -61,19 +59,18 @@ struct StartTrainingView: View {
                             }) {
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(template.name)
-                                        .font(.system(.body, design: .rounded).weight(.semibold))
+                                        .font(ShuttlXFont.watchTemplateTitle)
                                         .foregroundStyle(.primary)
                                     Text(template.summaryText)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 12)
+                                .padding(.horizontal, ShuttlXSpacing.lg)
                                 .padding(.vertical, 10)
-                                .background(Color(.darkGray), in: RoundedRectangle(cornerRadius: 12))
                             }
-                            .buttonStyle(.plain)
-                            .padding(.horizontal, 16)
+                            .buttonStyle(ShuttlXCardButtonStyle())
+                            .padding(.horizontal, ShuttlXSpacing.xl)
                             .accessibilityLabel("\(template.name), \(template.summaryText)")
                             .accessibilityHint("Start this interval workout")
                         }
@@ -83,7 +80,7 @@ struct StartTrainingView: View {
                 // Last workout — compact inline
                 if let last = lastSession, !workoutManager.authorizationDenied {
                     lastWorkoutRow(last)
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, ShuttlXSpacing.lg)
                 }
 
                 #if DEBUG
@@ -97,7 +94,7 @@ struct StartTrainingView: View {
                 }
                 #endif
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, ShuttlXSpacing.xs)
         }
         .navigationTitle("ShuttlX")
         .onAppear { loadLastSession() }
@@ -106,7 +103,7 @@ struct StartTrainingView: View {
     // MARK: - Last Workout Row
 
     private func lastWorkoutRow(_ session: TrainingSession) -> some View {
-        HStack(spacing: 8) {
+        HStack(spacing: ShuttlXSpacing.md) {
             Text("Last")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
@@ -119,7 +116,7 @@ struct StartTrainingView: View {
                 HStack(spacing: 2) {
                     Image(systemName: "location.fill")
                         .font(.system(size: 8))
-                        .foregroundColor(.green)
+                        .foregroundColor(ShuttlXColor.running)
                     Text(FormattingUtils.formatDistance(distance))
                         .font(.caption2.monospacedDigit())
                 }
@@ -129,7 +126,7 @@ struct StartTrainingView: View {
                 HStack(spacing: 2) {
                     Image(systemName: "heart.fill")
                         .font(.system(size: 8))
-                        .foregroundColor(.red)
+                        .foregroundColor(ShuttlXColor.heartRate)
                     Text("\(Int(hr))")
                         .font(.caption2.monospacedDigit())
                 }
@@ -176,7 +173,7 @@ private struct ErrorBanner: View {
     let color: Color
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: ShuttlXSpacing.sm) {
             Image(systemName: icon)
                 .font(.caption2)
                 .foregroundStyle(color)
@@ -186,9 +183,9 @@ private struct ErrorBanner: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }
-        .padding(6)
+        .padding(ShuttlXSpacing.sm)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 6))
+        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: ShuttlXSpacing.sm))
         .accessibilityElement(children: .combine)
         .accessibilityLabel(message)
     }

@@ -18,17 +18,17 @@ struct PlanProgressCard: View {
                 Spacer()
                 Text("\(Int(completion * 100))%")
                     .font(.subheadline.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(.green)
+                    .foregroundStyle(ShuttlXColor.ctaPrimary)
             }
 
             ProgressView(value: completion)
-                .tint(.green)
+                .tint(ShuttlXColor.ctaPrimary)
 
             if let next = nextWorkout {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.right.circle.fill")
                         .font(.caption)
-                        .foregroundStyle(.green)
+                        .foregroundStyle(ShuttlXColor.ctaPrimary)
                     Text("Next: \(next.templateName ?? "Workout")")
                         .font(.caption)
                     Spacer()

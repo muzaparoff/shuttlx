@@ -7,7 +7,7 @@ struct WatchPromptView: View {
                 Spacer()
 
                 Image(systemName: "applewatch")
-                    .font(.system(size: 64))
+                    .font(ShuttlXFont.heroIcon)
                     .foregroundColor(.accentColor)
                     .accessibilityHidden(true)
 
@@ -28,7 +28,7 @@ struct WatchPromptView: View {
                     VStack {
                         Image(systemName: "figure.run")
                             .font(.title2)
-                            .foregroundColor(.green)
+                            .foregroundColor(ShuttlXColor.running)
                         Text("Running")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -39,7 +39,7 @@ struct WatchPromptView: View {
                     VStack {
                         Image(systemName: "figure.walk")
                             .font(.title2)
-                            .foregroundColor(.orange)
+                            .foregroundColor(ShuttlXColor.walking)
                         Text("Walking")
                             .font(.caption)
                             .foregroundColor(.secondary)

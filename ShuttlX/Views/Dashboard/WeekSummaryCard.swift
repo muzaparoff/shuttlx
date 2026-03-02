@@ -55,11 +55,11 @@ struct WeekSummaryCard: View {
 
                         if day.sessionCount > 0 {
                             Text(FormattingUtils.formatDuration(day.totalDuration))
-                                .font(.system(size: 9).monospacedDigit())
+                                .font(ShuttlXFont.microLabel.monospacedDigit())
                                 .foregroundStyle(.secondary)
                         } else {
                             Text(" ")
-                                .font(.system(size: 9))
+                                .font(ShuttlXFont.microLabel)
                         }
                     }
                     .frame(maxWidth: .infinity)

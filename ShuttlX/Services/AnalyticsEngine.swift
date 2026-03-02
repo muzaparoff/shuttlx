@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - Analytics Data Types
 
@@ -394,6 +395,19 @@ enum AnalyticsEngine {
         case 285..<330: return "Tempo"      // 4:45 - 5:30/km
         case 330..<390: return "Moderate"   // 5:30 - 6:30/km
         default:        return "Easy"       // > 6:30/km
+        }
+    }
+}
+
+// MARK: - Recovery Color Helper (depends on RecoveryStatus, main target only)
+
+extension ShuttlXColor {
+    static func forRecovery(_ status: RecoveryStatus) -> Color {
+        switch status {
+        case .fresh: return recoveryFresh
+        case .normal: return recoveryNormal
+        case .fatigued: return recoveryFatigued
+        case .overreaching: return recoveryOverreaching
         }
     }
 }

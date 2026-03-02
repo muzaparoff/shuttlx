@@ -59,7 +59,7 @@ struct PlanEditorView: View {
                                     renumberWeeks()
                                 }
                                 .font(.caption)
-                                .foregroundStyle(.red)
+                                .foregroundStyle(ShuttlXColor.ctaDestructive)
                                 .accessibilityLabel("Remove week \(week.weekNumber)")
                             }
                         }

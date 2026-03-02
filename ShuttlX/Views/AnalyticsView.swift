@@ -45,7 +45,7 @@ struct AnalyticsView: View {
     private var emptyStateView: some View {
         VStack(spacing: 16) {
             Image(systemName: "chart.line.uptrend.xyaxis")
-                .font(.system(size: 48))
+                .font(ShuttlXFont.heroIcon)
                 .foregroundStyle(.secondary)
 
             Text("No Data Yet")
@@ -73,8 +73,8 @@ struct AnalyticsView: View {
 
             HStack(spacing: 16) {
                 Text(recovery.rawValue)
-                    .font(.system(.largeTitle, design: .rounded).weight(.bold))
-                    .foregroundStyle(recoveryColor)
+                    .font(ShuttlXFont.metricLarge)
+                    .foregroundStyle(ShuttlXColor.forRecovery(recovery))
 
                 Spacer()
 
@@ -84,27 +84,18 @@ struct AnalyticsView: View {
                         .foregroundStyle(.secondary)
                     Text(formScore >= 0 ? "+\(String(format: "%.0f", formScore))" : String(format: "%.0f", formScore))
                         .font(ShuttlXFont.metricMedium)
-                        .foregroundStyle(formScore >= 0 ? .green : .orange)
+                        .foregroundStyle(formScore >= 0 ? ShuttlXColor.positive : ShuttlXColor.negative)
                 }
             }
         }
         .padding(16)
-        .background(recoveryColor.opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
+        .background(ShuttlXColor.forRecovery(recovery).opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(recoveryColor.opacity(0.3), lineWidth: 1)
+                .stroke(ShuttlXColor.forRecovery(recovery).opacity(0.3), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Recovery status: \(recovery.rawValue). Form score: \(String(format: "%.0f", formScore))")
-    }
-
-    private var recoveryColor: Color {
-        switch recovery {
-        case .fresh: return .green
-        case .normal: return .blue
-        case .fatigued: return .orange
-        case .overreaching: return .red
-        }
     }
 
     // MARK: - Fitness Overview Row
@@ -115,7 +106,7 @@ struct AnalyticsView: View {
                 icon: "heart.fill",
                 value: String(format: "%.0f", fitnessScore),
                 label: "Fitness",
-                color: .green,
+                color: ShuttlXColor.positive,
                 compact: true
             )
 
@@ -123,7 +114,7 @@ struct AnalyticsView: View {
                 icon: "bolt.fill",
                 value: String(format: "%.0f", fatigueScore),
                 label: "Fatigue",
-                color: .orange,
+                color: ShuttlXColor.negative,
                 compact: true
             )
 
@@ -131,7 +122,7 @@ struct AnalyticsView: View {
                 icon: "arrow.up.arrow.down",
                 value: formScore >= 0 ? "+\(String(format: "%.0f", formScore))" : String(format: "%.0f", formScore),
                 label: "Form",
-                color: formScore >= 0 ? .green : .orange,
+                color: formScore >= 0 ? ShuttlXColor.positive : ShuttlXColor.negative,
                 compact: true
             )
         }
@@ -150,7 +141,7 @@ struct AnalyticsView: View {
                         x: .value("Week", week.weekLabel),
                         y: .value("Load", week.trainingLoad)
                     )
-                    .foregroundStyle(.green)
+                    .foregroundStyle(ShuttlXColor.running)
                     .interpolationMethod(.catmullRom)
                     .symbol(.circle)
 
@@ -160,7 +151,7 @@ struct AnalyticsView: View {
                     )
                     .foregroundStyle(
                         LinearGradient(
-                            colors: [.green.opacity(0.3), .green.opacity(0.05)],
+                            colors: [ShuttlXColor.running.opacity(0.3), ShuttlXColor.running.opacity(0.05)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
@@ -279,13 +270,13 @@ struct AnalyticsView: View {
 
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(String(format: "%.1f", vo2))
-                            .font(.system(.largeTitle, design: .rounded).weight(.bold))
+                            .font(ShuttlXFont.metricLarge)
                             .foregroundStyle(ShuttlXColor.running)
 
                         if let isUp = trending {
                             Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
                                 .font(.title3.weight(.semibold))
-                                .foregroundStyle(isUp ? .green : .orange)
+                                .foregroundStyle(isUp ? ShuttlXColor.positive : ShuttlXColor.negative)
                         }
                     }
                 }
@@ -345,7 +336,7 @@ struct AnalyticsView: View {
                         value: FormattingUtils.formatDistance(dist),
                         date: records.mostDistanceDate,
                         icon: "road.lanes",
-                        color: .blue
+                        color: ShuttlXColor.steps
                     )
                 }
 
@@ -355,7 +346,7 @@ struct AnalyticsView: View {
                         value: FormattingUtils.formatDuration(dur),
                         date: records.longestDurationDate,
                         icon: "clock.fill",
-                        color: .purple
+                        color: ShuttlXColor.pace
                     )
                 }
 
@@ -391,7 +382,7 @@ struct AnalyticsView: View {
 
                         GeometryReader { geo in
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(paceZoneColor(zone.zone))
+                                .fill(ShuttlXColor.forPaceZone(zone.zone))
                                 .frame(width: max(geo.size.width * zone.percentage / 100, 4))
                         }
                         .frame(height: 20)
@@ -407,7 +398,7 @@ struct AnalyticsView: View {
                 HStack(spacing: 0) {
                     ForEach(["<4:00", "4:00-4:45", "4:45-5:30", "5:30-6:30", ">6:30"], id: \.self) { label in
                         Text(label)
-                            .font(.system(size: 9))
+                            .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.tertiary)
                             .frame(maxWidth: .infinity)
                     }
@@ -444,7 +435,7 @@ struct AnalyticsView: View {
                         icon: "arrow.down.right",
                         value: "\(Int(summary.totalDescent)) m",
                         label: "Total Descent",
-                        color: .orange,
+                        color: ShuttlXColor.negative,
                         compact: true
                     )
 
@@ -452,7 +443,7 @@ struct AnalyticsView: View {
                         icon: "mountain.2.fill",
                         value: "\(Int(summary.highestPoint)) m",
                         label: "Highest Point",
-                        color: .blue,
+                        color: ShuttlXColor.steps,
                         compact: true
                     )
 
@@ -460,7 +451,7 @@ struct AnalyticsView: View {
                         icon: "chart.line.uptrend.xyaxis",
                         value: "\(Int(summary.averageAscent)) m",
                         label: "Avg Ascent",
-                        color: .purple,
+                        color: ShuttlXColor.pace,
                         compact: true
                     )
                 }
@@ -475,16 +466,6 @@ struct AnalyticsView: View {
         }
     }
 
-    private func paceZoneColor(_ zone: String) -> Color {
-        switch zone {
-        case "Interval": return .red
-        case "Threshold": return .orange
-        case "Tempo": return .yellow
-        case "Moderate": return .green
-        case "Easy": return .blue
-        default: return .gray
-        }
-    }
 }
 
 // MARK: - PR Card Component
@@ -509,7 +490,7 @@ private struct PRCard: View {
             }
 
             Text(value)
-                .font(.system(.title3, design: .rounded).weight(.bold))
+                .font(ShuttlXFont.prValue)
                 .minimumScaleFactor(0.7)
                 .lineLimit(1)
 

@@ -31,7 +31,7 @@ struct ProgramsTabView: View {
                             }
                         } icon: {
                             Image(systemName: "calendar.badge.clock")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(ShuttlXColor.ctaPrimary)
                         }
                     }
                     .accessibilityLabel("Training Plans, \(planManager.plans.count) plans")
@@ -53,7 +53,7 @@ struct ProgramsTabView: View {
                             }
                         } icon: {
                             Image(systemName: "timer")
-                                .foregroundStyle(.orange)
+                                .foregroundStyle(ShuttlXColor.walking)
                         }
                     }
                     .accessibilityLabel("Interval Workouts, \(templateManager.templates.count) workouts")
@@ -81,7 +81,7 @@ struct ProgramsTabView: View {
                 // Progress bar
                 let pct = planManager.completionPercentage(for: progress)
                 ProgressView(value: pct)
-                    .tint(.green)
+                    .tint(ShuttlXColor.ctaPrimary)
 
                 HStack {
                     Text("\(Int(pct * 100))% complete")
@@ -93,7 +93,7 @@ struct ProgramsTabView: View {
                     if let next = planManager.nextWorkout(for: progress) {
                         Text("Week \(next.week), Day \(next.day)")
                             .font(.caption)
-                            .foregroundStyle(.green)
+                            .foregroundStyle(ShuttlXColor.ctaPrimary)
                     }
                 }
             }

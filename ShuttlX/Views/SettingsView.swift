@@ -31,7 +31,7 @@ struct SettingsView: View {
                         }
                         Spacer()
                         Image(systemName: "checkmark.icloud.fill")
-                            .foregroundStyle(.green)
+                            .foregroundStyle(ShuttlXColor.positive)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Account")
@@ -75,7 +75,7 @@ struct SettingsView: View {
 
                     Label("Data is stored locally only", systemImage: "exclamationmark.triangle.fill")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(ShuttlXColor.ctaWarning)
                 }
             }
 
@@ -89,7 +89,7 @@ struct SettingsView: View {
                     Spacer()
                     HStack(spacing: 4) {
                         Circle()
-                            .fill(watchPaired ? Color.green : Color.secondary)
+                            .fill(watchPaired ? ShuttlXColor.positive : Color.secondary)
                             .frame(width: 8, height: 8)
                         Text(watchStatusText)
                             .foregroundStyle(.secondary)
@@ -139,7 +139,7 @@ struct SettingsView: View {
                     Text("HealthKit Status")
                     Spacer()
                     Text(dataManager.healthKitAuthorized ? "Connected" : "Not Connected")
-                        .foregroundStyle(dataManager.healthKitAuthorized ? .green : .secondary)
+                        .foregroundStyle(dataManager.healthKitAuthorized ? ShuttlXColor.positive : .secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("HealthKit Status")
@@ -251,7 +251,7 @@ struct ToastView: View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
                 .font(.title3)
-                .foregroundStyle(.green)
+                .foregroundStyle(ShuttlXColor.positive)
             Text(message)
                 .font(.callout)
         }

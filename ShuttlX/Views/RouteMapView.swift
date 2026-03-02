@@ -23,9 +23,9 @@ struct RouteMapView: View {
                     Annotation("", coordinate: marker.coordinate) {
                         VStack(spacing: 0) {
                             Text("km \(marker.km)")
-                                .font(.system(size: 9, weight: .bold))
+                                .font(ShuttlXFont.microLabel.weight(.bold))
                             Text(marker.paceLabel)
-                                .font(.system(size: 8).monospacedDigit())
+                                .font(ShuttlXFont.microLabel.monospacedDigit())
                         }
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
@@ -37,7 +37,7 @@ struct RouteMapView: View {
                 if let first = route.first {
                     Annotation("Start", coordinate: CLLocationCoordinate2D(latitude: first.latitude, longitude: first.longitude)) {
                         Circle()
-                            .fill(.green)
+                            .fill(ShuttlXColor.running)
                             .frame(width: 12, height: 12)
                             .overlay(Circle().stroke(.white, lineWidth: 2))
                     }
@@ -48,7 +48,7 @@ struct RouteMapView: View {
                     Annotation("Finish", coordinate: CLLocationCoordinate2D(latitude: last.latitude, longitude: last.longitude)) {
                         Image(systemName: "flag.fill")
                             .font(.caption)
-                            .foregroundStyle(.red)
+                            .foregroundStyle(ShuttlXColor.ctaDestructive)
                             .padding(4)
                             .background(.white, in: Circle())
                     }

@@ -187,7 +187,7 @@ struct TrainingHistoryView: View {
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "calendar.badge.exclamationmark")
-                .font(.system(size: 44))
+                .font(ShuttlXFont.heroIcon)
                 .foregroundStyle(.secondary)
                 .accessibilityHidden(true)
 

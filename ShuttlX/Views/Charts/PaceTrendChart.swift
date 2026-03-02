@@ -26,13 +26,13 @@ struct PaceTrendChart: View {
                         y: .value("Pace", (day.averagePace ?? 0) / 60.0)
                     )
                     .interpolationMethod(.catmullRom)
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(ShuttlXColor.pace)
 
                     PointMark(
                         x: .value("Day", day.dayLabel),
                         y: .value("Pace", (day.averagePace ?? 0) / 60.0)
                     )
-                    .foregroundStyle(.purple)
+                    .foregroundStyle(ShuttlXColor.pace)
                     .symbolSize(30)
                 }
                 .chartYAxis {

@@ -50,7 +50,7 @@ struct SessionDetailView: View {
             if let name = session.programName {
                 Text(name)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.green)
+                    .foregroundStyle(ShuttlXColor.ctaPrimary)
             }
 
             if let sport = session.sportType {

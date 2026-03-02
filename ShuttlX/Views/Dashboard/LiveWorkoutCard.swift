@@ -77,7 +77,7 @@ struct LiveWorkoutCard: View {
                     LiveMetricPill(
                         icon: "gauge.with.dots.needle.33percent",
                         value: FormattingUtils.formatPace(sharedData.livePace),
-                        color: .purple
+                        color: ShuttlXColor.pace
                     )
                 }
             }

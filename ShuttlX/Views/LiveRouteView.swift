@@ -35,7 +35,7 @@ struct LiveRouteView: View {
                     if let first = routePoints.first {
                         Annotation("Start", coordinate: CLLocationCoordinate2D(latitude: first.latitude, longitude: first.longitude)) {
                             Circle()
-                                .fill(.green)
+                                .fill(ShuttlXColor.running)
                                 .frame(width: 8, height: 8)
                                 .overlay(Circle().stroke(.white, lineWidth: 1.5))
                         }

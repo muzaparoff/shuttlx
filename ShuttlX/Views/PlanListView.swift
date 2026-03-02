@@ -86,11 +86,11 @@ struct PlanListView: View {
                 let pct = planManager.completionPercentage(for: progress)
                 HStack(spacing: 6) {
                     ProgressView(value: pct)
-                        .tint(.green)
+                        .tint(ShuttlXColor.ctaPrimary)
                         .frame(width: 80)
                     Text("\(Int(pct * 100))%")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.green)
+                        .foregroundStyle(ShuttlXColor.positive)
                 }
                 .padding(.top, 2)
             }

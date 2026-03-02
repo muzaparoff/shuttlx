@@ -54,7 +54,7 @@ struct PlanDetailView: View {
                 let pct = planManager.completionPercentage(for: progress)
                 VStack(spacing: 4) {
                     ProgressView(value: pct)
-                        .tint(.green)
+                        .tint(ShuttlXColor.ctaPrimary)
                     Text("\(Int(pct * 100))% complete")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -72,12 +72,8 @@ struct PlanDetailView: View {
             planManager.startPlan(plan)
         }) {
             Text(activeProgress != nil ? "Restart Plan" : "Start Plan")
-                .font(.headline)
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 12))
         }
+        .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
         .accessibilityLabel(activeProgress != nil ? "Restart plan" : "Start plan")
         .accessibilityHint("Begins tracking your progress through this training plan")
     }
@@ -132,7 +128,7 @@ struct PlanDetailView: View {
 
             if isCompleted {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
+                    .foregroundStyle(ShuttlXColor.positive)
                     .accessibilityLabel("Completed")
             } else if !day.isRestDay {
                 // Mark complete button

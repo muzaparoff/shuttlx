@@ -27,7 +27,7 @@ struct OnboardingView: View {
             Spacer()
 
             Image(systemName: "figure.run")
-                .font(.system(size: 72))
+                .font(ShuttlXFont.onboardingIcon)
                 .foregroundStyle(ShuttlXColor.running)
                 .symbolEffect(.bounce, value: currentPage == 0)
                 .accessibilityHidden(true)
@@ -47,12 +47,8 @@ struct OnboardingView: View {
                 withAnimation { currentPage = 1 }
             } label: {
                 Text("Get Started")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: 280)
-                    .padding(.vertical, 14)
-                    .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 14))
             }
+            .buttonStyle(ShuttlXPrimaryCTAStyle())
             .accessibilityHint("Proceed to health integration setup")
 
             Spacer().frame(height: 40)
@@ -67,7 +63,7 @@ struct OnboardingView: View {
             Spacer()
 
             Image(systemName: "heart.fill")
-                .font(.system(size: 72))
+                .font(ShuttlXFont.onboardingIcon)
                 .foregroundStyle(ShuttlXColor.heartRate)
                 .symbolEffect(.bounce, value: currentPage == 1)
                 .accessibilityHidden(true)
@@ -96,12 +92,8 @@ struct OnboardingView: View {
                 }
             } label: {
                 Text("Grant Health Access")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: 280)
-                    .padding(.vertical, 14)
-                    .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 14))
             }
+            .buttonStyle(ShuttlXPrimaryCTAStyle())
             .accessibilityHint("Requests HealthKit permissions")
 
             Button {
@@ -125,7 +117,7 @@ struct OnboardingView: View {
             Spacer()
 
             Image(systemName: "applewatch")
-                .font(.system(size: 72))
+                .font(ShuttlXFont.onboardingIcon)
                 .foregroundStyle(.tint)
                 .symbolEffect(.bounce, value: currentPage == 2)
                 .accessibilityHidden(true)
@@ -159,12 +151,8 @@ struct OnboardingView: View {
                 isFirstLaunch = false
             } label: {
                 Text("Start Training")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: 280)
-                    .padding(.vertical, 14)
-                    .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 14))
             }
+            .buttonStyle(ShuttlXPrimaryCTAStyle())
             .accessibilityHint("Completes onboarding and opens the app")
 
             Spacer().frame(height: 40)
@@ -212,7 +200,7 @@ private struct WatchStatusRow: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: icon)
-                .foregroundStyle(isGood ? .green : .secondary)
+                .foregroundStyle(isGood ? ShuttlXColor.positive : .secondary)
             Text(label)
                 .font(.subheadline)
                 .foregroundStyle(isGood ? .primary : .secondary)

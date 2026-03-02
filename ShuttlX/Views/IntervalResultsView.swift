@@ -32,7 +32,7 @@ struct IntervalResultsView: View {
                 ForEach(intervals) { interval in
                     let fraction = totalDuration > 0 ? interval.actualDuration / totalDuration : 0
                     RoundedRectangle(cornerRadius: 3)
-                        .fill(intervalColor(interval.intervalType))
+                        .fill(ShuttlXColor.forStepType(interval.intervalType))
                         .frame(width: max(4, geometry.size.width * fraction))
                 }
             }
@@ -47,7 +47,7 @@ struct IntervalResultsView: View {
         HStack(spacing: 8) {
             // Type indicator
             Circle()
-                .fill(intervalColor(interval.intervalType))
+                .fill(ShuttlXColor.forStepType(interval.intervalType))
                 .frame(width: 8, height: 8)
 
             // Label / type
@@ -70,7 +70,7 @@ struct IntervalResultsView: View {
                     let diff = interval.actualDuration - interval.targetDuration
                     Text(diff >= 0 ? "+\(Int(diff))s" : "\(Int(diff))s")
                         .font(.caption2)
-                        .foregroundStyle(diff > 3 ? .orange : .secondary)
+                        .foregroundStyle(diff > 3 ? ShuttlXColor.negative : .secondary)
                 }
             }
 
@@ -78,7 +78,7 @@ struct IntervalResultsView: View {
             if let hr = interval.averageHeartRate {
                 Text("\(Int(hr))")
                     .font(.caption.weight(.semibold).monospacedDigit())
-                    .foregroundStyle(.red)
+                    .foregroundStyle(ShuttlXColor.heartRate)
                     .frame(width: 32, alignment: .trailing)
             }
         }
@@ -101,14 +101,14 @@ struct IntervalResultsView: View {
                     summaryItem(
                         label: "Avg Work HR",
                         value: avgHR(workIntervals),
-                        color: .green
+                        color: ShuttlXColor.stepWork
                     )
                 }
                 if !restIntervals.isEmpty {
                     summaryItem(
                         label: "Avg Rest HR",
                         value: avgHR(restIntervals),
-                        color: .orange
+                        color: ShuttlXColor.stepRest
                     )
                 }
             }
@@ -119,7 +119,7 @@ struct IntervalResultsView: View {
     private func summaryItem(label: String, value: String, color: Color) -> some View {
         VStack(spacing: 2) {
             Text(value)
-                .font(.system(.title3, design: .rounded).weight(.bold))
+                .font(ShuttlXFont.prValue)
                 .foregroundStyle(color)
             Text(label)
                 .font(.caption2)
@@ -134,12 +134,4 @@ struct IntervalResultsView: View {
         return "\(Int(hrs.reduce(0, +) / Double(hrs.count))) BPM"
     }
 
-    private func intervalColor(_ type: IntervalType) -> Color {
-        switch type {
-        case .work: return .green
-        case .rest: return .orange
-        case .warmup: return .blue
-        case .cooldown: return .blue
-        }
-    }
 }

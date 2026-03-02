@@ -19,9 +19,9 @@ struct DebugView: View {
                         }) {
                             HStack {
                                 Image(systemName: "trash")
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(ShuttlXColor.ctaDestructive)
                                 Text("Clear All Training Sessions")
-                                    .foregroundColor(.red)
+                                    .foregroundStyle(ShuttlXColor.ctaDestructive)
                             }
                         }
                         .alert("Clear All Sessions", isPresented: $showingCleanupAlert) {
@@ -51,7 +51,7 @@ struct DebugView: View {
                                     if !session.segments.isEmpty {
                                         Text("\(session.segments.count) segments")
                                             .font(.caption)
-                                            .foregroundColor(.secondary)
+                                            .foregroundStyle(.secondary)
                                     }
                                 }
                             }
@@ -62,13 +62,13 @@ struct DebugView: View {
 
                     Section(header: Text("Sync Status")) {
                         Text(sharedDataManager.checkConnectivity())
-                            .font(.system(.footnote, design: .monospaced))
+                            .font(ShuttlXFont.debugMono)
                     }
 
                     Section(header: Text("Sync Log")) {
                         ForEach(sharedDataManager.syncLog, id: \.self) { log in
                             Text(log)
-                                .font(.system(.caption, design: .monospaced))
+                                .font(ShuttlXFont.debugMono)
                         }
                     }
                 }
@@ -87,8 +87,8 @@ struct DebugView: View {
                     if showMessage {
                         Text(cleanupMessage)
                             .padding()
-                            .background(Color.green.opacity(0.8))
-                            .foregroundColor(.white)
+                            .background(ShuttlXColor.positive.opacity(0.8))
+                            .foregroundStyle(.white)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .shadow(radius: 3)
                             .transition(.move(edge: .top))

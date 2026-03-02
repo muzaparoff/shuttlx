@@ -48,7 +48,7 @@ struct SignInView: View {
 
                     Text("Without signing in, your data is stored locally and could be lost if you reset or lose your device.")
                         .font(.caption)
-                        .foregroundStyle(.orange)
+                        .foregroundStyle(ShuttlXColor.ctaWarning)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }

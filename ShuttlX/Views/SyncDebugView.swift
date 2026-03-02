@@ -12,11 +12,11 @@ struct SyncDebugView: View {
                 Section(header: Text("Session Status")) {
                     statusRow(title: "Activation State", value: syncMonitor.activationState)
                     statusRow(title: "Reachable", value: syncMonitor.isReachable ? "Yes" : "No",
-                              color: syncMonitor.isReachable ? .green : .red)
+                              color: syncMonitor.isReachable ? ShuttlXColor.positive : ShuttlXColor.ctaDestructive)
                     statusRow(title: "Paired", value: syncMonitor.isPaired ? "Yes" : "No",
-                              color: syncMonitor.isPaired ? .green : .red)
+                              color: syncMonitor.isPaired ? ShuttlXColor.positive : ShuttlXColor.ctaDestructive)
                     statusRow(title: "Watch App Installed", value: syncMonitor.isWatchAppInstalled ? "Yes" : "No",
-                              color: syncMonitor.isWatchAppInstalled ? .green : .red)
+                              color: syncMonitor.isWatchAppInstalled ? ShuttlXColor.positive : ShuttlXColor.ctaDestructive)
                 }
 
                 Section(header: Text("Sync Status")) {
@@ -51,12 +51,12 @@ struct SyncDebugView: View {
         }
     }
 
-    private func statusRow(title: String, value: String, color: Color = .primary) -> some View {
+    private func statusRow(title: String, value: String, color: Color? = nil) -> some View {
         HStack {
             Text(title)
             Spacer()
             Text(value)
-                .foregroundColor(color)
+                .foregroundStyle(color ?? .primary)
         }
     }
 }
@@ -82,11 +82,11 @@ class SyncMonitor: ObservableObject {
 
     var healthColor: Color {
         if connectivityHealth > 0.7 {
-            return .green
+            return ShuttlXColor.positive
         } else if connectivityHealth > 0.3 {
-            return .yellow
+            return ShuttlXColor.ctaWarning
         } else {
-            return .red
+            return ShuttlXColor.ctaDestructive
         }
     }
 

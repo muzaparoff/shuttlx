@@ -130,7 +130,7 @@ struct TemplateEditorView: View {
                         Text("Total Duration")
                         Spacer()
                         Text(FormattingUtils.formatDuration(totalDuration))
-                            .font(.system(.body, design: .rounded).weight(.semibold))
+                            .font(ShuttlXFont.metricSmall)
                             .monospacedDigit()
                     }
                 }
