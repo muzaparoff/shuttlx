@@ -250,6 +250,65 @@ enum AnalyticsEngine {
         }
     }
 
+    // MARK: - Elevation
+
+    struct ElevationSummary {
+        let totalAscent: Double
+        let totalDescent: Double
+        let highestPoint: Double
+        let averageAscent: Double
+        let sessionCount: Int
+    }
+
+    /// Aggregate elevation stats across all sessions with route data.
+    static func elevationSummary(sessions: [TrainingSession]) -> ElevationSummary? {
+        var totalAscent = 0.0
+        var totalDescent = 0.0
+        var highestPoint = -Double.greatestFiniteMagnitude
+        var sessionCount = 0
+
+        for session in sessions {
+            guard let route = session.route else { continue }
+            let altitudes = route.compactMap(\.altitude)
+            guard altitudes.count >= 2 else { continue }
+
+            sessionCount += 1
+            var ascent = 0.0
+            var descent = 0.0
+
+            for i in 1..<altitudes.count {
+                let diff = altitudes[i] - altitudes[i - 1]
+                if diff > 0 { ascent += diff } else { descent += abs(diff) }
+            }
+
+            totalAscent += ascent
+            totalDescent += descent
+            if let maxAlt = altitudes.max(), maxAlt > highestPoint {
+                highestPoint = maxAlt
+            }
+        }
+
+        guard sessionCount > 0 else { return nil }
+        return ElevationSummary(
+            totalAscent: totalAscent,
+            totalDescent: totalDescent,
+            highestPoint: highestPoint,
+            averageAscent: totalAscent / Double(sessionCount),
+            sessionCount: sessionCount
+        )
+    }
+
+    /// Most recent session's route that has elevation data, for chart display.
+    static func latestElevationRoute(sessions: [TrainingSession]) -> [RoutePoint]? {
+        sessions
+            .sorted { $0.startDate > $1.startDate }
+            .first { session in
+                guard let route = session.route else { return false }
+                return route.contains { $0.altitude != nil }
+            }?
+            .route
+    }
+
     // MARK: - Private Helpers
 
     private static func computeTrainingLoad(for sessions: [TrainingSession]) -> Double {

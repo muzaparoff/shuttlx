@@ -14,19 +14,14 @@ struct SessionDetailView: View {
                     activityBadges
                 }
 
-                // Activity timeline bar
+                // Activity segments (timeline bar + detail rows)
                 if !session.segments.isEmpty {
-                    ActivityTimelineView(segments: session.segments, totalDuration: session.duration)
+                    ActivitySegmentsView(segments: session.segments, totalDuration: session.duration)
                 }
 
                 // Route map
                 if let route = session.route, !route.isEmpty {
                     RouteMapView(route: route, segments: session.segments, kmSplits: session.kmSplits)
-
-                    // Elevation profile
-                    if route.contains(where: { $0.altitude != nil }) {
-                        ElevationProfileView(route: route)
-                    }
                 }
 
                 // Interval results (if interval workout)
@@ -40,11 +35,6 @@ struct SessionDetailView: View {
                 // Km splits
                 if let splits = session.kmSplits, !splits.isEmpty {
                     kmSplitsTable(splits)
-                }
-
-                // Segments list
-                if !session.segments.isEmpty {
-                    segmentsList
                 }
             }
             .padding()
@@ -189,65 +179,20 @@ struct SessionDetailView: View {
         }
     }
 
-    // MARK: - Segments List
-
-    private var segmentsList: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Activity Segments")
-                .font(ShuttlXFont.sectionHeader)
-                .padding(.top, 4)
-
-            ForEach(session.segments) { segment in
-                HStack {
-                    Image(systemName: segment.activityType.systemImage)
-                        .foregroundStyle(segment.activityType.themeColor)
-                        .frame(width: 24)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(segment.activityType.displayName)
-                            .font(.subheadline.weight(.medium))
-
-                        Text(formatTimeRange(start: segment.startDate, end: segment.endDate))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
-                    Text(FormattingUtils.formatDuration(segment.duration))
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
-            }
-        }
-    }
-
-    private func formatTimeRange(start: Date, end: Date?) -> String {
-        let f = DateFormatter()
-        f.timeStyle = .short
-        let startStr = f.string(from: start)
-        if let end = end {
-            return "\(startStr) - \(f.string(from: end))"
-        }
-        return startStr
-    }
 }
 
-// MARK: - Activity Timeline View
+// MARK: - Unified Activity Segments View
 
-struct ActivityTimelineView: View {
+struct ActivitySegmentsView: View {
     let segments: [ActivitySegment]
     let totalDuration: TimeInterval
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Activity Timeline")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Activity")
+                .font(ShuttlXFont.sectionHeader)
 
+            // Timeline bar
             GeometryReader { geometry in
                 HStack(spacing: 1) {
                     ForEach(segments) { segment in
@@ -261,23 +206,32 @@ struct ActivityTimelineView: View {
             .frame(height: 12)
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Legend
-            HStack(spacing: 12) {
-                let activities = Set(segments.map(\.activityType))
-                ForEach(Array(activities), id: \.self) { activity in
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(activity.themeColor)
-                            .frame(width: 6, height: 6)
-                        Text(activity.displayName)
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+            // Segment detail rows
+            ForEach(segments) { segment in
+                HStack(spacing: 8) {
+                    Circle()
+                        .fill(segment.activityType.themeColor)
+                        .frame(width: 8, height: 8)
+
+                    Image(systemName: segment.activityType.systemImage)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(segment.activityType.themeColor)
+                        .frame(width: 20)
+
+                    Text(segment.activityType.displayName)
+                        .font(ShuttlXFont.cardSubtitle)
+
+                    Spacer()
+
+                    Text(FormattingUtils.formatDuration(segment.duration))
+                        .font(ShuttlXFont.cardSubtitle.monospacedDigit())
+                        .foregroundStyle(.secondary)
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
             }
         }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Activity timeline showing workout segments")
+        .accessibilityElement(children: .contain)
     }
 }
 

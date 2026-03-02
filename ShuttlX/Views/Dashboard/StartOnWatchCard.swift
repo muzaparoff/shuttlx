@@ -11,77 +11,31 @@ struct StartOnWatchCard: View {
     }
 
     var body: some View {
-        VStack(spacing: 16) {
+        HStack(spacing: 12) {
             Image(systemName: "applewatch")
-                .font(.system(size: 44))
+                .font(.title3)
                 .foregroundStyle(.tint)
 
-            Text("Start Training on Apple Watch")
-                .font(ShuttlXFont.cardTitle)
-                .multilineTextAlignment(.center)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Start on Apple Watch")
+                    .font(ShuttlXFont.cardTitle)
 
-            Text("ShuttlX auto-detects running and walking.\nJust press Start on your Watch.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-
-            // Connectivity status
-            HStack(spacing: 12) {
-                StatusPill(
-                    icon: isPaired ? "checkmark.circle.fill" : "xmark.circle.fill",
-                    text: isPaired ? "Paired" : "Not Paired",
-                    isGood: isPaired
-                )
-
-                StatusPill(
-                    icon: isReachable ? "antenna.radiowaves.left.and.right" : "antenna.radiowaves.left.and.right.slash",
-                    text: isReachable ? "Reachable" : "Not Reachable",
-                    isGood: isReachable
-                )
+                Text(isPaired ? (isReachable ? "Ready" : "Not reachable") : "Not paired")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(.secondary)
             }
 
-            // Activity icons
-            HStack(spacing: 24) {
-                VStack(spacing: 4) {
-                    Image(systemName: "figure.run")
-                        .font(.title3)
-                        .foregroundStyle(ShuttlXColor.running)
-                    Text("Running")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
+            Spacer()
 
-                VStack(spacing: 4) {
-                    Image(systemName: "figure.walk")
-                        .font(.title3)
-                        .foregroundStyle(ShuttlXColor.walking)
-                    Text("Walking")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
+            Circle()
+                .fill(isReachable ? ShuttlXColor.ctaPrimary : Color.secondary)
+                .frame(width: 8, height: 8)
         }
-        .padding(20)
-        .frame(maxWidth: .infinity)
-        .glassBackground(cornerRadius: 16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .glassBackground(cornerRadius: 12)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Start training on Apple Watch. Watch is \(isPaired ? "paired" : "not paired") and \(isReachable ? "reachable" : "not reachable")")
-    }
-}
-
-private struct StatusPill: View {
-    let icon: String
-    let text: String
-    let isGood: Bool
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(.caption2)
-            Text(text)
-                .font(.caption2)
-        }
-        .foregroundStyle(isGood ? .green : .secondary)
     }
 }
 

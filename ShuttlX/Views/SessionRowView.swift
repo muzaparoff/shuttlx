@@ -4,62 +4,61 @@ struct SessionRowView: View {
     let session: TrainingSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
+            // Row 1: Sport icon + name + date
             HStack {
+                Image(systemName: session.sportType?.systemImage ?? "figure.run")
+                    .font(.title3)
+                    .foregroundStyle(session.sportType?.themeColor ?? ShuttlXColor.running)
+                    .frame(width: 28)
+
                 Text(session.displayName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
+                    .font(ShuttlXFont.cardTitle)
+                    .foregroundStyle(.primary)
 
                 Spacer()
 
                 Text(formatDate(session.startDate))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(.secondary)
             }
 
-            HStack {
-                Label(formatDuration(session.duration), systemImage: "clock")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Spacer()
-
-                // Running duration
-                if session.totalRunningDuration > 0 {
-                    Label(formatDuration(session.totalRunningDuration), systemImage: "figure.run")
-                        .font(.caption)
-                        .foregroundColor(.green)
-                }
-
-                // Walking duration
-                if session.totalWalkingDuration > 0 {
-                    Label(formatDuration(session.totalWalkingDuration), systemImage: "figure.walk")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+            // Row 2: Activity badges
+            if session.totalRunningDuration > 0 || session.totalWalkingDuration > 0 {
+                HStack(spacing: 8) {
+                    if session.totalRunningDuration > 0 {
+                        ActivityBadge(activity: .running, duration: session.totalRunningDuration)
+                    }
+                    if session.totalWalkingDuration > 0 {
+                        ActivityBadge(activity: .walking, duration: session.totalWalkingDuration)
+                    }
+                    Spacer()
                 }
             }
 
-            HStack {
+            // Row 3: Compact metrics
+            HStack(spacing: 12) {
                 if let calories = session.caloriesBurned {
                     Label("\(Int(calories)) cal", systemImage: "flame.fill")
-                        .font(.caption)
-                        .foregroundColor(.orange)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.calories)
                 }
 
                 if let heartRate = session.averageHeartRate {
                     Label("\(Int(heartRate)) bpm", systemImage: "heart.fill")
-                        .font(.caption)
-                        .foregroundColor(.red)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.heartRate)
                 }
 
                 if let steps = session.totalSteps {
                     Label("\(steps)", systemImage: "shoeprints.fill")
-                        .font(.caption)
-                        .foregroundColor(.blue)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.steps)
                 }
             }
         }
-        .padding(.vertical, 4)
+        .padding(16)
+        .glassBackground(cornerRadius: 16)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(sessionAccessibilityLabel)
     }
@@ -119,4 +118,5 @@ struct SessionRowView: View {
             ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-600), endDate: Date())
         ]
     ))
+    .padding()
 }

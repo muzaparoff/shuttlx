@@ -171,21 +171,15 @@ struct TrainingHistoryView: View {
     // MARK: - Session List
 
     private var sessionList: some View {
-        LazyVStack(spacing: 0) {
+        LazyVStack(spacing: 12) {
             ForEach(filteredSessions) { session in
                 NavigationLink(destination: SessionDetailView(session: session)) {
                     SessionRowView(session: session)
-                        .padding(.horizontal)
-                        .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
-
-                if session.id != filteredSessions.last?.id {
-                    Divider()
-                        .padding(.leading)
-                }
             }
         }
+        .padding(.horizontal)
     }
 
     // MARK: - Empty State

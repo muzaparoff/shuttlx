@@ -3,7 +3,16 @@ import SwiftUI
 struct DashboardView: View {
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var planManager: PlanManager
+    @EnvironmentObject var authManager: AuthenticationManager
     @ObservedObject var sharedData = SharedDataManager.shared
+
+    private var greetingTitle: String {
+        if authManager.isSignedIn, let name = authManager.userName {
+            let firstName = name.components(separatedBy: " ").first ?? name
+            return "Hi, \(firstName)"
+        }
+        return "Training"
+    }
 
     private var lastSession: TrainingSession? {
         dataManager.sessions.sorted(by: { $0.startDate > $1.startDate }).first
@@ -92,7 +101,16 @@ struct DashboardView: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
             }
-            .navigationTitle("Training")
+            .navigationTitle(greetingTitle)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    NavigationLink(destination: SettingsView()) {
+                        Image(systemName: authManager.isSignedIn ? "person.crop.circle.fill" : "person.crop.circle")
+                            .foregroundStyle(authManager.isSignedIn ? ShuttlXColor.ctaPrimary : .secondary)
+                    }
+                    .accessibilityLabel(authManager.isSignedIn ? "Settings, signed in" : "Settings, not signed in")
+                }
+            }
             .animation(.spring(response: 0.4, dampingFraction: 0.8), value: sharedData.isWorkoutActiveOnWatch)
         }
     }
@@ -102,4 +120,5 @@ struct DashboardView: View {
     DashboardView()
         .environmentObject(DataManager())
         .environmentObject(PlanManager())
+        .environmentObject(AuthenticationManager.shared)
 }

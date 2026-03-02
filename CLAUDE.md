@@ -474,3 +474,50 @@ AGENT-5 (Submission)
 | 18 | LOW | Hardcoded colors (dark mode) | Various views | AGENT-4 |
 | 19 | LOW | Package.swift broken/unused | Package.swift | AGENT-1 |
 | 20 | LOW | Missing ITSAppUsesNonExemptEncryption | Both Info.plist | AGENT-1/5 |
+
+---
+
+## Design System Rules
+
+All new UI code must follow these conventions. Existing code should be migrated when touched.
+
+### Cards & Containers
+- Use `.glassBackground(cornerRadius: 16)` for all card containers (uses `glassEffect` on iOS 26+, `.regularMaterial` fallback)
+- Never use `Divider()` between list items — use vertical spacing (`LazyVStack(spacing: 12)`)
+- Standard card padding: `.padding(16)`
+
+### Colors
+- Always use `ShuttlXColor.*` constants — never hardcoded `Color.green`, `Color.red`, etc.
+- Activity colors: `.running`, `.walking`, `.heartRate`, `.steps`, `.calories`, `.stationary`
+- Sport colors: `.cycling`, `.swimming`, `.hiking`, `.elliptical`, `.crossTraining`
+- CTA colors: `.ctaPrimary`, `.ctaDestructive`, `.ctaWarning`
+
+### Typography
+- Always use `ShuttlXFont.*` constants — never raw `.font(.system(size:))`
+- Key fonts: `.metricLarge`, `.metricMedium`, `.metricSmall`, `.timerDisplay`, `.sectionHeader`, `.cardTitle`, `.cardSubtitle`, `.cardCaption`
+
+### Numerics
+- All numeric displays must use `.monospacedDigit()` for stable layout
+
+### Accessibility
+- Every interactive element needs `.accessibilityLabel()`
+- Use `.accessibilityElement(children: .combine)` for composite rows
+- Add `.accessibilityHint()` for non-obvious actions
+
+### Reusable Components
+- `MetricCard` — standard metric display (icon, value, label, color, compact flag)
+- `ActivityBadge` — activity type pill (activity, duration)
+- `StreakBadge` — streak display
+- `ElevationProfileView` — elevation chart from route data
+
+### Layout Patterns
+- Standard scrollable screen: `NavigationStack { ScrollView { VStack(spacing: 16) { ... }.padding(.horizontal).padding(.top, 8) } .navigationTitle(...) }`
+- Metric grid: `LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10)`
+
+### Development Rules
+- Build both platforms after every change: `bash tests/build_and_test_both_platforms.sh --clean --build`
+- Zero external dependencies — Apple frameworks only
+- Discuss features before implementing — never start without explicit approval
+- Apple Fitness-style UI: big bold numbers, minimal icons, clean design
+- Timer screen: 52pt monospaced timer, 28pt bold metrics, no emoji/icons
+- Watch controls: circular buttons (green=pause, red=stop)

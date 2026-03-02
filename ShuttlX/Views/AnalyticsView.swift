@@ -10,6 +10,8 @@ struct AnalyticsView: View {
     private var recovery: RecoveryStatus { AnalyticsEngine.recoveryStatus(sessions: sessions) }
     private var vo2max: Double? { AnalyticsEngine.estimatedVO2Max(sessions: sessions) }
     private var paceZones: [PaceZoneDistribution] { AnalyticsEngine.paceZones(sessions: sessions) }
+    private var elevationSummary: AnalyticsEngine.ElevationSummary? { AnalyticsEngine.elevationSummary(sessions: sessions) }
+    private var latestElevationRoute: [RoutePoint]? { AnalyticsEngine.latestElevationRoute(sessions: sessions) }
     private var fitnessScore: Double { AnalyticsEngine.fitnessScore(sessions: sessions) }
     private var fatigueScore: Double { AnalyticsEngine.fatigue(sessions: sessions) }
     private var formScore: Double { AnalyticsEngine.form(sessions: sessions) }
@@ -28,6 +30,7 @@ struct AnalyticsView: View {
                         vo2maxCard
                         personalRecordsSection
                         paceZoneChart
+                        elevationSection
                     }
                 }
                 .padding(.horizontal)
@@ -415,6 +418,60 @@ struct AnalyticsView: View {
             .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Pace zone distribution: \(paceZones.map { "\($0.zone) \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", "))")
+        }
+    }
+
+    // MARK: - Elevation Section
+
+    @ViewBuilder
+    private var elevationSection: some View {
+        if let summary = elevationSummary {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Elevation")
+                    .font(ShuttlXFont.sectionHeader)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                    MetricCard(
+                        icon: "arrow.up.right",
+                        value: "\(Int(summary.totalAscent)) m",
+                        label: "Total Ascent",
+                        color: ShuttlXColor.running,
+                        compact: true
+                    )
+
+                    MetricCard(
+                        icon: "arrow.down.right",
+                        value: "\(Int(summary.totalDescent)) m",
+                        label: "Total Descent",
+                        color: .orange,
+                        compact: true
+                    )
+
+                    MetricCard(
+                        icon: "mountain.2.fill",
+                        value: "\(Int(summary.highestPoint)) m",
+                        label: "Highest Point",
+                        color: .blue,
+                        compact: true
+                    )
+
+                    MetricCard(
+                        icon: "chart.line.uptrend.xyaxis",
+                        value: "\(Int(summary.averageAscent)) m",
+                        label: "Avg Ascent",
+                        color: .purple,
+                        compact: true
+                    )
+                }
+
+                if let route = latestElevationRoute {
+                    ElevationProfileView(route: route)
+                }
+            }
+            .padding(16)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .accessibilityElement(children: .contain)
         }
     }
 
