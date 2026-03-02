@@ -39,7 +39,7 @@ struct TrainingView: View {
                 let summary = WorkoutSummary(
                     duration: workoutManager.elapsedTime,
                     distance: workoutManager.totalDistance,
-                    avgHeartRate: workoutManager.heartRate,
+                    avgHeartRate: workoutManager.averageHeartRate,
                     calories: workoutManager.calories,
                     steps: workoutManager.totalSteps,
                     avgPace: workoutManager.currentPace,

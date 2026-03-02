@@ -33,6 +33,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
 
+    /// True average heart rate across all collected samples (excludes paused periods)
+    var averageHeartRate: Int {
+        guard !heartRateSamples.isEmpty else { return 0 }
+        return Int((heartRateSamples.reduce(0, +) / Double(heartRateSamples.count)).rounded())
+    }
+
     // MARK: - Interval Mode
     enum WorkoutMode { case freeRun, interval }
     @Published var workoutMode: WorkoutMode = .freeRun
@@ -645,9 +651,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
-            self.heartRateSamples.append(contentsOf: bpmValues)
+            // Only include samples taken while workout is not paused
+            if !self.isPaused {
+                self.heartRateSamples.append(contentsOf: bpmValues)
+            }
             if let latestBPM = bpmValues.last {
-                self.heartRate = Int(latestBPM)
+                self.heartRate = Int(latestBPM.rounded())
             }
             if let maxBPM = bpmValues.max(), maxBPM > self.maxHeartRateValue {
                 self.maxHeartRateValue = maxBPM
