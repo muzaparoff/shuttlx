@@ -13,7 +13,7 @@ struct RouteMapView: View {
 
             Map {
                 // Color-coded polylines per segment
-                ForEach(coloredPolylines, id: \.activityType) { polyline in
+                ForEach(coloredPolylines) { polyline in
                     MapPolyline(coordinates: polyline.coordinates)
                         .stroke(polyline.color, lineWidth: 4)
                 }
@@ -120,7 +120,8 @@ struct RouteMapView: View {
 
     // MARK: - Color-coded polylines
 
-    private struct ColoredPolyline {
+    private struct ColoredPolyline: Identifiable {
+        let id = UUID()
         let activityType: DetectedActivity
         let coordinates: [CLLocationCoordinate2D]
         let color: Color
