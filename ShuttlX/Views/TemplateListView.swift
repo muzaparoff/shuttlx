@@ -2,18 +2,20 @@ import SwiftUI
 
 struct TemplateListView: View {
     @EnvironmentObject var templateManager: TemplateManager
+    @EnvironmentObject var dataManager: DataManager
     @State private var showingEditor = false
     @State private var editingTemplate: WorkoutTemplate?
 
+    /// Most recent session with no templateID (i.e. a free run)
+    private var lastFreeRunSession: TrainingSession? {
+        dataManager.sessions
+            .filter { $0.templateID == nil }
+            .max(by: { $0.startDate < $1.startDate })
+    }
+
     var body: some View {
         NavigationStack {
-            Group {
-                if templateManager.templates.isEmpty {
-                    emptyState
-                } else {
-                    templateList
-                }
-            }
+            templateList
             .navigationTitle("Programs")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -36,19 +38,72 @@ struct TemplateListView: View {
         }
     }
 
+    // MARK: - Free Run Card
+
+    private var freeRunCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "figure.run")
+                    .foregroundStyle(ShuttlXColor.running)
+                    .frame(width: 20)
+                Text("Free Run")
+                    .font(.headline)
+            }
+
+            HStack(spacing: 12) {
+                Text("Auto-detects run & walk")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let last = lastFreeRunSession {
+                let minutes = Int(last.duration / 60)
+                Text("Last: \(minutes)m · \(relativeDate(last.startDate))")
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Free Run, auto-detects run and walk")
+    }
+
     // MARK: - Template List
 
     private var templateList: some View {
         List {
-            ForEach(templateManager.templates) { template in
-                templateRow(template)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        editingTemplate = template
+            // Section 1: Free Run (non-deletable)
+            Section {
+                if let session = lastFreeRunSession {
+                    NavigationLink(destination: SessionDetailView(session: session)) {
+                        freeRunCard
                     }
+                } else {
+                    freeRunCard
+                }
             }
-            .onDelete { offsets in
-                templateManager.deleteAt(offsets: offsets)
+
+            // Section 2: User-created interval templates (deletable)
+            Section {
+                ForEach(templateManager.templates) { template in
+                    templateRow(template)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            editingTemplate = template
+                        }
+                }
+                .onDelete { offsets in
+                    templateManager.deleteAt(offsets: offsets)
+                }
+            } header: {
+                if !templateManager.templates.isEmpty {
+                    Text("Interval Workouts")
+                }
+            } footer: {
+                if templateManager.templates.isEmpty {
+                    Text("Tap + to create an interval workout")
+                }
             }
         }
     }
@@ -114,36 +169,16 @@ struct TemplateListView: View {
             .foregroundStyle(ShuttlXColor.forStepType(step.type))
     }
 
-    // MARK: - Empty State
-
-    private var emptyState: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "timer")
-                .font(ShuttlXFont.heroIcon)
-                .foregroundStyle(.secondary)
-
-            Text("No Programs Yet")
-                .font(.title3.weight(.semibold))
-
-            Text("Create interval workouts to run on your Apple Watch")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-
-            Button(action: { showingEditor = true }) {
-                Label("Create Program", systemImage: "plus")
-                    .font(.headline)
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(ShuttlXColor.ctaPrimary, in: Capsule())
-            }
-            .padding(.top, 8)
-        }
-    }
-
     // MARK: - Helpers
+
+    private func relativeDate(_ date: Date) -> String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEE"
+        return formatter.string(from: date)
+    }
 
     private func formatStepDuration(_ duration: TimeInterval) -> String {
         let seconds = Int(duration)
@@ -162,4 +197,5 @@ struct TemplateListView: View {
 #Preview {
     TemplateListView()
         .environmentObject(TemplateManager())
+        .environmentObject(DataManager())
 }
