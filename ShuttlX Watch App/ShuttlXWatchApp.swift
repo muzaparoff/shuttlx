@@ -36,6 +36,7 @@ struct ShuttlXWatchApp: App {
         logger.info("🏗️ Building WindowGroup scene...")
         return WindowGroup {
             ContentView()
+                .environment(ThemeManager.shared)
                 .environmentObject(sharedDataManager)
                 .environmentObject(workoutManager)
                 .onOpenURL { url in

@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct ShuttlXApp: App {
     @Environment(\.scenePhase) private var scenePhase
+    @State private var themeManager = ThemeManager.shared
     @StateObject private var dataManager = DataManager()
     @StateObject private var sharedDataManager = SharedDataManager.shared
     @StateObject private var templateManager = TemplateManager()
@@ -20,6 +21,7 @@ struct ShuttlXApp: App {
                     ContentView()
                 }
             }
+            .environment(themeManager)
             .environmentObject(dataManager)
             .environmentObject(sharedDataManager)
             .environmentObject(templateManager)

@@ -3,6 +3,7 @@ import HealthKit
 import WatchConnectivity
 
 struct SettingsView: View {
+    @Environment(ThemeManager.self) var themeManager
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var sharedDataManager: SharedDataManager
     @EnvironmentObject var authManager: AuthenticationManager
@@ -160,6 +161,62 @@ struct SettingsView: View {
                 .accessibilityHint("Shows information about how health data is used")
             }
 
+            // Appearance Section
+            Section("Appearance") {
+                @Bindable var tm = themeManager
+                ForEach(AppTheme.all) { theme in
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            tm.selectedThemeID = theme.id
+                        }
+                        sharedDataManager.sendThemeToWatch(theme.id)
+                    } label: {
+                        HStack(spacing: 12) {
+                            Image(systemName: theme.icon)
+                                .font(.body.weight(.semibold))
+                                .foregroundStyle(theme.colors.ctaPrimary)
+                                .frame(width: 28)
+                                .accessibilityHidden(true)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(theme.displayName)
+                                    .font(.body)
+                                    .foregroundStyle(Color(.label))
+                                Text(themeSubtitle(for: theme.id))
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer()
+                            if themeManager.selectedThemeID == theme.id {
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(ShuttlXColor.ctaPrimary)
+                            }
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(theme.displayName) theme")
+                    .accessibilityValue(themeManager.selectedThemeID == theme.id ? "Selected" : "")
+                    .accessibilityHint("Switches to \(theme.displayName) theme")
+                }
+
+                // Preview swatch
+                HStack(spacing: 6) {
+                    let preview = themeManager.current.colors
+                    Circle().fill(preview.running).frame(width: 16, height: 16)
+                    Circle().fill(preview.heartRate).frame(width: 16, height: 16)
+                    Circle().fill(preview.steps).frame(width: 16, height: 16)
+                    Circle().fill(preview.ctaPrimary).frame(width: 16, height: 16)
+                    Circle().fill(preview.pace).frame(width: 16, height: 16)
+                    Spacer()
+                    Text("Preview")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Theme color preview")
+            }
+
             // Data Management Section
             Section("Data Management") {
                 Button("Clear All Training Sessions", role: .destructive) {
@@ -240,6 +297,16 @@ struct SettingsView: View {
         guard WCSession.isSupported() else { return "Not Supported" }
         return WCSession.default.isPaired ? "Paired" : "Not Paired"
     }
+
+    private func themeSubtitle(for id: String) -> String {
+        switch id {
+        case "clean": return "Modern & minimal"
+        case "synthwave": return "Neon nights"
+        case "casio": return "Digital retro"
+        case "arcade": return "8-bit energy"
+        default: return ""
+        }
+    }
 }
 
 // Toast message view
@@ -316,7 +383,9 @@ struct HealthPermissionsInfoView: View {
 #Preview {
     NavigationStack {
         SettingsView()
+            .environment(ThemeManager.shared)
             .environmentObject(DataManager())
             .environmentObject(SharedDataManager.shared)
+            .environmentObject(AuthenticationManager.shared)
     }
 }

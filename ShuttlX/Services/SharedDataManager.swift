@@ -421,6 +421,22 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    // MARK: - Theme Sync
+
+    func sendThemeToWatch(_ themeID: String) {
+        guard WCSession.isSupported(), session.isPaired else { return }
+        let payload: [String: Any] = [
+            "action": "syncTheme",
+            "themeID": themeID
+        ]
+        do {
+            try session.updateApplicationContext(payload)
+            log("Theme sent to Watch: \(themeID)")
+        } catch {
+            log("Failed to send theme: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Helpers
 
     private func log(_ message: String) {

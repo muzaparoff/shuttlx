@@ -422,21 +422,33 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Template Sync
 
     private func handleIncomingPayload(_ payload: [String: Any]) {
-        guard let action = payload["action"] as? String, action == "syncTemplates" else { return }
-        guard let base64 = payload["templatesData"] as? String,
-              let data = Data(base64Encoded: base64) else {
-            logger.error("Failed to decode templates payload")
-            return
-        }
+        guard let action = payload["action"] as? String else { return }
 
-        do {
-            let templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
-            workoutTemplates = templates
-            saveTemplatesToDisk(templates)
-            logger.info("Received \(templates.count) template(s) from iPhone")
-            updateSyncStatus("Synced \(templates.count) program(s)")
-        } catch {
-            logger.error("Failed to decode templates: \(error.localizedDescription)")
+        switch action {
+        case "syncTemplates":
+            guard let base64 = payload["templatesData"] as? String,
+                  let data = Data(base64Encoded: base64) else {
+                logger.error("Failed to decode templates payload")
+                return
+            }
+            do {
+                let templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+                workoutTemplates = templates
+                saveTemplatesToDisk(templates)
+                logger.info("Received \(templates.count) template(s) from iPhone")
+                updateSyncStatus("Synced \(templates.count) program(s)")
+            } catch {
+                logger.error("Failed to decode templates: \(error.localizedDescription)")
+            }
+
+        case "syncTheme":
+            if let themeID = payload["themeID"] as? String {
+                ThemeManager.shared.selectedThemeID = themeID
+                logger.info("Theme synced from iPhone: \(themeID)")
+            }
+
+        default:
+            break
         }
     }
 

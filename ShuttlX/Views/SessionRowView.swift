@@ -58,7 +58,7 @@ struct SessionRowView: View {
             }
         }
         .padding(16)
-        .glassBackground(cornerRadius: 16)
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(sessionAccessibilityLabel)
     }

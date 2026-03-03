@@ -6,15 +6,15 @@ Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI. Ze
 - **Team**: `83HPSY452Y`
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
-- **Codebase**: ~12,300 LOC across 91 Swift files
+- **Codebase**: ~12,800 LOC across 111 Swift files
 - **CI**: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 47 | SharedDataManager (605), AnalyticsView (514), SettingsView (322) |
-| watchOS | `ShuttlX Watch App` | 24 | WatchWorkoutManager (944), TrainingView (357), SharedDataManager (525) |
+| iOS | `ShuttlX` | 57 | SharedDataManager (605), AnalyticsView (514), ThemeManager + 10 theme files |
+| watchOS | `ShuttlX Watch App` | 34 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 10 theme files |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
 | Widgets | `ShuttlXWidgets` | 3 | SmallWidget, MediumWidget |
 
@@ -47,11 +47,26 @@ Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
   → On complete: saveWorkoutData() → TrainingSession sent via WCSession
 
 iPhone receives session → SharedDataManager → DataManager → UI updates
+
+Theme sync:
+  iPhone: Settings → ThemeManager.selectedThemeID → UserDefaults (App Group)
+    → SharedDataManager.sendThemeToWatch() via applicationContext
+  Watch: receives → ThemeManager.shared.selectedThemeID → UI updates
 ```
+
+## Theme System
+
+- `ThemeManager` (`@Observable` singleton) manages active theme, persists to App Group UserDefaults
+- `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
+- Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
+- 4 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Casio LCD (amber/green, monospaced), Arcade (heavy weights, pixel borders)
+- View modifiers: `.themedCard()`, `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
+- Files: 10 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Casio, Themes/Arcade)
 
 ## Data Storage
 
 - JSON files in App Group container: `sessions.json`, `workout_templates.json`
+- Theme selection: App Group UserDefaults key `selectedThemeID`
 - Sync: WatchConnectivity (`sendMessage` + `transferUserInfo` + `applicationContext`)
 - HealthKit: workout sessions, heart rate, distance, calories
 
@@ -60,8 +75,9 @@ iPhone receives session → SharedDataManager → DataManager → UI updates
 - **Build both platforms after every change**: `bash tests/build_and_test_both_platforms.sh --clean --build`
 - **Zero external dependencies** — Apple frameworks only
 - **Discuss features before implementing** — never start without explicit approval
-- **Apple Fitness-style UI**: big bold numbers, minimal icons, clean design
+- **Dynamic multi-theme UI**: 4 themes (Clean, Synthwave, Casio LCD, Arcade) — selectable in Settings
 - **Models are duplicated** between iOS and watchOS — update BOTH copies when changing
+- **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 
 ## Path-Scoped Rules
 

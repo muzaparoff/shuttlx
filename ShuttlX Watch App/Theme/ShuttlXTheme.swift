@@ -1,99 +1,119 @@
 import SwiftUI
 
-// MARK: - Color Theme
+// MARK: - Color Theme (bridges to ThemeManager)
 
 enum ShuttlXColor {
+    private static var colors: ThemeColors { ThemeManager.shared.colors }
+
     // Activity colors
-    static let running = Color.green
-    static let walking = Color.orange
-    static let heartRate = Color.red
-    static let steps = Color.blue
-    static let calories = Color.orange
-    static let stationary = Color.secondary
+    static var running: Color { colors.running }
+    static var walking: Color { colors.walking }
+    static var heartRate: Color { colors.heartRate }
+    static var steps: Color { colors.steps }
+    static var calories: Color { colors.calories }
+    static var stationary: Color { colors.stationary }
 
     // Sport colors
-    static let cycling = Color.blue
-    static let swimming = Color.cyan
-    static let hiking = Color.brown
-    static let elliptical = Color.purple
-    static let crossTraining = Color.indigo
+    static var cycling: Color { colors.cycling }
+    static var swimming: Color { colors.swimming }
+    static var hiking: Color { colors.hiking }
+    static var elliptical: Color { colors.elliptical }
+    static var crossTraining: Color { colors.crossTraining }
 
     // UI element colors
-    static let ctaPrimary = Color.green
-    static let ctaDestructive = Color.red
-    static let ctaWarning = Color.orange
+    static var ctaPrimary: Color { colors.ctaPrimary }
+    static var ctaDestructive: Color { colors.ctaDestructive }
+    static var ctaWarning: Color { colors.ctaWarning }
 
     // HR Zone colors
-    static let hrZone1 = Color.blue
-    static let hrZone2 = Color.green
-    static let hrZone3 = Color.yellow
-    static let hrZone4 = Color.orange
-    static let hrZone5 = Color.red
+    static var hrZone1: Color { colors.hrZone1 }
+    static var hrZone2: Color { colors.hrZone2 }
+    static var hrZone3: Color { colors.hrZone3 }
+    static var hrZone4: Color { colors.hrZone4 }
+    static var hrZone5: Color { colors.hrZone5 }
 
     // Interval step type colors
-    static let stepWork = Color.green
-    static let stepRest = Color.orange
-    static let stepWarmup = Color.blue
-    static let stepCooldown = Color.blue
+    static var stepWork: Color { colors.stepWork }
+    static var stepRest: Color { colors.stepRest }
+    static var stepWarmup: Color { colors.stepWarmup }
+    static var stepCooldown: Color { colors.stepCooldown }
 
     // watchOS surfaces
-    static let watchCardBackground = Color.white.opacity(0.12)
-    static let watchButtonBackground = Color.white.opacity(0.15)
+    static var watchCardBackground: Color { colors.watchCardBackground }
+    static var watchButtonBackground: Color { colors.watchButtonBackground }
+
+    // Card backgrounds
+    static var cardBackground: Color { colors.cardBackground }
 
     // Semantic
-    static let ctaPause = Color.yellow
-    static let iconOnCTA = Color.black
-    static let pace = Color.purple
+    static var ctaPause: Color { colors.ctaPause }
+    static var iconOnCTA: Color { colors.iconOnCTA }
+    static var pace: Color { colors.pace }
+    static var positive: Color { colors.positive }
+    static var negative: Color { colors.negative }
+
+    // Text
+    static var textPrimary: Color { colors.textPrimary }
+    static var textSecondary: Color { colors.textSecondary }
+
+    // Recovery status
+    static var recoveryFresh: Color { colors.recoveryFresh }
+    static var recoveryNormal: Color { colors.recoveryNormal }
+    static var recoveryFatigued: Color { colors.recoveryFatigued }
+    static var recoveryOverreaching: Color { colors.recoveryOverreaching }
+
+    // Pace zones
+    static var paceInterval: Color { colors.paceInterval }
+    static var paceThreshold: Color { colors.paceThreshold }
+    static var paceTempo: Color { colors.paceTempo }
+    static var paceModerate: Color { colors.paceModerate }
+    static var paceEasy: Color { colors.paceEasy }
 
     // MARK: - Helpers
 
     static func forStepType(_ type: IntervalType) -> Color {
-        switch type {
-        case .work: return stepWork
-        case .rest: return stepRest
-        case .warmup: return stepWarmup
-        case .cooldown: return stepCooldown
-        }
+        colors.forStepType(type)
     }
 
     static func forHRZone(_ heartRate: Int) -> Color {
-        if heartRate <= 0 { return ShuttlXColor.heartRate }
-        if heartRate < 104 { return hrZone1 }
-        if heartRate < 125 { return hrZone2 }
-        if heartRate < 146 { return hrZone3 }
-        if heartRate < 167 { return hrZone4 }
-        return hrZone5
+        colors.forHRZone(heartRate)
+    }
+
+    static func forPaceZone(_ zone: String) -> Color {
+        colors.forPaceZone(zone)
     }
 }
 
-// MARK: - Typography (Dynamic Type safe, watchOS-optimized)
+// MARK: - Typography (bridges to ThemeManager)
 
 enum ShuttlXFont {
-    static let metricLarge = Font.system(.title2, design: .rounded).weight(.bold)
-    static let metricMedium = Font.system(.body, design: .rounded).weight(.semibold)
-    static let metricSmall = Font.system(.callout, design: .rounded).weight(.medium)
-    static let timerDisplay = Font.system(.largeTitle, design: .monospaced).weight(.semibold)
-    static let cardTitle = Font.headline
-    static let cardCaption = Font.caption
+    private static var fonts: ThemeFonts { ThemeManager.shared.fonts }
 
-    // Timer screen — all 4 values same 40pt
-    static let watchMetricDisplay = Font.system(size: 40, weight: .bold, design: .rounded)
-    static let watchTimerDisplay = Font.system(size: 40, weight: .bold, design: .monospaced)
+    static var metricLarge: Font { fonts.metricLarge }
+    static var metricMedium: Font { fonts.metricMedium }
+    static var metricSmall: Font { fonts.metricSmall }
+    static var timerDisplay: Font { fonts.timerDisplay }
+    static var cardTitle: Font { fonts.cardTitle }
+    static var cardCaption: Font { fonts.cardCaption }
+
+    // Timer screen
+    static var watchMetricDisplay: Font { fonts.watchMetricDisplay }
+    static var watchTimerDisplay: Font { fonts.watchTimerDisplay }
 
     // Supporting labels
-    static let watchStepLabel = Font.system(size: 13, weight: .bold)
-    static let watchControlIcon = Font.system(size: 26, weight: .semibold)
-    static let watchControlLabel = Font.system(size: 11)
-    static let watchStatusBadge = Font.system(size: 13, weight: .bold)
+    static var watchStepLabel: Font { fonts.watchStepLabel }
+    static var watchControlIcon: Font { fonts.watchControlIcon }
+    static var watchControlLabel: Font { fonts.watchControlLabel }
+    static var watchStatusBadge: Font { fonts.watchStatusBadge }
 
     // Summary screen
-    static let watchSummaryTimer = Font.system(.title, design: .monospaced).weight(.bold)
-    static let watchSummaryMetric = Font.system(.body, design: .rounded).weight(.semibold)
+    static var watchSummaryTimer: Font { fonts.watchSummaryTimer }
+    static var watchSummaryMetric: Font { fonts.watchSummaryMetric }
 
     // Program selection
-    static let watchHeroIcon = Font.system(size: 32, weight: .medium)
-    static let watchHeroTitle = Font.system(.title3, design: .rounded).weight(.semibold)
-    static let watchTemplateTitle = Font.system(.body, design: .rounded).weight(.semibold)
+    static var watchHeroIcon: Font { fonts.watchHeroIcon }
+    static var watchHeroTitle: Font { fonts.watchHeroTitle }
+    static var watchTemplateTitle: Font { fonts.watchTemplateTitle }
 }
 
 // MARK: - Spacing
@@ -152,5 +172,22 @@ struct ShuttlXCardButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .opacity(configuration.isPressed ? 0.8 : 1.0)
             .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+// MARK: - Glass Background (watchOS 26 Liquid Glass with fallback)
+
+extension View {
+    @ViewBuilder
+    func glassBackground(cornerRadius: CGFloat = 16) -> some View {
+        #if compiler(>=6.2)
+        if #available(iOS 26, watchOS 26, *) {
+            self.glassEffect(in: .rect(cornerRadius: cornerRadius))
+        } else {
+            self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        }
+        #else
+        self.background(.regularMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        #endif
     }
 }

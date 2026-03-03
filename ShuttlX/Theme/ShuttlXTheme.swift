@@ -1,125 +1,113 @@
 import SwiftUI
 
-// MARK: - Color Theme
+// MARK: - Color Theme (bridges to ThemeManager)
 
 enum ShuttlXColor {
-    // Activity colors (use system adaptive colors that work in light + dark)
-    static let running = Color.green
-    static let walking = Color.orange
-    static let heartRate = Color.red
-    static let steps = Color.blue
-    static let calories = Color.orange
-    static let stationary = Color.secondary
+    private static var colors: ThemeColors { ThemeManager.shared.colors }
+
+    // Activity colors
+    static var running: Color { colors.running }
+    static var walking: Color { colors.walking }
+    static var heartRate: Color { colors.heartRate }
+    static var steps: Color { colors.steps }
+    static var calories: Color { colors.calories }
+    static var stationary: Color { colors.stationary }
 
     // Sport colors
-    static let cycling = Color.blue
-    static let swimming = Color.cyan
-    static let hiking = Color.brown
-    static let elliptical = Color.purple
-    static let crossTraining = Color.indigo
+    static var cycling: Color { colors.cycling }
+    static var swimming: Color { colors.swimming }
+    static var hiking: Color { colors.hiking }
+    static var elliptical: Color { colors.elliptical }
+    static var crossTraining: Color { colors.crossTraining }
 
     // UI element colors
-    static let ctaPrimary = Color.green
-    static let ctaDestructive = Color.red
-    static let ctaWarning = Color.orange
+    static var ctaPrimary: Color { colors.ctaPrimary }
+    static var ctaDestructive: Color { colors.ctaDestructive }
+    static var ctaWarning: Color { colors.ctaWarning }
 
     // Card backgrounds
-    static let cardBackground = Color(.secondarySystemBackground)
+    static var cardBackground: Color { colors.cardBackground }
 
     // HR Zone colors
-    static let hrZone1 = Color.blue       // Easy
-    static let hrZone2 = Color.green      // Fat Burn
-    static let hrZone3 = Color.yellow     // Cardio
-    static let hrZone4 = Color.orange     // Hard
-    static let hrZone5 = Color.red        // Peak
+    static var hrZone1: Color { colors.hrZone1 }
+    static var hrZone2: Color { colors.hrZone2 }
+    static var hrZone3: Color { colors.hrZone3 }
+    static var hrZone4: Color { colors.hrZone4 }
+    static var hrZone5: Color { colors.hrZone5 }
 
     // Interval step type colors
-    static let stepWork = Color.green
-    static let stepRest = Color.orange
-    static let stepWarmup = Color.blue
-    static let stepCooldown = Color.blue
+    static var stepWork: Color { colors.stepWork }
+    static var stepRest: Color { colors.stepRest }
+    static var stepWarmup: Color { colors.stepWarmup }
+    static var stepCooldown: Color { colors.stepCooldown }
 
     // Semantic
-    static let pace = Color.purple
-    static let positive = Color.green       // good status, upward trends
-    static let negative = Color.orange      // warning status, downward trends
-    static let iconOnCTA = Color.black
+    static var pace: Color { colors.pace }
+    static var positive: Color { colors.positive }
+    static var negative: Color { colors.negative }
+    static var iconOnCTA: Color { colors.iconOnCTA }
 
     // Recovery status
-    static let recoveryFresh = Color.green
-    static let recoveryNormal = Color.blue
-    static let recoveryFatigued = Color.orange
-    static let recoveryOverreaching = Color.red
+    static var recoveryFresh: Color { colors.recoveryFresh }
+    static var recoveryNormal: Color { colors.recoveryNormal }
+    static var recoveryFatigued: Color { colors.recoveryFatigued }
+    static var recoveryOverreaching: Color { colors.recoveryOverreaching }
 
     // Pace zones
-    static let paceInterval = Color.red
-    static let paceThreshold = Color.orange
-    static let paceTempo = Color.yellow
-    static let paceModerate = Color.green
-    static let paceEasy = Color.blue
+    static var paceInterval: Color { colors.paceInterval }
+    static var paceThreshold: Color { colors.paceThreshold }
+    static var paceTempo: Color { colors.paceTempo }
+    static var paceModerate: Color { colors.paceModerate }
+    static var paceEasy: Color { colors.paceEasy }
 
     // Gradients
-    static let workoutGradient = LinearGradient(
-        colors: [.green.opacity(0.7), .green.opacity(0.3)],
-        startPoint: .topLeading,
-        endPoint: .bottomTrailing
-    )
+    static var workoutGradient: LinearGradient {
+        LinearGradient(
+            colors: [colors.running.opacity(0.7), colors.running.opacity(0.3)],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
 
     // MARK: - Helper Functions
 
     static func forStepType(_ type: IntervalType) -> Color {
-        switch type {
-        case .work: return stepWork
-        case .rest: return stepRest
-        case .warmup: return stepWarmup
-        case .cooldown: return stepCooldown
-        }
+        colors.forStepType(type)
     }
 
     static func forHRZone(_ heartRate: Int) -> Color {
-        switch heartRate {
-        case ..<100: return hrZone1
-        case 100..<130: return hrZone2
-        case 130..<155: return hrZone3
-        case 155..<175: return hrZone4
-        default: return hrZone5
-        }
+        colors.forHRZone(heartRate)
     }
 
     static func forPaceZone(_ zone: String) -> Color {
-        switch zone {
-        case "Interval": return paceInterval
-        case "Threshold": return paceThreshold
-        case "Tempo": return paceTempo
-        case "Moderate": return paceModerate
-        case "Easy": return paceEasy
-        default: return Color.gray
-        }
+        colors.forPaceZone(zone)
     }
 }
 
-// MARK: - Typography (Dynamic Type safe)
+// MARK: - Typography (bridges to ThemeManager)
 
 enum ShuttlXFont {
-    static let metricLarge = Font.system(.largeTitle, design: .rounded).weight(.bold)
-    static let metricMedium = Font.system(.title2, design: .rounded).weight(.semibold)
-    static let metricSmall = Font.system(.body, design: .rounded).weight(.medium)
-    static let timerDisplay = Font.system(.largeTitle, design: .monospaced).weight(.semibold)
-    static let sectionHeader = Font.headline
-    static let cardTitle = Font.headline
-    static let cardSubtitle = Font.subheadline
-    static let cardCaption = Font.caption
+    private static var fonts: ThemeFonts { ThemeManager.shared.fonts }
+
+    static var metricLarge: Font { fonts.metricLarge }
+    static var metricMedium: Font { fonts.metricMedium }
+    static var metricSmall: Font { fonts.metricSmall }
+    static var timerDisplay: Font { fonts.timerDisplay }
+    static var sectionHeader: Font { fonts.sectionHeader }
+    static var cardTitle: Font { fonts.cardTitle }
+    static var cardSubtitle: Font { fonts.cardSubtitle }
+    static var cardCaption: Font { fonts.cardCaption }
 
     // Hero / empty state icons
-    static let heroIcon = Font.system(size: 48)
+    static var heroIcon: Font { fonts.heroIcon }
     // Onboarding page icons
-    static let onboardingIcon = Font.system(size: 72)
+    static var onboardingIcon: Font { fonts.onboardingIcon }
     // PR card values
-    static let prValue = Font.system(.title3, design: .rounded).weight(.bold)
+    static var prValue: Font { fonts.prValue }
     // Map annotations, chart legends
-    static let microLabel = Font.system(size: 9)
+    static var microLabel: Font { fonts.microLabel }
     // Debug views
-    static let debugMono = Font.system(.caption, design: .monospaced)
+    static var debugMono: Font { fonts.debugMono }
 }
 
 // MARK: - Spacing & Size Tokens
