@@ -120,11 +120,13 @@ struct StartTrainingView: View {
     // MARK: - Last Session Subtitle
 
     private func lastSubtitle(_ session: TrainingSession) -> some View {
-        Text("Last: \(FormattingUtils.formatDuration(session.duration)) · \(relativeDate(session.startDate))")
+        let minutes = Int(session.duration / 60)
+        return Text("Last: \(minutes)m · \(relativeDate(session.startDate))")
             .font(.system(.caption2, design: .rounded))
             .monospacedDigit()
             .foregroundStyle(.secondary)
-            .accessibilityLabel("Last workout \(FormattingUtils.formatDuration(session.duration)), \(relativeDate(session.startDate))")
+            .lineLimit(1)
+            .accessibilityLabel("Last workout \(minutes) minutes, \(relativeDate(session.startDate))")
     }
 
     private func relativeDate(_ date: Date) -> String {
