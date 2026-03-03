@@ -37,62 +37,67 @@ struct StartTrainingView: View {
                     .padding(.horizontal, ShuttlXSpacing.md)
                 }
 
-                // Free Run — hero card
+                // Free Run card
                 Button(action: {
                     logger.info("Start Free Run tapped")
                     workoutManager.startWorkout()
                 }) {
-                    VStack(spacing: ShuttlXSpacing.sm) {
+                    HStack(spacing: ShuttlXSpacing.md) {
                         Image(systemName: "figure.run")
-                            .font(ShuttlXFont.watchHeroIcon)
-                        Text("Free Run")
-                            .font(ShuttlXFont.watchHeroTitle)
-                        if lastWasFreeRun, let last = lastSession {
-                            lastSubtitle(last)
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(ShuttlXColor.running)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Free Run")
+                                .font(ShuttlXFont.watchTemplateTitle)
+                                .foregroundStyle(.primary)
+                            if lastWasFreeRun, let last = lastSession {
+                                lastSubtitle(last)
+                            }
                         }
+                        Spacer()
                     }
-                    .foregroundStyle(ShuttlXColor.iconOnCTA)
-                    .padding(.vertical, ShuttlXSpacing.xl)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, ShuttlXSpacing.lg)
+                    .padding(.vertical, 10)
                 }
-                .buttonStyle(ShuttlXPrimaryCTAStyle())
+                .buttonStyle(ShuttlXCardButtonStyle())
                 .padding(.horizontal, ShuttlXSpacing.xl)
                 .accessibilityLabel("Start Free Run")
                 .accessibilityHint("Begins a free-form workout that auto-detects running and walking")
 
-                // Templates list
-                if !sharedDataManager.workoutTemplates.isEmpty {
-                    VStack(alignment: .leading, spacing: ShuttlXSpacing.md) {
-                        Text("Programs")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, ShuttlXSpacing.xl)
-
-                        ForEach(sharedDataManager.workoutTemplates) { template in
-                            Button(action: {
-                                logger.info("Starting interval workout: \(template.name)")
-                                workoutManager.startIntervalWorkout(template: template)
-                            }) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(template.name)
-                                        .font(ShuttlXFont.watchTemplateTitle)
-                                        .foregroundStyle(.primary)
-                                    Text(template.summaryText)
-                                        .font(.caption2)
-                                        .foregroundStyle(.secondary)
-                                    if let last = lastSessionFor(template: template) {
-                                        lastSubtitle(last)
-                                    }
+                // Templates
+                ForEach(sharedDataManager.workoutTemplates) { template in
+                    Button(action: {
+                        logger.info("Starting interval workout: \(template.name)")
+                        workoutManager.startIntervalWorkout(template: template)
+                    }) {
+                        HStack(spacing: ShuttlXSpacing.md) {
+                            Image(systemName: "flame.fill")
+                                .font(.title3.weight(.semibold))
+                                .foregroundStyle(ShuttlXColor.calories)
+                                .frame(width: 28)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(template.name)
+                                    .font(ShuttlXFont.watchTemplateTitle)
+                                    .foregroundStyle(.primary)
+                                Text(template.summaryText)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                if let last = lastSessionFor(template: template) {
+                                    lastSubtitle(last)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, ShuttlXSpacing.lg)
-                                .padding(.vertical, 10)
                             }
-                            .buttonStyle(ShuttlXCardButtonStyle())
-                            .padding(.horizontal, ShuttlXSpacing.xl)
-                            .accessibilityLabel("\(template.name), \(template.summaryText)")
-                            .accessibilityHint("Start this interval workout")
+                            Spacer()
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, ShuttlXSpacing.lg)
+                        .padding(.vertical, 10)
                     }
+                    .buttonStyle(ShuttlXCardButtonStyle())
+                    .padding(.horizontal, ShuttlXSpacing.xl)
+                    .accessibilityLabel("\(template.name), \(template.summaryText)")
+                    .accessibilityHint("Start this interval workout")
                 }
 
                 #if DEBUG
