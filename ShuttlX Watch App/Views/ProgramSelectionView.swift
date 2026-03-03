@@ -12,6 +12,18 @@ struct StartTrainingView: View {
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "StartTrainingView")
 
+    /// Whether the last session was a free run (no template)
+    private var lastWasFreeRun: Bool {
+        guard let last = lastSession else { return false }
+        return last.templateID == nil
+    }
+
+    /// Returns the last session if it matches the given template
+    private func lastSessionFor(template: WorkoutTemplate) -> TrainingSession? {
+        guard let last = lastSession, last.templateID == template.id else { return nil }
+        return last
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: ShuttlXSpacing.lg) {
@@ -25,7 +37,7 @@ struct StartTrainingView: View {
                     .padding(.horizontal, ShuttlXSpacing.md)
                 }
 
-                // Free Run button — the hero
+                // Free Run — hero card
                 Button(action: {
                     logger.info("Start Free Run tapped")
                     workoutManager.startWorkout()
@@ -35,6 +47,9 @@ struct StartTrainingView: View {
                             .font(ShuttlXFont.watchHeroIcon)
                         Text("Free Run")
                             .font(ShuttlXFont.watchHeroTitle)
+                        if lastWasFreeRun, let last = lastSession {
+                            lastSubtitle(last)
+                        }
                     }
                     .foregroundStyle(ShuttlXColor.iconOnCTA)
                     .padding(.vertical, ShuttlXSpacing.xl)
@@ -64,6 +79,9 @@ struct StartTrainingView: View {
                                     Text(template.summaryText)
                                         .font(.caption2)
                                         .foregroundStyle(.secondary)
+                                    if let last = lastSessionFor(template: template) {
+                                        lastSubtitle(last)
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding(.horizontal, ShuttlXSpacing.lg)
@@ -75,12 +93,6 @@ struct StartTrainingView: View {
                             .accessibilityHint("Start this interval workout")
                         }
                     }
-                }
-
-                // Last workout — compact inline
-                if let last = lastSession, !workoutManager.authorizationDenied {
-                    lastWorkoutRow(last)
-                        .padding(.horizontal, ShuttlXSpacing.lg)
                 }
 
                 #if DEBUG
@@ -100,52 +112,14 @@ struct StartTrainingView: View {
         .onAppear { loadLastSession() }
     }
 
-    // MARK: - Last Workout Row
+    // MARK: - Last Session Subtitle
 
-    private func lastWorkoutRow(_ session: TrainingSession) -> some View {
-        VStack(spacing: 4) {
-            // Row 1: "Last" + duration + date
-            HStack {
-                Text("Last")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                Text(FormattingUtils.formatDuration(session.duration))
-                    .font(.system(.caption, design: .rounded).weight(.bold))
-                    .monospacedDigit()
-                Spacer()
-                Text(relativeDate(session.startDate))
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            // Row 2: distance + heart rate
-            HStack(spacing: ShuttlXSpacing.md) {
-                if let distance = session.distance, distance > 0 {
-                    HStack(spacing: 2) {
-                        Image(systemName: "location.fill")
-                            .font(.system(size: 8))
-                            .foregroundColor(ShuttlXColor.running)
-                        Text(FormattingUtils.formatDistance(distance))
-                            .font(.caption2.monospacedDigit())
-                    }
-                }
-
-                if let hr = session.averageHeartRate, hr > 0 {
-                    HStack(spacing: 2) {
-                        Image(systemName: "heart.fill")
-                            .font(.system(size: 8))
-                            .foregroundColor(ShuttlXColor.heartRate)
-                        Text("\(Int(hr))")
-                            .font(.caption2.monospacedDigit())
-                    }
-                }
-
-                Spacer()
-            }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Last workout, \(FormattingUtils.formatDuration(session.duration))")
+    private func lastSubtitle(_ session: TrainingSession) -> some View {
+        Text("Last: \(FormattingUtils.formatDuration(session.duration)) · \(relativeDate(session.startDate))")
+            .font(.system(.caption2, design: .rounded))
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .accessibilityLabel("Last workout \(FormattingUtils.formatDuration(session.duration)), \(relativeDate(session.startDate))")
     }
 
     private func relativeDate(_ date: Date) -> String {
