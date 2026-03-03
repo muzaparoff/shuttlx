@@ -443,7 +443,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         case "syncTheme":
             if let themeID = payload["themeID"] as? String {
-                ThemeManager.shared.selectedThemeID = themeID
+                ThemeManager.shared.selectTheme(themeID)
                 logger.info("Theme synced from iPhone: \(themeID)")
             }
 

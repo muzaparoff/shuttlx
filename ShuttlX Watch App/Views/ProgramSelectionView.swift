@@ -103,40 +103,46 @@ struct StartTrainingView: View {
     // MARK: - Last Workout Row
 
     private func lastWorkoutRow(_ session: TrainingSession) -> some View {
-        HStack(spacing: ShuttlXSpacing.md) {
-            Text("Last")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-
-            Text(FormattingUtils.formatDuration(session.duration))
-                .font(.system(.caption, design: .rounded).weight(.bold))
-                .monospacedDigit()
-
-            if let distance = session.distance, distance > 0 {
-                HStack(spacing: 2) {
-                    Image(systemName: "location.fill")
-                        .font(.system(size: 8))
-                        .foregroundColor(ShuttlXColor.running)
-                    Text(FormattingUtils.formatDistance(distance))
-                        .font(.caption2.monospacedDigit())
-                }
+        VStack(spacing: 4) {
+            // Row 1: "Last" + duration + date
+            HStack {
+                Text("Last")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                Text(FormattingUtils.formatDuration(session.duration))
+                    .font(.system(.caption, design: .rounded).weight(.bold))
+                    .monospacedDigit()
+                Spacer()
+                Text(relativeDate(session.startDate))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
             }
 
-            if let hr = session.averageHeartRate, hr > 0 {
-                HStack(spacing: 2) {
-                    Image(systemName: "heart.fill")
-                        .font(.system(size: 8))
-                        .foregroundColor(ShuttlXColor.heartRate)
-                    Text("\(Int(hr))")
-                        .font(.caption2.monospacedDigit())
+            // Row 2: distance + heart rate
+            HStack(spacing: ShuttlXSpacing.md) {
+                if let distance = session.distance, distance > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(ShuttlXColor.running)
+                        Text(FormattingUtils.formatDistance(distance))
+                            .font(.caption2.monospacedDigit())
+                    }
                 }
+
+                if let hr = session.averageHeartRate, hr > 0 {
+                    HStack(spacing: 2) {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: 8))
+                            .foregroundColor(ShuttlXColor.heartRate)
+                        Text("\(Int(hr))")
+                            .font(.caption2.monospacedDigit())
+                    }
+                }
+
+                Spacer()
             }
-
-            Spacer()
-
-            Text(relativeDate(session.startDate))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Last workout, \(FormattingUtils.formatDuration(session.duration))")

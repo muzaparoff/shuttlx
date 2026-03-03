@@ -57,6 +57,8 @@ Theme sync:
 ## Theme System
 
 - `ThemeManager` (`@Observable` singleton) manages active theme, persists to App Group UserDefaults
+- **Switching**: call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
+- `current` is a **stored** property (not computed) — ensures `@Observable` generates proper tracking
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
 - Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
 - 4 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Casio LCD (amber/green, monospaced), Arcade (heavy weights, pixel borders)
@@ -75,9 +77,11 @@ Theme sync:
 - **Build both platforms after every change**: `bash tests/build_and_test_both_platforms.sh --clean --build`
 - **Zero external dependencies** — Apple frameworks only
 - **Discuss features before implementing** — never start without explicit approval
+- **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
 - **Dynamic multi-theme UI**: 4 themes (Clean, Synthwave, Casio LCD, Arcade) — selectable in Settings
 - **Models are duplicated** between iOS and watchOS — update BOTH copies when changing
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
+- **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status
 
 ## Path-Scoped Rules
 

@@ -13,6 +13,8 @@ All new UI code must follow these conventions. Existing code should be migrated 
 
 - 4 selectable themes: **Clean** (default), **Synthwave**, **Casio LCD**, **Arcade**
 - `ThemeManager.shared` is the `@Observable` singleton — injected via `.environment(ThemeManager.shared)` at app root
+- **Theme switching**: always call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
+- `current` is a stored `@Observable` property (not computed) — ensures SwiftUI re-renders on theme change
 - Views can access theme via `@Environment(ThemeManager.self) var themeManager` then `themeManager.colors.*`, `themeManager.fonts.*`
 - `ShuttlXColor.*` and `ShuttlXFont.*` enums **bridge** to `ThemeManager.shared` — existing code is automatically theme-aware
 - Theme files: `ShuttlX/Theme/` (iOS) and `ShuttlX Watch App/Theme/` (watchOS) — mirrored

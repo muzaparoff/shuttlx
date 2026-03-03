@@ -9,28 +9,27 @@ final class ThemeManager {
     private let defaultsKey = "selectedThemeID"
     private let appGroupID = "group.com.shuttlx.shared"
 
-    var selectedThemeID: String {
-        didSet {
-            guard selectedThemeID != oldValue else { return }
-            persist()
-            logger.info("Theme changed to: \(self.selectedThemeID)")
-        }
-    }
-
-    var current: AppTheme {
-        AppTheme.theme(for: selectedThemeID)
-    }
+    // Both stored so @Observable generates proper tracking for each
+    var selectedThemeID: String = "clean"
+    private(set) var current: AppTheme = .clean
 
     var colors: ThemeColors { current.colors }
     var fonts: ThemeFonts { current.fonts }
     var effects: ThemeEffects { current.effects }
 
+    func selectTheme(_ id: String) {
+        guard id != selectedThemeID else { return }
+        selectedThemeID = id
+        current = AppTheme.theme(for: id)
+        persist()
+        logger.info("Theme changed to: \(id)")
+    }
+
     init() {
-        if let defaults = UserDefaults(suiteName: "group.com.shuttlx.shared"),
-           let saved = defaults.string(forKey: "selectedThemeID") {
-            self.selectedThemeID = saved
-        } else {
-            self.selectedThemeID = "clean"
+        if let defaults = UserDefaults(suiteName: appGroupID),
+           let saved = defaults.string(forKey: defaultsKey) {
+            selectedThemeID = saved
+            current = AppTheme.theme(for: saved)
         }
     }
 

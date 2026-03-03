@@ -163,11 +163,10 @@ struct SettingsView: View {
 
             // Appearance Section
             Section("Appearance") {
-                @Bindable var tm = themeManager
                 ForEach(AppTheme.all) { theme in
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
-                            tm.selectedThemeID = theme.id
+                            themeManager.selectTheme(theme.id)
                         }
                         sharedDataManager.sendThemeToWatch(theme.id)
                     } label: {
