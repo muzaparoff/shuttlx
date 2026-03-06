@@ -99,6 +99,15 @@ echo ""
 # Build timeout in seconds
 BUILD_TIMEOUT=300
 
+# Portable timeout: use gtimeout (Homebrew coreutils), timeout (Linux), or no timeout
+if command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+elif command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout"
+else
+    TIMEOUT_CMD=""
+fi
+
 # Helper: Build a target with proper timeout and error handling
 build_target() {
     local target="$1"
@@ -128,7 +137,7 @@ build_target() {
     # Clean first if requested
     if [ "$clean_first" = true ]; then
         echo "🧹 Cleaning $platform_name target..."
-        (cd "$PROJECT_ROOT" && timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
+        (cd "$PROJECT_ROOT" && ${TIMEOUT_CMD:+$TIMEOUT_CMD $BUILD_TIMEOUT} xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
             clean 2>&1 | tee "/tmp/clean_${platform_name}.log")
         local clean_exit_code=$?
@@ -155,7 +164,7 @@ build_target() {
     
     cat > "$temp_script" << EOF
 #!/bin/bash
-timeout $BUILD_TIMEOUT xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \\
+${TIMEOUT_CMD:+$TIMEOUT_CMD $BUILD_TIMEOUT} xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \\
     CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \\
     $debug_flags \\
     $build_action
@@ -175,10 +184,10 @@ EOF
     # Clean up the temporary script
     rm -f "$temp_script"
     
-    set -e  # Re-enable exit on error
-    
+    # Note: NOT re-enabling set -e — script handles errors manually (see line 25)
+
     # Display the build output (excluding the exit code line)
-    grep -v "XCODEBUILD_EXIT_CODE:" "/tmp/build_${platform_name}.log"
+    grep -v "XCODEBUILD_EXIT_CODE:" "/tmp/build_${platform_name}.log" || true
     
     # Check the exit code first - this is the definitive indicator
     echo "\n🔍 Build Exit Code Analysis:"
@@ -428,6 +437,37 @@ $group_entries" "$temp_file"
     fi
 }
 
+# Helper: Boot simulators and pair watch to phone
+boot_and_pair_simulators() {
+    local phone_name="iPhone 17 Pro"
+    local watch_name="Apple Watch Series 11 (46mm)"
+
+    echo "📱 Booting $phone_name simulator..."
+    xcrun simctl boot "$phone_name" 2>/dev/null || true  # already booted is OK
+
+    echo "⌚ Booting $watch_name simulator..."
+    xcrun simctl boot "$watch_name" 2>/dev/null || true
+
+    # Open Simulator.app to show the devices
+    open -a Simulator
+
+    # Check if already paired
+    local phone_udid=$(xcrun simctl list devices available | grep "$phone_name" | head -1 | grep -oE '[0-9A-F-]{36}')
+    local watch_udid=$(xcrun simctl list devices available | grep "$watch_name" | head -1 | grep -oE '[0-9A-F-]{36}')
+
+    if [ -n "$phone_udid" ] && [ -n "$watch_udid" ]; then
+        local already_paired=$(xcrun simctl list pairs | grep -A2 "$phone_udid" | grep "$watch_udid")
+        if [ -z "$already_paired" ]; then
+            echo "🔗 Pairing $watch_name ↔ $phone_name..."
+            xcrun simctl pair "$watch_udid" "$phone_udid" 2>/dev/null || echo "⚠️  Pairing skipped (may already exist)"
+        else
+            echo "✅ Already paired"
+        fi
+    fi
+
+    echo "✅ Simulators ready"
+}
+
 function run_preflight_checks() {
     echo "🔍 Running preflight checks..."
     
@@ -453,6 +493,9 @@ function run_preflight_checks() {
 
 # Main build logic
 if [ "$BUILD" = true ]; then
+    # Boot simulators and pair watch↔phone
+    boot_and_pair_simulators
+
     # Run preflight checks before building
     run_preflight_checks
     
@@ -461,10 +504,10 @@ if [ "$BUILD" = true ]; then
     if [ "$IOS_ONLY" != true ]; then
         echo "\n⌚ Building watchOS target first..."
         
-        if build_target "ShuttlXWatch Watch App Watch App" "watchsimulator" "platform=watchOS Simulator,name=Apple Watch Series 10 (46mm),OS=11.5" "watchOS"; then
+        if build_target "ShuttlX Watch App" "watchsimulator" "platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=26.2" "watchOS"; then
             
             # Detect and preserve watchOS app
-            WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlXWatch Watch App Watch App.app"
+            WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlX Watch App.app"
             if [ -d "$WATCHOS_APP_PATH" ]; then
                 echo "🔍 watchOS app path detected: $WATCHOS_APP_PATH"
                 
@@ -491,7 +534,7 @@ if [ "$BUILD" = true ]; then
             fi
         fi
         
-        if build_target "ShuttlX" "iphonesimulator" "platform=iOS Simulator,name=iPhone 16,OS=18.5" "iOS"; then
+        if build_target "ShuttlX" "iphonesimulator" "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2" "iOS"; then
             
             # Detect iOS app
             IOS_APP_PATH="build/Release-iphonesimulator/ShuttlX.app"
@@ -517,13 +560,13 @@ fi
 if [ "$INSTALL" = true ]; then
     if [ "$IOS_ONLY" != true ]; then
         # Install watchOS app
-        WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlXWatch Watch App Watch App.app"
+        WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlX Watch App.app"
         if [ ! -d "$WATCHOS_APP_PATH" ] && [ -d "/tmp/ShuttlXWatch_Watch_App.app" ]; then
             WATCHOS_APP_PATH="/tmp/ShuttlXWatch_Watch_App.app"
         fi
         
         if [ -d "$WATCHOS_APP_PATH" ]; then
-            install_app "Apple Watch Series 10 (46mm)" "$WATCHOS_APP_PATH" "watchOS"
+            install_app "Apple Watch Series 11 (46mm)" "$WATCHOS_APP_PATH" "watchOS"
         else
             echo "⚠️  watchOS app not found for installation"
         fi
@@ -533,7 +576,7 @@ if [ "$INSTALL" = true ]; then
         # Install iOS app
         IOS_APP_PATH="build/Release-iphonesimulator/ShuttlX.app"
         if [ -d "$IOS_APP_PATH" ]; then
-            install_app "iPhone 16" "$IOS_APP_PATH" "iOS"
+            install_app "iPhone 17 Pro" "$IOS_APP_PATH" "iOS"
         else
             echo "⚠️  iOS app not found for installation"
         fi
@@ -544,12 +587,12 @@ fi
 if [ "$LAUNCH" = true ]; then
     if [ "$IOS_ONLY" != true ]; then
         # Launch watchOS app
-        launch_app "Apple Watch Series 10 (46mm)" "com.shuttlx.ShuttlX.watchkitapp" "watchOS"
+        launch_app "Apple Watch Series 11 (46mm)" "com.shuttlx.ShuttlX.watchkitapp" "watchOS"
     fi
     
     if [ "$WATCHOS_ONLY" != true ]; then
         # Launch iOS app
-        launch_app "iPhone 16" "com.shuttlx.ShuttlX" "iOS"
+        launch_app "iPhone 17 Pro" "com.shuttlx.ShuttlX" "iOS"
     fi
 fi
 
