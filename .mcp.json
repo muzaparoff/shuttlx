@@ -1,0 +1,26 @@
+{
+  "mcpServers": {
+    "xcodebuildmcp": {
+      "type": "stdio",
+      "command": "xcodebuildmcp",
+      "args": ["mcp"]
+    },
+    "mcp-image": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "mcp-image"],
+      "env": {
+        "GEMINI_API_KEY": "${GEMINI_API_KEY}",
+        "IMAGE_OUTPUT_DIR": "./assets/generated"
+      }
+    },
+    "svgmaker": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@genwave/svgmaker-mcp"],
+      "env": {
+        "SVGMAKER_API_KEY": "${SVGMAKER_API_KEY}"
+      }
+    }
+  }
+}

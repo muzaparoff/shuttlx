@@ -62,6 +62,7 @@ Theme sync:
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
 - Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
 - 4 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Casio LCD (amber/green, monospaced), Arcade (heavy weights, pixel borders)
+- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Casio: dot-matrix, Arcade: CRT scanlines+vignette
 - View modifiers: `.themedCard()`, `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
 - Files: 10 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Casio, Themes/Arcade)
 

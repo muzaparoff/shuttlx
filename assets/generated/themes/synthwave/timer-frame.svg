@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <filter id="neonGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur1"/>
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="blur2"/>
+      <feMerge>
+        <feMergeNode in="blur1"/>
+        <feMergeNode in="blur2"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="magentaGlow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="8" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <linearGradient id="chromeRing" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#00F5FF"/>
+      <stop offset="25%" stop-color="#00C4CC"/>
+      <stop offset="50%" stop-color="#00F5FF"/>
+      <stop offset="75%" stop-color="#00C4CC"/>
+      <stop offset="100%" stop-color="#00F5FF"/>
+    </linearGradient>
+  </defs>
+  <!-- Background dark circle -->
+  <circle cx="100" cy="100" r="95" fill="#0A0A1A"/>
+  <!-- Outer magenta glow ring -->
+  <circle cx="100" cy="100" r="88" fill="none" stroke="#FF2D95" stroke-width="2" stroke-opacity="0.4" filter="url(#magentaGlow)"/>
+  <!-- Main cyan neon ring -->
+  <circle cx="100" cy="100" r="82" fill="none" stroke="#00F5FF" stroke-width="4" filter="url(#neonGlow)"/>
+  <!-- Inner thin cyan ring -->
+  <circle cx="100" cy="100" r="72" fill="none" stroke="#00F5FF" stroke-width="1" stroke-opacity="0.5"/>
+  <!-- Chrome highlight arcs -->
+  <path d="M 40 55 A 75 75 0 0 1 160 55" fill="none" stroke="white" stroke-width="1.5" stroke-opacity="0.2" stroke-linecap="round"/>
+  <!-- Neon tick marks -->
+  <line x1="100" y1="22" x2="100" y2="34" stroke="#00F5FF" stroke-width="2" stroke-opacity="0.8" stroke-linecap="round"/>
+  <line x1="178" y1="100" x2="166" y2="100" stroke="#00F5FF" stroke-width="2" stroke-opacity="0.8" stroke-linecap="round"/>
+  <line x1="100" y1="178" x2="100" y2="166" stroke="#00F5FF" stroke-width="2" stroke-opacity="0.8" stroke-linecap="round"/>
+  <line x1="22" y1="100" x2="34" y2="100" stroke="#00F5FF" stroke-width="2" stroke-opacity="0.8" stroke-linecap="round"/>
+  <!-- Small decorative ticks (8 positions) -->
+  <line x1="155" y1="42" x2="149" y2="50" stroke="#FF2D95" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+  <line x1="155" y1="158" x2="149" y2="150" stroke="#FF2D95" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+  <line x1="45" y1="42" x2="51" y2="50" stroke="#FF2D95" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+  <line x1="45" y1="158" x2="51" y2="150" stroke="#FF2D95" stroke-width="1.5" stroke-opacity="0.5" stroke-linecap="round"/>
+</svg>

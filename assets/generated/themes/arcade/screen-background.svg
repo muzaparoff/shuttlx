@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+    <pattern id="crtScanlines" x="0" y="0" width="2" height="2" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="2" y2="0" stroke="#000000" stroke-width="1" stroke-opacity="0.04"/>
+    </pattern>
+    <radialGradient id="vignette" cx="50%" cy="50%" r="70%">
+      <stop offset="0%" stop-color="#0F0F2D" stop-opacity="0"/>
+      <stop offset="70%" stop-color="#0F0F2D" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.6"/>
+    </radialGradient>
+  </defs>
+  <!-- Deep navy background -->
+  <rect width="390" height="844" fill="#0F0F2D"/>
+  <!-- Phosphor green tint -->
+  <rect width="390" height="844" fill="#00FF00" fill-opacity="0.015"/>
+  <!-- CRT scanlines -->
+  <rect width="390" height="844" fill="url(#crtScanlines)"/>
+  <!-- Vignette (dark edges) -->
+  <rect width="390" height="844" fill="url(#vignette)"/>
+  <!-- Subtle pixel grid -->
+  <g stroke="#00FF00" stroke-width="0.3" stroke-opacity="0.015">
+    <line x1="0" y1="0" x2="0" y2="844"/><line x1="40" y1="0" x2="40" y2="844"/>
+    <line x1="80" y1="0" x2="80" y2="844"/><line x1="120" y1="0" x2="120" y2="844"/>
+    <line x1="160" y1="0" x2="160" y2="844"/><line x1="200" y1="0" x2="200" y2="844"/>
+    <line x1="240" y1="0" x2="240" y2="844"/><line x1="280" y1="0" x2="280" y2="844"/>
+    <line x1="320" y1="0" x2="320" y2="844"/><line x1="360" y1="0" x2="360" y2="844"/>
+  </g>
+</svg>

@@ -85,7 +85,11 @@ extension AppTheme {
             hasGridBackground: false,
             neonGlowColor: nil,
             cardCornerRadius: 4,
-            buttonCornerRadius: 4
+            buttonCornerRadius: 4,
+            hasMeshBackground: false,
+            hasHorizonGrid: false,
+            hasLCDDotMatrix: false,
+            hasCRTEffect: true
         )
     )
 }

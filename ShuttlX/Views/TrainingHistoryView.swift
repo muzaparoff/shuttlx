@@ -67,6 +67,7 @@ struct TrainingHistoryView: View {
             }
             .navigationTitle("History")
         }
+        .themedScreenBackground()
         .animation(.easeInOut(duration: 0.2), value: viewMode)
     }
 

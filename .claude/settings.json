@@ -1,0 +1,38 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(xcodebuild:*)",
+      "Bash(xcodebuildmcp:*)",
+      "Bash(bash tests/*)",
+      "Bash(git:*)",
+      "Bash(gh:*)",
+      "Bash(swift:*)",
+      "Bash(xcrun:*)",
+      "Bash(ls:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(file:*)",
+      "Bash(/usr/libexec/PlistBuddy:*)",
+      "Bash(sips:*)",
+      "Bash(python3:*)",
+      "Bash(npm:*)",
+      "Bash(npx:*)",
+      "WebSearch",
+      "WebFetch"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-docs.sh\""
+          }
+        ]
+      }
+    ],
+    "Stop": []
+  }
+}

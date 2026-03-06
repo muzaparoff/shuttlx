@@ -20,6 +20,14 @@ All new UI code must follow these conventions. Existing code should be migrated 
 - Theme files: `ShuttlX/Theme/` (iOS) and `ShuttlX Watch App/Theme/` (watchOS) — mirrored
 - Theme ID persisted in App Group UserDefaults, synced to Watch via WCSession
 
+## Screen Backgrounds
+
+- Use `.themedScreenBackground()` on every major screen's outermost container (NavigationStack, ScrollView, List, TabView)
+- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), LCD dot-matrix (Casio), CRT scanlines (Arcade)
+- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.casioLCDBackground()`, `.arcadeCRTBackground()`
+- `MeshGradient` is iOS-only — watchOS Clean theme uses `LinearGradient` fallback
+- All background overlays use `.allowsHitTesting(false)` and `.ignoresSafeArea()`
+
 ## Cards & Containers
 
 - Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel)

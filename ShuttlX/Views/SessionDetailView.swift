@@ -41,6 +41,7 @@ struct SessionDetailView: View {
         }
         .navigationTitle("Session Details")
         .navigationBarTitleDisplayMode(.inline)
+        .themedScreenBackground()
     }
 
     // MARK: - Duration Header

@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="crtBezel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a2a50"/>
+      <stop offset="50%" stop-color="#1A1A3E"/>
+      <stop offset="100%" stop-color="#0F0F2D"/>
+    </linearGradient>
+    <radialGradient id="phosphorGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#00FF00" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#00FF00" stop-opacity="0"/>
+    </radialGradient>
+    <pattern id="scanlines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="4" y2="0" stroke="#000000" stroke-width="1" stroke-opacity="0.3"/>
+    </pattern>
+    <filter id="arcadeGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- CRT monitor outer frame - chunky/pixel -->
+  <rect x="6" y="6" width="188" height="188" rx="4" fill="url(#crtBezel)" stroke="#00FF00" stroke-width="3" stroke-opacity="0.5"/>
+  <!-- Pixel corner decorations -->
+  <rect x="6" y="6" width="12" height="4" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="6" y="6" width="4" height="12" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="182" y="6" width="12" height="4" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="190" y="6" width="4" height="12" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="6" y="190" width="12" height="4" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="6" y="182" width="4" height="12" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="182" y="190" width="12" height="4" fill="#00FF00" fill-opacity="0.6"/>
+  <rect x="190" y="182" width="4" height="12" fill="#00FF00" fill-opacity="0.6"/>
+  <!-- Inner screen area -->
+  <rect x="18" y="18" width="164" height="164" rx="2" fill="#0F0F2D"/>
+  <!-- Phosphor glow -->
+  <rect x="18" y="18" width="164" height="164" rx="2" fill="url(#phosphorGlow)"/>
+  <!-- Scanlines overlay -->
+  <rect x="18" y="18" width="164" height="164" rx="2" fill="url(#scanlines)"/>
+  <!-- Green pixel frame inside -->
+  <rect x="26" y="26" width="148" height="148" rx="2" fill="none" stroke="#00FF00" stroke-width="2" stroke-opacity="0.6" stroke-dasharray="4,2" filter="url(#arcadeGlow)"/>
+  <!-- Pixel tick marks -->
+  <rect x="97" y="30" width="6" height="10" fill="#00FF00" fill-opacity="0.7"/>
+  <rect x="97" y="160" width="6" height="10" fill="#00FF00" fill-opacity="0.7"/>
+  <rect x="30" y="97" width="10" height="6" fill="#00FF00" fill-opacity="0.7"/>
+  <rect x="160" y="97" width="10" height="6" fill="#00FF00" fill-opacity="0.7"/>
+  <!-- Diagonal pixel accent marks -->
+  <rect x="46" y="46" width="4" height="4" fill="#FFAA00" fill-opacity="0.5"/>
+  <rect x="150" y="46" width="4" height="4" fill="#FFAA00" fill-opacity="0.5"/>
+  <rect x="46" y="150" width="4" height="4" fill="#FFAA00" fill-opacity="0.5"/>
+  <rect x="150" y="150" width="4" height="4" fill="#FFAA00" fill-opacity="0.5"/>
+</svg>

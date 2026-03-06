@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="medalGradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0e7ff" stop-opacity="0.7"/>
+      <stop offset="40%" stop-color="#c7d2fe" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#a5b4fc" stop-opacity="0.3"/>
+    </linearGradient>
+    <linearGradient id="ribbonLeft" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#6366f1"/>
+      <stop offset="100%" stop-color="#818cf8"/>
+    </linearGradient>
+    <linearGradient id="ribbonRight" x1="1" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#a5b4fc"/>
+    </linearGradient>
+    <linearGradient id="checkGradient" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#10b981"/>
+    </linearGradient>
+    <filter id="medalShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5"/>
+      <feOffset dy="4"/>
+      <feFlood flood-color="#6366f1" flood-opacity="0.2"/>
+      <feComposite in2="SourceAlpha" operator="in"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- Ribbon tails -->
+  <path d="M 72 35 L 60 10 L 75 20 L 85 5" fill="none" stroke="url(#ribbonLeft)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 128 35 L 140 10 L 125 20 L 115 5" fill="none" stroke="url(#ribbonRight)" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Medal circle - outer ring -->
+  <circle cx="100" cy="110" r="68" fill="none" stroke="#a5b4fc" stroke-width="1" stroke-opacity="0.3"/>
+  <!-- Medal body -->
+  <circle cx="100" cy="110" r="60" fill="url(#medalGradient)" filter="url(#medalShadow)" stroke="white" stroke-width="1.5" stroke-opacity="0.4"/>
+  <!-- Inner circle decoration -->
+  <circle cx="100" cy="110" r="46" fill="none" stroke="white" stroke-width="1" stroke-opacity="0.25"/>
+  <!-- Top glass highlight -->
+  <ellipse cx="100" cy="85" rx="35" ry="18" fill="white" fill-opacity="0.15"/>
+  <!-- Checkmark -->
+  <path d="M 78 110 L 93 126 L 124 92" fill="none" stroke="url(#checkGradient)" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

@@ -50,6 +50,7 @@ struct PlanListView: View {
                 planManager.save(plan)
             }
         }
+        .themedScreenBackground()
     }
 
     private var builtInPlans: [TrainingPlan] {

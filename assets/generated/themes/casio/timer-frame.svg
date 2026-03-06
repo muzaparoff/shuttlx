@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="bezelTop" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4a4a4a"/>
+      <stop offset="50%" stop-color="#333333"/>
+      <stop offset="100%" stop-color="#2a2a2a"/>
+    </linearGradient>
+    <linearGradient id="screenInset" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#080808"/>
+      <stop offset="100%" stop-color="#0D0D0D"/>
+    </linearGradient>
+    <pattern id="dotMatrix" x="0" y="0" width="6" height="6" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="0.8" fill="#39FF14" fill-opacity="0.06"/>
+    </pattern>
+    <filter id="insetShadow">
+      <feOffset dx="0" dy="2"/>
+      <feGaussianBlur stdDeviation="2"/>
+      <feComposite operator="out" in="SourceGraphic"/>
+      <feFlood flood-color="#000000" flood-opacity="0.5"/>
+      <feComposite operator="in" in2=""/>
+      <feComposite operator="over" in2="SourceGraphic"/>
+    </filter>
+  </defs>
+  <!-- Outer bezel -->
+  <rect x="10" y="10" width="180" height="180" rx="8" fill="url(#bezelTop)" stroke="#555555" stroke-width="1"/>
+  <!-- Bezel screws -->
+  <circle cx="22" cy="22" r="4" fill="#2a2a2a" stroke="#444444" stroke-width="0.5"/>
+  <line x1="20" y1="22" x2="24" y2="22" stroke="#555555" stroke-width="0.8"/>
+  <circle cx="178" cy="22" r="4" fill="#2a2a2a" stroke="#444444" stroke-width="0.5"/>
+  <line x1="176" y1="22" x2="180" y2="22" stroke="#555555" stroke-width="0.8"/>
+  <circle cx="22" cy="178" r="4" fill="#2a2a2a" stroke="#444444" stroke-width="0.5"/>
+  <line x1="20" y1="178" x2="24" y2="178" stroke="#555555" stroke-width="0.8"/>
+  <circle cx="178" cy="178" r="4" fill="#2a2a2a" stroke="#444444" stroke-width="0.5"/>
+  <line x1="176" y1="178" x2="180" y2="178" stroke="#555555" stroke-width="0.8"/>
+  <!-- Screen inset area -->
+  <rect x="24" y="24" width="152" height="152" rx="4" fill="url(#screenInset)" stroke="#1a1a1a" stroke-width="2"/>
+  <!-- Dot matrix pattern -->
+  <rect x="24" y="24" width="152" height="152" rx="4" fill="url(#dotMatrix)"/>
+  <!-- LCD segment frame lines -->
+  <line x1="30" y1="60" x2="170" y2="60" stroke="#333333" stroke-width="0.5" stroke-dasharray="2,4"/>
+  <line x1="30" y1="140" x2="170" y2="140" stroke="#333333" stroke-width="0.5" stroke-dasharray="2,4"/>
+  <!-- Green accent line at top -->
+  <line x1="30" y1="30" x2="170" y2="30" stroke="#39FF14" stroke-width="1" stroke-opacity="0.3"/>
+  <!-- Label area indicator -->
+  <rect x="60" y="34" width="80" height="16" rx="2" fill="none" stroke="#39FF14" stroke-width="0.5" stroke-opacity="0.2"/>
+  <!-- Glass reflection -->
+  <rect x="24" y="24" width="152" height="60" rx="4" fill="white" fill-opacity="0.03"/>
+</svg>

@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <defs>
+    <linearGradient id="glassFrame" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.6"/>
+      <stop offset="50%" stop-color="#a5b4fc" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#818cf8" stop-opacity="0.15"/>
+    </linearGradient>
+    <linearGradient id="innerHighlight" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c7d2fe" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#e0e7ff" stop-opacity="0.1"/>
+    </linearGradient>
+    <linearGradient id="specularTop" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="white" stop-opacity="0"/>
+      <stop offset="20%" stop-color="white" stop-opacity="0.4"/>
+      <stop offset="80%" stop-color="white" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="glassShadow" x="-15%" y="-15%" width="130%" height="130%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="5" result="blur"/>
+      <feOffset dx="0" dy="3" result="offset"/>
+      <feFlood flood-color="#6366f1" flood-opacity="0.15" result="color"/>
+      <feComposite in="color" in2="offset" operator="in" result="shadow"/>
+      <feMerge>
+        <feMergeNode in="shadow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="specClip">
+      <rect x="20" y="8" width="140" height="40" rx="20"/>
+    </clipPath>
+  </defs>
+  <!-- Outer soft glow border -->
+  <rect x="6" y="6" width="168" height="168" rx="26" ry="26" fill="none" stroke="#a5b4fc" stroke-width="1" stroke-opacity="0.2"/>
+  <!-- Main glass frame -->
+  <rect x="12" y="12" width="156" height="156" rx="24" ry="24" fill="none" stroke="url(#glassFrame)" stroke-width="12" filter="url(#glassShadow)" stroke-linejoin="round"/>
+  <!-- Inner highlight frame -->
+  <rect x="12" y="12" width="156" height="156" rx="24" ry="24" fill="none" stroke="url(#innerHighlight)" stroke-width="5" stroke-opacity="0.5"/>
+  <!-- Top specular highlight -->
+  <rect x="30" y="14" width="120" height="3" rx="1.5" fill="url(#specularTop)" clip-path="url(#specClip)"/>
+  <!-- Tick marks at 12, 3, 6, 9 o'clock positions -->
+  <line x1="90" y1="14" x2="90" y2="22" stroke="white" stroke-width="2" stroke-opacity="0.3" stroke-linecap="round"/>
+  <line x1="166" y1="90" x2="158" y2="90" stroke="white" stroke-width="2" stroke-opacity="0.3" stroke-linecap="round"/>
+  <line x1="90" y1="166" x2="90" y2="158" stroke="white" stroke-width="2" stroke-opacity="0.3" stroke-linecap="round"/>
+  <line x1="14" y1="90" x2="22" y2="90" stroke="white" stroke-width="2" stroke-opacity="0.3" stroke-linecap="round"/>
+</svg>

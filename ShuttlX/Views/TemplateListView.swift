@@ -35,6 +35,7 @@ struct TemplateListView: View {
                     templateManager.save(updated)
                 }
             }
+            .themedScreenBackground()
         }
     }
 

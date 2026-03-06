@@ -8,6 +8,10 @@ struct ThemeEffects: Equatable {
     let neonGlowColor: Color?
     let cardCornerRadius: CGFloat
     let buttonCornerRadius: CGFloat
+    let hasMeshBackground: Bool
+    let hasHorizonGrid: Bool
+    let hasLCDDotMatrix: Bool
+    let hasCRTEffect: Bool
 
     enum CardStyle: String, Equatable {
         case glass
@@ -23,5 +27,9 @@ struct ThemeEffects: Equatable {
             && lhs.hasGridBackground == rhs.hasGridBackground
             && lhs.cardCornerRadius == rhs.cardCornerRadius
             && lhs.buttonCornerRadius == rhs.buttonCornerRadius
+            && lhs.hasMeshBackground == rhs.hasMeshBackground
+            && lhs.hasHorizonGrid == rhs.hasHorizonGrid
+            && lhs.hasLCDDotMatrix == rhs.hasLCDDotMatrix
+            && lhs.hasCRTEffect == rhs.hasCRTEffect
     }
 }

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120" width="200" height="120">
+  <defs>
+    <pattern id="dotBg" x="0" y="0" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="0.6" fill="#39FF14" fill-opacity="0.05"/>
+    </pattern>
+    <filter id="lcdGlow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.5"/>
+      <feMerge>
+        <feMergeNode/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- LCD panel background -->
+  <rect x="4" y="4" width="192" height="112" rx="8" fill="#0D0D0D" stroke="#333333" stroke-width="2"/>
+  <!-- Dot matrix overlay -->
+  <rect x="4" y="4" width="192" height="112" rx="8" fill="url(#dotBg)"/>
+  <!-- Inset border -->
+  <rect x="12" y="12" width="176" height="96" rx="4" fill="none" stroke="#1a1a1a" stroke-width="1.5"/>
+  <!-- "COMPLETE" in LCD segment style -->
+  <!-- Using rectangles to simulate 7-segment look -->
+  <g filter="url(#lcdGlow)">
+    <!-- C -->
+    <rect x="22" y="38" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="22" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="22" y="57.5" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <!-- O -->
+    <rect x="38" y="38" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="38" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="47.5" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="38" y="57.5" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <!-- M -->
+    <rect x="54" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="54" y="38" width="5" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="59" y="38" width="2.5" height="12" rx="1" fill="#39FF14"/>
+    <rect x="61.5" y="38" width="5" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="64" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <!-- P -->
+    <rect x="70" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="70" y="38" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="79.5" y="38" width="2.5" height="12" rx="1" fill="#39FF14"/>
+    <rect x="70" y="47.5" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <!-- L -->
+    <rect x="86" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="86" y="57.5" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <!-- E -->
+    <rect x="102" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="102" y="38" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="102" y="47.5" width="10" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="102" y="57.5" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <!-- T -->
+    <rect x="118" y="38" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="122.5" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <!-- E -->
+    <rect x="134" y="38" width="2.5" height="22" rx="1" fill="#39FF14"/>
+    <rect x="134" y="38" width="12" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="134" y="47.5" width="10" height="2.5" rx="1" fill="#39FF14"/>
+    <rect x="134" y="57.5" width="12" height="2.5" rx="1" fill="#39FF14"/>
+  </g>
+  <!-- Checkmark icon below -->
+  <path d="M 155 42 L 163 52 L 178 35" fill="none" stroke="#39FF14" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" filter="url(#lcdGlow)"/>
+  <!-- Amber time display -->
+  <text x="100" y="85" font-family="'SF Mono', 'Menlo', monospace" font-size="11" fill="#FFB800" text-anchor="middle" letter-spacing="2" opacity="0.7">32:15</text>
+  <!-- Divider line -->
+  <line x1="30" y1="72" x2="170" y2="72" stroke="#333333" stroke-width="0.5"/>
+</svg>

@@ -37,6 +37,7 @@ struct AnalyticsView: View {
                 .padding(.top, 8)
             }
             .navigationTitle("Analytics")
+            .themedScreenBackground()
         }
     }
 

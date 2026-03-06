@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
+  <defs>
+    <pattern id="sDots" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r="0.3" fill="#FF3333" fill-opacity="0.04"/>
+    </pattern>
+    <filter id="lcdStopGlow">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1"/>
+      <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- LCD panel -->
+  <rect x="4" y="4" width="72" height="72" rx="8" fill="#0D0D0D" stroke="#333333" stroke-width="2"/>
+  <rect x="4" y="4" width="72" height="72" rx="8" fill="url(#sDots)"/>
+  <!-- Red border -->
+  <rect x="4" y="4" width="72" height="72" rx="8" fill="none" stroke="#FF3333" stroke-width="1" stroke-opacity="0.4"/>
+  <!-- Stop square - LCD red -->
+  <rect x="24" y="24" width="32" height="32" rx="2" fill="#FF3333" filter="url(#lcdStopGlow)"/>
+</svg>

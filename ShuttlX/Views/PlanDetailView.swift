@@ -26,6 +26,7 @@ struct PlanDetailView: View {
         }
         .navigationTitle(plan.name)
         .navigationBarTitleDisplayMode(.inline)
+        .themedScreenBackground()
     }
 
     // MARK: - Header

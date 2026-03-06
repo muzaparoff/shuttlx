@@ -114,6 +114,7 @@ struct StartTrainingView: View {
             .padding(.vertical, ShuttlXSpacing.xs)
         }
         .navigationTitle("ShuttlX")
+        .themedScreenBackground()
         .onAppear { loadLastSession() }
     }
 

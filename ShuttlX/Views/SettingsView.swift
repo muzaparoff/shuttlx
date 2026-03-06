@@ -284,6 +284,7 @@ struct SettingsView: View {
         } message: {
             Text("Your local data will be kept, but it will no longer sync to iCloud.")
         }
+        .themedScreenBackground()
     }
 
     // MARK: - Watch Helpers

@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 844" width="390" height="844">
+  <defs>
+    <pattern id="dotGrid" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="0.7" fill="#39FF14" fill-opacity="0.04"/>
+    </pattern>
+    <linearGradient id="glassReflect" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="white" stop-opacity="0.04"/>
+      <stop offset="50%" stop-color="white" stop-opacity="0.01"/>
+      <stop offset="100%" stop-color="white" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="lcdBase" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0a120a"/>
+      <stop offset="100%" stop-color="#0D0D0D"/>
+    </linearGradient>
+  </defs>
+  <!-- Dark LCD background -->
+  <rect width="390" height="844" fill="url(#lcdBase)"/>
+  <!-- Dot matrix pattern -->
+  <rect width="390" height="844" fill="url(#dotGrid)"/>
+  <!-- Subtle horizontal scan lines -->
+  <g stroke="#39FF14" stroke-width="0.3" stroke-opacity="0.02">
+    <line x1="0" y1="100" x2="390" y2="100"/>
+    <line x1="0" y1="200" x2="390" y2="200"/>
+    <line x1="0" y1="300" x2="390" y2="300"/>
+    <line x1="0" y1="400" x2="390" y2="400"/>
+    <line x1="0" y1="500" x2="390" y2="500"/>
+    <line x1="0" y1="600" x2="390" y2="600"/>
+    <line x1="0" y1="700" x2="390" y2="700"/>
+    <line x1="0" y1="800" x2="390" y2="800"/>
+  </g>
+  <!-- Glass reflection overlay -->
+  <rect width="390" height="422" fill="url(#glassReflect)"/>
+  <!-- Edge vignette -->
+  <rect width="390" height="844" fill="none" stroke="#0D0D0D" stroke-width="40" stroke-opacity="0.3"/>
+</svg>

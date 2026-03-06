@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>ShuttlX Theme Assets Preview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: white; font-family: -apple-system, SF Pro, Helvetica Neue, sans-serif; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 32px; font-size: 28px; letter-spacing: 2px; }
+  .theme-section { margin-bottom: 48px; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; }
+  .theme-section h2 { margin-bottom: 20px; font-size: 20px; padding-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+  .clean h2 { color: #a5b4fc; }
+  .synthwave h2 { color: #00F5FF; }
+  .casio h2 { color: #39FF14; }
+  .arcade h2 { color: #00FF00; }
+  .assets-row { display: flex; gap: 24px; align-items: center; flex-wrap: wrap; }
+  .asset-card { text-align: center; background: rgba(255,255,255,0.05); border-radius: 12px; padding: 16px; }
+  .asset-card img { display: block; margin: 0 auto 8px; }
+  .asset-card .label { font-size: 12px; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 1px; }
+  .bg-preview { width: 120px; height: 260px; border-radius: 8px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+  .bg-preview img { width: 100%; height: 100%; object-fit: cover; }
+  .total { text-align: center; color: rgba(255,255,255,0.4); margin-top: 32px; font-size: 14px; }
+  .variant-group { display: flex; gap: 12px; align-items: flex-end; }
+  .variant-group .asset-card .sublabel { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
+  .watch-shape { border-radius: 22px; overflow: hidden; display: inline-block; background: rgba(0,0,0,0.3); padding: 4px; }
+</style>
+</head>
+<body>
+<h1>ShuttlX Theme Assets</h1>
+
+<div class="theme-section clean">
+  <h2>Clean Theme — Glass & Soft Gradients</h2>
+  <div class="assets-row">
+    <div class="asset-card">
+      <div class="bg-preview"><img src="clean/screen-background.svg"/></div>
+      <div class="label">Screen Background</div>
+    </div>
+    <div class="variant-group">
+      <div class="asset-card">
+        <img src="clean/timer-frame.svg" width="140" height="140"/>
+        <div class="label">Timer Frame</div>
+        <div class="sublabel">iOS (Circle)</div>
+      </div>
+      <div class="asset-card">
+        <div class="watch-shape"><img src="clean/timer-frame-watch.svg" width="120" height="120"/></div>
+        <div class="label">Timer Frame</div>
+        <div class="sublabel">watchOS (Squircle)</div>
+      </div>
+    </div>
+    <div class="asset-card">
+      <img src="clean/completion-badge.svg" width="140" height="140"/>
+      <div class="label">Completion Badge</div>
+    </div>
+    <div class="asset-card">
+      <img src="clean/start-button.svg" width="180"/>
+      <div class="label">Start Button</div>
+    </div>
+    <div class="asset-card">
+      <img src="clean/pause-button.svg" width="64" height="64"/>
+      <div class="label">Pause</div>
+    </div>
+    <div class="asset-card">
+      <img src="clean/stop-button.svg" width="64" height="64"/>
+      <div class="label">Stop</div>
+    </div>
+  </div>
+</div>
+
+<div class="theme-section synthwave">
+  <h2>Synthwave Theme — Neon Cyberpunk</h2>
+  <div class="assets-row">
+    <div class="asset-card">
+      <div class="bg-preview"><img src="synthwave/screen-background.svg"/></div>
+      <div class="label">Screen Background</div>
+    </div>
+    <div class="variant-group">
+      <div class="asset-card">
+        <img src="synthwave/timer-frame.svg" width="140" height="140"/>
+        <div class="label">Timer Frame</div>
+        <div class="sublabel">iOS (Circle)</div>
+      </div>
+      <div class="asset-card">
+        <div class="watch-shape"><img src="synthwave/timer-frame-watch.svg" width="120" height="120"/></div>
+        <div class="label">Timer Frame</div>
+        <div class="sublabel">watchOS (Squircle)</div>
+      </div>
+    </div>
+    <div class="asset-card">
+      <img src="synthwave/completion-badge.svg" width="140" height="140"/>
+      <div class="label">Completion Badge</div>
+    </div>
+    <div class="asset-card">
+      <img src="synthwave/start-button.svg" width="180"/>
+      <div class="label">Start Button</div>
+    </div>
+    <div class="asset-card">
+      <img src="synthwave/pause-button.svg" width="64" height="64"/>
+      <div class="label">Pause</div>
+    </div>
+    <div class="asset-card">
+      <img src="synthwave/stop-button.svg" width="64" height="64"/>
+      <div class="label">Stop</div>
+    </div>
+  </div>
+</div>
+
+<div class="theme-section casio">
+  <h2>Casio LCD Theme — Retro Digital Watch</h2>
+  <div class="assets-row">
+    <div class="asset-card">
+      <div class="bg-preview"><img src="casio/screen-background.svg"/></div>
+      <div class="label">Screen Background</div>
+    </div>
+    <div class="asset-card">
+      <img src="casio/timer-frame.svg" width="140" height="140"/>
+      <div class="label">Timer Frame</div>
+    </div>
+    <div class="asset-card">
+      <img src="casio/completion-badge.svg" width="140" height="100"/>
+      <div class="label">Completion Badge</div>
+    </div>
+    <div class="asset-card">
+      <img src="casio/start-button.svg" width="180"/>
+      <div class="label">Start Button</div>
+    </div>
+    <div class="asset-card">
+      <img src="casio/pause-button.svg" width="64" height="64"/>
+      <div class="label">Pause</div>
+    </div>
+    <div class="asset-card">
+      <img src="casio/stop-button.svg" width="64" height="64"/>
+      <div class="label">Stop</div>
+    </div>
+  </div>
+</div>
+
+<div class="theme-section arcade">
+  <h2>Arcade Theme — 1980s Game Cabinet</h2>
+  <div class="assets-row">
+    <div class="asset-card">
+      <div class="bg-preview"><img src="arcade/screen-background.svg"/></div>
+      <div class="label">Screen Background</div>
+    </div>
+    <div class="asset-card">
+      <img src="arcade/timer-frame.svg" width="140" height="140"/>
+      <div class="label">Timer Frame</div>
+    </div>
+    <div class="asset-card">
+      <img src="arcade/completion-badge.svg" width="140" height="100"/>
+      <div class="label">Completion Badge</div>
+    </div>
+    <div class="asset-card">
+      <img src="arcade/start-button.svg" width="180"/>
+      <div class="label">Start Button</div>
+    </div>
+    <div class="asset-card">
+      <img src="arcade/pause-button.svg" width="64" height="64"/>
+      <div class="label">Pause</div>
+    </div>
+    <div class="asset-card">
+      <img src="arcade/stop-button.svg" width="64" height="64"/>
+      <div class="label">Stop</div>
+    </div>
+  </div>
+</div>
+
+<p class="total">26 SVG assets total — 6 per theme + 2 watch timer frames (Clean, Synthwave)</p>
+</body>
+</html>

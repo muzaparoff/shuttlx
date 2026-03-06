@@ -34,6 +34,7 @@ struct TrainingView: View {
         }
         .navigationBarHidden(true)
         .tabViewStyle(PageTabViewStyle())
+        .themedScreenBackground()
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
                 let summary = WorkoutSummary(
@@ -329,6 +330,7 @@ struct WorkoutSummaryView: View {
             }
             .padding(.vertical)
         }
+        .themedScreenBackground()
     }
 
     private func summaryRow(icon: String, color: Color, label: String, value: String) -> some View {
