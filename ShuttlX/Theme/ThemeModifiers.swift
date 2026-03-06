@@ -46,6 +46,28 @@ extension View {
                     RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
                         .stroke(theme.colors.surfaceBorder, lineWidth: 2)
                 )
+        case .tape:
+            self
+                .padding(0)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                        .fill(theme.colors.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                        .stroke(theme.colors.surfaceBorder, lineWidth: 1)
+                )
+        case .meter:
+            self
+                .padding(0)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                        .fill(theme.colors.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                        .stroke(theme.colors.surfaceBorder, lineWidth: 1)
+                )
         }
     }
 
@@ -57,7 +79,7 @@ extension View {
             .shadow(color: color.opacity(0.15), radius: radius)
     }
 
-    // MARK: - Scanline Overlay (Casio)
+    // MARK: - Scanline Overlay (Mixtape)
 
     func scanlineOverlay(opacity: Double = 0.05) -> some View {
         self.overlay(
@@ -109,7 +131,7 @@ extension View {
         )
     }
 
-    // MARK: - LCD Panel (Casio)
+    // MARK: - LCD Panel (Mixtape)
 
     func lcdPanel() -> some View {
         let theme = ThemeManager.shared
@@ -131,11 +153,13 @@ extension View {
     func themedScreenBackground() -> some View {
         let theme = ThemeManager.shared
         switch theme.current.id {
-        case "clean":     self.cleanMeshBackground()
-        case "synthwave": self.synthwaveHorizonBackground()
-        case "casio":     self.casioLCDBackground()
-        case "arcade":    self.arcadeCRTBackground()
-        default:          self
+        case "clean":        self.cleanMeshBackground()
+        case "synthwave":    self.synthwaveHorizonBackground()
+        case "mixtape":      self.mixtapeBackground()
+        case "arcade":       self.arcadeCRTBackground()
+        case "classicradio": self.classicRadioBackground()
+        case "vumeter":      self.vuMeterBackground()
+        default:             self
         }
     }
 
@@ -208,33 +232,28 @@ extension View {
         )
     }
 
-    // MARK: - Casio LCD Background
+    // MARK: - Mixtape Background (Portable Player)
 
-    func casioLCDBackground() -> some View {
-        #if os(watchOS)
-        let dotSpacing: CGFloat = 6
-        #else
-        let dotSpacing: CGFloat = 4
-        #endif
-
-        return self
+    func mixtapeBackground() -> some View {
+        self
             .background(
                 ZStack {
-                    Color(red: 0.05, green: 0.07, blue: 0.05)
+                    Color(red: 0.05, green: 0.08, blue: 0.13)
+                    // Subtle horizontal texture lines (plastic body)
                     Canvas { context, size in
-                        let dotColor = Color.green.opacity(0.03)
-                        for x in stride(from: CGFloat(0), to: size.width, by: dotSpacing) {
-                            for y in stride(from: CGFloat(0), to: size.height, by: dotSpacing) {
-                                context.fill(
-                                    Path(ellipseIn: CGRect(x: x, y: y, width: 1, height: 1)),
-                                    with: .color(dotColor))
-                            }
+                        let lineColor = Color.white.opacity(0.015)
+                        for y in stride(from: CGFloat(0), to: size.height, by: 3) {
+                            var path = Path()
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: size.width, y: y))
+                            context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
                         }
                     }
+                    // Blue sheen gradient
                     LinearGradient(
-                        colors: [.white.opacity(0.04), .white.opacity(0.01), .clear],
+                        colors: [Color.blue.opacity(0.06), .clear, Color.blue.opacity(0.03)],
                         startPoint: .topLeading,
-                        endPoint: UnitPoint(x: 0.6, y: 0.4)
+                        endPoint: .bottomTrailing
                     )
                 }
                 .allowsHitTesting(false)
@@ -264,6 +283,66 @@ extension View {
                         endRadius: 500
                     )
                     Color.green.opacity(0.015)
+                }
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
+            )
+    }
+
+    // MARK: - Classic Radio Background
+
+    func classicRadioBackground() -> some View {
+        self
+            .background(
+                ZStack {
+                    Color(red: 0.11, green: 0.08, blue: 0.03)
+                    // Subtle plastic grain texture
+                    Canvas { context, size in
+                        let grainColor = Color.white.opacity(0.008)
+                        for y in stride(from: CGFloat(0), to: size.height, by: 4) {
+                            var path = Path()
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: size.width, y: y))
+                            context.stroke(path, with: .color(grainColor), lineWidth: 0.5)
+                        }
+                    }
+                    // Warm brown vignette
+                    RadialGradient(
+                        colors: [Color(red: 0.15, green: 0.10, blue: 0.05).opacity(0.3), .clear],
+                        center: .center,
+                        startRadius: 100,
+                        endRadius: 500
+                    )
+                }
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
+            )
+    }
+
+    // MARK: - VU Meter Background
+
+    func vuMeterBackground() -> some View {
+        self
+            .background(
+                ZStack {
+                    Color(red: 0.10, green: 0.09, blue: 0.06)
+                    // Horizontal panel lines
+                    Canvas { context, size in
+                        let lineColor = Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.02)
+                        for y in stride(from: CGFloat(0), to: size.height, by: 6) {
+                            var path = Path()
+                            path.move(to: CGPoint(x: 0, y: y))
+                            path.addLine(to: CGPoint(x: size.width, y: y))
+                            context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
+                        }
+                    }
+                    // Amber radial glow
+                    RadialGradient(
+                        colors: [Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.06), .clear],
+                        center: .center,
+                        startRadius: 50,
+                        endRadius: 400
+                    )
                 }
                 .allowsHitTesting(false)
                 .ignoresSafeArea()

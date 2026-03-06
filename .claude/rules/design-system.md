@@ -11,7 +11,7 @@ All new UI code must follow these conventions. Existing code should be migrated 
 
 ## Theme System
 
-- 4 selectable themes: **Clean** (default), **Synthwave**, **Casio LCD**, **Arcade**
+- 6 selectable themes: **Clean** (default), **Synthwave**, **Mixtape**, **Arcade**, **Classic Radio**, **VU Meter**
 - `ThemeManager.shared` is the `@Observable` singleton — injected via `.environment(ThemeManager.shared)` at app root
 - **Theme switching**: always call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
 - `current` is a stored `@Observable` property (not computed) — ensures SwiftUI re-renders on theme change
@@ -23,14 +23,14 @@ All new UI code must follow these conventions. Existing code should be migrated 
 ## Screen Backgrounds
 
 - Use `.themedScreenBackground()` on every major screen's outermost container (NavigationStack, ScrollView, List, TabView)
-- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), LCD dot-matrix (Casio), CRT scanlines (Arcade)
-- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.casioLCDBackground()`, `.arcadeCRTBackground()`
+- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), blue body texture (Mixtape), CRT scanlines (Arcade), warm brown grain (Classic Radio), amber glow panels (VU Meter)
+- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.mixtapeBackground()`, `.arcadeCRTBackground()`, `.classicRadioBackground()`, `.vuMeterBackground()`
 - `MeshGradient` is iOS-only — watchOS Clean theme uses `LinearGradient` fallback
 - All background overlays use `.allowsHitTesting(false)` and `.ignoresSafeArea()`
 
 ## Cards & Containers
 
-- Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel)
+- Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel/tape/meter)
 - `.glassBackground(cornerRadius:)` still available as a fallback for Clean-only contexts
 - Theme-specific modifiers: `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
 - Never use `Divider()` between list items — use vertical spacing (`LazyVStack(spacing: 12)`)

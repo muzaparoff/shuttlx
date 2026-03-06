@@ -63,56 +63,62 @@ struct TrainingView: View {
     // MARK: - Workout Display Tab (Full-Screen Stacked Metrics)
 
     private var workoutDisplayTab: some View {
-        VStack(spacing: ShuttlXSpacing.xs) {
-            Spacer(minLength: 0)
+        GeometryReader { geo in
+            VStack(spacing: ShuttlXSpacing.xs) {
+                Spacer(minLength: 0)
 
-            // Line 1: Timer (countdown or elapsed) with themed frame
-            timerLine
-                .background(ThemedTimerFrame(size: 140).opacity(0.6))
+                // Line 1: Timer (countdown or elapsed)
+                timerLine
 
-            // Line 2: Distance
-            Text(distanceText)
-                .font(ShuttlXFont.watchMetricDisplay)
-                .monospacedDigit()
-                .foregroundColor(.primary)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel("Distance \(accessibleDistance)")
+                // Line 2: Distance
+                Text(distanceText)
+                    .font(ShuttlXFont.watchMetricDisplay)
+                    .monospacedDigit()
+                    .foregroundColor(.primary)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel("Distance \(accessibleDistance)")
 
-            // Line 3: Heart rate — colored by zone
-            Text(heartRateText)
-                .font(ShuttlXFont.watchMetricDisplay)
-                .monospacedDigit()
-                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel(workoutManager.heartRate > 0
-                    ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
-                    : "Heart rate no data")
-                .accessibilityAddTraits(.updatesFrequently)
+                // Line 3: Heart rate — colored by zone
+                Text(heartRateText)
+                    .font(ShuttlXFont.watchMetricDisplay)
+                    .monospacedDigit()
+                    .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel(workoutManager.heartRate > 0
+                        ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
+                        : "Heart rate no data")
+                    .accessibilityAddTraits(.updatesFrequently)
 
-            // Line 4: Pace
-            Text(paceText)
-                .font(ShuttlXFont.watchMetricDisplay)
-                .monospacedDigit()
-                .foregroundColor(.primary)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel(accessiblePace)
+                // Line 4: Pace
+                Text(paceText)
+                    .font(ShuttlXFont.watchMetricDisplay)
+                    .monospacedDigit()
+                    .foregroundColor(.primary)
+                    .minimumScaleFactor(0.5)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity)
+                    .accessibilityLabel(accessiblePace)
 
-            // Status badge
-            if workoutManager.isPaused {
-                Text("PAUSED")
-                    .font(ShuttlXFont.watchStatusBadge)
-                    .foregroundColor(ShuttlXColor.ctaWarning)
+                // Status badge
+                if workoutManager.isPaused {
+                    Text("PAUSED")
+                        .font(ShuttlXFont.watchStatusBadge)
+                        .foregroundColor(ShuttlXColor.ctaWarning)
+                }
+
+                Spacer(minLength: 0)
             }
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, ShuttlXSpacing.md)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                ThemedTimerFrame(size: min(geo.size.width, geo.size.height))
+                    .opacity(0.6)
+            )
         }
-        .padding(.horizontal, ShuttlXSpacing.md)
     }
 
     // MARK: - Timer Line

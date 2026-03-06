@@ -38,7 +38,7 @@ globs:
 
 ## Theme System
 
-- All 4 themes (Clean, Synthwave, Casio LCD, Arcade) are supported on watchOS
+- All 6 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter) are supported on watchOS
 - Theme files mirrored in `ShuttlX Watch App/Theme/` with watch-specific font sizes
 - Theme selection synced from iPhone via WCSession `applicationContext`
 - `ThemeManager.shared` injected at app root in `ShuttlXWatchApp.swift`

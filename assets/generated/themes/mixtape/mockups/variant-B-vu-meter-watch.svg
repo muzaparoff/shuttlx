@@ -1,0 +1,154 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500">
+  <defs>
+    <radialGradient id="amberGlowB" cx="50%" cy="35%" r="60%">
+      <stop offset="0%" stop-color="#e8a030" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#e8a030" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <text x="200" y="24" text-anchor="middle" font-family="monospace" font-size="13" fill="#888" font-weight="bold">VU METER — watchOS</text>
+
+  <!-- Watch bezel -->
+  <rect x="50" y="42" width="300" height="390" rx="48" fill="#111"/>
+  <rect x="52" y="44" width="296" height="386" rx="46" fill="none" stroke="#333" stroke-width="1"/>
+
+  <!-- Screen area -->
+  <rect x="62" y="54" width="276" height="366" rx="38" fill="#1a1610"/>
+  <rect x="62" y="54" width="276" height="366" rx="38" fill="url(#amberGlowB)"/>
+
+  <!-- Brushed panel lines -->
+  <g opacity="0.12">
+    <line x1="72" y1="95" x2="328" y2="95" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="72" y1="250" x2="328" y2="250" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="72" y1="350" x2="328" y2="350" stroke="#e8a030" stroke-width="0.3"/>
+  </g>
+
+  <!-- VU Meter frame -->
+  <rect x="82" y="68" width="236" height="115" rx="8" fill="#120e08"/>
+  <rect x="82" y="68" width="236" height="115" rx="8" fill="none" stroke="#5a4a32" stroke-width="2"/>
+  <rect x="86" y="72" width="228" height="107" rx="6" fill="none" stroke="#3a2d1e" stroke-width="1"/>
+
+  <!-- VU meter markings -->
+  <g transform="translate(200, 155)">
+    <path d="M-85,-55 A95,95 0 0,1 85,-55" fill="none" stroke="#5a4a32" stroke-width="0.5"/>
+    <g font-family="'Courier New', monospace" font-size="7" fill="#8a7a5a">
+      <text x="-82" y="-58" text-anchor="middle">-20</text>
+      <text x="-58" y="-75" text-anchor="middle">-10</text>
+      <text x="-26" y="-85" text-anchor="middle">-7</text>
+      <text x="0" y="-88" text-anchor="middle">-5</text>
+      <text x="22" y="-86" text-anchor="middle">-3</text>
+      <text x="42" y="-80" text-anchor="middle">0</text>
+      <text x="62" y="-70" text-anchor="middle" fill="#cc4444">+1</text>
+      <text x="78" y="-56" text-anchor="middle" fill="#cc4444">+3</text>
+    </g>
+    <g stroke="#8a7a5a" stroke-width="1">
+      <line x1="-80" y1="-46" x2="-75" y2="-42"/>
+      <line x1="-56" y1="-65" x2="-52" y2="-60"/>
+      <line x1="-26" y1="-76" x2="-24" y2="-70"/>
+      <line x1="0" y1="-80" x2="0" y2="-74"/>
+      <line x1="26" y1="-76" x2="24" y2="-70"/>
+      <line x1="48" y1="-68" x2="45" y2="-63"/>
+    </g>
+    <g stroke="#cc4444" stroke-width="1">
+      <line x1="64" y1="-58" x2="60" y2="-54"/>
+      <line x1="76" y1="-44" x2="72" y2="-40"/>
+    </g>
+    <text x="0" y="-36" text-anchor="middle" font-family="'Courier New', monospace" font-size="8" fill="#5a4a32">VU</text>
+    <!-- Needle -->
+    <line x1="0" y1="0" x2="-12" y2="-72" stroke="#e8a030" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="4" fill="#3a2d1e" stroke="#5a4a32" stroke-width="1"/>
+  </g>
+
+  <!-- Timer digital readout inside VU panel -->
+  <rect x="135" y="100" width="130" height="38" rx="4" fill="#0a0804"/>
+  <rect x="135" y="100" width="130" height="38" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+  <text x="200" y="128" text-anchor="middle" font-family="'Courier New', monospace" font-size="28" fill="#e8a030" font-weight="bold">12:34</text>
+
+  <!-- Metrics area — fully inside screen, well below VU panel -->
+  <g font-family="'Courier New', monospace">
+    <rect x="82" y="195" width="236" height="32" rx="4" fill="#120e08"/>
+    <rect x="82" y="195" width="236" height="32" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="92" y="216" font-size="10" fill="#5a4a32">DIST</text>
+    <text x="308" y="216" text-anchor="end" font-size="19" fill="#e8a030" font-weight="bold">2.45 KM</text>
+
+    <rect x="82" y="232" width="236" height="32" rx="4" fill="#120e08"/>
+    <rect x="82" y="232" width="236" height="32" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="92" y="253" font-size="10" fill="#5a4a32">HR</text>
+    <text x="308" y="253" text-anchor="end" font-size="19" fill="#cc4444" font-weight="bold">142 BPM</text>
+
+    <rect x="82" y="269" width="236" height="32" rx="4" fill="#120e08"/>
+    <rect x="82" y="269" width="236" height="32" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="92" y="290" font-size="10" fill="#5a4a32">PACE</text>
+    <text x="308" y="290" text-anchor="end" font-size="19" fill="#e8a030" font-weight="bold">5:02 /KM</text>
+  </g>
+
+  <!-- Level bars — on panel, below metrics, above buttons -->
+  <g transform="translate(92, 310)">
+    <text x="0" y="10" font-family="'Courier New', monospace" font-size="8" fill="#8a7a5a">L</text>
+    <g transform="translate(14, 0)">
+      <rect x="0" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.9"/>
+      <rect x="10" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.85"/>
+      <rect x="20" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.75"/>
+      <rect x="30" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.6"/>
+      <rect x="40" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.7"/>
+      <rect x="50" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.5"/>
+      <rect x="60" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.35"/>
+      <rect x="70" y="2" width="8" height="8" rx="1" fill="#ff6633" opacity="0.25"/>
+      <rect x="80" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.15"/>
+      <rect x="90" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.08"/>
+    </g>
+  </g>
+  <g transform="translate(92, 324)">
+    <text x="0" y="10" font-family="'Courier New', monospace" font-size="8" fill="#8a7a5a">R</text>
+    <g transform="translate(14, 0)">
+      <rect x="0" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.85"/>
+      <rect x="10" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.7"/>
+      <rect x="20" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.55"/>
+      <rect x="30" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.35"/>
+      <rect x="40" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.25"/>
+      <rect x="50" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.12"/>
+      <rect x="60" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.08"/>
+      <rect x="70" y="2" width="8" height="8" rx="1" fill="#ff6633" opacity="0.06"/>
+      <rect x="80" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="90" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.06"/>
+    </g>
+  </g>
+
+  <!-- Controls — pushed down well below bars -->
+  <g transform="translate(120, 350)">
+    <circle cx="0" cy="0" r="22" fill="#2a1f10" stroke="#5a4a32" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="18" fill="#1a1610" stroke="#3a2d1e" stroke-width="0.5"/>
+    <g stroke="#4a3a22" stroke-width="0.3" opacity="0.5">
+      <line x1="-16" y1="-8" x2="-16" y2="8"/>
+      <line x1="-12" y1="-14" x2="-12" y2="14"/>
+      <line x1="-8" y1="-16" x2="-8" y2="16"/>
+      <line x1="-4" y1="-17" x2="-4" y2="17"/>
+      <line x1="0" y1="-18" x2="0" y2="18"/>
+      <line x1="4" y1="-17" x2="4" y2="17"/>
+      <line x1="8" y1="-16" x2="8" y2="16"/>
+      <line x1="12" y1="-14" x2="12" y2="14"/>
+      <line x1="16" y1="-8" x2="16" y2="8"/>
+    </g>
+    <text x="0" y="5" text-anchor="middle" font-family="monospace" font-size="16" fill="#e8a030" font-weight="bold">II</text>
+    <text x="0" y="30" text-anchor="middle" font-family="monospace" font-size="8" fill="#5a4a32">PAUSE</text>
+  </g>
+  <g transform="translate(280, 350)">
+    <circle cx="0" cy="0" r="22" fill="#2a1f10" stroke="#cc4444" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="18" fill="#1a1610" stroke="#3a2d1e" stroke-width="0.5"/>
+    <g stroke="#4a3a22" stroke-width="0.3" opacity="0.5">
+      <line x1="-16" y1="-8" x2="-16" y2="8"/>
+      <line x1="-12" y1="-14" x2="-12" y2="14"/>
+      <line x1="-8" y1="-16" x2="-8" y2="16"/>
+      <line x1="-4" y1="-17" x2="-4" y2="17"/>
+      <line x1="0" y1="-18" x2="0" y2="18"/>
+      <line x1="4" y1="-17" x2="4" y2="17"/>
+      <line x1="8" y1="-16" x2="8" y2="16"/>
+      <line x1="12" y1="-14" x2="12" y2="14"/>
+      <line x1="16" y1="-8" x2="16" y2="8"/>
+    </g>
+    <rect x="-6" y="-6" width="12" height="12" rx="1" fill="#cc4444"/>
+    <text x="0" y="30" text-anchor="middle" font-family="monospace" font-size="8" fill="#5a4a32">STOP</text>
+  </g>
+
+  <text x="200" y="460" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">VU Meter — watchOS. Bars + buttons on panel, not crossing screen.</text>
+</svg>

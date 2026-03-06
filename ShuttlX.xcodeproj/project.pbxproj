@@ -40,8 +40,10 @@
 		TH000016 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
 		TH000017 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
 		TH000018 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
-		TH000019 /* CasioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* CasioTheme.swift */; };
+		TH000019 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
 		TH000020 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
+		TH000023 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
+		TH000024 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
 		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
@@ -51,8 +53,10 @@
 		TH000036 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
 		TH000037 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
 		TH000038 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
-		TH000039 /* CasioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* CasioTheme.swift */; };
+		TH000039 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
 		TH000040 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
+		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
+		TH000044 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
 		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
@@ -203,8 +207,10 @@
 		TH000006 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeModifiers.swift; sourceTree = "<group>"; };
 		TH000007 /* CleanTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanTheme.swift; sourceTree = "<group>"; };
 		TH000008 /* SynthwaveTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTheme.swift; sourceTree = "<group>"; };
-		TH000009 /* CasioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CasioTheme.swift; sourceTree = "<group>"; };
+		TH000009 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTheme.swift; sourceTree = "<group>"; };
 		TH000010 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTheme.swift; sourceTree = "<group>"; };
+		TH000050 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTheme.swift; sourceTree = "<group>"; };
+		TH000051 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterTheme.swift; sourceTree = "<group>"; };
 		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
 		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
@@ -449,8 +455,10 @@
 			children = (
 				TH000007 /* CleanTheme.swift */,
 				TH000008 /* SynthwaveTheme.swift */,
-				TH000009 /* CasioTheme.swift */,
+				TH000009 /* MixtapeTheme.swift */,
 				TH000010 /* ArcadeTheme.swift */,
+				TH000050 /* ClassicRadioTheme.swift */,
+				TH000051 /* VUMeterTheme.swift */,
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -692,8 +700,10 @@
 				TH000022 /* ThemeAssets.swift in Sources */,
 				TH000017 /* CleanTheme.swift in Sources */,
 				TH000018 /* SynthwaveTheme.swift in Sources */,
-				TH000019 /* CasioTheme.swift in Sources */,
+				TH000019 /* MixtapeTheme.swift in Sources */,
 				TH000020 /* ArcadeTheme.swift in Sources */,
+				TH000023 /* ClassicRadioTheme.swift in Sources */,
+				TH000024 /* VUMeterTheme.swift in Sources */,
 				A5923B02 /* MetricCard.swift in Sources */,
 				A5923B03 /* ActivityBadge.swift in Sources */,
 				A5923B04 /* StreakBadge.swift in Sources */,
@@ -771,8 +781,10 @@
 				TH000042 /* ThemeAssets.swift in Sources */,
 				TH000037 /* CleanTheme.swift in Sources */,
 				TH000038 /* SynthwaveTheme.swift in Sources */,
-				TH000039 /* CasioTheme.swift in Sources */,
+				TH000039 /* MixtapeTheme.swift in Sources */,
 				TH000040 /* ArcadeTheme.swift in Sources */,
+				TH000043 /* ClassicRadioTheme.swift in Sources */,
+				TH000044 /* VUMeterTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

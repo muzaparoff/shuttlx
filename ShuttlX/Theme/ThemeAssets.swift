@@ -9,10 +9,12 @@ struct ThemedTimerFrame: View {
     var body: some View {
         let themeID = ThemeManager.shared.current.id
         switch themeID {
-        case "synthwave": SynthwaveTimerFrame(size: size)
-        case "casio":     CasioTimerFrame(size: size)
-        case "arcade":    ArcadeTimerFrame(size: size)
-        default:          CleanTimerFrame(size: size)
+        case "synthwave":    SynthwaveTimerFrame(size: size)
+        case "mixtape":      MixtapeTimerFrame(size: size)
+        case "arcade":       ArcadeTimerFrame(size: size)
+        case "classicradio": ClassicRadioTimerFrame(size: size)
+        case "vumeter":      VUMeterTimerFrame(size: size)
+        default:             CleanTimerFrame(size: size)
         }
     }
 }
@@ -113,46 +115,36 @@ private struct SynthwaveTimerFrame: View {
     }
 }
 
-// MARK: Casio Timer Frame — LCD segment-style rectangular border
+// MARK: Mixtape Timer Frame — green LCD panel on blue player body
 
-private struct CasioTimerFrame: View {
+private struct MixtapeTimerFrame: View {
     let size: CGFloat
     private let lcdGreen = Color(red: 0.22, green: 1.0, blue: 0.08)
-    private let amber = Color(red: 1.0, green: 0.72, blue: 0.0)
+    private let playerBlue = Color(red: 0.29, green: 0.42, blue: 0.60)
 
     var body: some View {
         ZStack {
-            // Outer LCD panel border
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color(white: 0.2), lineWidth: 2)
+            // Green-gray LCD fill
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(red: 0.08, green: 0.14, blue: 0.10))
+                .frame(width: size, height: size * 0.7)
+
+            // Blue-steel border
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(playerBlue, lineWidth: 2)
                 .frame(width: size, height: size * 0.7)
 
             // Inner inset border
-            RoundedRectangle(cornerRadius: 2)
-                .stroke(lcdGreen.opacity(0.15), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(lcdGreen.opacity(0.12), lineWidth: 1)
                 .frame(width: size - 8, height: size * 0.7 - 8)
 
-            // Corner brackets (LCD segment style)
+            // Corner brackets
             ForEach(0..<4, id: \.self) { corner in
-                LCDBracket(color: lcdGreen.opacity(0.3))
+                LCDBracket(color: playerBlue.opacity(0.4))
                     .frame(width: 10, height: 10)
                     .position(bracketPosition(corner: corner, size: size))
             }
-
-            // Dot matrix overlay
-            Canvas { context, canvasSize in
-                let dotColor = lcdGreen.opacity(0.04)
-                for x in stride(from: CGFloat(0), to: canvasSize.width, by: 6) {
-                    for y in stride(from: CGFloat(0), to: canvasSize.height, by: 6) {
-                        context.fill(
-                            Path(ellipseIn: CGRect(x: x, y: y, width: 1, height: 1)),
-                            with: .color(dotColor)
-                        )
-                    }
-                }
-            }
-            .frame(width: size - 10, height: size * 0.7 - 10)
-            .allowsHitTesting(false)
         }
         .frame(width: size, height: size)
     }
@@ -171,7 +163,111 @@ private struct CasioTimerFrame: View {
     }
 }
 
-// MARK: Arcade Timer Frame — pixelated circle with CRT phosphor glow
+// MARK: Classic Radio Timer Frame — cassette label shape with cream fill
+
+private struct ClassicRadioTimerFrame: View {
+    let size: CGFloat
+    private let cream = Color(red: 0.96, green: 0.90, blue: 0.78)
+    private let brown = Color(red: 0.35, green: 0.29, blue: 0.20)
+
+    var body: some View {
+        ZStack {
+            // Cream label fill
+            RoundedRectangle(cornerRadius: 4)
+                .fill(cream.opacity(0.08))
+                .frame(width: size, height: size * 0.7)
+
+            // Brown border
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(brown, lineWidth: 2)
+                .frame(width: size, height: size * 0.7)
+
+            // Lined paper texture (horizontal rules)
+            Canvas { context, canvasSize in
+                let lineColor = brown.opacity(0.12)
+                for y in stride(from: CGFloat(8), to: canvasSize.height - 4, by: 10) {
+                    var path = Path()
+                    path.move(to: CGPoint(x: 6, y: y))
+                    path.addLine(to: CGPoint(x: canvasSize.width - 6, y: y))
+                    context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
+                }
+            }
+            .frame(width: size - 4, height: size * 0.7 - 4)
+            .allowsHitTesting(false)
+
+            // Inner inset
+            RoundedRectangle(cornerRadius: 2)
+                .stroke(cream.opacity(0.1), lineWidth: 1)
+                .frame(width: size - 10, height: size * 0.7 - 10)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: VU Meter Timer Frame — analog meter panel with arc markings
+
+private struct VUMeterTimerFrame: View {
+    let size: CGFloat
+    private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
+    private let darkPanel = Color(red: 0.07, green: 0.05, blue: 0.03)
+
+    var body: some View {
+        ZStack {
+            // Dark meter panel fill
+            RoundedRectangle(cornerRadius: 8)
+                .fill(darkPanel)
+                .frame(width: size, height: size * 0.7)
+
+            // Amber border
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(amber.opacity(0.4), lineWidth: 2)
+                .frame(width: size, height: size * 0.7)
+
+            // VU arc markings
+            Canvas { context, canvasSize in
+                let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height * 0.75)
+                let radius = canvasSize.width * 0.35
+
+                // Arc path
+                var arcPath = Path()
+                arcPath.addArc(center: center, radius: radius,
+                              startAngle: .degrees(-150), endAngle: .degrees(-30),
+                              clockwise: false)
+                context.stroke(arcPath, with: .color(amber.opacity(0.2)), lineWidth: 1)
+
+                // Tick marks along arc
+                for i in 0...10 {
+                    let angle = -150.0 + Double(i) * 12.0
+                    let rad = angle * .pi / 180
+                    let innerR = radius - 4
+                    let outerR = radius + 4
+                    let tickColor = i >= 8 ? Color.red.opacity(0.4) : amber.opacity(0.3)
+
+                    var tick = Path()
+                    tick.move(to: CGPoint(
+                        x: center.x + cos(rad) * innerR,
+                        y: center.y + sin(rad) * innerR
+                    ))
+                    tick.addLine(to: CGPoint(
+                        x: center.x + cos(rad) * outerR,
+                        y: center.y + sin(rad) * outerR
+                    ))
+                    context.stroke(tick, with: .color(tickColor), lineWidth: 1)
+                }
+            }
+            .frame(width: size - 4, height: size * 0.7 - 4)
+            .allowsHitTesting(false)
+
+            // Inner inset
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(amber.opacity(0.15), lineWidth: 1)
+                .frame(width: size - 12, height: size * 0.7 - 12)
+        }
+        .frame(width: size, height: size)
+    }
+}
+
+// MARK: Arcade Timer Frame — pixelated rounded rect with CRT phosphor glow
 
 private struct ArcadeTimerFrame: View {
     let size: CGFloat
@@ -181,12 +277,12 @@ private struct ArcadeTimerFrame: View {
     var body: some View {
         ZStack {
             // Outer pixel border
-            Circle()
+            RoundedRectangle(cornerRadius: 4)
                 .stroke(phosphorGreen.opacity(0.5), lineWidth: 3)
                 .frame(width: size, height: size)
 
             // Inner dashed pixel ring
-            Circle()
+            RoundedRectangle(cornerRadius: 4)
                 .stroke(phosphorGreen.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
                 .frame(width: size - 10, height: size - 10)
 
@@ -194,7 +290,7 @@ private struct ArcadeTimerFrame: View {
             ForEach(0..<4, id: \.self) { corner in
                 PixelCorner(color: phosphorGreen.opacity(0.6))
                     .frame(width: 8, height: 8)
-                    .offset(pixelCornerOffset(corner: corner, radius: size / 2 - 4))
+                    .offset(pixelCornerOffset(corner: corner, size: size))
             }
 
             // Green tick marks
@@ -212,7 +308,7 @@ private struct ArcadeTimerFrame: View {
             .frame(width: size - 4, height: size - 4)
 
             // CRT phosphor glow
-            Circle()
+            RoundedRectangle(cornerRadius: 4)
                 .fill(
                     RadialGradient(
                         colors: [phosphorGreen.opacity(0.03), .clear],
@@ -225,10 +321,15 @@ private struct ArcadeTimerFrame: View {
         .frame(width: size, height: size)
     }
 
-    private func pixelCornerOffset(corner: Int, radius: CGFloat) -> CGSize {
-        let angle = Double(corner) * 90 + 45
-        let rad = angle * .pi / 180
-        return CGSize(width: CGFloat(Foundation.cos(rad)) * radius * 0.7, height: CGFloat(Foundation.sin(rad)) * radius * 0.7)
+    private func pixelCornerOffset(corner: Int, size: CGFloat) -> CGSize {
+        let half = size / 2 - 8
+        switch corner {
+        case 0: return CGSize(width: -half, height: -half)
+        case 1: return CGSize(width: half, height: -half)
+        case 2: return CGSize(width: -half, height: half)
+        case 3: return CGSize(width: half, height: half)
+        default: return .zero
+        }
     }
 }
 
@@ -238,10 +339,12 @@ struct ThemedCompletionBadge: View {
     var body: some View {
         let themeID = ThemeManager.shared.current.id
         switch themeID {
-        case "synthwave": SynthwaveCompletionBadge()
-        case "casio":     CasioCompletionBadge()
-        case "arcade":    ArcadeCompletionBadge()
-        default:          CleanCompletionBadge()
+        case "synthwave":    SynthwaveCompletionBadge()
+        case "mixtape":      MixtapeCompletionBadge()
+        case "arcade":       ArcadeCompletionBadge()
+        case "classicradio": ClassicRadioCompletionBadge()
+        case "vumeter":      VUMeterCompletionBadge()
+        default:             CleanCompletionBadge()
         }
     }
 }
@@ -305,14 +408,18 @@ private struct SynthwaveCompletionBadge: View {
     }
 }
 
-// MARK: Casio Completion Badge — LCD "COMPLETE" display
+// MARK: Mixtape Completion Badge — "REWIND COMPLETE" on green LCD
 
-private struct CasioCompletionBadge: View {
+private struct MixtapeCompletionBadge: View {
     private let lcdGreen = Color(red: 0.22, green: 1.0, blue: 0.08)
+    private let playerBlue = Color(red: 0.29, green: 0.42, blue: 0.60)
 
     var body: some View {
         VStack(spacing: 4) {
-            // LCD panel frame
+            Text("REWIND")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(playerBlue)
+
             Text("COMPLETE")
                 .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundColor(lcdGreen)
@@ -325,12 +432,81 @@ private struct CasioCompletionBadge: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(red: 0.06, green: 0.10, blue: 0.16))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 6)
+                .stroke(playerBlue, lineWidth: 1.5)
+        )
+    }
+}
+
+// MARK: Classic Radio Completion Badge — "SIDE A COMPLETE" tape label
+
+private struct ClassicRadioCompletionBadge: View {
+    private let cream = Color(red: 0.96, green: 0.90, blue: 0.78)
+    private let brown = Color(red: 0.35, green: 0.29, blue: 0.20)
+    private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("SIDE A")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(brown)
+
+            Text("COMPLETE")
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundColor(amber)
+                .shadow(color: amber.opacity(0.3), radius: 2)
+
+            Image(systemName: "checkmark")
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundColor(amber)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(Color(red: 0.06, green: 0.06, blue: 0.06))
+                .fill(cream.opacity(0.08))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .stroke(Color(white: 0.2), lineWidth: 1.5)
+                .stroke(brown, lineWidth: 1.5)
+        )
+    }
+}
+
+// MARK: VU Meter Completion Badge — "RECORDING DONE" amber on dark panel
+
+private struct VUMeterCompletionBadge: View {
+    private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
+    private let darkPanel = Color(red: 0.07, green: 0.05, blue: 0.03)
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text("RECORDING")
+                .font(.system(size: 10, weight: .bold, design: .monospaced))
+                .foregroundColor(amber.opacity(0.6))
+
+            Text("DONE")
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundColor(amber)
+                .shadow(color: amber.opacity(0.4), radius: 2)
+
+            Image(systemName: "checkmark")
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundColor(amber)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .fill(darkPanel)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(amber.opacity(0.4), lineWidth: 1.5)
         )
     }
 }
@@ -396,12 +572,18 @@ struct ThemedControlButtonStyle: ButtonStyle {
         case "synthwave":
             RoundedRectangle(cornerRadius: 12)
                 .fill(Color(red: 0.08, green: 0.08, blue: 0.16))
-        case "casio":
+        case "mixtape":
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color(red: 0.08, green: 0.08, blue: 0.08))
+                .fill(Color(red: 0.08, green: 0.12, blue: 0.20))
         case "arcade":
             RoundedRectangle(cornerRadius: 4)
                 .fill(Color(red: 0.08, green: 0.08, blue: 0.2))
+        case "classicradio":
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color(red: 0.23, green: 0.18, blue: 0.12))
+        case "vumeter":
+            Circle()
+                .fill(Color(red: 0.14, green: 0.11, blue: 0.07))
         default:
             RoundedRectangle(cornerRadius: 12)
                 .fill(ShuttlXColor.watchButtonBackground)
@@ -415,12 +597,18 @@ struct ThemedControlButtonStyle: ButtonStyle {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color(red: 0.0, green: 0.96, blue: 1.0).opacity(0.4), lineWidth: 1.5)
                 .shadow(color: Color(red: 0.0, green: 0.96, blue: 1.0).opacity(0.3), radius: 4)
-        case "casio":
+        case "mixtape":
             RoundedRectangle(cornerRadius: 6)
-                .stroke(Color(white: 0.25), lineWidth: 1.5)
+                .stroke(Color(red: 0.29, green: 0.42, blue: 0.60), lineWidth: 1.5)
         case "arcade":
             RoundedRectangle(cornerRadius: 4)
                 .stroke(Color(red: 0.0, green: 1.0, blue: 0.0).opacity(0.4), lineWidth: 2)
+        case "classicradio":
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color(red: 0.35, green: 0.29, blue: 0.20), lineWidth: 1.5)
+        case "vumeter":
+            Circle()
+                .stroke(Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.4), lineWidth: 1.5)
         default:
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)

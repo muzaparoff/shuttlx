@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Mixtape Theme — 3 Design Directions</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #1a1a2e; color: white; font-family: -apple-system, SF Pro, Helvetica Neue, sans-serif; padding: 24px; }
+  h1 { text-align: center; margin-bottom: 6px; font-size: 28px; letter-spacing: 2px; }
+  .subtitle { text-align: center; color: rgba(255,255,255,0.4); margin-bottom: 32px; font-size: 13px; }
+  .variant { margin-bottom: 48px; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 24px; }
+  .variant h2 { font-size: 20px; margin-bottom: 4px; }
+  .variant .desc { font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 16px; line-height: 1.5; }
+  .devices { display: flex; gap: 32px; align-items: flex-start; justify-content: center; flex-wrap: wrap; }
+  .device { text-align: center; }
+  .device img { display: block; margin: 0 auto; }
+  .device .label { font-size: 11px; color: rgba(255,255,255,0.35); margin-top: 8px; text-transform: uppercase; letter-spacing: 1px; }
+  .a { border-color: rgba(232,160,48,0.3); }
+  .a h2 { color: #e8a030; }
+  .b { border-color: rgba(232,160,48,0.3); }
+  .b h2 { color: #e8a030; }
+  .c { border-color: rgba(74,138,202,0.3); }
+  .c h2 { color: #4a8aca; }
+</style>
+</head>
+<body>
+
+<h1>Mixtape Theme — 3 Separate Themes</h1>
+<p class="subtitle">Each could be its own selectable theme in the app</p>
+
+<div class="variant a">
+  <h2>A — Classic Radio</h2>
+  <p class="desc">Cassette body background with label sticker for timer/metrics. Tape reels visible through window. Level bars on the cassette panel (not crossing into screen). Only pause + stop buttons — no rewind/ff.</p>
+  <div class="devices">
+    <div class="device">
+      <img src="variant-A-classic-radio-watch.svg" height="420"/>
+      <div class="label">watchOS</div>
+    </div>
+    <div class="device">
+      <img src="variant-A-classic-radio-ios.svg" height="650"/>
+      <div class="label">iOS</div>
+    </div>
+  </div>
+</div>
+
+<div class="variant b">
+  <h2>B — VU Meter</h2>
+  <p class="desc">Analog VU meter with needle as timer frame. LED level bars fully on panel below metrics. Rotary knob controls pushed down to bottom — nothing crosses between screen areas. Brushed warm panel texture.</p>
+  <div class="devices">
+    <div class="device">
+      <img src="variant-B-vu-meter-watch.svg" height="420"/>
+      <div class="label">watchOS</div>
+    </div>
+    <div class="device">
+      <img src="variant-B-vu-meter-ios.svg" height="650"/>
+      <div class="label">iOS</div>
+    </div>
+  </div>
+</div>
+
+<div class="variant c">
+  <h2>C — Mixtape (Portable Player)</h2>
+  <p class="desc">80s/90s portable cassette player — blue metallic body, green LCD display, transparent lid showing cassette with spinning reels. EQ visualizer, volume slider, battery indicator, hold switch. Chunky mechanical transport buttons.</p>
+  <div class="devices">
+    <div class="device">
+      <img src="variant-C-portable-player-watch.svg" height="420"/>
+      <div class="label">watchOS</div>
+    </div>
+    <div class="device">
+      <img src="variant-C-portable-player-ios.svg" height="650"/>
+      <div class="label">iOS</div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

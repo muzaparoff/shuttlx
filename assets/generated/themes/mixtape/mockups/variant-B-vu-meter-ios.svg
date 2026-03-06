@@ -1,0 +1,176 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="780" viewBox="0 0 400 780">
+  <defs>
+    <radialGradient id="amberGlowBI" cx="50%" cy="30%" r="60%">
+      <stop offset="0%" stop-color="#e8a030" stop-opacity="0.06"/>
+      <stop offset="100%" stop-color="#e8a030" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <text x="200" y="24" text-anchor="middle" font-family="monospace" font-size="13" fill="#888" font-weight="bold">VU METER — iOS</text>
+
+  <!-- Phone frame -->
+  <rect x="30" y="40" width="340" height="700" rx="40" fill="#111"/>
+  <rect x="32" y="42" width="336" height="696" rx="38" fill="none" stroke="#333" stroke-width="1"/>
+  <rect x="150" y="50" width="100" height="28" rx="14" fill="#000"/>
+
+  <!-- Screen -->
+  <rect x="40" y="50" width="320" height="680" rx="34" fill="#1a1610"/>
+  <rect x="40" y="50" width="320" height="680" rx="34" fill="url(#amberGlowBI)"/>
+
+  <!-- Brushed panel lines -->
+  <g opacity="0.1">
+    <line x1="50" y1="100" x2="350" y2="100" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="50" y1="370" x2="350" y2="370" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="50" y1="580" x2="350" y2="580" stroke="#e8a030" stroke-width="0.3"/>
+  </g>
+
+  <!-- VU Meter panel (large) -->
+  <rect x="55" y="90" width="290" height="200" rx="10" fill="#120e08"/>
+  <rect x="55" y="90" width="290" height="200" rx="10" fill="none" stroke="#5a4a32" stroke-width="2"/>
+  <rect x="59" y="94" width="282" height="192" rx="8" fill="none" stroke="#3a2d1e" stroke-width="1"/>
+
+  <!-- VU Meter arc -->
+  <g transform="translate(200, 245)">
+    <path d="M-115,-80 A140,140 0 0,1 115,-80" fill="none" stroke="#5a4a32" stroke-width="0.5"/>
+    <g font-family="'Courier New', monospace" font-size="9" fill="#8a7a5a">
+      <text x="-112" y="-84" text-anchor="middle">-20</text>
+      <text x="-82" y="-108" text-anchor="middle">-10</text>
+      <text x="-40" y="-124" text-anchor="middle">-7</text>
+      <text x="0" y="-130" text-anchor="middle">-5</text>
+      <text x="32" y="-126" text-anchor="middle">-3</text>
+      <text x="60" y="-116" text-anchor="middle">0</text>
+      <text x="88" y="-100" text-anchor="middle" fill="#cc4444">+1</text>
+      <text x="110" y="-80" text-anchor="middle" fill="#cc4444">+3</text>
+    </g>
+    <g stroke="#8a7a5a" stroke-width="1">
+      <line x1="-108" y1="-68" x2="-102" y2="-63"/>
+      <line x1="-78" y1="-96" x2="-73" y2="-90"/>
+      <line x1="-38" y1="-112" x2="-35" y2="-105"/>
+      <line x1="0" y1="-118" x2="0" y2="-111"/>
+      <line x1="38" y1="-112" x2="35" y2="-105"/>
+      <line x1="65" y1="-100" x2="61" y2="-94"/>
+    </g>
+    <g stroke="#cc4444" stroke-width="1">
+      <line x1="88" y1="-84" x2="83" y2="-79"/>
+      <line x1="106" y1="-64" x2="100" y2="-60"/>
+    </g>
+    <text x="0" y="-52" text-anchor="middle" font-family="'Courier New', monospace" font-size="10" fill="#5a4a32">VU</text>
+    <!-- Needle -->
+    <line x1="0" y1="0" x2="-18" y2="-108" stroke="#e8a030" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="5" fill="#3a2d1e" stroke="#5a4a32" stroke-width="1"/>
+  </g>
+
+  <!-- Timer digital readout -->
+  <rect x="120" y="128" width="160" height="50" rx="6" fill="#0a0804"/>
+  <rect x="120" y="128" width="160" height="50" rx="6" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+  <text x="200" y="164" text-anchor="middle" font-family="'Courier New', monospace" font-size="38" fill="#e8a030" font-weight="bold">12:34</text>
+
+  <!-- Metrics -->
+  <g font-family="'Courier New', monospace">
+    <rect x="55" y="305" width="290" height="40" rx="6" fill="#120e08"/>
+    <rect x="55" y="305" width="290" height="40" rx="6" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="70" y="331" font-size="12" fill="#5a4a32">DISTANCE</text>
+    <text x="335" y="331" text-anchor="end" font-size="22" fill="#e8a030" font-weight="bold">2.45 KM</text>
+
+    <rect x="55" y="352" width="290" height="40" rx="6" fill="#120e08"/>
+    <rect x="55" y="352" width="290" height="40" rx="6" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="70" y="378" font-size="12" fill="#5a4a32">HEART RATE</text>
+    <text x="335" y="378" text-anchor="end" font-size="22" fill="#cc4444" font-weight="bold">142 BPM</text>
+
+    <rect x="55" y="399" width="290" height="40" rx="6" fill="#120e08"/>
+    <rect x="55" y="399" width="290" height="40" rx="6" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="70" y="425" font-size="12" fill="#5a4a32">PACE</text>
+    <text x="335" y="425" text-anchor="end" font-size="22" fill="#e8a030" font-weight="bold">5:02 /KM</text>
+
+    <rect x="55" y="446" width="290" height="40" rx="6" fill="#120e08"/>
+    <rect x="55" y="446" width="290" height="40" rx="6" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="70" y="472" font-size="12" fill="#5a4a32">CALORIES</text>
+    <text x="335" y="472" text-anchor="end" font-size="22" fill="#e8a030" font-weight="bold">286 kcal</text>
+  </g>
+
+  <!-- Level bars — on panel below metrics -->
+  <g transform="translate(64, 500)">
+    <text x="0" y="12" font-family="'Courier New', monospace" font-size="10" fill="#8a7a5a">L</text>
+    <g transform="translate(18, 0)">
+      <rect x="0" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.9"/>
+      <rect x="14" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.85"/>
+      <rect x="28" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.75"/>
+      <rect x="42" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.6"/>
+      <rect x="56" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.5"/>
+      <rect x="70" y="2" width="12" height="10" rx="1" fill="#e8a030" opacity="0.8"/>
+      <rect x="84" y="2" width="12" height="10" rx="1" fill="#e8a030" opacity="0.6"/>
+      <rect x="98" y="2" width="12" height="10" rx="1" fill="#e8a030" opacity="0.4"/>
+      <rect x="112" y="2" width="12" height="10" rx="1" fill="#ff6633" opacity="0.3"/>
+      <rect x="126" y="2" width="12" height="10" rx="1" fill="#ff6633" opacity="0.18"/>
+      <rect x="140" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.12"/>
+      <rect x="154" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.08"/>
+      <rect x="168" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="182" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="196" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="210" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="224" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="238" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+    </g>
+  </g>
+  <g transform="translate(64, 518)">
+    <text x="0" y="12" font-family="'Courier New', monospace" font-size="10" fill="#8a7a5a">R</text>
+    <g transform="translate(18, 0)">
+      <rect x="0" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.85"/>
+      <rect x="14" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.7"/>
+      <rect x="28" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.5"/>
+      <rect x="42" y="2" width="12" height="10" rx="1" fill="#39FF14" opacity="0.3"/>
+      <rect x="56" y="2" width="12" height="10" rx="1" fill="#e8a030" opacity="0.2"/>
+      <rect x="70" y="2" width="12" height="10" rx="1" fill="#e8a030" opacity="0.12"/>
+      <rect x="84" y="2" width="12" height="10" rx="1" fill="#e8a030" opacity="0.08"/>
+      <rect x="98" y="2" width="12" height="10" rx="1" fill="#ff6633" opacity="0.06"/>
+      <rect x="112" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="126" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="140" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="154" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="168" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="182" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="196" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="210" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="224" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+      <rect x="238" y="2" width="12" height="10" rx="1" fill="#cc4444" opacity="0.06"/>
+    </g>
+  </g>
+
+  <!-- Controls — lower on panel -->
+  <g transform="translate(130, 580)">
+    <circle cx="0" cy="0" r="32" fill="#2a1f10" stroke="#5a4a32" stroke-width="2"/>
+    <circle cx="0" cy="0" r="27" fill="#1a1610" stroke="#3a2d1e" stroke-width="0.5"/>
+    <g stroke="#4a3a22" stroke-width="0.4" opacity="0.4">
+      <line x1="-24" y1="-12" x2="-24" y2="12"/>
+      <line x1="-18" y1="-20" x2="-18" y2="20"/>
+      <line x1="-12" y1="-24" x2="-12" y2="24"/>
+      <line x1="-6" y1="-26" x2="-6" y2="26"/>
+      <line x1="0" y1="-27" x2="0" y2="27"/>
+      <line x1="6" y1="-26" x2="6" y2="26"/>
+      <line x1="12" y1="-24" x2="12" y2="24"/>
+      <line x1="18" y1="-20" x2="18" y2="20"/>
+      <line x1="24" y1="-12" x2="24" y2="12"/>
+    </g>
+    <text x="0" y="6" text-anchor="middle" font-family="monospace" font-size="22" fill="#e8a030" font-weight="bold">II</text>
+    <text x="0" y="42" text-anchor="middle" font-family="monospace" font-size="10" fill="#5a4a32">PAUSE</text>
+  </g>
+  <g transform="translate(270, 580)">
+    <circle cx="0" cy="0" r="32" fill="#2a1f10" stroke="#cc4444" stroke-width="2"/>
+    <circle cx="0" cy="0" r="27" fill="#1a1610" stroke="#3a2d1e" stroke-width="0.5"/>
+    <g stroke="#4a3a22" stroke-width="0.4" opacity="0.4">
+      <line x1="-24" y1="-12" x2="-24" y2="12"/>
+      <line x1="-18" y1="-20" x2="-18" y2="20"/>
+      <line x1="-12" y1="-24" x2="-12" y2="24"/>
+      <line x1="-6" y1="-26" x2="-6" y2="26"/>
+      <line x1="0" y1="-27" x2="0" y2="27"/>
+      <line x1="6" y1="-26" x2="6" y2="26"/>
+      <line x1="12" y1="-24" x2="12" y2="24"/>
+      <line x1="18" y1="-20" x2="18" y2="20"/>
+      <line x1="24" y1="-12" x2="24" y2="12"/>
+    </g>
+    <rect x="-8" y="-8" width="16" height="16" rx="2" fill="#cc4444"/>
+    <text x="0" y="42" text-anchor="middle" font-family="monospace" font-size="10" fill="#5a4a32">STOP</text>
+  </g>
+
+  <text x="200" y="750" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">VU Meter — iOS. Large meter, spacious metrics, knob controls at bottom.</text>
+</svg>

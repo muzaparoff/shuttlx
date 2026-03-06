@@ -13,8 +13,8 @@ Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI. Ze
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 57 | SharedDataManager (605), AnalyticsView (514), ThemeManager + 10 theme files |
-| watchOS | `ShuttlX Watch App` | 34 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 10 theme files |
+| iOS | `ShuttlX` | 59 | SharedDataManager (605), AnalyticsView (514), ThemeManager + 12 theme files |
+| watchOS | `ShuttlX Watch App` | 36 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 12 theme files |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
 | Widgets | `ShuttlXWidgets` | 3 | SmallWidget, MediumWidget |
 
@@ -61,10 +61,10 @@ Theme sync:
 - `current` is a **stored** property (not computed) — ensures `@Observable` generates proper tracking
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
 - Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
-- 4 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Casio LCD (amber/green, monospaced), Arcade (heavy weights, pixel borders)
-- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Casio: dot-matrix, Arcade: CRT scanlines+vignette
+- 6 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Mixtape (blue portable player, green LCD), Arcade (heavy weights, pixel borders), Classic Radio (warm brown, cream/amber), VU Meter (dark panel, amber gauges)
+- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Mixtape: blue body + texture lines, Arcade: CRT scanlines+vignette, Classic Radio: warm brown grain + vignette, VU Meter: amber glow + panel lines
 - View modifiers: `.themedCard()`, `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
-- Files: 10 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Casio, Themes/Arcade)
+- Files: 12 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Mixtape, Themes/Arcade, Themes/ClassicRadio, Themes/VUMeter)
 
 ## Data Storage
 
@@ -79,7 +79,7 @@ Theme sync:
 - **Zero external dependencies** — Apple frameworks only
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
-- **Dynamic multi-theme UI**: 4 themes (Clean, Synthwave, Casio LCD, Arcade) — selectable in Settings
+- **Dynamic multi-theme UI**: 6 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter) — selectable in Settings
 - **Models are duplicated** between iOS and watchOS — update BOTH copies when changing
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 - **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status

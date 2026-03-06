@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="480" viewBox="0 0 400 480">
+  <defs>
+    <!-- Lined paper pattern -->
+    <pattern id="lines" x="0" y="0" width="400" height="18" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="17" x2="400" y2="17" stroke="#d4c4a0" stroke-width="0.5"/>
+    </pattern>
+    <!-- Worn paper texture -->
+    <filter id="paper">
+      <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="gray"/>
+      <feBlend in="SourceGraphic" in2="gray" mode="multiply"/>
+    </filter>
+    <!-- Sticker edge dashes -->
+    <pattern id="stickerEdge" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <circle cx="4" cy="4" r="1.5" fill="#c4a878"/>
+    </pattern>
+  </defs>
+
+  <!-- Title -->
+  <text x="200" y="28" text-anchor="middle" font-family="monospace" font-size="14" fill="#888" font-weight="bold">VARIANT C — MIX TAPE LABEL</text>
+
+  <!-- Watch bezel -->
+  <rect x="50" y="45" width="300" height="390" rx="48" fill="#111"/>
+  <rect x="52" y="47" width="296" height="386" rx="46" fill="none" stroke="#333" stroke-width="1"/>
+
+  <!-- Screen area - dark background like inside a cassette case -->
+  <rect x="62" y="57" width="276" height="366" rx="38" fill="#1a1408"/>
+
+  <!-- Cassette J-card / liner notes background -->
+  <rect x="72" y="67" width="256" height="346" rx="8" fill="#f0e4c8" filter="url(#paper)"/>
+  <!-- Lined paper -->
+  <rect x="72" y="67" width="256" height="346" rx="8" fill="url(#lines)"/>
+  <!-- Aged paper overlay -->
+  <rect x="72" y="67" width="256" height="346" rx="8" fill="#e8d4a0" opacity="0.3"/>
+
+  <!-- Top sticker label -->
+  <rect x="82" y="72" width="236" height="50" rx="3" fill="#fff8e8"/>
+  <rect x="82" y="72" width="236" height="50" rx="3" fill="none" stroke="#c4a878" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="200" y="92" text-anchor="middle" font-family="'Comic Sans MS', 'Marker Felt', cursive" font-size="14" fill="#8a6a3a" font-weight="bold">SIDE A</text>
+  <text x="200" y="112" text-anchor="middle" font-family="'Comic Sans MS', 'Marker Felt', cursive" font-size="11" fill="#aa8a5a">YOUR WORKOUT MIX</text>
+
+  <!-- Timer — handwritten style on lined paper -->
+  <text x="200" y="165" text-anchor="middle" font-family="'Courier New', monospace" font-size="48" fill="#2a1808" font-weight="bold" letter-spacing="4">12:34</text>
+  <!-- Underline scribble -->
+  <path d="M125 172 Q160 178 200 170 Q240 162 275 172" fill="none" stroke="#2a1808" stroke-width="1.5" opacity="0.3"/>
+
+  <!-- Track list style metrics -->
+  <g font-family="'Courier New', monospace">
+    <!-- Track numbers + metrics -->
+    <text x="92" y="205" font-size="12" fill="#aa8a5a">01.</text>
+    <text x="112" y="205" font-size="14" fill="#2a1808">Distance</text>
+    <text x="298" y="205" text-anchor="end" font-size="14" fill="#2a1808" font-weight="bold">2.45 KM</text>
+    <!-- Dotted leader -->
+    <line x1="178" y1="203" x2="250" y2="203" stroke="#c4a878" stroke-width="0.5" stroke-dasharray="2,3"/>
+
+    <text x="92" y="225" font-size="12" fill="#aa8a5a">02.</text>
+    <text x="112" y="225" font-size="14" fill="#cc3333">Heart Rate</text>
+    <text x="298" y="225" text-anchor="end" font-size="14" fill="#cc3333" font-weight="bold">142 BPM</text>
+    <line x1="192" y1="223" x2="250" y2="223" stroke="#c4a878" stroke-width="0.5" stroke-dasharray="2,3"/>
+
+    <text x="92" y="245" font-size="12" fill="#aa8a5a">03.</text>
+    <text x="112" y="245" font-size="14" fill="#2a1808">Pace</text>
+    <text x="298" y="245" text-anchor="end" font-size="14" fill="#2a1808" font-weight="bold">5:02 /KM</text>
+    <line x1="148" y1="243" x2="250" y2="243" stroke="#c4a878" stroke-width="0.5" stroke-dasharray="2,3"/>
+
+    <text x="92" y="265" font-size="12" fill="#aa8a5a">04.</text>
+    <text x="112" y="265" font-size="14" fill="#2a1808">Calories</text>
+    <text x="298" y="265" text-anchor="end" font-size="14" fill="#2a1808" font-weight="bold">286 kcal</text>
+    <line x1="172" y1="263" x2="250" y2="263" stroke="#c4a878" stroke-width="0.5" stroke-dasharray="2,3"/>
+  </g>
+
+  <!-- Decorative doodles (hand-drawn feel) -->
+  <g opacity="0.25" stroke="#8a6a3a" fill="none" stroke-width="1">
+    <!-- Star doodle -->
+    <path d="M88 285 l4,-12 4,12 -10,-7 12,0 z"/>
+    <!-- Heart doodle -->
+    <path d="M108 280 q4,-8 8,0 q4,-8 8,0 q0,6 -8,12 q-8,-6 -8,-12"/>
+    <!-- Music note -->
+    <path d="M138 278 l0,16 M138 294 q-4,0 -4,-3 q0,-3 4,-3 M138 278 l8,-3 l0,16 M146 291 q-4,0 -4,-3 q0,-3 4,-3"/>
+  </g>
+
+  <!-- Bottom — "Made by" credit area -->
+  <rect x="82" y="295" width="236" height="35" rx="3" fill="#fff8e8"/>
+  <rect x="82" y="295" width="236" height="35" rx="3" fill="none" stroke="#c4a878" stroke-width="1" stroke-dasharray="4,3"/>
+  <text x="200" y="310" text-anchor="middle" font-family="'Comic Sans MS', 'Marker Felt', cursive" font-size="9" fill="#aa8a5a">RECORDED ON</text>
+  <text x="200" y="324" text-anchor="middle" font-family="'Courier New', monospace" font-size="11" fill="#8a6a3a" font-weight="bold">MAR 06, 2026 - 16:34</text>
+
+  <!-- Control buttons — sticker/badge style -->
+  <g transform="translate(120, 345)">
+    <!-- Pause sticker -->
+    <circle cx="0" cy="0" r="24" fill="#fff8e8" stroke="#e8a030" stroke-width="2"/>
+    <circle cx="0" cy="0" r="21" fill="none" stroke="#e8a030" stroke-width="0.5" stroke-dasharray="3,2"/>
+    <rect x="-7" y="-8" width="5" height="16" rx="1" fill="#e8a030"/>
+    <rect x="2" y="-8" width="5" height="16" rx="1" fill="#e8a030"/>
+    <text x="0" y="34" text-anchor="middle" font-family="'Comic Sans MS', cursive" font-size="9" fill="#8a6a3a">Pause</text>
+  </g>
+  <g transform="translate(200, 345)">
+    <!-- Play sticker (for resume) -->
+    <circle cx="0" cy="0" r="24" fill="#fff8e8" stroke="#39aa14" stroke-width="2"/>
+    <circle cx="0" cy="0" r="21" fill="none" stroke="#39aa14" stroke-width="0.5" stroke-dasharray="3,2"/>
+    <polygon points="-5,-9 9,0 -5,9" fill="#39aa14"/>
+    <text x="0" y="34" text-anchor="middle" font-family="'Comic Sans MS', cursive" font-size="9" fill="#8a6a3a">Play</text>
+  </g>
+  <g transform="translate(280, 345)">
+    <!-- Stop sticker -->
+    <circle cx="0" cy="0" r="24" fill="#fff8e8" stroke="#cc4444" stroke-width="2"/>
+    <circle cx="0" cy="0" r="21" fill="none" stroke="#cc4444" stroke-width="0.5" stroke-dasharray="3,2"/>
+    <rect x="-7" y="-7" width="14" height="14" rx="1" fill="#cc4444"/>
+    <text x="0" y="34" text-anchor="middle" font-family="'Comic Sans MS', cursive" font-size="9" fill="#8a6a3a">Stop</text>
+  </g>
+
+  <!-- Tape cassette icon at very bottom -->
+  <g transform="translate(175, 388)" opacity="0.15">
+    <rect x="0" y="0" width="50" height="32" rx="4" fill="none" stroke="#8a6a3a" stroke-width="1"/>
+    <circle cx="15" cy="16" r="6" fill="none" stroke="#8a6a3a" stroke-width="0.5"/>
+    <circle cx="35" cy="16" r="6" fill="none" stroke="#8a6a3a" stroke-width="0.5"/>
+    <rect x="10" y="22" width="30" height="6" rx="2" fill="none" stroke="#8a6a3a" stroke-width="0.5"/>
+  </g>
+
+  <!-- Design notes -->
+  <text x="200" y="458" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Mix tape J-card / liner notes style. Metrics as track listing.</text>
+  <text x="200" y="472" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Colors: cream/aged paper/brown ink. Sticker badge buttons.</text>
+</svg>

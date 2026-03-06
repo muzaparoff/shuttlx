@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500">
+  <defs>
+    <linearGradient id="playerBody" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a5a8a"/>
+      <stop offset="30%" stop-color="#2a4a7a"/>
+      <stop offset="100%" stop-color="#1a3a6a"/>
+    </linearGradient>
+    <linearGradient id="cassetteSlot" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1008"/>
+      <stop offset="50%" stop-color="#2d1f0e"/>
+      <stop offset="100%" stop-color="#1a1008"/>
+    </linearGradient>
+    <radialGradient id="reelC" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3d2e1a"/>
+      <stop offset="60%" stop-color="#2a1f10"/>
+      <stop offset="100%" stop-color="#1a1008"/>
+    </radialGradient>
+    <linearGradient id="lcdBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8aaa6a"/>
+      <stop offset="100%" stop-color="#7a9a5a"/>
+    </linearGradient>
+  </defs>
+
+  <text x="200" y="24" text-anchor="middle" font-family="monospace" font-size="13" fill="#888" font-weight="bold">MIXTAPE (Portable Player) — watchOS</text>
+
+  <!-- Watch bezel -->
+  <rect x="50" y="42" width="300" height="390" rx="48" fill="#111"/>
+  <rect x="52" y="44" width="296" height="386" rx="46" fill="none" stroke="#333" stroke-width="1"/>
+
+  <!-- Screen area -->
+  <rect x="62" y="54" width="276" height="366" rx="38" fill="#0e1420"/>
+
+  <!-- Portable player body -->
+  <rect x="72" y="64" width="256" height="346" rx="16" fill="url(#playerBody)"/>
+  <rect x="72" y="64" width="256" height="346" rx="16" fill="none" stroke="#4a6a9a" stroke-width="1.5"/>
+  <!-- Body texture lines -->
+  <g opacity="0.06" stroke="#fff" stroke-width="0.3">
+    <line x1="72" y1="80" x2="328" y2="80"/>
+    <line x1="72" y1="100" x2="328" y2="100"/>
+    <line x1="72" y1="120" x2="328" y2="120"/>
+    <line x1="72" y1="140" x2="328" y2="140"/>
+  </g>
+
+  <!-- Brand area (generic) -->
+  <text x="200" y="82" text-anchor="middle" font-family="'Courier New', monospace" font-size="10" fill="#8aaaca" font-weight="bold" letter-spacing="3">SHUTTLX</text>
+  <text x="200" y="94" text-anchor="middle" font-family="'Courier New', monospace" font-size="7" fill="#6a8aaa" letter-spacing="2">PORTABLE STEREO</text>
+
+  <!-- LCD display window (green/gray like old LCDs) -->
+  <rect x="86" y="102" width="228" height="68" rx="4" fill="url(#lcdBg)"/>
+  <rect x="86" y="102" width="228" height="68" rx="4" fill="none" stroke="#5a7a4a" stroke-width="1.5"/>
+  <!-- LCD segments shadow -->
+  <rect x="90" y="106" width="220" height="60" rx="2" fill="#6a9a4a" opacity="0.3"/>
+
+  <!-- Timer on LCD -->
+  <text x="200" y="142" text-anchor="middle" font-family="'Courier New', monospace" font-size="34" fill="#1a2a08" font-weight="bold">12:34</text>
+  <!-- Mode indicator -->
+  <text x="96" y="116" font-family="'Courier New', monospace" font-size="7" fill="#3a5a2a">PLAY</text>
+  <polygon points="96,120 102,124 96,128" fill="#3a5a2a"/>
+  <!-- Counter -->
+  <text x="304" y="116" text-anchor="end" font-family="'Courier New', monospace" font-size="7" fill="#3a5a2a">COUNTER</text>
+  <text x="304" y="128" text-anchor="end" font-family="'Courier New', monospace" font-size="10" fill="#1a2a08" font-weight="bold">0734</text>
+
+  <!-- Small metrics bar under LCD -->
+  <rect x="86" y="174" width="228" height="20" rx="3" fill="#1a3060"/>
+  <text x="120" y="188" text-anchor="middle" font-family="'Courier New', monospace" font-size="9" fill="#8aaaca">2.45km</text>
+  <text x="200" y="188" text-anchor="middle" font-family="'Courier New', monospace" font-size="9" fill="#ff6666">142bpm</text>
+  <text x="280" y="188" text-anchor="middle" font-family="'Courier New', monospace" font-size="9" fill="#8aaaca">5:02/km</text>
+
+  <!-- Cassette window (transparent lid showing tape inside) -->
+  <rect x="86" y="200" width="228" height="100" rx="6" fill="url(#cassetteSlot)"/>
+  <rect x="86" y="200" width="228" height="100" rx="6" fill="none" stroke="#4a6a9a" stroke-width="1"/>
+  <!-- Transparent lid effect -->
+  <rect x="86" y="200" width="228" height="100" rx="6" fill="rgba(42,74,122,0.15)"/>
+  <!-- Lid reflection -->
+  <line x1="90" y1="204" x2="310" y2="204" stroke="white" stroke-width="0.5" opacity="0.1"/>
+
+  <!-- Cassette inside the slot -->
+  <rect x="100" y="210" width="200" height="80" rx="6" fill="#3a2d1e" stroke="#5a4a32" stroke-width="0.8"/>
+
+  <!-- Left reel -->
+  <circle cx="155" cy="250" r="22" fill="url(#reelC)" stroke="#5a4a32" stroke-width="0.8"/>
+  <circle cx="155" cy="250" r="14" fill="none" stroke="#4a3a22" stroke-width="0.4"/>
+  <circle cx="155" cy="250" r="6" fill="#1a1008" stroke="#4a3a22" stroke-width="0.8"/>
+
+  <!-- Right reel -->
+  <circle cx="245" cy="250" r="22" fill="url(#reelC)" stroke="#5a4a32" stroke-width="0.8"/>
+  <circle cx="245" cy="250" r="14" fill="none" stroke="#4a3a22" stroke-width="0.4"/>
+  <circle cx="245" cy="250" r="6" fill="#1a1008" stroke="#4a3a22" stroke-width="0.8"/>
+
+  <!-- Tape label on cassette -->
+  <rect x="170" y="220" width="60" height="18" rx="2" fill="#e8d4a8"/>
+  <text x="200" y="233" text-anchor="middle" font-family="'Courier New', monospace" font-size="6" fill="#5a4a32" font-weight="bold">MIX VOL.1</text>
+
+  <!-- Cassette bottom guides -->
+  <rect x="140" y="276" width="4" height="10" rx="1" fill="#5a4a32"/>
+  <rect x="180" y="276" width="4" height="10" rx="1" fill="#5a4a32"/>
+  <rect x="216" y="276" width="4" height="10" rx="1" fill="#5a4a32"/>
+  <rect x="256" y="276" width="4" height="10" rx="1" fill="#5a4a32"/>
+
+  <!-- Volume slider -->
+  <text x="92" y="318" font-family="'Courier New', monospace" font-size="7" fill="#6a8aaa">VOL</text>
+  <rect x="112" y="312" width="80" height="6" rx="3" fill="#1a3060"/>
+  <rect x="112" y="312" width="50" height="6" rx="3" fill="#4a8aca"/>
+  <circle cx="162" cy="315" r="5" fill="#8aaaca" stroke="#4a6a9a" stroke-width="1"/>
+
+  <!-- Headphone jack indicator -->
+  <circle cx="220" cy="315" r="4" fill="#1a3060" stroke="#4a6a9a" stroke-width="0.5"/>
+  <text x="230" y="318" font-family="'Courier New', monospace" font-size="7" fill="#6a8aaa">PHONES</text>
+
+  <!-- Transport controls — chunky mechanical buttons -->
+  <g transform="translate(88, 334)">
+    <!-- Play/Pause -->
+    <rect x="0" y="0" width="44" height="28" rx="3" fill="#1a3060" stroke="#4a6a9a" stroke-width="1"/>
+    <rect x="2" y="2" width="40" height="24" rx="2" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+    <!-- Raised top edge -->
+    <line x1="4" y1="3" x2="40" y2="3" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <rect x="14" y="7" width="5" height="14" rx="1" fill="#e8a030"/>
+    <rect x="24" y="7" width="5" height="14" rx="1" fill="#e8a030"/>
+    <text x="22" y="40" text-anchor="middle" font-family="monospace" font-size="6" fill="#6a8aaa">PAUSE</text>
+  </g>
+  <g transform="translate(140, 334)">
+    <!-- Stop -->
+    <rect x="0" y="0" width="44" height="28" rx="3" fill="#1a3060" stroke="#cc4444" stroke-width="1"/>
+    <rect x="2" y="2" width="40" height="24" rx="2" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+    <line x1="4" y1="3" x2="40" y2="3" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+    <rect x="14" y="7" width="16" height="14" rx="1" fill="#cc4444"/>
+    <text x="22" y="40" text-anchor="middle" font-family="monospace" font-size="6" fill="#6a8aaa">STOP</text>
+  </g>
+
+  <!-- Battery indicator -->
+  <rect x="210" y="338" width="20" height="10" rx="2" fill="none" stroke="#6a8aaa" stroke-width="0.8"/>
+  <rect x="230" y="341" width="2" height="4" rx="1" fill="#6a8aaa"/>
+  <rect x="212" y="340" width="12" height="6" rx="1" fill="#4a8a4a"/>
+  <text x="244" y="347" font-family="'Courier New', monospace" font-size="6" fill="#6a8aaa">BATT</text>
+
+  <!-- HOLD switch -->
+  <rect x="270" y="336" width="30" height="12" rx="3" fill="#1a3060" stroke="#4a6a9a" stroke-width="0.5"/>
+  <rect x="270" y="336" width="15" height="12" rx="3" fill="#4a8aca"/>
+  <text x="285" y="360" text-anchor="middle" font-family="'Courier New', monospace" font-size="6" fill="#6a8aaa">HOLD</text>
+
+  <text x="200" y="460" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Mixtape — portable cassette player. Blue body, green LCD,</text>
+  <text x="200" y="474" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">transparent lid showing tape. 80s/90s aesthetic.</text>
+</svg>

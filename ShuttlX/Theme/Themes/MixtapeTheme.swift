@@ -1,56 +1,56 @@
 import SwiftUI
 
 extension AppTheme {
-    static let casio = AppTheme(
-        id: "casio",
-        displayName: "Casio LCD",
-        icon: "clock.fill",
+    static let mixtape = AppTheme(
+        id: "mixtape",
+        displayName: "Mixtape",
+        icon: "cassette.fill",
         colors: ThemeColors(
-            background: Color(red: 0.05, green: 0.05, blue: 0.05),       // #0D0D0D
-            surface: Color(red: 0.10, green: 0.10, blue: 0.10),          // #1A1A1A
-            surfaceBorder: Color(red: 0.20, green: 0.20, blue: 0.20),    // #333333 inset
-            running: Color(red: 0.22, green: 1.0, blue: 0.08),           // #39FF14 phosphor green
-            walking: Color(red: 1.0, green: 0.72, blue: 0.0),            // #FFB800 amber
+            background: Color(red: 0.05, green: 0.08, blue: 0.13),       // #0E1420 dark blue body
+            surface: Color(red: 0.10, green: 0.19, blue: 0.38),          // #1A3060 blue panel
+            surfaceBorder: Color(red: 0.29, green: 0.42, blue: 0.60),    // #4A6A9A blue-steel border
+            running: Color(red: 0.22, green: 1.0, blue: 0.08),           // #39FF14 green LCD
+            walking: Color(red: 0.29, green: 0.54, blue: 0.79),          // #4A8ACA blue accent
             heartRate: Color(red: 1.0, green: 0.20, blue: 0.20),         // #FF3333 LED red
-            steps: Color(red: 0.22, green: 1.0, blue: 0.08),             // phosphor green
-            calories: Color(red: 1.0, green: 0.72, blue: 0.0),           // amber
-            stationary: Color(red: 0.40, green: 0.40, blue: 0.40),       // #666666
+            steps: Color(red: 0.22, green: 1.0, blue: 0.08),             // green LCD
+            calories: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue accent
+            stationary: Color(red: 0.42, green: 0.54, blue: 0.67),       // #6A8AAA muted blue
             cycling: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
             swimming: Color(red: 0.0, green: 0.80, blue: 0.80),          // teal
-            hiking: Color(red: 1.0, green: 0.72, blue: 0.0),             // amber
+            hiking: Color(red: 0.29, green: 0.54, blue: 0.79),           // blue accent
             elliptical: Color(red: 0.22, green: 1.0, blue: 0.08),        // green
-            crossTraining: Color(red: 1.0, green: 0.72, blue: 0.0),      // amber
-            ctaPrimary: Color(red: 0.22, green: 1.0, blue: 0.08),        // #39FF14 green LCD
+            crossTraining: Color(red: 0.29, green: 0.54, blue: 0.79),    // blue accent
+            ctaPrimary: Color(red: 0.29, green: 0.54, blue: 0.79),       // #4A8ACA blue
             ctaDestructive: Color(red: 1.0, green: 0.20, blue: 0.20),    // LED red
-            ctaWarning: Color(red: 1.0, green: 0.72, blue: 0.0),         // amber
-            ctaPause: Color(red: 1.0, green: 0.72, blue: 0.0),           // amber
-            iconOnCTA: Color(red: 0.05, green: 0.05, blue: 0.05),        // near-black
+            ctaWarning: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue
+            ctaPause: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue
+            iconOnCTA: Color(red: 0.05, green: 0.08, blue: 0.13),        // dark blue
             hrZone1: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
             hrZone2: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
-            hrZone3: Color(red: 1.0, green: 0.72, blue: 0.0),            // amber
-            hrZone4: Color(red: 1.0, green: 0.50, blue: 0.0),            // orange-amber
+            hrZone3: Color(red: 0.29, green: 0.54, blue: 0.79),          // blue
+            hrZone4: Color(red: 0.54, green: 0.40, blue: 0.79),          // purple-blue
             hrZone5: Color(red: 1.0, green: 0.20, blue: 0.20),           // LED red
             stepWork: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
-            stepRest: Color(red: 1.0, green: 0.72, blue: 0.0),           // amber
-            stepWarmup: Color(red: 0.22, green: 1.0, blue: 0.08),        // green
+            stepRest: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue
+            stepWarmup: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue
             stepCooldown: Color(red: 0.22, green: 1.0, blue: 0.08),      // green
-            pace: Color(red: 1.0, green: 0.72, blue: 0.0),               // amber
+            pace: Color(red: 0.29, green: 0.54, blue: 0.79),             // blue
             positive: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
-            negative: Color(red: 1.0, green: 0.72, blue: 0.0),           // amber
+            negative: Color(red: 1.0, green: 0.20, blue: 0.20),          // red
             recoveryFresh: Color(red: 0.22, green: 1.0, blue: 0.08),     // green
-            recoveryNormal: Color(red: 0.22, green: 1.0, blue: 0.08),    // green
-            recoveryFatigued: Color(red: 1.0, green: 0.72, blue: 0.0),   // amber
+            recoveryNormal: Color(red: 0.29, green: 0.54, blue: 0.79),   // blue
+            recoveryFatigued: Color(red: 0.54, green: 0.40, blue: 0.79), // purple-blue
             recoveryOverreaching: Color(red: 1.0, green: 0.20, blue: 0.20), // red
             paceInterval: Color(red: 1.0, green: 0.20, blue: 0.20),      // red
-            paceThreshold: Color(red: 1.0, green: 0.72, blue: 0.0),      // amber
-            paceTempo: Color(red: 1.0, green: 0.72, blue: 0.0),          // amber
+            paceThreshold: Color(red: 0.54, green: 0.40, blue: 0.79),    // purple-blue
+            paceTempo: Color(red: 0.29, green: 0.54, blue: 0.79),        // blue
             paceModerate: Color(red: 0.22, green: 1.0, blue: 0.08),      // green
             paceEasy: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
-            textPrimary: Color(red: 0.67, green: 0.67, blue: 0.67),      // #AAAAAA
-            textSecondary: Color(red: 0.40, green: 0.40, blue: 0.40),    // #666666
-            cardBackground: Color(red: 0.10, green: 0.10, blue: 0.10),
-            watchCardBackground: Color(red: 0.10, green: 0.10, blue: 0.10),
-            watchButtonBackground: Color(red: 0.15, green: 0.15, blue: 0.15)
+            textPrimary: Color(red: 0.54, green: 0.67, blue: 0.79),      // #8AAACA cool blue-gray
+            textSecondary: Color(red: 0.42, green: 0.54, blue: 0.67),    // #6A8AAA muted blue
+            cardBackground: Color(red: 0.10, green: 0.19, blue: 0.38),
+            watchCardBackground: Color(red: 0.10, green: 0.19, blue: 0.38),
+            watchButtonBackground: Color(red: 0.15, green: 0.24, blue: 0.43)
         ),
         fonts: ThemeFonts(
             timerDisplay: .system(.largeTitle, design: .monospaced).weight(.bold),

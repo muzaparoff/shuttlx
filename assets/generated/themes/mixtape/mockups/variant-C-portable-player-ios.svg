@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="780" viewBox="0 0 400 780">
+  <defs>
+    <linearGradient id="playerBodyI" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3a5a8a"/>
+      <stop offset="30%" stop-color="#2a4a7a"/>
+      <stop offset="100%" stop-color="#1a3a6a"/>
+    </linearGradient>
+    <linearGradient id="cassetteSlotI" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1008"/>
+      <stop offset="50%" stop-color="#2d1f0e"/>
+      <stop offset="100%" stop-color="#1a1008"/>
+    </linearGradient>
+    <radialGradient id="reelCI" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3d2e1a"/>
+      <stop offset="60%" stop-color="#2a1f10"/>
+      <stop offset="100%" stop-color="#1a1008"/>
+    </radialGradient>
+    <linearGradient id="lcdBgI" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8aaa6a"/>
+      <stop offset="100%" stop-color="#7a9a5a"/>
+    </linearGradient>
+  </defs>
+
+  <text x="200" y="24" text-anchor="middle" font-family="monospace" font-size="13" fill="#888" font-weight="bold">MIXTAPE (Portable Player) — iOS</text>
+
+  <!-- Phone frame -->
+  <rect x="30" y="40" width="340" height="700" rx="40" fill="#111"/>
+  <rect x="32" y="42" width="336" height="696" rx="38" fill="none" stroke="#333" stroke-width="1"/>
+  <rect x="150" y="50" width="100" height="28" rx="14" fill="#000"/>
+
+  <!-- Screen -->
+  <rect x="40" y="50" width="320" height="680" rx="34" fill="#0e1420"/>
+
+  <!-- Player body -->
+  <rect x="44" y="54" width="312" height="672" rx="30" fill="url(#playerBodyI)"/>
+  <rect x="44" y="54" width="312" height="672" rx="30" fill="none" stroke="#4a6a9a" stroke-width="1.5"/>
+
+  <!-- Body texture -->
+  <g opacity="0.04" stroke="#fff" stroke-width="0.3">
+    <line x1="44" y1="90" x2="356" y2="90"/>
+    <line x1="44" y1="110" x2="356" y2="110"/>
+    <line x1="44" y1="130" x2="356" y2="130"/>
+  </g>
+
+  <!-- Brand -->
+  <text x="200" y="92" text-anchor="middle" font-family="'Courier New', monospace" font-size="13" fill="#8aaaca" font-weight="bold" letter-spacing="4">SHUTTLX</text>
+  <text x="200" y="106" text-anchor="middle" font-family="'Courier New', monospace" font-size="8" fill="#6a8aaa" letter-spacing="3">PORTABLE STEREO PLAYER</text>
+
+  <!-- LCD display (larger) -->
+  <rect x="60" y="118" width="280" height="110" rx="6" fill="url(#lcdBgI)"/>
+  <rect x="60" y="118" width="280" height="110" rx="6" fill="none" stroke="#5a7a4a" stroke-width="2"/>
+  <rect x="64" y="122" width="272" height="102" rx="4" fill="#6a9a4a" opacity="0.3"/>
+
+  <!-- Play indicator + counter -->
+  <text x="74" y="138" font-family="'Courier New', monospace" font-size="9" fill="#3a5a2a">PLAY</text>
+  <polygon points="74,142 82,147 74,152" fill="#3a5a2a"/>
+  <text x="330" y="138" text-anchor="end" font-family="'Courier New', monospace" font-size="9" fill="#3a5a2a">COUNTER</text>
+  <text x="330" y="152" text-anchor="end" font-family="'Courier New', monospace" font-size="12" fill="#1a2a08" font-weight="bold">0734</text>
+
+  <!-- Timer -->
+  <text x="200" y="185" text-anchor="middle" font-family="'Courier New', monospace" font-size="50" fill="#1a2a08" font-weight="bold">12:34</text>
+
+  <!-- Metrics under timer on LCD -->
+  <line x1="72" y1="196" x2="328" y2="196" stroke="#5a7a4a" stroke-width="0.5"/>
+  <text x="115" y="216" text-anchor="middle" font-family="'Courier New', monospace" font-size="13" fill="#2a4a1a" font-weight="bold">2.45 km</text>
+  <text x="200" y="216" text-anchor="middle" font-family="'Courier New', monospace" font-size="13" fill="#6a2a2a" font-weight="bold">142 bpm</text>
+  <text x="290" y="216" text-anchor="middle" font-family="'Courier New', monospace" font-size="13" fill="#2a4a1a" font-weight="bold">5:02/km</text>
+
+  <!-- Cassette compartment with transparent lid -->
+  <rect x="60" y="242" width="280" height="155" rx="8" fill="url(#cassetteSlotI)"/>
+  <rect x="60" y="242" width="280" height="155" rx="8" fill="none" stroke="#4a6a9a" stroke-width="1.5"/>
+  <!-- Lid tint -->
+  <rect x="60" y="242" width="280" height="155" rx="8" fill="rgba(42,74,122,0.12)"/>
+  <!-- Lid reflection -->
+  <line x1="66" y1="248" x2="334" y2="248" stroke="white" stroke-width="0.5" opacity="0.1"/>
+
+  <!-- Cassette body inside -->
+  <rect x="78" y="254" width="244" height="130" rx="8" fill="#3a2d1e" stroke="#5a4a32" stroke-width="1"/>
+
+  <!-- Cassette label -->
+  <rect x="148" y="262" width="104" height="26" rx="3" fill="#e8d4a8"/>
+  <text x="200" y="272" text-anchor="middle" font-family="'Courier New', monospace" font-size="7" fill="#5a4a32" font-weight="bold">YOUR WORKOUT MIX</text>
+  <text x="200" y="283" text-anchor="middle" font-family="'Courier New', monospace" font-size="6" fill="#8a7a5a">VOL. 1 — SIDE A</text>
+
+  <!-- Tape window inside cassette -->
+  <rect x="110" y="295" width="180" height="55" rx="4" fill="#1a1008" stroke="#4a3a22" stroke-width="0.5"/>
+
+  <!-- Left reel -->
+  <circle cx="160" cy="322" r="22" fill="url(#reelCI)" stroke="#5a4a32" stroke-width="0.8"/>
+  <circle cx="160" cy="322" r="14" fill="none" stroke="#4a3a22" stroke-width="0.4"/>
+  <circle cx="160" cy="322" r="6" fill="#1a1008" stroke="#4a3a22" stroke-width="0.8"/>
+
+  <!-- Right reel -->
+  <circle cx="240" cy="322" r="22" fill="url(#reelCI)" stroke="#5a4a32" stroke-width="0.8"/>
+  <circle cx="240" cy="322" r="14" fill="none" stroke="#4a3a22" stroke-width="0.4"/>
+  <circle cx="240" cy="322" r="6" fill="#1a1008" stroke="#4a3a22" stroke-width="0.8"/>
+
+  <!-- Cassette bottom -->
+  <rect x="130" y="355" width="4" height="12" rx="1" fill="#5a4a32"/>
+  <rect x="170" y="355" width="4" height="12" rx="1" fill="#5a4a32"/>
+  <rect x="226" y="355" width="4" height="12" rx="1" fill="#5a4a32"/>
+  <rect x="266" y="355" width="4" height="12" rx="1" fill="#5a4a32"/>
+  <path d="M134 367 Q200 382 266 367" fill="none" stroke="#5a4a32" stroke-width="0.8"/>
+
+  <!-- EQ / level display -->
+  <rect x="60" y="410" width="280" height="30" rx="4" fill="#1a3060"/>
+  <rect x="60" y="410" width="280" height="30" rx="4" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+  <g font-family="'Courier New', monospace" font-size="7" fill="#6a8aaa">
+    <text x="72" y="422">60</text>
+    <text x="100" y="422">250</text>
+    <text x="135" y="422">1K</text>
+    <text x="167" y="422">4K</text>
+    <text x="195" y="422">8K</text>
+    <text x="223" y="422">16K</text>
+  </g>
+  <!-- EQ bars -->
+  <g transform="translate(70, 425)">
+    <rect x="4" y="0" width="6" height="10" rx="1" fill="#4a8aca" opacity="0.8"/>
+    <rect x="32" y="-3" width="6" height="13" rx="1" fill="#4a8aca" opacity="0.9"/>
+    <rect x="62" y="-6" width="6" height="16" rx="1" fill="#4a8aca"/>
+    <rect x="94" y="-2" width="6" height="12" rx="1" fill="#4a8aca" opacity="0.85"/>
+    <rect x="124" y="2" width="6" height="8" rx="1" fill="#4a8aca" opacity="0.6"/>
+    <rect x="154" y="4" width="6" height="6" rx="1" fill="#4a8aca" opacity="0.4"/>
+  </g>
+
+  <!-- Volume slider -->
+  <text x="68" y="465" font-family="'Courier New', monospace" font-size="9" fill="#6a8aaa">VOLUME</text>
+  <rect x="130" y="458" width="200" height="8" rx="4" fill="#1a3060"/>
+  <rect x="130" y="458" width="130" height="8" rx="4" fill="#4a8aca"/>
+  <circle cx="260" cy="462" r="7" fill="#8aaaca" stroke="#4a6a9a" stroke-width="1"/>
+
+  <!-- Additional metric cards -->
+  <g font-family="'Courier New', monospace">
+    <rect x="60" y="484" width="135" height="50" rx="6" fill="#1a3060"/>
+    <rect x="60" y="484" width="135" height="50" rx="6" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+    <text x="72" y="502" font-size="9" fill="#6a8aaa">CALORIES</text>
+    <text x="185" y="524" text-anchor="end" font-size="20" fill="#8aaaca" font-weight="bold">286 kcal</text>
+
+    <rect x="205" y="484" width="135" height="50" rx="6" fill="#1a3060"/>
+    <rect x="205" y="484" width="135" height="50" rx="6" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+    <text x="217" y="502" font-size="9" fill="#6a8aaa">STEPS</text>
+    <text x="330" y="524" text-anchor="end" font-size="20" fill="#8aaaca" font-weight="bold">3,241</text>
+  </g>
+
+  <!-- Transport controls — big chunky mechanical buttons -->
+  <g transform="translate(75, 556)">
+    <!-- Pause -->
+    <rect x="0" y="0" width="110" height="48" rx="6" fill="#1a3060" stroke="#e8a030" stroke-width="2"/>
+    <rect x="2" y="2" width="106" height="44" rx="5" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+    <line x1="6" y1="4" x2="100" y2="4" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <rect x="40" y="12" width="9" height="24" rx="1" fill="#e8a030"/>
+    <rect x="56" y="12" width="9" height="24" rx="1" fill="#e8a030"/>
+    <text x="55" y="62" text-anchor="middle" font-family="monospace" font-size="10" fill="#6a8aaa">PAUSE</text>
+  </g>
+  <g transform="translate(215, 556)">
+    <!-- Stop -->
+    <rect x="0" y="0" width="110" height="48" rx="6" fill="#1a3060" stroke="#cc4444" stroke-width="2"/>
+    <rect x="2" y="2" width="106" height="44" rx="5" fill="none" stroke="#2a4a7a" stroke-width="0.5"/>
+    <line x1="6" y1="4" x2="100" y2="4" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+    <rect x="40" y="12" width="24" height="24" rx="2" fill="#cc4444"/>
+    <text x="55" y="62" text-anchor="middle" font-family="monospace" font-size="10" fill="#6a8aaa">STOP</text>
+  </g>
+
+  <!-- Bottom details -->
+  <g transform="translate(60, 640)">
+    <!-- Battery -->
+    <rect x="0" y="0" width="24" height="12" rx="2" fill="none" stroke="#6a8aaa" stroke-width="1"/>
+    <rect x="24" y="3" width="3" height="6" rx="1" fill="#6a8aaa"/>
+    <rect x="2" y="2" width="16" height="8" rx="1" fill="#4a8a4a"/>
+    <text x="34" y="10" font-family="'Courier New', monospace" font-size="8" fill="#6a8aaa">BATT OK</text>
+
+    <!-- Hold switch -->
+    <rect x="130" y="0" width="36" height="12" rx="4" fill="#1a3060" stroke="#4a6a9a" stroke-width="0.5"/>
+    <rect x="130" y="0" width="18" height="12" rx="4" fill="#4a8aca"/>
+    <text x="148" y="22" text-anchor="middle" font-family="'Courier New', monospace" font-size="7" fill="#6a8aaa">HOLD</text>
+
+    <!-- Headphone jack -->
+    <circle cx="220" cy="6" r="5" fill="#1a3060" stroke="#4a6a9a" stroke-width="0.8"/>
+    <circle cx="220" cy="6" r="2" fill="#2a4a7a"/>
+    <text x="232" y="10" font-family="'Courier New', monospace" font-size="8" fill="#6a8aaa">PHONES</text>
+  </g>
+
+  <text x="200" y="750" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Mixtape — iOS. Portable player with cassette, LCD, EQ, volume slider.</text>
+</svg>

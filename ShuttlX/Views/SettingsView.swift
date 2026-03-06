@@ -302,8 +302,10 @@ struct SettingsView: View {
         switch id {
         case "clean": return "Modern & minimal"
         case "synthwave": return "Neon nights"
-        case "casio": return "Digital retro"
+        case "mixtape": return "Portable player"
         case "arcade": return "8-bit energy"
+        case "classicradio": return "Warm analog tape"
+        case "vumeter": return "Hi-fi dashboard"
         default: return ""
         }
     }

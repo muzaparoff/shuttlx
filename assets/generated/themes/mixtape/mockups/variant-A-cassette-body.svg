@@ -1,0 +1,126 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="480" viewBox="0 0 400 480">
+  <defs>
+    <!-- Cassette plastic texture -->
+    <filter id="plastic">
+      <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" result="noise"/>
+      <feColorMatrix type="saturate" values="0" in="noise" result="gray"/>
+      <feBlend in="SourceGraphic" in2="gray" mode="overlay"/>
+    </filter>
+    <!-- Tape window gradient -->
+    <linearGradient id="tapeWindow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a1008"/>
+      <stop offset="50%" stop-color="#2d1f0e"/>
+      <stop offset="100%" stop-color="#1a1008"/>
+    </linearGradient>
+    <!-- Reel hub gradient -->
+    <radialGradient id="reelHub" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#3d2e1a"/>
+      <stop offset="60%" stop-color="#2a1f10"/>
+      <stop offset="100%" stop-color="#1a1008"/>
+    </radialGradient>
+    <!-- Label gradient -->
+    <linearGradient id="labelBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f5e6c8"/>
+      <stop offset="100%" stop-color="#e8d4a8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="200" y="28" text-anchor="middle" font-family="monospace" font-size="14" fill="#888" font-weight="bold">VARIANT A — CASSETTE BODY</text>
+
+  <!-- Watch bezel -->
+  <rect x="50" y="45" width="300" height="390" rx="48" fill="#111"/>
+  <rect x="52" y="47" width="296" height="386" rx="46" fill="none" stroke="#333" stroke-width="1"/>
+
+  <!-- Screen area -->
+  <rect x="62" y="57" width="276" height="366" rx="38" fill="#1c1408"/>
+
+  <!-- Cassette shell body -->
+  <rect x="72" y="67" width="256" height="346" rx="16" fill="#3a2d1e" filter="url(#plastic)"/>
+  <rect x="72" y="67" width="256" height="346" rx="16" fill="none" stroke="#5a4a32" stroke-width="1.5"/>
+
+  <!-- Screw holes (4 corners) -->
+  <circle cx="92" cy="87" r="5" fill="#2a1f10" stroke="#4a3a22" stroke-width="0.5"/>
+  <circle cx="308" cy="87" r="5" fill="#2a1f10" stroke="#4a3a22" stroke-width="0.5"/>
+  <circle cx="92" cy="393" r="5" fill="#2a1f10" stroke="#4a3a22" stroke-width="0.5"/>
+  <circle cx="308" cy="393" r="5" fill="#2a1f10" stroke="#4a3a22" stroke-width="0.5"/>
+
+  <!-- Label area (top half) -->
+  <rect x="88" y="95" width="224" height="120" rx="4" fill="url(#labelBg)"/>
+  <rect x="88" y="95" width="224" height="120" rx="4" fill="none" stroke="#c4a878" stroke-width="0.5"/>
+  <!-- Label lines -->
+  <line x1="96" y1="115" x2="304" y2="115" stroke="#c4a878" stroke-width="0.3"/>
+  <line x1="96" y1="135" x2="304" y2="135" stroke="#c4a878" stroke-width="0.3"/>
+  <line x1="96" y1="155" x2="304" y2="155" stroke="#c4a878" stroke-width="0.3"/>
+  <line x1="96" y1="175" x2="304" y2="175" stroke="#c4a878" stroke-width="0.3"/>
+  <line x1="96" y1="195" x2="304" y2="195" stroke="#c4a878" stroke-width="0.3"/>
+
+  <!-- Timer on label -->
+  <text x="200" y="130" text-anchor="middle" font-family="'Courier New', monospace" font-size="36" fill="#2a1f10" font-weight="bold">12:34</text>
+  <!-- Metrics on label -->
+  <text x="200" y="155" text-anchor="middle" font-family="'Courier New', monospace" font-size="16" fill="#5a4a32">2.45 KM</text>
+  <text x="200" y="175" text-anchor="middle" font-family="'Courier New', monospace" font-size="16" fill="#cc4444">142 BPM</text>
+  <text x="200" y="195" text-anchor="middle" font-family="'Courier New', monospace" font-size="16" fill="#5a4a32">5:02 /KM</text>
+
+  <!-- Tape window -->
+  <rect x="110" y="230" width="180" height="80" rx="8" fill="url(#tapeWindow)"/>
+  <rect x="110" y="230" width="180" height="80" rx="8" fill="none" stroke="#5a4a32" stroke-width="1.5"/>
+
+  <!-- Left reel -->
+  <circle cx="160" cy="270" r="28" fill="url(#reelHub)" stroke="#5a4a32" stroke-width="1"/>
+  <circle cx="160" cy="270" r="18" fill="none" stroke="#4a3a22" stroke-width="0.5"/>
+  <circle cx="160" cy="270" r="8" fill="#1a1008" stroke="#4a3a22" stroke-width="1"/>
+  <!-- Reel spokes -->
+  <line x1="160" y1="252" x2="160" y2="242" stroke="#4a3a22" stroke-width="0.5"/>
+  <line x1="178" y1="270" x2="188" y2="270" stroke="#4a3a22" stroke-width="0.5"/>
+  <line x1="160" y1="288" x2="160" y2="298" stroke="#4a3a22" stroke-width="0.5"/>
+  <line x1="142" y1="270" x2="132" y2="270" stroke="#4a3a22" stroke-width="0.5"/>
+
+  <!-- Right reel -->
+  <circle cx="240" cy="270" r="28" fill="url(#reelHub)" stroke="#5a4a32" stroke-width="1"/>
+  <circle cx="240" cy="270" r="18" fill="none" stroke="#4a3a22" stroke-width="0.5"/>
+  <circle cx="240" cy="270" r="8" fill="#1a1008" stroke="#4a3a22" stroke-width="1"/>
+  <!-- Reel spokes -->
+  <line x1="240" y1="252" x2="240" y2="242" stroke="#4a3a22" stroke-width="0.5"/>
+  <line x1="258" y1="270" x2="268" y2="270" stroke="#4a3a22" stroke-width="0.5"/>
+  <line x1="240" y1="288" x2="240" y2="298" stroke="#4a3a22" stroke-width="0.5"/>
+  <line x1="222" y1="270" x2="212" y2="270" stroke="#4a3a22" stroke-width="0.5"/>
+
+  <!-- Tape ribbon between reels -->
+  <path d="M132 270 Q148 260 160 242 M160 298 Q148 280 132 270" fill="none" stroke="#8B4513" stroke-width="1" opacity="0.4"/>
+  <path d="M268 270 Q252 260 240 242 M240 298 Q252 280 268 270" fill="none" stroke="#8B4513" stroke-width="1" opacity="0.4"/>
+
+  <!-- Bottom guide teeth -->
+  <rect x="140" y="320" width="6" height="16" rx="1" fill="#5a4a32"/>
+  <rect x="182" y="320" width="6" height="16" rx="1" fill="#5a4a32"/>
+  <rect x="212" y="320" width="6" height="16" rx="1" fill="#5a4a32"/>
+  <rect x="254" y="320" width="6" height="16" rx="1" fill="#5a4a32"/>
+
+  <!-- Tape guide groove -->
+  <path d="M146 336 Q200 356 254 336" fill="none" stroke="#5a4a32" stroke-width="1"/>
+
+  <!-- Control buttons at bottom -->
+  <g transform="translate(100, 360)">
+    <!-- Rewind -->
+    <rect x="0" y="0" width="36" height="24" rx="3" fill="#2a1f10" stroke="#5a4a32" stroke-width="1"/>
+    <polygon points="22,6 12,12 22,18" fill="#c4a878"/>
+    <polygon points="14,6 4,12 14,18" fill="#c4a878"/>
+    <!-- Play/Pause -->
+    <rect x="44" y="0" width="36" height="24" rx="3" fill="#2a1f10" stroke="#e8a030" stroke-width="1.5"/>
+    <polygon points="56,6 68,12 56,18" fill="#e8a030"/>
+    <!-- Stop -->
+    <rect x="88" y="0" width="36" height="24" rx="3" fill="#2a1f10" stroke="#cc4444" stroke-width="1.5"/>
+    <rect x="100" y="6" width="12" height="12" rx="1" fill="#cc4444"/>
+    <!-- Fast Forward -->
+    <rect x="132" y="0" width="36" height="24" rx="3" fill="#2a1f10" stroke="#5a4a32" stroke-width="1"/>
+    <polygon points="142,6 152,12 142,18" fill="#c4a878"/>
+    <polygon points="150,6 160,12 150,18" fill="#c4a878"/>
+    <!-- Record -->
+    <rect x="176" y="0" width="24" height="24" rx="3" fill="#2a1f10" stroke="#5a4a32" stroke-width="1"/>
+    <circle cx="188" cy="12" r="6" fill="#cc4444" opacity="0.6"/>
+  </g>
+
+  <!-- Design notes -->
+  <text x="200" y="458" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Full cassette shell as background. Timer on label area.</text>
+  <text x="200" y="472" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Colors: warm brown/amber/cream. Mechanical deck buttons.</text>
+</svg>

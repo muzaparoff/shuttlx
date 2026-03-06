@@ -1,0 +1,191 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="480" viewBox="0 0 400 480">
+  <defs>
+    <!-- Brushed metal texture -->
+    <linearGradient id="brushedMetal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#2a2520"/>
+      <stop offset="20%" stop-color="#332d26"/>
+      <stop offset="40%" stop-color="#2a2520"/>
+      <stop offset="60%" stop-color="#332d26"/>
+      <stop offset="80%" stop-color="#2a2520"/>
+      <stop offset="100%" stop-color="#332d26"/>
+    </linearGradient>
+    <!-- VU meter arc gradient -->
+    <linearGradient id="vuArc" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#39FF14"/>
+      <stop offset="60%" stop-color="#e8a030"/>
+      <stop offset="80%" stop-color="#ff6633"/>
+      <stop offset="100%" stop-color="#ff2222"/>
+    </linearGradient>
+    <!-- Amber glow -->
+    <radialGradient id="amberGlow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#e8a030" stop-opacity="0.08"/>
+      <stop offset="100%" stop-color="#e8a030" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Title -->
+  <text x="200" y="28" text-anchor="middle" font-family="monospace" font-size="14" fill="#888" font-weight="bold">VARIANT B — VU METER STYLE</text>
+
+  <!-- Watch bezel -->
+  <rect x="50" y="45" width="300" height="390" rx="48" fill="#111"/>
+  <rect x="52" y="47" width="296" height="386" rx="46" fill="none" stroke="#333" stroke-width="1"/>
+
+  <!-- Screen area - dark warm background -->
+  <rect x="62" y="57" width="276" height="366" rx="38" fill="#1a1610"/>
+  <!-- Subtle warm glow -->
+  <rect x="62" y="57" width="276" height="366" rx="38" fill="url(#amberGlow)"/>
+
+  <!-- Brushed panel strips (horizontal) -->
+  <g opacity="0.15">
+    <line x1="72" y1="100" x2="328" y2="100" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="72" y1="160" x2="328" y2="160" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="72" y1="300" x2="328" y2="300" stroke="#e8a030" stroke-width="0.3"/>
+    <line x1="72" y1="360" x2="328" y2="360" stroke="#e8a030" stroke-width="0.3"/>
+  </g>
+
+  <!-- VU Meter frame (timer area) -->
+  <rect x="82" y="72" width="236" height="130" rx="8" fill="#120e08"/>
+  <rect x="82" y="72" width="236" height="130" rx="8" fill="none" stroke="#5a4a32" stroke-width="2"/>
+  <!-- Inner bevel -->
+  <rect x="86" y="76" width="228" height="122" rx="6" fill="none" stroke="#3a2d1e" stroke-width="1"/>
+
+  <!-- VU meter markings arc -->
+  <g transform="translate(200, 170)">
+    <!-- Arc background -->
+    <path d="M-90,-60 A100,100 0 0,1 90,-60" fill="none" stroke="#5a4a32" stroke-width="0.5"/>
+
+    <!-- Scale markings -->
+    <g font-family="'Courier New', monospace" font-size="7" fill="#8a7a5a">
+      <text x="-88" y="-64" text-anchor="middle">-20</text>
+      <text x="-62" y="-82" text-anchor="middle">-10</text>
+      <text x="-28" y="-92" text-anchor="middle">-7</text>
+      <text x="-2" y="-96" text-anchor="middle">-5</text>
+      <text x="22" y="-94" text-anchor="middle">-3</text>
+      <text x="44" y="-88" text-anchor="middle">0</text>
+      <text x="64" y="-76" text-anchor="middle" fill="#cc4444">+1</text>
+      <text x="82" y="-62" text-anchor="middle" fill="#cc4444">+3</text>
+    </g>
+
+    <!-- Tick marks on arc -->
+    <g stroke="#8a7a5a" stroke-width="1">
+      <line x1="-86" y1="-52" x2="-80" y2="-48" />
+      <line x1="-60" y1="-72" x2="-55" y2="-67" />
+      <line x1="-28" y1="-84" x2="-25" y2="-78" />
+      <line x1="0" y1="-88" x2="0" y2="-82" />
+      <line x1="28" y1="-84" x2="25" y2="-78" />
+      <line x1="52" y1="-76" x2="48" y2="-71" />
+    </g>
+    <g stroke="#cc4444" stroke-width="1">
+      <line x1="68" y1="-64" x2="64" y2="-59" />
+      <line x1="82" y1="-48" x2="77" y2="-44" />
+    </g>
+
+    <!-- VU "dB" label -->
+    <text x="0" y="-40" text-anchor="middle" font-family="'Courier New', monospace" font-size="8" fill="#5a4a32">VU</text>
+
+    <!-- Needle -->
+    <line x1="0" y1="0" x2="-15" y2="-80" stroke="#e8a030" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="4" fill="#3a2d1e" stroke="#5a4a32" stroke-width="1"/>
+  </g>
+
+  <!-- Timer display (digital readout under VU meter) -->
+  <rect x="130" y="108" width="140" height="42" rx="4" fill="#0a0804"/>
+  <rect x="130" y="108" width="140" height="42" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+  <text x="200" y="140" text-anchor="middle" font-family="'Courier New', monospace" font-size="32" fill="#e8a030" font-weight="bold">12:34</text>
+
+  <!-- Level bars (LED-style indicators) -->
+  <g transform="translate(92, 166)">
+    <text x="0" y="10" font-family="'Courier New', monospace" font-size="8" fill="#5a4a32">L</text>
+    <g transform="translate(14, 0)">
+      <rect x="0" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.9"/>
+      <rect x="10" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.9"/>
+      <rect x="20" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.8"/>
+      <rect x="30" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.7"/>
+      <rect x="40" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.8"/>
+      <rect x="50" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.7"/>
+      <rect x="60" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.6"/>
+      <rect x="70" y="2" width="8" height="8" rx="1" fill="#ff6633" opacity="0.5"/>
+      <rect x="80" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.3"/>
+      <rect x="90" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.15"/>
+    </g>
+  </g>
+  <g transform="translate(92, 180)">
+    <text x="0" y="10" font-family="'Courier New', monospace" font-size="8" fill="#5a4a32">R</text>
+    <g transform="translate(14, 0)">
+      <rect x="0" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.9"/>
+      <rect x="10" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.9"/>
+      <rect x="20" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.8"/>
+      <rect x="30" y="2" width="8" height="8" rx="1" fill="#39FF14" opacity="0.6"/>
+      <rect x="40" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.5"/>
+      <rect x="50" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.3"/>
+      <rect x="60" y="2" width="8" height="8" rx="1" fill="#e8a030" opacity="0.15"/>
+      <rect x="70" y="2" width="8" height="8" rx="1" fill="#ff6633" opacity="0.1"/>
+      <rect x="80" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.1"/>
+      <rect x="90" y="2" width="8" height="8" rx="1" fill="#cc4444" opacity="0.1"/>
+    </g>
+  </g>
+
+  <!-- Metrics area -->
+  <g font-family="'Courier New', monospace">
+    <!-- Distance -->
+    <rect x="82" y="208" width="236" height="36" rx="4" fill="#120e08"/>
+    <rect x="82" y="208" width="236" height="36" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="92" y="232" font-size="11" fill="#5a4a32">DIST</text>
+    <text x="308" y="232" text-anchor="end" font-size="22" fill="#e8a030" font-weight="bold">2.45 KM</text>
+
+    <!-- Heart rate -->
+    <rect x="82" y="250" width="236" height="36" rx="4" fill="#120e08"/>
+    <rect x="82" y="250" width="236" height="36" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="92" y="274" font-size="11" fill="#5a4a32">HR</text>
+    <text x="308" y="274" text-anchor="end" font-size="22" fill="#cc4444" font-weight="bold">142 BPM</text>
+
+    <!-- Pace -->
+    <rect x="82" y="292" width="236" height="36" rx="4" fill="#120e08"/>
+    <rect x="82" y="292" width="236" height="36" rx="4" fill="none" stroke="#3a2d1e" stroke-width="0.5"/>
+    <text x="92" y="316" font-size="11" fill="#5a4a32">PACE</text>
+    <text x="308" y="316" text-anchor="end" font-size="22" fill="#e8a030" font-weight="bold">5:02 /KM</text>
+  </g>
+
+  <!-- Bottom controls — rotary knob style -->
+  <g transform="translate(145, 348)">
+    <!-- Pause knob -->
+    <circle cx="0" cy="0" r="22" fill="#2a1f10" stroke="#5a4a32" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="18" fill="#1a1610" stroke="#3a2d1e" stroke-width="0.5"/>
+    <!-- Knurl texture -->
+    <g stroke="#4a3a22" stroke-width="0.3" opacity="0.5">
+      <line x1="-16" y1="-8" x2="-16" y2="8"/>
+      <line x1="-12" y1="-14" x2="-12" y2="14"/>
+      <line x1="-8" y1="-16" x2="-8" y2="16"/>
+      <line x1="-4" y1="-17" x2="-4" y2="17"/>
+      <line x1="0" y1="-18" x2="0" y2="18"/>
+      <line x1="4" y1="-17" x2="4" y2="17"/>
+      <line x1="8" y1="-16" x2="8" y2="16"/>
+      <line x1="12" y1="-14" x2="12" y2="14"/>
+      <line x1="16" y1="-8" x2="16" y2="8"/>
+    </g>
+    <text x="0" y="4" text-anchor="middle" font-family="monospace" font-size="14" fill="#e8a030" font-weight="bold">II</text>
+    <text x="0" y="30" text-anchor="middle" font-family="monospace" font-size="9" fill="#5a4a32">PAUSE</text>
+  </g>
+  <g transform="translate(255, 348)">
+    <!-- Stop knob -->
+    <circle cx="0" cy="0" r="22" fill="#2a1f10" stroke="#cc4444" stroke-width="1.5"/>
+    <circle cx="0" cy="0" r="18" fill="#1a1610" stroke="#3a2d1e" stroke-width="0.5"/>
+    <g stroke="#4a3a22" stroke-width="0.3" opacity="0.5">
+      <line x1="-16" y1="-8" x2="-16" y2="8"/>
+      <line x1="-12" y1="-14" x2="-12" y2="14"/>
+      <line x1="-8" y1="-16" x2="-8" y2="16"/>
+      <line x1="-4" y1="-17" x2="-4" y2="17"/>
+      <line x1="0" y1="-18" x2="0" y2="18"/>
+      <line x1="4" y1="-17" x2="4" y2="17"/>
+      <line x1="8" y1="-16" x2="8" y2="16"/>
+      <line x1="12" y1="-14" x2="12" y2="14"/>
+      <line x1="16" y1="-8" x2="16" y2="8"/>
+    </g>
+    <rect x="-6" y="-6" width="12" height="12" rx="1" fill="#cc4444"/>
+    <text x="0" y="30" text-anchor="middle" font-family="monospace" font-size="9" fill="#5a4a32">STOP</text>
+  </g>
+
+  <!-- Design notes -->
+  <text x="200" y="458" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">VU meter as timer frame. LED level bars. Rotary knob controls.</text>
+  <text x="200" y="472" text-anchor="middle" font-family="monospace" font-size="10" fill="#666">Colors: dark brown/amber/orange. Brushed panel texture.</text>
+</svg>
