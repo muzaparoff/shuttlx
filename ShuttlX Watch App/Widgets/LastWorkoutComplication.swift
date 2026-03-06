@@ -3,7 +3,7 @@ import SwiftUI
 
 struct LastWorkoutComplicationProvider: TimelineProvider {
     func placeholder(in context: Context) -> LastWorkoutEntry {
-        LastWorkoutEntry(date: Date(), timeSince: "2h ago", distance: "3.2 km", duration: "28:15")
+        LastWorkoutEntry(date: Date(), isToday: true, timeSince: "2h ago", distance: "3.2 km", duration: "28:15")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (LastWorkoutEntry) -> Void) {
@@ -17,15 +17,26 @@ struct LastWorkoutComplicationProvider: TimelineProvider {
     }
 
     private func makeEntry() -> LastWorkoutEntry {
-        guard let session = WatchWidgetDataProvider.lastSession() else {
-            return LastWorkoutEntry(date: Date(), timeSince: "No workouts", distance: "--", duration: "--:--")
+        // Prefer today's session, fall back to last session
+        let todaySession = WatchWidgetDataProvider.todaySession()
+        let session: TrainingSession
+        let isToday: Bool
+
+        if let today = todaySession {
+            session = today
+            isToday = true
+        } else if let last = WatchWidgetDataProvider.lastSession() {
+            session = last
+            isToday = false
+        } else {
+            return LastWorkoutEntry(date: Date(), isToday: false, timeSince: "No workouts", distance: "--", duration: "--:--")
         }
 
-        let timeSince = formatTimeSince(session.startDate)
+        let timeSince = isToday ? "Today" : formatTimeSince(session.startDate)
         let distance = formatDistance(session.distance)
         let duration = formatDuration(session.duration)
 
-        return LastWorkoutEntry(date: Date(), timeSince: timeSince, distance: distance, duration: duration)
+        return LastWorkoutEntry(date: Date(), isToday: isToday, timeSince: timeSince, distance: distance, duration: duration)
     }
 
     private func formatTimeSince(_ date: Date) -> String {
@@ -52,6 +63,7 @@ struct LastWorkoutComplicationProvider: TimelineProvider {
 
 struct LastWorkoutEntry: TimelineEntry {
     let date: Date
+    let isToday: Bool
     let timeSince: String
     let distance: String
     let duration: String
@@ -76,9 +88,15 @@ struct LastWorkoutComplicationView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(entry.timeSince)
-                .font(.headline)
-                .widgetAccentable()
+            HStack(spacing: 4) {
+                if entry.isToday {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundStyle(.green)
+                }
+                Text(entry.isToday ? "Today's Workout" : entry.timeSince)
+                    .font(.headline)
+                    .widgetAccentable()
+            }
             HStack(spacing: 8) {
                 Label(entry.distance, systemImage: "figure.run")
                 Label(entry.duration, systemImage: "timer")

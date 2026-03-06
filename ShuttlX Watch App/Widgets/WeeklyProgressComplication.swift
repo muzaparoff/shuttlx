@@ -38,21 +38,41 @@ struct WeeklyProgressComplication: Widget {
         }
         .configurationDisplayName("Weekly Progress")
         .description("Shows workouts completed this week.")
-        .supportedFamilies([.accessoryCircular])
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }
 
 struct WeeklyProgressComplicationView: View {
     let entry: WeeklyProgressEntry
+    @Environment(\.widgetFamily) var family
 
     var body: some View {
-        Gauge(value: Double(min(entry.count, entry.goal)), in: 0...Double(entry.goal)) {
-            Image(systemName: "figure.run")
-        } currentValueLabel: {
-            Text("\(entry.count)")
-                .font(.system(.title3, design: .rounded, weight: .bold))
+        switch family {
+        case .accessoryRectangular:
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Weekly Progress")
+                    .font(.headline)
+                    .widgetAccentable()
+                HStack(spacing: 4) {
+                    ProgressView(value: Double(min(entry.count, entry.goal)), total: Double(entry.goal))
+                        .tint(.green)
+                    Text("\(entry.count)/\(entry.goal)")
+                        .font(.caption)
+                        .monospacedDigit()
+                }
+                Text("\(entry.count) workout\(entry.count == 1 ? "" : "s") this week")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        default:
+            Gauge(value: Double(min(entry.count, entry.goal)), in: 0...Double(entry.goal)) {
+                Image(systemName: "figure.run")
+            } currentValueLabel: {
+                Text("\(entry.count)")
+                    .font(.system(.title3, design: .rounded, weight: .bold))
+            }
+            .gaugeStyle(.accessoryCircular)
+            .widgetAccentable()
         }
-        .gaugeStyle(.accessoryCircular)
-        .widgetAccentable()
     }
 }

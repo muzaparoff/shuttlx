@@ -3,7 +3,7 @@ import SwiftUI
 
 struct SmallWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> SmallWidgetEntry {
-        SmallWidgetEntry(date: Date(), streak: 3, timeSince: "2h ago")
+        SmallWidgetEntry(date: Date(), streak: 3, timeSince: "2h ago", trainedToday: true)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SmallWidgetEntry) -> Void) {
@@ -18,13 +18,14 @@ struct SmallWidgetProvider: TimelineProvider {
 
     private func makeEntry() -> SmallWidgetEntry {
         let streak = WidgetDataProvider.currentStreak()
+        let trainedToday = WidgetDataProvider.todaySession() != nil
         let timeSince: String
         if let last = WidgetDataProvider.lastSession() {
             timeSince = formatTimeSince(last.startDate)
         } else {
             timeSince = "No workouts"
         }
-        return SmallWidgetEntry(date: Date(), streak: streak, timeSince: timeSince)
+        return SmallWidgetEntry(date: Date(), streak: streak, timeSince: timeSince, trainedToday: trainedToday)
     }
 
     private func formatTimeSince(_ date: Date) -> String {
@@ -42,6 +43,7 @@ struct SmallWidgetEntry: TimelineEntry {
     let date: Date
     let streak: Int
     let timeSince: String
+    let trainedToday: Bool
 }
 
 struct SmallWidget: Widget {
@@ -68,8 +70,14 @@ struct SmallWidgetView: View {
                     .foregroundStyle(.orange)
                     .font(.title3)
                 Spacer()
-                Image(systemName: "figure.run")
-                    .foregroundStyle(.secondary)
+                if entry.trainedToday {
+                    Label("Today", systemImage: "checkmark.circle.fill")
+                        .font(.caption2.bold())
+                        .foregroundStyle(.green)
+                } else {
+                    Image(systemName: "figure.run")
+                        .foregroundStyle(.secondary)
+                }
             }
 
             Spacer()

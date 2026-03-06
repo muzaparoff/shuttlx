@@ -66,8 +66,9 @@ struct TrainingView: View {
         VStack(spacing: ShuttlXSpacing.xs) {
             Spacer(minLength: 0)
 
-            // Line 1: Timer (countdown or elapsed)
+            // Line 1: Timer (countdown or elapsed) with themed frame
             timerLine
+                .background(ThemedTimerFrame(size: 140).opacity(0.6))
 
             // Line 2: Distance
             Text(distanceText)
@@ -176,7 +177,7 @@ struct TrainingView: View {
                         .font(ShuttlXFont.watchControlIcon)
                         .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaPrimary : ShuttlXColor.ctaPause)
                 }
-                .buttonStyle(ShuttlXControlButtonStyle())
+                .buttonStyle(ThemedControlButtonStyle())
                 .accessibilityLabel(workoutManager.isPaused ? "Resume workout" : "Pause workout")
 
                 // Finish
@@ -187,7 +188,7 @@ struct TrainingView: View {
                         .font(ShuttlXFont.watchControlIcon)
                         .foregroundColor(ShuttlXColor.ctaDestructive)
                 }
-                .buttonStyle(ShuttlXControlButtonStyle())
+                .buttonStyle(ThemedControlButtonStyle())
                 .accessibilityLabel("Finish workout")
                 .accessibilityHint("Saves the workout and shows your summary")
             }
@@ -272,9 +273,7 @@ struct WorkoutSummaryView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: ShuttlXSpacing.lg) {
-                Image(systemName: "checkmark.circle.fill")
-                    .font(.system(size: 36))
-                    .foregroundColor(ShuttlXColor.ctaPrimary)
+                ThemedCompletionBadge()
 
                 Text("Workout Complete")
                     .font(ShuttlXFont.cardTitle)

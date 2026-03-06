@@ -6,6 +6,7 @@ struct MediumWidgetProvider: TimelineProvider {
         MediumWidgetEntry(
             date: Date(),
             hasSession: true,
+            isToday: true,
             workoutDate: "Today, 8:30 AM",
             heartRate: "142 bpm",
             distance: "3.2 km",
@@ -27,10 +28,22 @@ struct MediumWidgetProvider: TimelineProvider {
     private func makeEntry() -> MediumWidgetEntry {
         let weekCount = WidgetDataProvider.thisWeekSessionCount()
 
-        guard let session = WidgetDataProvider.lastSession() else {
+        // Prefer today's session, fall back to last session
+        let todaySession = WidgetDataProvider.todaySession()
+        let session: TrainingSession
+        let isToday: Bool
+
+        if let today = todaySession {
+            session = today
+            isToday = true
+        } else if let last = WidgetDataProvider.lastSession() {
+            session = last
+            isToday = false
+        } else {
             return MediumWidgetEntry(
                 date: Date(),
                 hasSession: false,
+                isToday: false,
                 workoutDate: "--",
                 heartRate: "--",
                 distance: "--",
@@ -65,6 +78,7 @@ struct MediumWidgetProvider: TimelineProvider {
         return MediumWidgetEntry(
             date: Date(),
             hasSession: true,
+            isToday: isToday,
             workoutDate: dateFormatter.string(from: session.startDate),
             heartRate: hr,
             distance: dist,
@@ -77,6 +91,7 @@ struct MediumWidgetProvider: TimelineProvider {
 struct MediumWidgetEntry: TimelineEntry {
     let date: Date
     let hasSession: Bool
+    let isToday: Bool
     let workoutDate: String
     let heartRate: String
     let distance: String
@@ -105,9 +120,12 @@ struct MediumWidgetView: View {
         if entry.hasSession {
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Label("Last Workout", systemImage: "figure.run")
-                        .font(.caption.bold())
-                        .foregroundStyle(.secondary)
+                    Label(
+                        entry.isToday ? "Today's Workout" : "Last Workout",
+                        systemImage: entry.isToday ? "checkmark.circle.fill" : "figure.run"
+                    )
+                    .font(.caption.bold())
+                    .foregroundStyle(entry.isToday ? .green : .secondary)
 
                     Text(entry.workoutDate)
                         .font(.subheadline.bold())

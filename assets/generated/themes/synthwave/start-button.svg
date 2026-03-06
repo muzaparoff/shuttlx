@@ -1,6 +1,6 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 72" width="240" height="72">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80" width="80" height="80">
   <defs>
-    <filter id="neonBtnGlow" x="-15%" y="-30%" width="130%" height="170%">
+    <filter id="neonBtnGlow" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur1"/>
       <feGaussianBlur in="SourceGraphic" stdDeviation="1.5" result="blur2"/>
       <feMerge>
@@ -9,22 +9,13 @@
         <feMergeNode in="SourceGraphic"/>
       </feMerge>
     </filter>
-    <filter id="textGlow" x="-20%" y="-30%" width="140%" height="160%">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
   <!-- Dark surface -->
-  <rect x="4" y="4" width="232" height="64" rx="16" fill="#141428"/>
+  <rect x="4" y="4" width="72" height="72" rx="12" fill="#141428"/>
   <!-- Neon cyan border -->
-  <rect x="4" y="4" width="232" height="64" rx="16" fill="none" stroke="#00F5FF" stroke-width="2" filter="url(#neonBtnGlow)"/>
+  <rect x="4" y="4" width="72" height="72" rx="12" fill="none" stroke="#00F5FF" stroke-width="2" filter="url(#neonBtnGlow)"/>
   <!-- Inner subtle glow -->
-  <rect x="8" y="8" width="224" height="56" rx="14" fill="#00F5FF" fill-opacity="0.05"/>
+  <rect x="8" y="8" width="64" height="64" rx="10" fill="#00F5FF" fill-opacity="0.05"/>
   <!-- Play triangle -->
-  <polygon points="88,26 88,48 106,37" fill="#00F5FF" filter="url(#textGlow)"/>
-  <!-- START text - monospaced neon style -->
-  <text x="148" y="43" font-family="'SF Mono', 'Menlo', 'Courier New', monospace" font-size="18" font-weight="700" fill="#00F5FF" text-anchor="middle" letter-spacing="4" filter="url(#textGlow)">START</text>
+  <polygon points="32,24 32,56 56,40" fill="#00F5FF" filter="url(#neonBtnGlow)"/>
 </svg>

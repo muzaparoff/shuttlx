@@ -31,17 +31,35 @@ struct QuickStartComplication: Widget {
         }
         .configurationDisplayName("Quick Start")
         .description("Tap to start a workout.")
-        .supportedFamilies([.accessoryCircular])
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular])
     }
 }
 
 struct QuickStartComplicationView: View {
+    @Environment(\.widgetFamily) var family
+
     var body: some View {
-        ZStack {
-            AccessoryWidgetBackground()
-            Image(systemName: "figure.run")
-                .font(.title2)
-                .widgetAccentable()
+        switch family {
+        case .accessoryRectangular:
+            HStack(spacing: 8) {
+                Image(systemName: "figure.run")
+                    .font(.title2)
+                    .widgetAccentable()
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Start Workout")
+                        .font(.headline)
+                    Text("Tap to begin")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        default:
+            ZStack {
+                AccessoryWidgetBackground()
+                Image(systemName: "figure.run")
+                    .font(.title2)
+                    .widgetAccentable()
+            }
         }
     }
 }

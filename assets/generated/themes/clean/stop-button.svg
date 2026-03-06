@@ -16,8 +16,8 @@
       <feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-  <circle cx="40" cy="40" r="34" fill="url(#stopGrad)" filter="url(#stopShadow)"/>
-  <circle cx="40" cy="40" r="34" fill="url(#stopHighlight)"/>
+  <rect x="6" y="6" width="68" height="68" rx="12" fill="url(#stopGrad)" filter="url(#stopShadow)"/>
+  <rect x="6" y="6" width="68" height="34" rx="12" fill="url(#stopHighlight)"/>
   <!-- Stop square -->
   <rect x="27" y="27" width="26" height="26" rx="4" fill="black" fill-opacity="0.85"/>
 </svg>

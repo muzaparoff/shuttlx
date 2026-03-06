@@ -42,6 +42,7 @@
 		TH000018 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
 		TH000019 /* CasioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* CasioTheme.swift */; };
 		TH000020 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
+		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
 		TH000033 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
@@ -52,6 +53,7 @@
 		TH000038 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
 		TH000039 /* CasioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* CasioTheme.swift */; };
 		TH000040 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
+		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
 		A5923B04 /* StreakBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A04 /* StreakBadge.swift */; };
@@ -203,6 +205,7 @@
 		TH000008 /* SynthwaveTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTheme.swift; sourceTree = "<group>"; };
 		TH000009 /* CasioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CasioTheme.swift; sourceTree = "<group>"; };
 		TH000010 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTheme.swift; sourceTree = "<group>"; };
+		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
 		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
 		A5923A04 /* StreakBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadge.swift; sourceTree = "<group>"; };
@@ -435,6 +438,7 @@
 				TH000004 /* AppTheme.swift */,
 				TH000005 /* ThemeManager.swift */,
 				TH000006 /* ThemeModifiers.swift */,
+				TH000021 /* ThemeAssets.swift */,
 				TH000030 /* Themes */,
 			);
 			path = Theme;
@@ -685,6 +689,7 @@
 				TH000014 /* AppTheme.swift in Sources */,
 				TH000015 /* ThemeManager.swift in Sources */,
 				TH000016 /* ThemeModifiers.swift in Sources */,
+				TH000022 /* ThemeAssets.swift in Sources */,
 				TH000017 /* CleanTheme.swift in Sources */,
 				TH000018 /* SynthwaveTheme.swift in Sources */,
 				TH000019 /* CasioTheme.swift in Sources */,
@@ -763,6 +768,7 @@
 				TH000034 /* AppTheme.swift in Sources */,
 				TH000035 /* ThemeManager.swift in Sources */,
 				TH000036 /* ThemeModifiers.swift in Sources */,
+				TH000042 /* ThemeAssets.swift in Sources */,
 				TH000037 /* CleanTheme.swift in Sources */,
 				TH000038 /* SynthwaveTheme.swift in Sources */,
 				TH000039 /* CasioTheme.swift in Sources */,

@@ -1,19 +1,28 @@
 import Foundation
+import os.log
 
 enum WidgetDataProvider {
     private static let appGroupIdentifier = "group.com.shuttlx.shared"
     private static let sessionsFileName = "sessions.json"
+    private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "WidgetDataProvider")
 
     static func loadSessions() -> [TrainingSession] {
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+            logger.warning("Widget: App Group container not available")
             return []
         }
         let url = containerURL.appendingPathComponent(sessionsFileName)
-        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            logger.info("Widget: No sessions.json found")
+            return []
+        }
         do {
             let data = try Data(contentsOf: url)
-            return try JSONDecoder().decode([TrainingSession].self, from: data)
+            let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+            logger.info("Widget: Loaded \(sessions.count) sessions")
+            return sessions
         } catch {
+            logger.error("Widget: Failed to decode sessions: \(error.localizedDescription)")
             return []
         }
     }
@@ -22,6 +31,18 @@ enum WidgetDataProvider {
         loadSessions()
             .sorted { $0.startDate > $1.startDate }
             .first
+    }
+
+    static func todaySession() -> TrainingSession? {
+        let cal = Calendar.current
+        return loadSessions()
+            .filter { cal.isDateInToday($0.startDate) }
+            .sorted { $0.startDate > $1.startDate }
+            .first
+    }
+
+    static func isToday(_ date: Date) -> Bool {
+        Calendar.current.isDateInToday(date)
     }
 
     static func thisWeekSessionCount() -> Int {
