@@ -576,6 +576,11 @@ if [ "$INSTALL" = true ]; then
         # Install iOS app
         IOS_APP_PATH="build/Release-iphonesimulator/ShuttlX.app"
         if [ -d "$IOS_APP_PATH" ]; then
+            # Strip embedded Watch app to avoid UIDeviceFamily simulator validation error
+            if [ -d "$IOS_APP_PATH/Watch" ]; then
+                echo "🔧 Stripping embedded Watch app from iOS bundle (simulator workaround)..."
+                rm -rf "$IOS_APP_PATH/Watch"
+            fi
             install_app "iPhone 17 Pro" "$IOS_APP_PATH" "iOS"
         else
             echo "⚠️  iOS app not found for installation"

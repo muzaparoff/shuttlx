@@ -57,7 +57,7 @@ struct PaceTrendChart: View {
             }
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Pace trend chart")
     }

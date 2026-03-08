@@ -27,7 +27,7 @@ struct DebugView: View {
                         .foregroundColor(.secondary)
                     HStack {
                         Circle()
-                            .fill(sharedDataManager.isConnected ? Color.green : Color.red)
+                            .fill(sharedDataManager.isConnected ? ShuttlXColor.positive : ShuttlXColor.ctaDestructive)
                             .frame(width: 6, height: 6)
                         Text(sharedDataManager.isConnected ? "Connected" : "Disconnected")
                             .font(.system(.caption2))
@@ -89,11 +89,11 @@ struct DebugView: View {
     private func getSyncStatusColor() -> Color {
         let status = sharedDataManager.syncStatus
         if status.contains("saved") || status.contains("verified") || status.contains("Connected") {
-            return .green
+            return ShuttlXColor.positive
         } else if status.contains("failed") || status.contains("error") {
-            return .red
+            return ShuttlXColor.ctaDestructive
         } else if status.contains("Syncing") || status.contains("queued") {
-            return .blue
+            return ShuttlXColor.ctaPrimary
         } else {
             return .primary
         }

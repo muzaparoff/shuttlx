@@ -17,6 +17,7 @@ struct OnboardingView: View {
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .always))
         }
+        .themedScreenBackground()
         .accessibilityElement(children: .contain)
     }
 

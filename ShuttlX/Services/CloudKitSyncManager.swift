@@ -9,7 +9,7 @@ class CloudKitSyncManager: ObservableObject {
     @Published var lastSyncDate: Date?
     @Published var syncError: String?
 
-    private let container = CKContainer(identifier: "iCloud.com.shuttlx.app")
+    private lazy var container = CKContainer(identifier: "iCloud.com.shuttlx.app")
     private var database: CKDatabase { container.privateCloudDatabase }
 
     private let sessionsRecordType = "TrainingSession"

@@ -73,6 +73,7 @@ struct PlanEditorView: View {
                     .accessibilityLabel("Add another week")
                 }
             }
+            .themedScreenBackground()
             .navigationTitle("New Plan")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

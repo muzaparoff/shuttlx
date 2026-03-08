@@ -135,6 +135,7 @@ struct TemplateEditorView: View {
                     }
                 }
             }
+            .themedScreenBackground()
             .navigationTitle(existingTemplate == nil ? "New Program" : "Edit Program")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

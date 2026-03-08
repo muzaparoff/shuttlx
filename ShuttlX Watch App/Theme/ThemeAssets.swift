@@ -4,17 +4,18 @@ import Foundation
 // MARK: - Themed Timer Frame
 
 struct ThemedTimerFrame: View {
-    var size: CGFloat = 160
+    var width: CGFloat = 160
+    var height: CGFloat = 160
 
     var body: some View {
         let themeID = ThemeManager.shared.current.id
         switch themeID {
-        case "synthwave":    SynthwaveTimerFrame(size: size)
-        case "mixtape":      MixtapeTimerFrame(size: size)
-        case "arcade":       ArcadeTimerFrame(size: size)
-        case "classicradio": ClassicRadioTimerFrame(size: size)
-        case "vumeter":      VUMeterTimerFrame(size: size)
-        default:             CleanTimerFrame(size: size)
+        case "synthwave":    SynthwaveTimerFrame(width: width, height: height)
+        case "mixtape":      MixtapeTimerFrame(width: width, height: height)
+        case "arcade":       ArcadeTimerFrame(width: width, height: height)
+        case "classicradio": ClassicRadioTimerFrame(width: width, height: height)
+        case "vumeter":      VUMeterTimerFrame(width: width, height: height)
+        default:             CleanTimerFrame(width: width, height: height)
         }
     }
 }
@@ -22,7 +23,9 @@ struct ThemedTimerFrame: View {
 // MARK: Clean Timer Frame — glass rounded rect with gradient border + specular highlight
 
 private struct CleanTimerFrame: View {
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
+    private var size: CGFloat { min(width, height) }
 
     var body: some View {
         ZStack {
@@ -35,7 +38,7 @@ private struct CleanTimerFrame: View {
                     ),
                     lineWidth: 3
                 )
-                .frame(width: size, height: size)
+                .frame(width: width, height: height)
 
             // Main glass frame
             RoundedRectangle(cornerRadius: 24)
@@ -46,13 +49,13 @@ private struct CleanTimerFrame: View {
                     ),
                     lineWidth: 6
                 )
-                .frame(width: size - 8, height: size - 8)
+                .frame(width: width - 8, height: height - 8)
 
             // Top specular highlight bar
             RoundedRectangle(cornerRadius: 1.5)
                 .fill(Color.white.opacity(0.15))
-                .frame(width: size * 0.55, height: 3)
-                .offset(y: -(size / 2 - 12))
+                .frame(width: width * 0.55, height: 3)
+                .offset(y: -(height / 2 - 12))
 
             // Tick marks at cardinal positions
             ForEach([0, 90, 180, 270], id: \.self) { angle in
@@ -61,14 +64,16 @@ private struct CleanTimerFrame: View {
             }
             .frame(width: size - 6, height: size - 6)
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
     }
 }
 
 // MARK: Synthwave Timer Frame — neon glow rounded rect (cyan/magenta)
 
 private struct SynthwaveTimerFrame: View {
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
+    private var size: CGFloat { min(width, height) }
     private let cyan = Color(red: 0.0, green: 0.96, blue: 1.0)
     private let magenta = Color(red: 1.0, green: 0.18, blue: 0.58)
 
@@ -77,25 +82,25 @@ private struct SynthwaveTimerFrame: View {
             // Dark background fill
             RoundedRectangle(cornerRadius: 26)
                 .fill(Color(red: 0.04, green: 0.04, blue: 0.1))
-                .frame(width: size, height: size)
+                .frame(width: width, height: height)
 
             // Outer magenta glow border
             RoundedRectangle(cornerRadius: 24)
                 .stroke(magenta.opacity(0.4), lineWidth: 2)
-                .frame(width: size - 4, height: size - 4)
+                .frame(width: width - 4, height: height - 4)
                 .shadow(color: magenta.opacity(0.3), radius: 8)
 
             // Main cyan neon frame
             RoundedRectangle(cornerRadius: 22)
                 .stroke(cyan, lineWidth: 3)
-                .frame(width: size - 12, height: size - 12)
+                .frame(width: width - 12, height: height - 12)
                 .shadow(color: cyan.opacity(0.5), radius: 6)
                 .shadow(color: cyan.opacity(0.25), radius: 12)
 
             // Inner thin cyan frame
             RoundedRectangle(cornerRadius: 18)
                 .stroke(cyan.opacity(0.3), lineWidth: 1)
-                .frame(width: size - 24, height: size - 24)
+                .frame(width: width - 24, height: height - 24)
 
             // Cyan tick marks at cardinal positions
             ForEach([0, 90, 180, 270], id: \.self) { angle in
@@ -111,14 +116,15 @@ private struct SynthwaveTimerFrame: View {
             }
             .frame(width: size - 6, height: size - 6)
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
     }
 }
 
 // MARK: Mixtape Timer Frame — green LCD panel on blue player body
 
 private struct MixtapeTimerFrame: View {
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
     private let lcdGreen = Color(red: 0.22, green: 1.0, blue: 0.08)
     private let playerBlue = Color(red: 0.29, green: 0.42, blue: 0.60)
 
@@ -127,37 +133,49 @@ private struct MixtapeTimerFrame: View {
             // Green-gray LCD fill
             RoundedRectangle(cornerRadius: 6)
                 .fill(Color(red: 0.08, green: 0.14, blue: 0.10))
-                .frame(width: size, height: size * 0.7)
 
             // Blue-steel border
             RoundedRectangle(cornerRadius: 6)
                 .stroke(playerBlue, lineWidth: 2)
-                .frame(width: size, height: size * 0.7)
 
             // Inner inset border
             RoundedRectangle(cornerRadius: 4)
                 .stroke(lcdGreen.opacity(0.12), lineWidth: 1)
-                .frame(width: size - 8, height: size * 0.7 - 8)
+                .padding(4)
 
             // Corner brackets
-            ForEach(0..<4, id: \.self) { corner in
-                LCDBracket(color: playerBlue.opacity(0.4))
-                    .frame(width: 10, height: 10)
-                    .position(bracketPosition(corner: corner, size: size))
+            GeometryReader { geo in
+                let inset: CGFloat = 8
+                ForEach(0..<4, id: \.self) { corner in
+                    LCDBracket(color: playerBlue.opacity(0.4))
+                        .frame(width: 10, height: 10)
+                        .position(bracketPosition(corner: corner, w: geo.size.width, h: geo.size.height, inset: inset))
+                }
             }
+
+            // Tape counter display
+            Text("000")
+                .font(.system(size: 8, weight: .medium, design: .monospaced))
+                .foregroundColor(lcdGreen.opacity(0.3))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                .padding(8)
+
+            // Transport icon
+            Image(systemName: "play.fill")
+                .font(.system(size: 6))
+                .foregroundColor(playerBlue.opacity(0.3))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .padding(8)
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
     }
 
-    private func bracketPosition(corner: Int, size: CGFloat) -> CGPoint {
-        let w = size, h = size * 0.7
-        let inset: CGFloat = 8
-        let cx = size / 2, cy = size / 2
+    private func bracketPosition(corner: Int, w: CGFloat, h: CGFloat, inset: CGFloat) -> CGPoint {
         switch corner {
-        case 0: return CGPoint(x: cx - w / 2 + inset, y: cy - h / 2 + inset)
-        case 1: return CGPoint(x: cx + w / 2 - inset, y: cy - h / 2 + inset)
-        case 2: return CGPoint(x: cx - w / 2 + inset, y: cy + h / 2 - inset)
-        case 3: return CGPoint(x: cx + w / 2 - inset, y: cy + h / 2 - inset)
+        case 0: return CGPoint(x: inset, y: inset)
+        case 1: return CGPoint(x: w - inset, y: inset)
+        case 2: return CGPoint(x: inset, y: h - inset)
+        case 3: return CGPoint(x: w - inset, y: h - inset)
         default: return .zero
         }
     }
@@ -166,48 +184,80 @@ private struct MixtapeTimerFrame: View {
 // MARK: Classic Radio Timer Frame — cassette label shape with cream fill
 
 private struct ClassicRadioTimerFrame: View {
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
     private let cream = Color(red: 0.96, green: 0.90, blue: 0.78)
     private let brown = Color(red: 0.35, green: 0.29, blue: 0.20)
+    private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
 
     var body: some View {
         ZStack {
             // Cream label fill
             RoundedRectangle(cornerRadius: 4)
                 .fill(cream.opacity(0.08))
-                .frame(width: size, height: size * 0.7)
 
             // Brown border
             RoundedRectangle(cornerRadius: 4)
                 .stroke(brown, lineWidth: 2)
-                .frame(width: size, height: size * 0.7)
 
             // Lined paper texture (horizontal rules)
             Canvas { context, canvasSize in
                 let lineColor = brown.opacity(0.12)
-                for y in stride(from: CGFloat(8), to: canvasSize.height - 4, by: 10) {
+                for y in stride(from: CGFloat(16), to: canvasSize.height - 4, by: 10) {
                     var path = Path()
                     path.move(to: CGPoint(x: 6, y: y))
                     path.addLine(to: CGPoint(x: canvasSize.width - 6, y: y))
                     context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
                 }
             }
-            .frame(width: size - 4, height: size * 0.7 - 4)
+            .padding(2)
             .allowsHitTesting(false)
 
             // Inner inset
             RoundedRectangle(cornerRadius: 2)
                 .stroke(cream.opacity(0.1), lineWidth: 1)
-                .frame(width: size - 10, height: size * 0.7 - 10)
+                .padding(5)
+
+            // "SIDE A" label at top
+            Text("SIDE A")
+                .font(.system(size: 7, weight: .bold, design: .monospaced))
+                .foregroundColor(brown.opacity(0.5))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 6)
+
+            // Tape reel circles
+            HStack {
+                Circle()
+                    .stroke(brown.opacity(0.25), lineWidth: 1)
+                    .frame(width: 14, height: 14)
+                    .overlay(
+                        Circle()
+                            .stroke(brown.opacity(0.15), lineWidth: 0.5)
+                            .frame(width: 6, height: 6)
+                    )
+                Spacer()
+                Circle()
+                    .stroke(brown.opacity(0.25), lineWidth: 1)
+                    .frame(width: 14, height: 14)
+                    .overlay(
+                        Circle()
+                            .stroke(brown.opacity(0.15), lineWidth: 0.5)
+                            .frame(width: 6, height: 6)
+                    )
+            }
+            .padding(.horizontal, 10)
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 8)
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
     }
 }
 
 // MARK: VU Meter Timer Frame — analog meter panel with arc markings
 
 private struct VUMeterTimerFrame: View {
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
     private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
     private let darkPanel = Color(red: 0.07, green: 0.05, blue: 0.03)
 
@@ -216,17 +266,15 @@ private struct VUMeterTimerFrame: View {
             // Dark meter panel fill
             RoundedRectangle(cornerRadius: 8)
                 .fill(darkPanel)
-                .frame(width: size, height: size * 0.7)
 
             // Amber border
             RoundedRectangle(cornerRadius: 8)
                 .stroke(amber.opacity(0.4), lineWidth: 2)
-                .frame(width: size, height: size * 0.7)
 
-            // VU arc markings
+            // VU arc markings with scale labels and needle
             Canvas { context, canvasSize in
-                let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height * 0.75)
-                let radius = canvasSize.width * 0.35
+                let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height * 0.7)
+                let radius = min(canvasSize.width, canvasSize.height) * 0.32
 
                 // Arc path
                 var arcPath = Path()
@@ -235,14 +283,20 @@ private struct VUMeterTimerFrame: View {
                               clockwise: false)
                 context.stroke(arcPath, with: .color(amber.opacity(0.2)), lineWidth: 1)
 
-                // Tick marks along arc
-                for i in 0...10 {
-                    let angle = -150.0 + Double(i) * 12.0
-                    let rad = angle * .pi / 180
-                    let innerR = radius - 4
-                    let outerR = radius + 4
-                    let tickColor = i >= 8 ? Color.red.opacity(0.4) : amber.opacity(0.3)
+                // Scale labels
+                let labels = ["-20", "-10", "-7", "-5", "-3", "0", "+1", "+2", "+3"]
+                let labelAngles: [Double] = [-150, -135, -120, -105, -90, -75, -60, -45, -30]
 
+                for (i, label) in labels.enumerated() {
+                    let angle = labelAngles[i]
+                    let rad = angle * .pi / 180
+                    let innerR = radius - 5
+                    let outerR = radius + 5
+                    let labelR = radius + 14
+                    let isRed = i >= 6
+                    let tickColor = isRed ? Color.red.opacity(0.4) : amber.opacity(0.3)
+
+                    // Tick marks
                     var tick = Path()
                     tick.move(to: CGPoint(
                         x: center.x + cos(rad) * innerR,
@@ -253,24 +307,70 @@ private struct VUMeterTimerFrame: View {
                         y: center.y + sin(rad) * outerR
                     ))
                     context.stroke(tick, with: .color(tickColor), lineWidth: 1)
+
+                    // Scale label text
+                    let lx: CGFloat = center.x + cos(rad) * labelR - 6
+                    let ly: CGFloat = center.y + sin(rad) * labelR - 4
+                    let labelPoint = CGPoint(x: lx, y: ly)
+                    context.draw(
+                        Text(label)
+                            .font(.system(size: 5, weight: .medium, design: .monospaced))
+                            .foregroundColor(isRed ? .red.opacity(0.3) : amber.opacity(0.25)),
+                        at: labelPoint, anchor: .center
+                    )
                 }
+
+                // Needle at ~75% position
+                let needleAngle = -60.0 * .pi / 180
+                var needle = Path()
+                needle.move(to: center)
+                needle.addLine(to: CGPoint(
+                    x: center.x + cos(needleAngle) * (radius - 2),
+                    y: center.y + sin(needleAngle) * (radius - 2)
+                ))
+                context.stroke(needle, with: .color(amber.opacity(0.5)), lineWidth: 1)
+
+                // Needle pivot dot
+                context.fill(
+                    Path(ellipseIn: CGRect(x: center.x - 2, y: center.y - 2, width: 4, height: 4)),
+                    with: .color(amber.opacity(0.4))
+                )
             }
-            .frame(width: size - 4, height: size * 0.7 - 4)
+            .padding(2)
             .allowsHitTesting(false)
+
+            // "VU" text below arc
+            Text("VU")
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .foregroundColor(amber.opacity(0.3))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 6)
 
             // Inner inset
             RoundedRectangle(cornerRadius: 6)
                 .stroke(amber.opacity(0.15), lineWidth: 1)
-                .frame(width: size - 12, height: size * 0.7 - 12)
+                .padding(6)
+
+            // LED indicator dots
+            HStack {
+                Circle().fill(Color.green.opacity(0.3)).frame(width: 4, height: 4)
+                Spacer()
+                Circle().fill(Color.red.opacity(0.3)).frame(width: 4, height: 4)
+            }
+            .padding(.horizontal, 8)
+            .frame(maxHeight: .infinity, alignment: .bottom)
+            .padding(.bottom, 6)
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
     }
 }
 
 // MARK: Arcade Timer Frame — pixelated rounded rect with CRT phosphor glow
 
 private struct ArcadeTimerFrame: View {
-    let size: CGFloat
+    let width: CGFloat
+    let height: CGFloat
+    private var size: CGFloat { min(width, height) }
     private let phosphorGreen = Color(red: 0.0, green: 1.0, blue: 0.0)
     private let accentOrange = Color(red: 1.0, green: 0.67, blue: 0.0)
 
@@ -279,18 +379,25 @@ private struct ArcadeTimerFrame: View {
             // Outer pixel border
             RoundedRectangle(cornerRadius: 4)
                 .stroke(phosphorGreen.opacity(0.5), lineWidth: 3)
-                .frame(width: size, height: size)
+                .frame(width: width, height: height)
 
             // Inner dashed pixel ring
             RoundedRectangle(cornerRadius: 4)
                 .stroke(phosphorGreen.opacity(0.3), style: StrokeStyle(lineWidth: 2, dash: [4, 4]))
-                .frame(width: size - 10, height: size - 10)
+                .frame(width: width - 10, height: height - 10)
+
+            // "SCORE" text at top
+            Text("SCORE")
+                .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                .foregroundColor(accentOrange.opacity(0.4))
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                .padding(.top, 6)
 
             // Pixel corner decorations
             ForEach(0..<4, id: \.self) { corner in
                 PixelCorner(color: phosphorGreen.opacity(0.6))
-                    .frame(width: 8, height: 8)
-                    .offset(pixelCornerOffset(corner: corner, size: size))
+                    .frame(width: 10, height: 10)
+                    .offset(pixelCornerOffset(corner: corner))
             }
 
             // Green tick marks
@@ -307,6 +414,18 @@ private struct ArcadeTimerFrame: View {
             }
             .frame(width: size - 4, height: size - 4)
 
+            // CRT scanline effect
+            Canvas { context, canvasSize in
+                for y in stride(from: CGFloat(0), to: canvasSize.height, by: 3) {
+                    var line = Path()
+                    line.move(to: CGPoint(x: 0, y: y))
+                    line.addLine(to: CGPoint(x: canvasSize.width, y: y))
+                    context.stroke(line, with: .color(phosphorGreen.opacity(0.03)), lineWidth: 1)
+                }
+            }
+            .frame(width: width, height: height)
+            .allowsHitTesting(false)
+
             // CRT phosphor glow
             RoundedRectangle(cornerRadius: 4)
                 .fill(
@@ -315,19 +434,20 @@ private struct ArcadeTimerFrame: View {
                         center: .center, startRadius: 0, endRadius: size / 2
                     )
                 )
-                .frame(width: size, height: size)
+                .frame(width: width, height: height)
                 .allowsHitTesting(false)
         }
-        .frame(width: size, height: size)
+        .frame(width: width, height: height)
     }
 
-    private func pixelCornerOffset(corner: Int, size: CGFloat) -> CGSize {
-        let half = size / 2 - 8
+    private func pixelCornerOffset(corner: Int) -> CGSize {
+        let halfW = width / 2 - 8
+        let halfH = height / 2 - 8
         switch corner {
-        case 0: return CGSize(width: -half, height: -half)
-        case 1: return CGSize(width: half, height: -half)
-        case 2: return CGSize(width: -half, height: half)
-        case 3: return CGSize(width: half, height: half)
+        case 0: return CGSize(width: -halfW, height: -halfH)
+        case 1: return CGSize(width: halfW, height: -halfH)
+        case 2: return CGSize(width: -halfW, height: halfH)
+        case 3: return CGSize(width: halfW, height: halfH)
         default: return .zero
         }
     }

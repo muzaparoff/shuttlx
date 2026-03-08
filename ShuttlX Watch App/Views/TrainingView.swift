@@ -115,7 +115,7 @@ struct TrainingView: View {
             .padding(.horizontal, ShuttlXSpacing.md)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(
-                ThemedTimerFrame(size: max(geo.size.width, geo.size.height))
+                ThemedTimerFrame(width: geo.size.width, height: geo.size.height)
                     .opacity(0.6)
             )
         }

@@ -60,6 +60,7 @@ struct ProgramsTabView: View {
                     .accessibilityHint("View and manage interval workout templates")
                 }
             }
+            .themedScreenBackground()
             .navigationTitle("Programs")
         }
     }

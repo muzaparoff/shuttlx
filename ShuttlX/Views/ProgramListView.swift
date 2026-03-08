@@ -52,6 +52,7 @@ struct WatchPromptView: View {
             }
             .padding()
             .navigationTitle("Training")
+            .themedScreenBackground()
         }
     }
 }

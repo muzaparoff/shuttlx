@@ -59,7 +59,7 @@ struct AnalyticsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(40)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("No analytics data available. Complete a workout to begin.")
     }
@@ -180,7 +180,7 @@ struct AnalyticsView: View {
             .frame(height: 180)
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Training load trend over 6 weeks")
     }
@@ -243,7 +243,7 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Weekly training volume over 6 weeks")
     }
@@ -288,7 +288,7 @@ struct AnalyticsView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .themedCard()
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Estimated VO2 max: \(String(format: "%.1f", vo2)) milliliters per kilogram per minute. \(vo2maxCategory(vo2))")
         }
@@ -363,7 +363,7 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .themedCard()
     }
 
     // MARK: - Pace Zones Chart
@@ -407,7 +407,7 @@ struct AnalyticsView: View {
                 .padding(.top, 4)
             }
             .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .themedCard()
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Pace zone distribution: \(paceZones.map { "\($0.zone) \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", "))")
         }
@@ -462,7 +462,7 @@ struct AnalyticsView: View {
                 }
             }
             .padding(16)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+            .themedCard()
             .accessibilityElement(children: .contain)
         }
     }

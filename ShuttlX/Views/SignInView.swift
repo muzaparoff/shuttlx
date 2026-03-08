@@ -57,6 +57,7 @@ struct SignInView: View {
             }
             .padding()
         }
+        .themedScreenBackground()
         .navigationTitle("Sign In")
         .navigationBarTitleDisplayMode(.inline)
     }
