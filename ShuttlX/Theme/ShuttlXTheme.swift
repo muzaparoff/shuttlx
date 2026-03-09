@@ -25,8 +25,17 @@ enum ShuttlXColor {
     static var ctaDestructive: Color { colors.ctaDestructive }
     static var ctaWarning: Color { colors.ctaWarning }
 
+    // Background & surfaces
+    static var background: Color { colors.background }
+    static var surface: Color { colors.surface }
+    static var surfaceBorder: Color { colors.surfaceBorder }
+
     // Card backgrounds
     static var cardBackground: Color { colors.cardBackground }
+
+    // Text
+    static var textPrimary: Color { colors.textPrimary }
+    static var textSecondary: Color { colors.textSecondary }
 
     // HR Zone colors
     static var hrZone1: Color { colors.hrZone1 }

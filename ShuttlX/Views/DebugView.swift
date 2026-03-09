@@ -72,6 +72,7 @@ struct DebugView: View {
                         }
                     }
                 }
+                .scrollContentBackground(.hidden)
                 .refreshable {
                     refreshData()
                 }
@@ -88,7 +89,7 @@ struct DebugView: View {
                         Text(cleanupMessage)
                             .padding()
                             .background(ShuttlXColor.positive.opacity(0.8))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(ShuttlXColor.textPrimary)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                             .shadow(radius: 3)
                             .transition(.move(edge: .top))
@@ -101,6 +102,7 @@ struct DebugView: View {
                 }
             )
         }
+        .themedScreenBackground()
         .onAppear(perform: refreshData)
     }
 

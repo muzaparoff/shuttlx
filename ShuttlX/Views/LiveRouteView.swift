@@ -48,7 +48,7 @@ struct LiveRouteView: View {
                 // Single point — show waiting state
                 ZStack {
                     RoundedRectangle(cornerRadius: 12)
-                        .fill(Color(.systemGray6))
+                        .fill(ShuttlXColor.surface)
                         .frame(height: compact ? 120 : 200)
 
                     VStack(spacing: 4) {

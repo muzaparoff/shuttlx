@@ -36,6 +36,7 @@ struct PlanListView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
         .navigationTitle("Training Plans")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {

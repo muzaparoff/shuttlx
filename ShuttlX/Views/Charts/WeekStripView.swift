@@ -30,17 +30,17 @@ struct WeekStripView: View {
                         VStack(spacing: 6) {
                             Text(dayName(day.date))
                                 .font(.caption2)
-                                .foregroundStyle(day.isSelected ? Color.white : .secondary)
+                                .foregroundStyle(day.isSelected ? ShuttlXColor.iconOnCTA : .secondary)
 
                             Text(dayNumber(day.date))
                                 .font(.subheadline.weight(day.isToday ? .bold : .medium))
-                                .foregroundStyle(day.isSelected ? Color.white : Color.white)
+                                .foregroundStyle(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.textPrimary)
 
                             // Session dots
                             HStack(spacing: 2) {
                                 ForEach(0..<min(day.sessionCount, 3), id: \.self) { _ in
                                     Circle()
-                                        .fill(day.isSelected ? Color.white : ShuttlXColor.running)
+                                        .fill(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.running)
                                         .frame(width: 4, height: 4)
                                 }
                             }

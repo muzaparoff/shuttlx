@@ -107,6 +107,7 @@ struct TemplateListView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
     }
 
     private func templateRow(_ template: WorkoutTemplate) -> some View {

@@ -41,8 +41,10 @@ struct SyncDebugView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
             .navigationTitle("Sync Debug")
         }
+        .themedScreenBackground()
         .onAppear {
             syncMonitor.startMonitoring()
         }

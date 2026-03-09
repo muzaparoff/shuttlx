@@ -104,50 +104,45 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         do {
             let sessionData = try JSONEncoder().encode(session)
+            let base64 = sessionData.base64EncodedString()
+            let payloadSize = base64.utf8.count
+            logger.info("Session payload: \(payloadSize) bytes (\(session.route?.count ?? 0) route points)")
 
-            // Always queue via transferUserInfo first — it survives app termination
-            sendSessionViaUserInfo(session, sessionData: sessionData)
-
-            if WCSession.default.isReachable {
-                // Also try sendMessage for immediate delivery
-                let message: [String: Any] = [
-                    "action": "saveSession",
-                    "sessionData": sessionData.base64EncodedString(),
-                    "timestamp": Date().timeIntervalSince1970
-                ]
-
-                WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
-                    Task { @MainActor in
-                        guard let self = self else { return }
-                        self.logger.info("Session sent to iOS via sendMessage")
-                        self.updateSyncStatus("Session saved to iPhone")
-                        self.consecutiveFailures = 0
-                        self.lastSyncTime = Date()
-                        self.removePendingSession(session.id)
-                        self.updateConnectivityHealth()
-                    }
-                }, errorHandler: { [weak self] error in
-                    Task { @MainActor in
-                        guard let self = self else { return }
-                        self.logger.error("sendMessage failed: \(error.localizedDescription)")
-                        self.consecutiveFailures += 1
-                        self.updateConnectivityHealth()
-                    }
-                })
+            if payloadSize > 200_000 {
+                // Large session — use file transfer (unlimited size)
+                sendSessionViaFileTransfer(session, sessionData: sessionData)
+            } else if payloadSize > 50_000 {
+                // Medium session — transferUserInfo only (sendMessage would fail at ~65 KB)
+                sendSessionViaUserInfo(session, sessionData: sessionData)
             } else {
-                if !pendingSessions.contains(where: { $0.id == session.id }) {
-                    pendingSessions.append(session)
-                    savePendingSessionsToDisk()
-                    logger.warning("iPhone not reachable, session queued to disk")
-                    updateSyncStatus("Session queued for sync")
-                }
+                // Small session — transferUserInfo + sendMessage for immediate delivery
+                sendSessionViaUserInfo(session, sessionData: sessionData)
+                sendSessionViaMessage(session, base64: base64)
             }
         } catch {
             logger.error("Failed to encode session: \(error.localizedDescription)")
-            if !pendingSessions.contains(where: { $0.id == session.id }) {
-                pendingSessions.append(session)
-                savePendingSessionsToDisk()
-            }
+            queuePendingSession(session)
+        }
+    }
+
+    private func sendSessionViaFileTransfer(_ session: TrainingSession, sessionData: Data) {
+        let tempDir = FileManager.default.temporaryDirectory
+        let fileName = "session_\(session.id.uuidString).json"
+        let fileURL = tempDir.appendingPathComponent(fileName)
+
+        do {
+            try sessionData.write(to: fileURL)
+            let metadata: [String: Any] = [
+                "action": "saveSession",
+                "sessionID": session.id.uuidString,
+                "timestamp": Date().timeIntervalSince1970
+            ]
+            WCSession.default.transferFile(fileURL, metadata: metadata)
+            logger.info("Session queued via transferFile (\(sessionData.count) bytes)")
+            updateSyncStatus("Large session queued for file transfer")
+        } catch {
+            logger.error("Failed to write temp file for transfer: \(error.localizedDescription)")
+            queuePendingSession(session)
         }
     }
 
@@ -162,6 +157,45 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.transferUserInfo(userInfo)
         logger.info("Session queued via transferUserInfo")
         updateSyncStatus("Session queued for background sync")
+    }
+
+    private func sendSessionViaMessage(_ session: TrainingSession, base64: String) {
+        guard WCSession.default.isReachable else {
+            queuePendingSession(session)
+            return
+        }
+        let message: [String: Any] = [
+            "action": "saveSession",
+            "sessionData": base64,
+            "timestamp": Date().timeIntervalSince1970
+        ]
+        WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.logger.info("Session sent via sendMessage")
+                self.updateSyncStatus("Session saved to iPhone")
+                self.consecutiveFailures = 0
+                self.lastSyncTime = Date()
+                self.removePendingSession(session.id)
+                self.updateConnectivityHealth()
+            }
+        }, errorHandler: { [weak self] error in
+            Task { @MainActor in
+                guard let self = self else { return }
+                self.logger.error("sendMessage failed: \(error.localizedDescription)")
+                self.consecutiveFailures += 1
+                self.updateConnectivityHealth()
+            }
+        })
+    }
+
+    private func queuePendingSession(_ session: TrainingSession) {
+        if !pendingSessions.contains(where: { $0.id == session.id }) {
+            pendingSessions.append(session)
+            savePendingSessionsToDisk()
+            logger.warning("Session queued to disk for retry")
+            updateSyncStatus("Session queued for sync")
+        }
     }
 
     // MARK: - Pending Sessions Persistence
@@ -302,13 +336,12 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     if sessions.isEmpty {
                         replyHandler(["status": "empty", "count": 0])
                     } else {
-                        do {
-                            let data = try JSONEncoder().encode(sessions)
-                            replyHandler(["status": "ok", "count": sessions.count, "sessionsData": data.base64EncodedString()])
-                            self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone")
-                        } catch {
-                            replyHandler(["error": "encode_failed"])
+                        // Send each session individually via size-aware routing
+                        for session in sessions {
+                            self.sendSessionToiOS(session)
                         }
+                        replyHandler(["status": "ok", "count": sessions.count])
+                        self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone (requested)")
                     }
                 default:
                     replyHandler(["error": "Unknown action"])
@@ -336,6 +369,29 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     self.removePendingSession(uuid)
                 }
             }
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
+        Task { @MainActor in
+            if let error = error {
+                self.logger.error("File transfer failed: \(error.localizedDescription)")
+                self.consecutiveFailures += 1
+                if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String {
+                    self.logger.info("Will retry session \(sessionID) on next cycle")
+                }
+            } else {
+                self.logger.info("File transfer completed successfully")
+                self.consecutiveFailures = 0
+                self.lastSyncTime = Date()
+                if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String,
+                   let uuid = UUID(uuidString: sessionID) {
+                    self.removePendingSession(uuid)
+                }
+            }
+            // Clean up temp file
+            try? FileManager.default.removeItem(at: fileTransfer.file.fileURL)
+            self.updateConnectivityHealth()
         }
     }
 
@@ -370,36 +426,15 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Bulk Session Sync
 
-    /// Send all locally stored sessions to iPhone when connectivity is available
+    /// Send all locally stored sessions to iPhone via size-aware routing
     func sendAllStoredSessions() {
-        guard WCSession.default.isReachable else { return }
-
         let sessions = loadAllLocalSessions()
         guard !sessions.isEmpty else { return }
 
         logger.info("Sending all \(sessions.count) stored session(s) to iPhone")
 
         for session in sessions {
-            do {
-                let sessionData = try JSONEncoder().encode(session)
-                let message: [String: Any] = [
-                    "action": "saveSession",
-                    "sessionData": sessionData.base64EncodedString(),
-                    "timestamp": Date().timeIntervalSince1970
-                ]
-                WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
-                    Task { @MainActor in
-                        self?.consecutiveFailures = 0
-                        self?.lastSyncTime = Date()
-                    }
-                }, errorHandler: { [weak self] error in
-                    Task { @MainActor in
-                        self?.logger.error("Bulk send failed: \(error.localizedDescription)")
-                    }
-                })
-            } catch {
-                logger.error("Failed to encode session for bulk send: \(error.localizedDescription)")
-            }
+            sendSessionToiOS(session)
         }
         updateSyncStatus("Sent \(sessions.count) session(s) to iPhone")
     }

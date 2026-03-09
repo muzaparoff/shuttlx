@@ -248,6 +248,7 @@ struct SettingsView: View {
                 .accessibilityValue(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "101")
             }
         }
+        .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
         .navigationTitle("Settings")
         .sheet(isPresented: $showingHealthPermissionsInfo) {

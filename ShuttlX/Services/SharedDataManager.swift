@@ -384,8 +384,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             }
         } else {
             let count = reply["count"] as? Int ?? 0
-            log("Watch returned \(count) sessions (no new data)")
-            completion(0)
+            log("Watch sending \(count) session(s) individually")
+            completion(0)  // Sessions arrive via delegate callbacks
         }
     }
 
@@ -614,6 +614,28 @@ extension SharedDataManager {
                 self.log("UserInfo transfer failed: \(error.localizedDescription)")
             } else {
                 self.consecutiveFailures = 0
+            }
+            self.updateConnectivityHealth()
+        }
+    }
+
+    nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        Task { @MainActor in
+            guard let metadata = file.metadata,
+                  let action = metadata["action"] as? String,
+                  action == "saveSession" else {
+                self.log("Received file with unknown metadata")
+                return
+            }
+
+            do {
+                let data = try Data(contentsOf: file.fileURL)
+                let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: data)
+                self.handleReceivedSession(trainingSession)
+                self.log("Session received via file transfer (\(data.count) bytes)")
+            } catch {
+                self.log("Failed to decode session from file: \(error.localizedDescription)")
+                self.consecutiveFailures += 1
             }
             self.updateConnectivityHealth()
         }

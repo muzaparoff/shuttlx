@@ -42,6 +42,11 @@ enum ShuttlXColor {
     static var watchCardBackground: Color { colors.watchCardBackground }
     static var watchButtonBackground: Color { colors.watchButtonBackground }
 
+    // Background & surfaces
+    static var background: Color { colors.background }
+    static var surface: Color { colors.surface }
+    static var surfaceBorder: Color { colors.surfaceBorder }
+
     // Card backgrounds
     static var cardBackground: Color { colors.cardBackground }
 
