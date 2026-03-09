@@ -358,6 +358,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func handleSessionRequestReply(_ reply: [String: Any], completion: @escaping (Int) -> Void) {
+        let oversizedCount = reply["oversizedCount"] as? Int ?? 0
+
         if let sessionsDataString = reply["sessionsData"] as? String,
            let sessionsData = Data(base64Encoded: sessionsDataString) {
             do {
@@ -374,6 +376,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     dataManager?.handleReceivedSessions(sessions)
                     log("Pulled \(newCount) new session(s) from Watch")
                 }
+                if oversizedCount > 0 {
+                    log("\(oversizedCount) large session(s) arriving via background transfer")
+                }
                 consecutiveFailures = 0
                 lastSyncTime = Date()
                 updateConnectivityHealth()
@@ -382,10 +387,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 log("Failed to decode sessions from Watch: \(error.localizedDescription)")
                 completion(0)
             }
+        } else if let count = reply["count"] as? Int, count > 0 {
+            log("Watch sending \(count) session(s) via background transfer")
+            completion(0)
         } else {
-            let count = reply["count"] as? Int ?? 0
-            log("Watch sending \(count) session(s) individually")
-            completion(0)  // Sessions arrive via delegate callbacks
+            completion(0)
         }
     }
 
@@ -429,11 +435,21 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             "action": "syncTheme",
             "themeID": themeID
         ]
+
+        // Immediate delivery when watch app is running
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil, errorHandler: { [weak self] error in
+                self?.log("Theme sendMessage failed: \(error.localizedDescription)")
+            })
+            log("Theme sent to Watch via sendMessage: \(themeID)")
+        }
+
+        // Persistent delivery for when watch app launches later
         do {
             try session.updateApplicationContext(payload)
-            log("Theme sent to Watch: \(themeID)")
+            log("Theme sent to Watch via applicationContext: \(themeID)")
         } catch {
-            log("Failed to send theme: \(error.localizedDescription)")
+            log("Failed to send theme context: \(error.localizedDescription)")
         }
     }
 

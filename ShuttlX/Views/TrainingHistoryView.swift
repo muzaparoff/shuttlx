@@ -41,11 +41,11 @@ struct TrainingHistoryView: View {
                     .accessibilityLabel("Time period")
                     .accessibilityValue(viewMode.rawValue)
 
-                    // Date navigation
+                    // Date navigation — arrows for all modes
+                    periodNavigator
+
                     if viewMode == .week || viewMode == .day {
                         WeekStripView(selectedDate: $selectedDate, sessions: dataManager.sessions)
-                    } else {
-                        monthNavigator
                     }
 
                     if filteredSessions.isEmpty {
@@ -71,19 +71,19 @@ struct TrainingHistoryView: View {
         .animation(.easeInOut(duration: 0.2), value: viewMode)
     }
 
-    // MARK: - Month Navigator
+    // MARK: - Period Navigator
 
-    private var monthNavigator: some View {
+    private var periodNavigator: some View {
         HStack {
             Button { changeDate(-1) } label: {
                 Image(systemName: "chevron.left")
                     .font(.title3)
             }
-            .accessibilityLabel("Previous month")
+            .accessibilityLabel("Previous \(viewMode.rawValue.lowercased())")
 
             Spacer()
 
-            Text(monthLabel)
+            Text(periodLabel)
                 .font(.headline)
 
             Spacer()
@@ -92,7 +92,7 @@ struct TrainingHistoryView: View {
                 Image(systemName: "chevron.right")
                     .font(.title3)
             }
-            .accessibilityLabel("Next month")
+            .accessibilityLabel("Next \(viewMode.rawValue.lowercased())")
         }
         .padding(.horizontal)
     }
@@ -208,10 +208,30 @@ struct TrainingHistoryView: View {
 
     // MARK: - Helpers
 
-    private var monthLabel: String {
+    private var periodLabel: String {
+        let calendar = Calendar.current
         let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        return f.string(from: selectedDate)
+        switch viewMode {
+        case .day:
+            f.dateFormat = "EEEE, MMM d"
+            return f.string(from: selectedDate)
+        case .week:
+            guard let weekInterval = calendar.dateInterval(of: .weekOfYear, for: selectedDate) else { return "" }
+            let start = weekInterval.start
+            let end = calendar.date(byAdding: .day, value: 6, to: start) ?? start
+            f.dateFormat = "MMM d"
+            let startStr = f.string(from: start)
+            if calendar.component(.month, from: start) == calendar.component(.month, from: end) {
+                let dayF = DateFormatter()
+                dayF.dateFormat = "d, yyyy"
+                return "\(startStr) – \(dayF.string(from: end))"
+            } else {
+                return "\(startStr) – \(f.string(from: end)), \(calendar.component(.year, from: end))"
+            }
+        case .month:
+            f.dateFormat = "MMMM yyyy"
+            return f.string(from: selectedDate)
+        }
     }
 
     private func changeDate(_ direction: Int) {

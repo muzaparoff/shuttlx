@@ -187,6 +187,16 @@ struct SessionDetailView: View {
 struct ActivitySegmentsView: View {
     let segments: [ActivitySegment]
     let totalDuration: TimeInterval
+    @State private var showAllSegments = false
+
+    /// Aggregated totals per activity type, sorted by duration descending
+    private var aggregated: [(activity: DetectedActivity, duration: TimeInterval)] {
+        var dict: [DetectedActivity: TimeInterval] = [:]
+        for segment in segments {
+            dict[segment.activityType, default: 0] += segment.duration
+        }
+        return dict.sorted { $0.value > $1.value }.map { (activity: $0.key, duration: $0.value) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -207,32 +217,70 @@ struct ActivitySegmentsView: View {
             .frame(height: 12)
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Segment detail rows
-            ForEach(segments) { segment in
-                HStack(spacing: 8) {
-                    Circle()
-                        .fill(segment.activityType.themeColor)
-                        .frame(width: 8, height: 8)
-
-                    Image(systemName: segment.activityType.systemImage)
-                        .font(ShuttlXFont.cardCaption)
-                        .foregroundStyle(segment.activityType.themeColor)
-                        .frame(width: 20)
-
-                    Text(segment.activityType.displayName)
-                        .font(ShuttlXFont.cardSubtitle)
-
-                    Spacer()
-
-                    Text(FormattingUtils.formatDuration(segment.duration))
-                        .font(ShuttlXFont.cardSubtitle.monospacedDigit())
-                        .foregroundStyle(.secondary)
+            // Aggregated summary row
+            HStack(spacing: 12) {
+                ForEach(aggregated, id: \.activity) { item in
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(item.activity.themeColor)
+                            .frame(width: 8, height: 8)
+                        Text(item.activity.displayName)
+                            .font(ShuttlXFont.cardCaption)
+                        Text(FormattingUtils.formatDuration(item.duration))
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("\(item.activity.displayName), \(FormattingUtils.formatDuration(item.duration))")
                 }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
+            }
+
+            // Expandable per-segment details
+            if segments.count > 3 {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) { showAllSegments.toggle() }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text(showAllSegments ? "Hide segments" : "Show all \(segments.count) segments")
+                            .font(.caption)
+                        Image(systemName: showAllSegments ? "chevron.up" : "chevron.down")
+                            .font(.caption2)
+                    }
+                    .foregroundStyle(.secondary)
+                }
+
+                if showAllSegments {
+                    segmentDetailRows
+                }
             }
         }
         .accessibilityElement(children: .contain)
+    }
+
+    private var segmentDetailRows: some View {
+        ForEach(segments) { segment in
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(segment.activityType.themeColor)
+                    .frame(width: 8, height: 8)
+
+                Image(systemName: segment.activityType.systemImage)
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(segment.activityType.themeColor)
+                    .frame(width: 20)
+
+                Text(segment.activityType.displayName)
+                    .font(ShuttlXFont.cardSubtitle)
+
+                Spacer()
+
+                Text(FormattingUtils.formatDuration(segment.duration))
+                    .font(ShuttlXFont.cardSubtitle.monospacedDigit())
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
+        }
     }
 }
 

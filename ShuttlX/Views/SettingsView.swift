@@ -109,7 +109,7 @@ struct SettingsView: View {
                                 dataManager.loadSessionsFromAppGroup()
                                 successMessage = "Synced \(count) session\(count == 1 ? "" : "s") from Watch"
                             } else {
-                                successMessage = "No new sessions found. Keep both apps open and retry."
+                                successMessage = "No new sessions on Watch"
                             }
                             showSuccessMessage = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {

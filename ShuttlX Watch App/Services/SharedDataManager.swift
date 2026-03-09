@@ -206,7 +206,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func savePendingSessionsToDisk() {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+        guard let containerURL = getWorkingContainer() else {
             return
         }
         let url = containerURL.appendingPathComponent(pendingSessionsFileName)
@@ -223,7 +223,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func loadPendingSessionsFromDisk() {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+        guard let containerURL = getWorkingContainer() else {
             return
         }
         let url = containerURL.appendingPathComponent(pendingSessionsFileName)
@@ -244,7 +244,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - App Group Storage
 
     private func saveSessionToAppGroup(_ session: TrainingSession) {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+        guard let containerURL = getWorkingContainer() else {
             logger.error("Failed to get App Group container URL")
             return
         }
@@ -314,10 +314,17 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
         Task { @MainActor in
-            if let action = message["action"] as? String, action == "ping" {
-                self.logger.info("Ping received from iPhone")
-                self.updateSyncStatus("Connection verified")
-                self.consecutiveFailures = 0
+            if let action = message["action"] as? String {
+                switch action {
+                case "ping":
+                    self.logger.info("Ping received from iPhone")
+                    self.updateSyncStatus("Connection verified")
+                    self.consecutiveFailures = 0
+                case "syncTheme", "syncTemplates":
+                    self.handleIncomingPayload(message)
+                default:
+                    break
+                }
             }
             self.updateConnectivityHealth()
         }
@@ -336,13 +343,34 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     if sessions.isEmpty {
                         replyHandler(["status": "empty", "count": 0])
                     } else {
-                        // Send each session individually via size-aware routing
-                        for session in sessions {
-                            self.sendSessionToiOS(session)
+                        // Hybrid reply: inline small/medium sessions, route large ones via file transfer
+                        var inlineSessions: [TrainingSession] = []
+                        var oversizedCount = 0
+                        for s in sessions {
+                            if let data = try? JSONEncoder().encode(s), data.count > 200_000 {
+                                self.sendSessionToiOS(s)
+                                oversizedCount += 1
+                            } else {
+                                inlineSessions.append(s)
+                            }
                         }
-                        replyHandler(["status": "ok", "count": sessions.count])
+                        if let encoded = try? JSONEncoder().encode(inlineSessions) {
+                            replyHandler([
+                                "status": "ok",
+                                "count": sessions.count,
+                                "sessionsData": encoded.base64EncodedString(),
+                                "oversizedCount": oversizedCount
+                            ])
+                        } else {
+                            // Encoding failed — fall back to individual routing
+                            for s in inlineSessions { self.sendSessionToiOS(s) }
+                            replyHandler(["status": "ok", "count": sessions.count, "oversizedCount": sessions.count])
+                        }
                         self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone (requested)")
                     }
+                case "syncTheme", "syncTemplates":
+                    self.handleIncomingPayload(message)
+                    replyHandler(["status": "received"])
                 default:
                     replyHandler(["error": "Unknown action"])
                 }
@@ -440,7 +468,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func loadAllLocalSessions() -> [TrainingSession] {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
+        guard let containerURL = getWorkingContainer() else {
             return []
         }
         let url = containerURL.appendingPathComponent("sessions.json")
@@ -488,7 +516,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func saveTemplatesToDisk(_ templates: [WorkoutTemplate]) {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else { return }
+        guard let containerURL = getWorkingContainer() else { return }
         let url = containerURL.appendingPathComponent("workout_templates.json")
         do {
             let data = try JSONEncoder().encode(templates)
@@ -499,7 +527,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func loadTemplatesFromDisk() {
-        guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else { return }
+        guard let containerURL = getWorkingContainer() else { return }
         let url = containerURL.appendingPathComponent("workout_templates.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
@@ -512,6 +540,17 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     // MARK: - Helpers
+
+    private func getWorkingContainer() -> URL? {
+        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
+            return container
+        }
+        // Fallback for simulator or missing entitlement
+        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let fallback = docsURL.appendingPathComponent("SharedData")
+        try? FileManager.default.createDirectory(at: fallback, withIntermediateDirectories: true)
+        return fallback
+    }
 
     private func updateSyncStatus(_ status: String) {
         syncStatus = status
