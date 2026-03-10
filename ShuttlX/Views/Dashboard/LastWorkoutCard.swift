@@ -4,19 +4,19 @@ struct LastWorkoutCard: View {
     let session: TrainingSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: ShuttlXSpacing.lg) {
             // Header
             HStack {
                 Text("Last Workout")
                     .font(ShuttlXFont.cardTitle)
                 Spacer()
                 Text(FormattingUtils.formatShortDate(session.startDate))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
             }
 
             // Activity badges
-            HStack(spacing: 8) {
+            HStack(spacing: ShuttlXSpacing.md) {
                 if session.totalRunningDuration > 0 {
                     ActivityBadge(activity: .running, duration: session.totalRunningDuration)
                 }
@@ -25,12 +25,12 @@ struct LastWorkoutCard: View {
                 }
                 Spacer()
                 Text(FormattingUtils.formatDuration(session.duration))
-                    .font(.subheadline.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .font(ShuttlXFont.cardCaption.monospacedDigit())
+                    .foregroundStyle(ShuttlXColor.textSecondary)
             }
 
             // Metrics grid
-            HStack(spacing: 8) {
+            HStack(spacing: ShuttlXSpacing.md) {
                 if let distance = session.distance, distance > 0 {
                     MetricCard(
                         icon: "location.fill",
@@ -62,8 +62,8 @@ struct LastWorkoutCard: View {
                 }
             }
         }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(ShuttlXSpacing.xl)
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Last workout, \(FormattingUtils.formatShortDate(session.startDate)), \(FormattingUtils.formatDuration(session.duration))")
     }

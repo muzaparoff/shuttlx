@@ -103,6 +103,7 @@ enum ShuttlXFont {
 
     // Timer screen
     static var watchMetricDisplay: Font { fonts.watchMetricDisplay }
+    static var watchMetricSecondary: Font { fonts.watchMetricSecondary }
     static var watchTimerDisplay: Font { fonts.watchTimerDisplay }
 
     // Supporting labels

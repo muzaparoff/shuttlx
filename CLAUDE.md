@@ -101,6 +101,32 @@ Additional rules load automatically based on the files being edited:
 - `/deploy` — Push to main, monitor CI, report TestFlight result
 - `/review-changes` — Check git diff against design system & safety rules
 
+## Agents
+
+| Agent | Purpose | Model |
+|-------|---------|-------|
+| `app-auditor` | Pre-release readiness audit (crash risks, metadata, features) | sonnet |
+| `design-reviewer` | UI/UX + Apple HIG compliance review | sonnet |
+| `growth-strategist` | ASO, marketing, solo-dev launch strategy | opus |
+| `accessibility-auditor` | VoiceOver, Dynamic Type, contrast, a11y | sonnet |
+| `performance-auditor` | Memory, battery, render efficiency, watchOS limits | sonnet |
+| `security-reviewer` | Entitlements, data protection, secrets, privacy | sonnet |
+| `watch-debugger` | watchOS workout/sync/HealthKit/timer debugging | sonnet |
+
+### Agent Routing Rules
+
+**Run in PARALLEL (independent, read-only):**
+- `app-auditor` + `design-reviewer` + `growth-strategist` → pre-release report
+- `accessibility-auditor` + `performance-auditor` + `security-reviewer` → code health report
+
+**Run SEQUENTIALLY (output feeds the next):**
+- `app-auditor` → implementer (fix what auditor found)
+- `design-reviewer` → design fixes (apply UI changes)
+
+**Never parallelize:**
+- Any two agents that write to the same Swift files
+- Agents with overlapping file scope
+
 ## Frameworks Used
 
 SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, Combine, os.log, WatchKit

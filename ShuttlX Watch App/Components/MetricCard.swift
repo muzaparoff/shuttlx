@@ -7,9 +7,9 @@ struct MetricCard: View {
     let color: Color
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: ShuttlXSpacing.xs) {
             Image(systemName: icon)
-                .font(.body)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(color)
 
             Text(value)
@@ -17,11 +17,11 @@ struct MetricCard: View {
                 .monospacedDigit()
 
             Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(ShuttlXColor.textSecondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(6)
+        .padding(ShuttlXSpacing.sm)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value)")
     }

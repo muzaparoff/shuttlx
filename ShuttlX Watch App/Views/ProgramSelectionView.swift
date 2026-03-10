@@ -24,9 +24,37 @@ struct StartTrainingView: View {
         return last
     }
 
+    private var greeting: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        if hour < 12 { return "Good morning" }
+        if hour < 17 { return "Good afternoon" }
+        return "Good evening"
+    }
+
     var body: some View {
         ScrollView {
             VStack(spacing: ShuttlXSpacing.lg) {
+                // Greeting header
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(greeting)
+                        .font(ShuttlXFont.watchHeroTitle)
+                        .foregroundStyle(ShuttlXColor.textPrimary)
+
+                    if let last = lastSession {
+                        let minutes = Int(last.duration / 60)
+                        Text("Last: \(minutes)m \(relativeDate(last.startDate))")
+                            .font(ShuttlXFont.cardCaption)
+                            .monospacedDigit()
+                            .foregroundStyle(ShuttlXColor.textSecondary)
+                    } else {
+                        Text("Ready to train?")
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundStyle(ShuttlXColor.textSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, ShuttlXSpacing.xl)
+
                 // Error states
                 if workoutManager.authorizationDenied {
                     ErrorBanner(
@@ -40,17 +68,20 @@ struct StartTrainingView: View {
                 // Free Run card
                 Button(action: {
                     logger.info("Start Free Run tapped")
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.start)
+                    #endif
                     workoutManager.startWorkout()
                 }) {
                     HStack(spacing: ShuttlXSpacing.md) {
                         Image(systemName: "figure.run")
-                            .font(.title3.weight(.semibold))
+                            .font(ShuttlXFont.watchTemplateTitle)
                             .foregroundStyle(ShuttlXColor.running)
                             .frame(width: 28)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Free Run")
                                 .font(ShuttlXFont.watchTemplateTitle)
-                                .foregroundStyle(.primary)
+                                .foregroundStyle(ShuttlXColor.textPrimary)
                             if lastWasFreeRun, let last = lastSession {
                                 lastSubtitle(last)
                             }
@@ -59,7 +90,7 @@ struct StartTrainingView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, ShuttlXSpacing.lg)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, ShuttlXSpacing.md)
                 }
                 .buttonStyle(ShuttlXCardButtonStyle())
                 .padding(.horizontal, ShuttlXSpacing.xl)
@@ -70,20 +101,23 @@ struct StartTrainingView: View {
                 ForEach(sharedDataManager.workoutTemplates) { template in
                     Button(action: {
                         logger.info("Starting interval workout: \(template.name)")
+                        #if os(watchOS)
+                        WKInterfaceDevice.current().play(.start)
+                        #endif
                         workoutManager.startIntervalWorkout(template: template)
                     }) {
                         HStack(spacing: ShuttlXSpacing.md) {
                             Image(systemName: "flame.fill")
-                                .font(.title3.weight(.semibold))
+                                .font(ShuttlXFont.watchTemplateTitle)
                                 .foregroundStyle(ShuttlXColor.calories)
                                 .frame(width: 28)
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(template.name)
                                     .font(ShuttlXFont.watchTemplateTitle)
-                                    .foregroundStyle(.primary)
+                                    .foregroundStyle(ShuttlXColor.textPrimary)
                                 Text(template.summaryText)
-                                    .font(.caption2)
-                                    .foregroundStyle(.secondary)
+                                    .font(ShuttlXFont.cardCaption)
+                                    .foregroundStyle(ShuttlXColor.textSecondary)
                                 if let last = lastSessionFor(template: template) {
                                     lastSubtitle(last)
                                 }
@@ -92,7 +126,7 @@ struct StartTrainingView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, ShuttlXSpacing.lg)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, ShuttlXSpacing.md)
                     }
                     .buttonStyle(ShuttlXCardButtonStyle())
                     .padding(.horizontal, ShuttlXSpacing.xl)
@@ -103,8 +137,8 @@ struct StartTrainingView: View {
                 #if DEBUG
                 Button(action: { showingDebugView = true }) {
                     Image(systemName: "ant")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
                 }
                 .sheet(isPresented: $showingDebugView) {
                     DebugView()
@@ -113,7 +147,7 @@ struct StartTrainingView: View {
             }
             .padding(.vertical, ShuttlXSpacing.xs)
         }
-        .navigationTitle("ShuttlX")
+        .navigationTitle("")
         .themedScreenBackground()
         .onAppear { loadLastSession() }
     }
@@ -122,10 +156,10 @@ struct StartTrainingView: View {
 
     private func lastSubtitle(_ session: TrainingSession) -> some View {
         let minutes = Int(session.duration / 60)
-        return Text("Last: \(minutes)m · \(relativeDate(session.startDate))")
-            .font(.system(.caption2, design: .rounded))
+        return Text("Last: \(minutes)m \(relativeDate(session.startDate))")
+            .font(ShuttlXFont.cardCaption)
             .monospacedDigit()
-            .foregroundStyle(.secondary)
+            .foregroundStyle(ShuttlXColor.textSecondary)
             .lineLimit(1)
             .accessibilityLabel("Last workout \(minutes) minutes, \(relativeDate(session.startDate))")
     }
@@ -163,11 +197,11 @@ private struct ErrorBanner: View {
     var body: some View {
         HStack(spacing: ShuttlXSpacing.sm) {
             Image(systemName: icon)
-                .font(.caption2)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(color)
             Text(message)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
+                .font(ShuttlXFont.watchControlLabel)
+                .foregroundStyle(ShuttlXColor.textSecondary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
         }

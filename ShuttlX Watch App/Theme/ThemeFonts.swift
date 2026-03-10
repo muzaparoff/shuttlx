@@ -21,6 +21,7 @@ struct ThemeFonts: Equatable {
     // watchOS-specific
     let watchTimerDisplay: Font
     let watchMetricDisplay: Font
+    let watchMetricSecondary: Font
     let watchStepLabel: Font
     let watchControlIcon: Font
     let watchControlLabel: Font

@@ -8,9 +8,11 @@ struct MediumWidgetProvider: TimelineProvider {
             hasSession: true,
             isToday: true,
             workoutDate: "Today, 8:30 AM",
+            sportTypeName: "Free Run",
+            sportTypeIcon: "figure.run",
             heartRate: "142 bpm",
-            distance: "3.2 km",
-            duration: "28:15",
+            caloriesBurned: "245 cal",
+            totalSteps: "3500",
             weekCount: 3
         )
     }
@@ -45,9 +47,11 @@ struct MediumWidgetProvider: TimelineProvider {
                 hasSession: false,
                 isToday: false,
                 workoutDate: "--",
+                sportTypeName: "",
+                sportTypeIcon: "figure.run",
                 heartRate: "--",
-                distance: "--",
-                duration: "--",
+                caloriesBurned: "--",
+                totalSteps: "--",
                 weekCount: weekCount
             )
         }
@@ -57,6 +61,9 @@ struct MediumWidgetProvider: TimelineProvider {
         dateFormatter.dateStyle = .short
         dateFormatter.timeStyle = .short
 
+        let sportName = session.displayName
+        let sportIcon = session.sportType?.systemImage ?? "figure.run"
+
         let hr: String
         if let avg = session.averageHeartRate, avg > 0 {
             hr = "\(Int(avg)) bpm"
@@ -64,25 +71,30 @@ struct MediumWidgetProvider: TimelineProvider {
             hr = "--"
         }
 
-        let dist: String
-        if let d = session.distance, d > 0 {
-            dist = String(format: "%.1f km", d / 1000)
+        let cal: String
+        if let c = session.caloriesBurned, c > 0 {
+            cal = "\(Int(c)) cal"
         } else {
-            dist = "--"
+            cal = "--"
         }
 
-        let minutes = Int(session.duration) / 60
-        let seconds = Int(session.duration) % 60
-        let dur = String(format: "%d:%02d", minutes, seconds)
+        let steps: String
+        if let s = session.totalSteps, s > 0 {
+            steps = "\(s)"
+        } else {
+            steps = "--"
+        }
 
         return MediumWidgetEntry(
             date: Date(),
             hasSession: true,
             isToday: isToday,
             workoutDate: dateFormatter.string(from: session.startDate),
+            sportTypeName: sportName,
+            sportTypeIcon: sportIcon,
             heartRate: hr,
-            distance: dist,
-            duration: dur,
+            caloriesBurned: cal,
+            totalSteps: steps,
             weekCount: weekCount
         )
     }
@@ -93,9 +105,11 @@ struct MediumWidgetEntry: TimelineEntry {
     let hasSession: Bool
     let isToday: Bool
     let workoutDate: String
+    let sportTypeName: String
+    let sportTypeIcon: String
     let heartRate: String
-    let distance: String
-    let duration: String
+    let caloriesBurned: String
+    let totalSteps: String
     let weekCount: Int
 }
 
@@ -107,8 +121,8 @@ struct MediumWidget: Widget {
             MediumWidgetView(entry: entry)
                 .containerBackground(.fill.tertiary, for: .widget)
         }
-        .configurationDisplayName("Last Workout")
-        .description("Shows details from your most recent workout.")
+        .configurationDisplayName("Today's Workout")
+        .description("Shows your latest workout at a glance.")
         .supportedFamilies([.systemMedium])
     }
 }
@@ -118,31 +132,47 @@ struct MediumWidgetView: View {
 
     var body: some View {
         if entry.hasSession {
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    Label(
-                        entry.isToday ? "Today's Workout" : "Last Workout",
-                        systemImage: entry.isToday ? "checkmark.circle.fill" : "figure.run"
-                    )
-                    .font(.caption.bold())
-                    .foregroundStyle(entry.isToday ? .green : .secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                // Row 1: Sport icon + name + date
+                HStack {
+                    Image(systemName: entry.sportTypeIcon)
+                        .font(.title3)
+                        .foregroundStyle(entry.isToday ? .green : .orange)
+                        .frame(width: 28)
+
+                    Text(entry.sportTypeName)
+                        .font(.headline)
+
+                    Spacer()
 
                     Text(entry.workoutDate)
-                        .font(.subheadline.bold())
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
+                // Row 2: Metrics (calories, bpm, steps) — matches history list
+                HStack(spacing: 12) {
+                    MetricRow(icon: "flame.fill", color: .orange, value: entry.caloriesBurned)
+                    MetricRow(icon: "heart.fill", color: .red, value: entry.heartRate)
+                    MetricRow(icon: "shoeprints.fill", color: .blue, value: entry.totalSteps)
+                }
+
+                Spacer()
+
+                // Row 3: Week count
+                HStack {
+                    Label(
+                        entry.isToday ? "Today's Workout" : "Last Workout",
+                        systemImage: entry.isToday ? "checkmark.circle.fill" : "clock"
+                    )
+                    .font(.caption)
+                    .foregroundStyle(entry.isToday ? .green : .secondary)
 
                     Spacer()
 
                     Text("\(entry.weekCount) this week")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-
-                Divider()
-
-                VStack(alignment: .leading, spacing: 8) {
-                    MetricRow(icon: "heart.fill", color: .red, value: entry.heartRate)
-                    MetricRow(icon: "arrow.forward", color: .blue, value: entry.distance)
-                    MetricRow(icon: "timer", color: .orange, value: entry.duration)
                 }
             }
         } else {
@@ -172,7 +202,7 @@ private struct MetricRow: View {
                 .foregroundStyle(color)
                 .frame(width: 14)
             Text(value)
-                .font(.subheadline)
+                .font(.subheadline.monospacedDigit())
         }
     }
 }

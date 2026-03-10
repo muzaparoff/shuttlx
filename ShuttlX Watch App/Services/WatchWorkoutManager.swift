@@ -78,6 +78,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private let motionActivityManager = CMMotionActivityManager()
     private let pedometer = CMPedometer()
 
+    // Pause time tracking
+    private var accumulatedPauseTime: TimeInterval = 0
+    private var pauseStartDate: Date?
+
     // Debounce: pending activity must persist for this duration before committing
     private let activityDebounceInterval: TimeInterval = 5.0
     private var pendingActivity: DetectedActivity?
@@ -184,6 +188,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
+        accumulatedPauseTime = 0
+        pauseStartDate = nil
 
         routePoints = []
 
@@ -213,13 +219,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutMode = .interval
         activeTemplate = template
         intervalEngine = IntervalEngine()
-        intervalEngine!.configure(template: template)
+        intervalEngine?.configure(template: template)
         startWorkout()
     }
 
     func pauseWorkout() {
         guard isWorkoutActive, !isPaused else { return }
         isPaused = true
+        pauseStartDate = Date()
 
         stopDisplayTimer()
         stopMotionUpdates()
@@ -236,6 +243,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     func resumeWorkout() {
         guard isWorkoutActive, isPaused else { return }
         isPaused = false
+
+        // Accumulate pause duration
+        if let pauseStart = pauseStartDate {
+            accumulatedPauseTime += Date().timeIntervalSince(pauseStart)
+            pauseStartDate = nil
+        }
 
         // Close the current segment and start a new one
         closeCurrentSegment()
@@ -301,6 +314,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         caloriesAnchor = nil
         lastLiveUpdateTime = nil
         routePoints = []
+        accumulatedPauseTime = 0
+        pauseStartDate = nil
 
         // Notify iOS that workout ended
         if WCSession.default.isReachable {
@@ -315,7 +330,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         intervalEngine = nil
         activeTemplate = nil
 
-        clearWorkoutBackup()
+        // Backup is cleared by saveWorkoutData() after confirmed save — not here
     }
 
     // MARK: - HKWorkoutSession
@@ -369,7 +384,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func updateElapsedTime() {
         guard let startTime = workoutStartTime else { return }
-        elapsedTime = Date().timeIntervalSince(startTime)
+        elapsedTime = Date().timeIntervalSince(startTime) - accumulatedPauseTime
 
         guard let segStart = currentSegmentStartTime else { return }
         currentSegmentTime = Date().timeIntervalSince(segStart)
@@ -752,10 +767,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
         }
 
+        // Calculate total pause time including current pause if active
+        let totalPause = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
+
         let session = TrainingSession(
             startDate: startTime,
             endDate: Date(),
-            duration: Date().timeIntervalSince(startTime),
+            duration: Date().timeIntervalSince(startTime) - totalPause,
             averageHeartRate: heartRateSamples.isEmpty ? nil : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count),
             maxHeartRate: maxHeartRateValue > 0 ? maxHeartRateValue : nil,
             caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
@@ -781,6 +799,32 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    /// Check for a crashed workout backup and recover the session
+    func recoverCrashedWorkout() -> TrainingSession? {
+        let fileManager = FileManager.default
+        guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let backupURL = docsURL.appendingPathComponent("active_workout_backup.json")
+        guard fileManager.fileExists(atPath: backupURL.path) else { return nil }
+
+        do {
+            let data = try Data(contentsOf: backupURL)
+            let session = try JSONDecoder().decode(TrainingSession.self, from: data)
+            logger.info("Recovered crashed workout backup: \(Int(session.duration))s")
+            return session
+        } catch {
+            logger.error("Failed to read workout backup: \(error.localizedDescription)")
+            try? fileManager.removeItem(at: backupURL)
+            return nil
+        }
+    }
+
+    /// Save a recovered session and clear the backup
+    func saveRecoveredSession(_ session: TrainingSession) {
+        sharedDataManager?.sendSessionToiOS(session)
+        clearWorkoutBackup()
+        logger.info("Recovered session sent to iOS and backup cleared")
+    }
+
     private func clearWorkoutBackup() {
         let fileManager = FileManager.default
         guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
@@ -800,10 +844,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
         }
 
+        // Calculate total pause time including current pause if active
+        let totalPauseTime = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
+
         var session = TrainingSession(
             startDate: startTime,
             endDate: Date(),
-            duration: Date().timeIntervalSince(startTime),
+            duration: Date().timeIntervalSince(startTime) - totalPauseTime,
             averageHeartRate: heartRateSamples.isEmpty ? nil : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count),
             maxHeartRate: maxHeartRateValue > 0 ? maxHeartRateValue : nil,
             caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
@@ -829,7 +876,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         finalizeRouteBuilder()
 
         sharedDataManager?.sendSessionToiOS(session)
-        saveWorkoutDataToLocalStorage()
+        clearWorkoutBackup()
         logger.info("Session saved: Duration \(Int(session.duration))s")
     }
 
@@ -877,8 +924,6 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
             switch toState {
             case .paused:
                 saveWorkoutDataToLocalStorage()
-            case .ended, .stopped:
-                clearWorkoutBackup()
             default:
                 break
             }

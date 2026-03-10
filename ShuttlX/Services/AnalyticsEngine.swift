@@ -118,7 +118,7 @@ enum AnalyticsEngine {
             // Fastest km from km splits
             if let splits = session.kmSplits {
                 for split in splits {
-                    if records.fastestKmPace == nil || split.splitTime < records.fastestKmPace! {
+                    if records.fastestKmPace.map({ split.splitTime < $0 }) ?? true {
                         records.fastestKmPace = split.splitTime
                         records.fastestKmDate = session.startDate
                     }
@@ -127,21 +127,21 @@ enum AnalyticsEngine {
             // Also check pace from distance/duration for sessions without splits
             if records.fastestKmPace == nil, let dist = session.distance, dist > 0.5 {
                 let pacePerKm = session.duration / dist
-                if records.fastestKmPace == nil || pacePerKm < records.fastestKmPace! {
+                if records.fastestKmPace.map({ pacePerKm < $0 }) ?? true {
                     records.fastestKmPace = pacePerKm
                     records.fastestKmDate = session.startDate
                 }
             }
 
             // Longest duration
-            if records.longestDuration == nil || session.duration > records.longestDuration! {
+            if records.longestDuration.map({ session.duration > $0 }) ?? true {
                 records.longestDuration = session.duration
                 records.longestDurationDate = session.startDate
             }
 
             // Highest average HR
             if let hr = session.averageHeartRate {
-                if records.highestAvgHR == nil || hr > records.highestAvgHR! {
+                if records.highestAvgHR.map({ hr > $0 }) ?? true {
                     records.highestAvgHR = hr
                     records.highestAvgHRDate = session.startDate
                 }
@@ -149,7 +149,7 @@ enum AnalyticsEngine {
 
             // Most distance
             if let dist = session.distance {
-                if records.mostDistance == nil || dist > records.mostDistance! {
+                if records.mostDistance.map({ dist > $0 }) ?? true {
                     records.mostDistance = dist
                     records.mostDistanceDate = session.startDate
                 }

@@ -29,34 +29,34 @@ struct WeekSummaryCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: ShuttlXSpacing.lg) {
             HStack {
                 Text("This Week")
                     .font(ShuttlXFont.cardTitle)
                 Spacer()
                 if weekSessionCount > 0 {
                     Text("\(weekSessionCount) session\(weekSessionCount == 1 ? "" : "s")")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
                 }
             }
 
             // Day dots
             HStack(spacing: 0) {
                 ForEach(weekDays) { day in
-                    VStack(spacing: 6) {
+                    VStack(spacing: ShuttlXSpacing.sm) {
                         Text(day.shortName)
-                            .font(.caption2)
-                            .foregroundStyle(day.isToday ? .primary : .secondary)
+                            .font(ShuttlXFont.microLabel)
+                            .foregroundStyle(day.isToday ? ShuttlXColor.textPrimary : ShuttlXColor.textSecondary)
 
                         Circle()
-                            .fill(day.sessionCount > 0 ? ShuttlXColor.running : Color(.tertiarySystemFill))
+                            .fill(day.sessionCount > 0 ? ShuttlXColor.running : ShuttlXColor.surface)
                             .frame(width: day.isToday ? 10 : 8, height: day.isToday ? 10 : 8)
 
                         if day.sessionCount > 0 {
                             Text(FormattingUtils.formatDuration(day.totalDuration))
                                 .font(ShuttlXFont.microLabel.monospacedDigit())
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(ShuttlXColor.textSecondary)
                         } else {
                             Text(" ")
                                 .font(ShuttlXFont.microLabel)
@@ -69,16 +69,16 @@ struct WeekSummaryCard: View {
             if weekTotalDuration > 0 {
                 HStack {
                     Text("Total")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
                     Spacer()
                     Text(FormattingUtils.formatDuration(weekTotalDuration))
-                        .font(.caption.monospacedDigit().bold())
+                        .font(ShuttlXFont.cardCaption.monospacedDigit().bold())
                 }
             }
         }
-        .padding(16)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+        .padding(ShuttlXSpacing.xl)
+        .themedCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("This week, \(weekSessionCount) sessions, total \(FormattingUtils.formatDuration(weekTotalDuration))")
     }

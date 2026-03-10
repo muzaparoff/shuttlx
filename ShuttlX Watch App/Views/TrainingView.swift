@@ -9,6 +9,7 @@ struct TrainingView: View {
     @State private var showingStopConfirmation = false
     @State private var showingSummary = false
     @State private var savedSummary: WorkoutSummary?
+    @State private var pausePulse = false
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -64,50 +65,49 @@ struct TrainingView: View {
 
     private var workoutDisplayTab: some View {
         GeometryReader { geo in
-            VStack(spacing: ShuttlXSpacing.xs) {
+            VStack(spacing: ShuttlXSpacing.sm) {
                 Spacer(minLength: 0)
 
                 // Line 1: Timer (countdown or elapsed)
                 timerLine
 
-                // Line 2: Distance
-                Text(distanceText)
-                    .font(ShuttlXFont.watchMetricDisplay)
-                    .monospacedDigit()
-                    .foregroundColor(.primary)
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel("Distance \(accessibleDistance)")
+                // Line 2: Distance with label
+                metricWithLabel(
+                    label: "DIST",
+                    value: distanceText,
+                    color: ShuttlXColor.textPrimary,
+                    accessibilityText: "Distance \(accessibleDistance)"
+                )
 
-                // Line 3: Heart rate — colored by zone
-                Text(heartRateText)
-                    .font(ShuttlXFont.watchMetricDisplay)
-                    .monospacedDigit()
-                    .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel(workoutManager.heartRate > 0
+                // Line 3: Heart rate with label — colored by zone
+                metricWithLabel(
+                    label: "HR",
+                    value: heartRateText,
+                    color: ShuttlXColor.forHRZone(workoutManager.heartRate),
+                    accessibilityText: workoutManager.heartRate > 0
                         ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
-                        : "Heart rate no data")
-                    .accessibilityAddTraits(.updatesFrequently)
+                        : "Heart rate no data"
+                )
+                .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
 
-                // Line 4: Pace
-                Text(paceText)
-                    .font(ShuttlXFont.watchMetricDisplay)
-                    .monospacedDigit()
-                    .foregroundColor(.primary)
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityLabel(accessiblePace)
+                // Line 4: Pace with label
+                metricWithLabel(
+                    label: "PACE",
+                    value: paceText,
+                    color: ShuttlXColor.textPrimary,
+                    accessibilityText: accessiblePace
+                )
 
-                // Status badge
+                // Status badge — pulsing
                 if workoutManager.isPaused {
                     Text("PAUSED")
                         .font(ShuttlXFont.watchStatusBadge)
                         .foregroundColor(ShuttlXColor.ctaWarning)
+                        .opacity(pausePulse ? 0.3 : 1.0)
+                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pausePulse)
+                        .onAppear { pausePulse = true }
+                        .onDisappear { pausePulse = false }
+                        .transition(.opacity)
                 }
 
                 Spacer(minLength: 0)
@@ -121,47 +121,114 @@ struct TrainingView: View {
         }
     }
 
+    // MARK: - Metric with Label
+
+    private func metricWithLabel(label: String, value: String, color: Color, accessibilityText: String) -> some View {
+        VStack(spacing: 0) {
+            Text(label)
+                .font(ShuttlXFont.watchControlLabel)
+                .foregroundColor(ShuttlXColor.textSecondary)
+            Text(value)
+                .font(ShuttlXFont.watchMetricSecondary)
+                .monospacedDigit()
+                .foregroundColor(color)
+                .contentTransition(.numericText())
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(accessibilityText)
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
     // MARK: - Timer Line
 
     @ViewBuilder
     private var timerLine: some View {
         if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
-            // Interval mode: colored dot + countdown + step counter
-            HStack(spacing: ShuttlXSpacing.sm) {
-                if let step = engine.currentStep {
-                    Circle()
-                        .fill(ShuttlXColor.forStepType(step.type))
-                        .frame(width: ShuttlXSize.stepDotSize, height: ShuttlXSize.stepDotSize)
-                        .accessibilityLabel(step.type.displayName)
+            // Interval mode: progress ring + countdown + step counter
+            intervalTimerLine(engine: engine)
+        } else {
+            // Free run mode: icon + elapsed time
+            VStack(spacing: 2) {
+                HStack(spacing: ShuttlXSpacing.xs) {
+                    Image(systemName: "figure.run")
+                        .font(ShuttlXFont.watchControlLabel)
+                        .foregroundColor(ShuttlXColor.running)
+                    Text("ELAPSED")
+                        .font(ShuttlXFont.watchControlLabel)
+                        .foregroundColor(ShuttlXColor.textSecondary)
                 }
-
-                Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+                Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
                     .font(ShuttlXFont.watchTimerDisplay)
                     .monospacedDigit()
-                    .foregroundColor(engine.currentStep.map { ShuttlXColor.forStepType($0.type) } ?? .primary)
+                    .foregroundColor(ShuttlXColor.textPrimary)
+                    .contentTransition(.numericText())
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
-
-                Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
-                    .font(ShuttlXFont.watchStepLabel)
-                    .foregroundColor(.secondary)
             }
             .frame(maxWidth: .infinity)
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Time remaining \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), step \(engine.currentStepIndex + 1) of \(engine.totalStepsCount)")
+            .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
             .accessibilityAddTraits(.updatesFrequently)
-        } else {
-            // Free run mode: plain elapsed time
-            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                .font(ShuttlXFont.watchTimerDisplay)
-                .monospacedDigit()
-                .foregroundColor(.primary)
-                .minimumScaleFactor(0.5)
-                .lineLimit(1)
-                .frame(maxWidth: .infinity)
-                .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
-                .accessibilityAddTraits(.updatesFrequently)
         }
+    }
+
+    // MARK: - Interval Timer with Progress Ring
+
+    private func intervalTimerLine(engine: IntervalEngine) -> some View {
+        let stepColor = engine.currentStep.map { ShuttlXColor.forStepType($0.type) } ?? ShuttlXColor.textPrimary
+        let stepProgress: Double = {
+            guard let step = engine.currentStep, step.duration > 0 else { return 0 }
+            return 1.0 - (engine.currentStepTimeRemaining / step.duration)
+        }()
+
+        return VStack(spacing: 2) {
+            // Progress ring around countdown
+            ZStack {
+                // Track
+                Circle()
+                    .stroke(stepColor.opacity(0.15), lineWidth: 4)
+                    .frame(width: 56, height: 56)
+
+                // Progress
+                Circle()
+                    .trim(from: 0, to: stepProgress)
+                    .stroke(stepColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
+                    .frame(width: 56, height: 56)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 1), value: stepProgress)
+
+                // Countdown text inside ring
+                Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+                    .font(ShuttlXFont.watchMetricSecondary)
+                    .monospacedDigit()
+                    .foregroundColor(stepColor)
+                    .contentTransition(.numericText())
+            }
+
+            // Step indicator: dot + label + counter
+            HStack(spacing: ShuttlXSpacing.xs) {
+                if let step = engine.currentStep {
+                    Circle()
+                        .fill(stepColor)
+                        .frame(width: 10, height: 10)
+                        .accessibilityLabel(step.type.displayName)
+                }
+
+                Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
+                    .font(ShuttlXFont.watchStepLabel)
+                    .foregroundColor(ShuttlXColor.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .id(engine.currentStepIndex)
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        .animation(.easeInOut(duration: 0.3), value: engine.currentStepIndex)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Time remaining \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), step \(engine.currentStepIndex + 1) of \(engine.totalStepsCount)")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     // MARK: - Controls Tab (Translucent Circles)
@@ -173,6 +240,9 @@ struct TrainingView: View {
             HStack(spacing: ShuttlXSpacing.xxl) {
                 // Pause / Resume
                 Button(action: {
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(workoutManager.isPaused ? .directionUp : .directionDown)
+                    #endif
                     if workoutManager.isPaused {
                         workoutManager.resumeWorkout()
                     } else {
@@ -188,6 +258,9 @@ struct TrainingView: View {
 
                 // Finish
                 Button(action: {
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.stop)
+                    #endif
                     showingStopConfirmation = true
                 }) {
                     Image(systemName: "stop.fill")
@@ -203,11 +276,11 @@ struct TrainingView: View {
             HStack(spacing: ShuttlXSpacing.xxl) {
                 Text(workoutManager.isPaused ? "Resume" : "Pause")
                     .font(ShuttlXFont.watchControlLabel)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
                     .frame(width: ShuttlXSize.controlButtonDiameter)
                 Text("End")
                     .font(ShuttlXFont.watchControlLabel)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
                     .frame(width: ShuttlXSize.controlButtonDiameter)
             }
             .padding(.top, ShuttlXSpacing.sm)
@@ -275,18 +348,22 @@ struct WorkoutSummary {
 struct WorkoutSummaryView: View {
     let summary: WorkoutSummary
     let onDismiss: () -> Void
+    @State private var showBadge = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: ShuttlXSpacing.lg) {
                 ThemedCompletionBadge()
+                    .scaleEffect(showBadge ? 1 : 0.3)
+                    .opacity(showBadge ? 1 : 0)
+                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
 
                 Text("Workout Complete")
-                    .font(ShuttlXFont.cardTitle)
+                    .font(ShuttlXFont.watchHeroTitle)
 
                 Text(FormattingUtils.formatTimer(summary.duration))
                     .font(ShuttlXFont.watchSummaryTimer)
-                    .foregroundColor(.primary)
+                    .foregroundColor(ShuttlXColor.textPrimary)
 
                 // Metrics
                 VStack(spacing: ShuttlXSpacing.md) {
@@ -321,6 +398,7 @@ struct WorkoutSummaryView: View {
                     }
                 }
                 .padding(.horizontal)
+                .themedCard()
 
                 // Done button — primary CTA style
                 Button(action: onDismiss) {
@@ -336,17 +414,23 @@ struct WorkoutSummaryView: View {
             .padding(.vertical)
         }
         .themedScreenBackground()
+        .onAppear {
+            showBadge = true
+            #if os(watchOS)
+            WKInterfaceDevice.current().play(.success)
+            #endif
+        }
     }
 
     private func summaryRow(icon: String, color: Color, label: String, value: String) -> some View {
         HStack {
             Image(systemName: icon)
-                .font(.body)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundColor(color)
                 .frame(width: 24)
             Text(label)
                 .font(ShuttlXFont.cardCaption)
-                .foregroundColor(.secondary)
+                .foregroundColor(ShuttlXColor.textSecondary)
             Spacer()
             Text(value)
                 .font(ShuttlXFont.watchSummaryMetric)

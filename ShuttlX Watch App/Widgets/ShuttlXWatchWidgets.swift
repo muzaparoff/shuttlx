@@ -6,5 +6,6 @@ struct ShuttlXWatchWidgets: WidgetBundle {
         LastWorkoutComplication()
         WeeklyProgressComplication()
         QuickStartComplication()
+        TodayWorkoutComplication()
     }
 }

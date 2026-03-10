@@ -32,10 +32,6 @@ struct SessionDetailView: View {
                 // Metric cards grid
                 metricGrid
 
-                // Km splits
-                if let splits = session.kmSplits, !splits.isEmpty {
-                    kmSplitsTable(splits)
-                }
             }
             .padding()
         }
@@ -135,47 +131,14 @@ struct SessionDetailView: View {
                     color: ShuttlXColor.steps
                 )
             }
-        }
-    }
 
-    // MARK: - Km Splits Table
-
-    private func kmSplitsTable(_ splits: [KmSplitData]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Km Splits")
-                .font(ShuttlXFont.sectionHeader)
-                .padding(.top, 4)
-
-            // Header
-            HStack {
-                Text("KM")
-                    .frame(width: 36, alignment: .leading)
-                Spacer()
-                Text("Split")
-                    .frame(width: 70, alignment: .trailing)
-                Text("Total")
-                    .frame(width: 70, alignment: .trailing)
-            }
-            .font(.caption.weight(.medium))
-            .foregroundStyle(.secondary)
-
-            ForEach(splits) { split in
-                HStack {
-                    Text("\(split.kmNumber)")
-                        .font(.subheadline.weight(.semibold))
-                        .frame(width: 36, alignment: .leading)
-                    Spacer()
-                    Text(FormattingUtils.formatPace(split.splitTime))
-                        .font(.subheadline.monospacedDigit())
-                    .frame(width: 70, alignment: .trailing)
-                    Text(FormattingUtils.formatDuration(split.cumulativeTime))
-                        .font(.subheadline.monospacedDigit())
-                        .foregroundStyle(.secondary)
-                        .frame(width: 70, alignment: .trailing)
-                }
-                .padding(.vertical, 2)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Kilometer \(split.kmNumber), pace \(FormattingUtils.formatPace(split.splitTime)), total \(FormattingUtils.formatDuration(split.cumulativeTime))")
+            if let distance = session.distance, distance > 0 {
+                MetricCard(
+                    icon: "gauge.with.dots.needle.bottom.50percent",
+                    value: FormattingUtils.formatPace(session.duration / distance),
+                    label: "Avg Pace",
+                    color: ShuttlXColor.pace
+                )
             }
         }
     }
@@ -308,11 +271,7 @@ struct ActivitySegmentsView: View {
                 RoutePoint(latitude: 55.7580, longitude: 37.6185, timestamp: Date().addingTimeInterval(-800)),
                 RoutePoint(latitude: 55.7585, longitude: 37.6170, timestamp: Date().addingTimeInterval(-500)),
             ],
-            kmSplits: [
-                KmSplitData(kmNumber: 1, splitTime: 345, cumulativeTime: 345),
-                KmSplitData(kmNumber: 2, splitTime: 330, cumulativeTime: 675),
-                KmSplitData(kmNumber: 3, splitTime: 355, cumulativeTime: 1030),
-            ]
+            kmSplits: nil
         ))
     }
 }

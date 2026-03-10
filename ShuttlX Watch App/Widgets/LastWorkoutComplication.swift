@@ -51,7 +51,7 @@ struct LastWorkoutComplicationProvider: TimelineProvider {
 
     private func formatDistance(_ distance: Double?) -> String {
         guard let d = distance, d > 0 else { return "--" }
-        return String(format: "%.1f km", d / 1000)
+        return String(format: "%.1f km", d)
     }
 
     private func formatDuration(_ duration: TimeInterval) -> String {

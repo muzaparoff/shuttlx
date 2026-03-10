@@ -68,6 +68,7 @@ extension AppTheme {
             debugMono: .system(.caption, design: .monospaced),
             watchTimerDisplay: .system(size: 40, weight: .bold, design: .monospaced),
             watchMetricDisplay: .system(size: 40, weight: .bold, design: .rounded),
+            watchMetricSecondary: .system(size: 24, weight: .semibold, design: .rounded),
             watchStepLabel: .system(size: 13, weight: .bold),
             watchControlIcon: .system(size: 26, weight: .semibold),
             watchControlLabel: .system(size: 11),

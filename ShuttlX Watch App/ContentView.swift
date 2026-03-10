@@ -9,16 +9,19 @@ struct ContentView: View {
         NavigationStack {
             if workoutManager.isWorkoutActive {
                 TrainingView()
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
                     .onAppear {
                         logger.info("TrainingView appeared - workout active")
                     }
             } else {
                 StartTrainingView()
+                    .transition(.move(edge: .leading).combined(with: .opacity))
                     .onAppear {
                         logger.info("StartTrainingView appeared")
                     }
             }
         }
+        .animation(.easeInOut(duration: 0.35), value: workoutManager.isWorkoutActive)
         .onAppear {
             logger.info("ContentView rendered")
         }
