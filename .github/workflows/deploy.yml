@@ -21,6 +21,7 @@
 #   WATCH_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.watchkitapp
 #   LIVEACTIVITY_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.ShuttlXLiveActivity
 #   WIDGETS_PROVISIONING_PROFILE_BASE64      Base64 App Store profile for com.shuttlx.ShuttlX.ShuttlXWidgets
+#   WATCH_WIDGETS_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets
 #
 # =============================================================================
 
@@ -130,11 +131,13 @@ jobs:
           WATCH_INFO=$(install_profile "${{ secrets.WATCH_PROVISIONING_PROFILE_BASE64 }}" "Watch")
           LIVEACTIVITY_INFO=$(install_profile "${{ secrets.LIVEACTIVITY_PROVISIONING_PROFILE_BASE64 }}" "LiveActivity")
           WIDGETS_INFO=$(install_profile "${{ secrets.WIDGETS_PROVISIONING_PROFILE_BASE64 }}" "Widgets")
+          WATCH_WIDGETS_INFO=$(install_profile "${{ secrets.WATCH_WIDGETS_PROVISIONING_PROFILE_BASE64 }}" "WatchWidgets")
 
           echo "ios_name=$(echo "$IOS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
           echo "watch_name=$(echo "$WATCH_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
           echo "liveactivity_name=$(echo "$LIVEACTIVITY_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
           echo "widgets_name=$(echo "$WIDGETS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
+          echo "watch_widgets_name=$(echo "$WATCH_WIDGETS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
 
           echo "Installed profiles:"
           ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
@@ -189,6 +192,7 @@ jobs:
           WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
           LIVEACTIVITY_NAME="${{ steps.install_profiles.outputs.liveactivity_name }}"
           WIDGETS_NAME="${{ steps.install_profiles.outputs.widgets_name }}"
+          WATCH_WIDGETS_NAME="${{ steps.install_profiles.outputs.watch_widgets_name }}"
 
           # Build LiveActivity entry only if profile exists
           LIVEACTIVITY_PLIST=""
@@ -202,6 +206,13 @@ jobs:
           if [ -n "$WIDGETS_NAME" ]; then
             WIDGETS_PLIST="            <key>com.shuttlx.ShuttlX.ShuttlXWidgets</key>
                       <string>$WIDGETS_NAME</string>"
+          fi
+
+          # Build Watch Widgets entry only if profile exists
+          WATCH_WIDGETS_PLIST=""
+          if [ -n "$WATCH_WIDGETS_NAME" ]; then
+            WATCH_WIDGETS_PLIST="            <key>com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets</key>
+                      <string>$WATCH_WIDGETS_NAME</string>"
           fi
 
           cat > ExportOptions.plist <<EXPORTEOF
@@ -233,6 +244,7 @@ jobs:
                   <string>$WATCH_NAME</string>
           $LIVEACTIVITY_PLIST
           $WIDGETS_PLIST
+          $WATCH_WIDGETS_PLIST
               </dict>
           </dict>
           </plist>
@@ -243,6 +255,7 @@ jobs:
           echo "  Watch: $WATCH_NAME"
           echo "  LiveActivity: ${LIVEACTIVITY_NAME:-auto-provisioned}"
           echo "  Widgets: ${WIDGETS_NAME:-auto-provisioned}"
+          echo "  WatchWidgets: ${WATCH_WIDGETS_NAME:-auto-provisioned}"
 
       # ------------------------------------------------------------------
       # 9. Configure manual signing in project
@@ -253,6 +266,7 @@ jobs:
           WATCH_PROFILE: ${{ steps.install_profiles.outputs.watch_name }}
           LIVEACTIVITY_PROFILE: ${{ steps.install_profiles.outputs.liveactivity_name }}
           WIDGETS_PROFILE: ${{ steps.install_profiles.outputs.widgets_name }}
+          WATCH_WIDGETS_PROFILE: ${{ steps.install_profiles.outputs.watch_widgets_name }}
         run: |
           python3 << 'PYEOF'
           import os
@@ -261,6 +275,7 @@ jobs:
           watch_profile = os.environ['WATCH_PROFILE']
           liveactivity_profile = os.environ.get('LIVEACTIVITY_PROFILE', '')
           widgets_profile = os.environ.get('WIDGETS_PROFILE', '')
+          watch_widgets_profile = os.environ.get('WATCH_WIDGETS_PROFILE', '')
 
           pbx = 'ShuttlX.xcodeproj/project.pbxproj'
           with open(pbx, 'r') as f:
@@ -301,6 +316,16 @@ jobs:
           else:
               print('  WARNING: No Widgets profile available!')
 
+          # Add profile specifier for Watch Widgets extension target
+          if watch_widgets_profile:
+              content = content.replace(
+                  'CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;',
+                  'CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;\n'
+                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + watch_widgets_profile + '";')
+              print(f'  WatchWidgets: {watch_widgets_profile}')
+          else:
+              print('  WARNING: No WatchWidgets profile available!')
+
           with open(pbx, 'w') as f:
               f.write(content)
 
@@ -312,6 +337,8 @@ jobs:
               missing.append(('LIVEACTIVITY_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.ShuttlXLiveActivity'))
           if not widgets_profile:
               missing.append(('WIDGETS_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.ShuttlXWidgets'))
+          if not watch_widgets_profile:
+              missing.append(('WATCH_WIDGETS_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets'))
 
           if missing:
               print()
