@@ -107,6 +107,32 @@
 		F5923012 /* CloudKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923002 /* CloudKitSyncManager.swift */; };
 		F5923013 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923003 /* SignInView.swift */; };
 		WG000020B /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
+		WW100001 /* ShuttlXWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000001 /* ShuttlXWatchWidgets.swift */; };
+		WW100002 /* LastWorkoutComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000002 /* LastWorkoutComplication.swift */; };
+		WW100003 /* WeeklyProgressComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000003 /* WeeklyProgressComplication.swift */; };
+		WW100004 /* QuickStartComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000004 /* QuickStartComplication.swift */; };
+		WW100005 /* TodayWorkoutComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000005 /* TodayWorkoutComplication.swift */; };
+		WW100006 /* WatchWidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000007 /* WatchWidgetDataProvider.swift */; };
+		WW100007 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
+		WW100008 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
+		WW100009 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
+		WW100010 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		WW100011 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
+		WW100012 /* ShuttlXWatchWidgets.appex in Embed Watch Widget Extension */ = {isa = PBXBuildFile; fileRef = WW000006 /* ShuttlXWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		WW100020 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00001 /* ShuttlXTheme.swift */; };
+		WW100021 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00002 /* ThemeColors.swift */; };
+		WW100022 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00003 /* ThemeFonts.swift */; };
+		WW100023 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00004 /* ThemeEffects.swift */; };
+		WW100024 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00005 /* AppTheme.swift */; };
+		WW100025 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00006 /* ThemeManager.swift */; };
+		WW100026 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00007 /* ThemeModifiers.swift */; };
+		WW100027 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00008 /* ThemeAssets.swift */; };
+		WW100028 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00009 /* CleanTheme.swift */; };
+		WW100029 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00010 /* SynthwaveTheme.swift */; };
+		WW100030 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00011 /* MixtapeTheme.swift */; };
+		WW100031 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00012 /* ArcadeTheme.swift */; };
+		WW100032 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00013 /* ClassicRadioTheme.swift */; };
+		WW100033 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00014 /* VUMeterTheme.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -130,6 +156,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = WG000050;
 			remoteInfo = ShuttlXWidgets;
+		};
+		WW200007 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A59234D6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = WW200001;
+			remoteInfo = ShuttlXWatchWidgets;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -155,6 +188,17 @@
 				WG000019 /* ShuttlXWidgets.appex in Embed PlugIns */,
 			);
 			name = "Embed PlugIns";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WW200006 /* Embed Watch Widget Extension */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				WW100012 /* ShuttlXWatchWidgets.appex in Embed Watch Widget Extension */,
+			);
+			name = "Embed Watch Widget Extension";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
@@ -245,6 +289,29 @@
 		F5923001 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		F5923002 /* CloudKitSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSyncManager.swift; sourceTree = "<group>"; };
 		F5923003 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		WW000001 /* ShuttlXWatchWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWatchWidgets.swift; sourceTree = "<group>"; };
+		WWT00001 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ShuttlXTheme.swift; path = "ShuttlX Watch App/Theme/ShuttlXTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00002 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeColors.swift; path = "ShuttlX Watch App/Theme/ThemeColors.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00003 /* ThemeFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeFonts.swift; path = "ShuttlX Watch App/Theme/ThemeFonts.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00004 /* ThemeEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeEffects.swift; path = "ShuttlX Watch App/Theme/ThemeEffects.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00005 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppTheme.swift; path = "ShuttlX Watch App/Theme/AppTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00006 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeManager.swift; path = "ShuttlX Watch App/Theme/ThemeManager.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00007 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeModifiers.swift; path = "ShuttlX Watch App/Theme/ThemeModifiers.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00008 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeAssets.swift; path = "ShuttlX Watch App/Theme/ThemeAssets.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00009 /* CleanTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CleanTheme.swift; path = "ShuttlX Watch App/Theme/Themes/CleanTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00010 /* SynthwaveTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = SynthwaveTheme.swift; path = "ShuttlX Watch App/Theme/Themes/SynthwaveTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00011 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MixtapeTheme.swift; path = "ShuttlX Watch App/Theme/Themes/MixtapeTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00012 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ArcadeTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ArcadeTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00013 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClassicRadioTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ClassicRadioTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00014 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VUMeterTheme.swift; path = "ShuttlX Watch App/Theme/Themes/VUMeterTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WW000002 /* LastWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutComplication.swift; sourceTree = "<group>"; };
+		WW000003 /* WeeklyProgressComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressComplication.swift; sourceTree = "<group>"; };
+		WW000004 /* QuickStartComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartComplication.swift; sourceTree = "<group>"; };
+		WW000005 /* TodayWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWorkoutComplication.swift; sourceTree = "<group>"; };
+		WW000006 /* ShuttlXWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		WW000007 /* WatchWidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetDataProvider.swift; sourceTree = "<group>"; };
+		WW000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		WW000009 /* ShuttlXWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlXWatchWidgets.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -297,6 +364,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WW200003 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -307,6 +381,7 @@
 				A56D91092E0940ED00E19F06 /* ShuttlX Watch App */,
 				LA000020 /* ShuttlXLiveActivity */,
 				WG000020 /* ShuttlXWidgets */,
+				WW200005 /* ShuttlXWatchWidgets */,
 				A59234DF /* Products */,
 			);
 			sourceTree = "<group>";
@@ -318,6 +393,7 @@
 				A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */,
 				LA000006 /* ShuttlXLiveActivity.appex */,
 				WG000006 /* ShuttlXWidgets.appex */,
+				WW000006 /* ShuttlXWatchWidgets.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -504,6 +580,21 @@
 			path = ShuttlXWidgets;
 			sourceTree = "<group>";
 		};
+		WW200005 /* ShuttlXWatchWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				WW000008 /* Info.plist */,
+				WW000009 /* ShuttlXWatchWidgets.entitlements */,
+				WW000001 /* ShuttlXWatchWidgets.swift */,
+				WW000002 /* LastWorkoutComplication.swift */,
+				WW000003 /* WeeklyProgressComplication.swift */,
+				WW000004 /* QuickStartComplication.swift */,
+				WW000005 /* TodayWorkoutComplication.swift */,
+				WW000007 /* WatchWidgetDataProvider.swift */,
+			);
+			path = ShuttlXWatchWidgets;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -514,10 +605,12 @@
 				A56D91042E0940ED00E19F06 /* Sources */,
 				A56D91052E0940ED00E19F06 /* Frameworks */,
 				A56D91062E0940ED00E19F06 /* Resources */,
+				WW200006 /* Embed Watch Widget Extension */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				WW200008 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				A56D91092E0940ED00E19F06 /* ShuttlX Watch App */,
@@ -585,6 +678,23 @@
 			productReference = WG000006 /* ShuttlXWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		WW200001 /* ShuttlXWatchWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = WW200011 /* Build configuration list for PBXNativeTarget "ShuttlXWatchWidgets" */;
+			buildPhases = (
+				WW200002 /* Sources */,
+				WW200003 /* Frameworks */,
+				WW200004 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = ShuttlXWatchWidgets;
+			productName = ShuttlXWatchWidgets;
+			productReference = WW000006 /* ShuttlXWatchWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -607,6 +717,9 @@
 					WG000050 = {
 						CreatedOnToolsVersion = 16.4;
 					};
+					WW200001 = {
+						CreatedOnToolsVersion = 16.4;
+					};
 				};
 			};
 			buildConfigurationList = A59234D9 /* Build configuration list for PBXProject "ShuttlX" */;
@@ -627,6 +740,7 @@
 				A56D91072E0940ED00E19F06 /* ShuttlX Watch App */,
 				LA000050 /* ShuttlXLiveActivity */,
 				WG000050 /* ShuttlXWidgets */,
+				WW200001 /* ShuttlXWatchWidgets */,
 			);
 		};
 /* End PBXProject section */
@@ -656,6 +770,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		WG000032 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		WW200004 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -788,6 +909,38 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		WW200002 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				WW100001 /* ShuttlXWatchWidgets.swift in Sources */,
+				WW100002 /* LastWorkoutComplication.swift in Sources */,
+				WW100003 /* WeeklyProgressComplication.swift in Sources */,
+				WW100004 /* QuickStartComplication.swift in Sources */,
+				WW100005 /* TodayWorkoutComplication.swift in Sources */,
+				WW100006 /* WatchWidgetDataProvider.swift in Sources */,
+				WW100007 /* TrainingSession.swift in Sources */,
+				WW100008 /* ActivitySegment.swift in Sources */,
+				WW100009 /* WorkoutTemplate.swift in Sources */,
+				WW100010 /* WorkoutSport.swift in Sources */,
+				WW100011 /* RoutePoint.swift in Sources */,
+				WW100020 /* ShuttlXTheme.swift in Sources */,
+				WW100021 /* ThemeColors.swift in Sources */,
+				WW100022 /* ThemeFonts.swift in Sources */,
+				WW100023 /* ThemeEffects.swift in Sources */,
+				WW100024 /* AppTheme.swift in Sources */,
+				WW100025 /* ThemeManager.swift in Sources */,
+				WW100026 /* ThemeModifiers.swift in Sources */,
+				WW100027 /* ThemeAssets.swift in Sources */,
+				WW100028 /* CleanTheme.swift in Sources */,
+				WW100029 /* SynthwaveTheme.swift in Sources */,
+				WW100030 /* MixtapeTheme.swift in Sources */,
+				WW100031 /* ArcadeTheme.swift in Sources */,
+				WW100032 /* ClassicRadioTheme.swift in Sources */,
+				WW100033 /* VUMeterTheme.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -805,6 +958,11 @@
 			isa = PBXTargetDependency;
 			target = WG000050 /* ShuttlXWidgets */;
 			targetProxy = WG000060 /* PBXContainerItemProxy */;
+		};
+		WW200008 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = WW200001 /* ShuttlXWatchWidgets */;
+			targetProxy = WW200007 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -1180,6 +1338,58 @@
 			};
 			name = Release;
 		};
+		WW200009 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShuttlXWatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Debug;
+		};
+		WW200010 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 83HPSY452Y;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = ShuttlXWatchWidgets/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 11.5;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1224,6 +1434,15 @@
 			buildConfigurations = (
 				WG000040 /* Debug */,
 				WG000041 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		WW200011 /* Build configuration list for PBXNativeTarget "ShuttlXWatchWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				WW200009 /* Debug */,
+				WW200010 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
