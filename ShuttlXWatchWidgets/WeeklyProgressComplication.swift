@@ -18,7 +18,9 @@ struct WeeklyProgressProvider: TimelineProvider {
 
     private func makeEntry() -> WeeklyProgressEntry {
         let count = WatchWidgetDataProvider.thisWeekSessionCount()
-        return WeeklyProgressEntry(date: Date(), count: count, goal: 5)
+        let defaults = UserDefaults(suiteName: "group.com.shuttlx.shared")
+        let goal = defaults?.integer(forKey: "weeklyWorkoutGoal")
+        return WeeklyProgressEntry(date: Date(), count: count, goal: goal ?? 5)
     }
 }
 

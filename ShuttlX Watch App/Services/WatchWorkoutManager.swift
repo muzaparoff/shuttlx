@@ -885,9 +885,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let sport = activeTemplate?.sportType ?? .running
         let start = workoutStartTime ?? Date()
 
+        // Nil the property first so no other code uses it, then finish async with local ref
+        routeBuilder = nil
+
         Task {
             do {
-                // Build the HKWorkout using the builder API
                 let config = HKWorkoutConfiguration()
                 config.activityType = sport.hkActivityType
                 config.locationType = sport.hkLocationType
@@ -895,22 +897,19 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 let workoutBuilder = HKWorkoutBuilder(healthStore: healthStore, configuration: config, device: nil)
                 try await workoutBuilder.beginCollection(at: start)
                 try await workoutBuilder.endCollection(at: Date())
-                let finishedWorkouts = try await workoutBuilder.finishWorkout()
 
-                if let workout = finishedWorkouts {
+                if let workout = try await workoutBuilder.finishWorkout() {
                     try await builder.finishRoute(with: workout, metadata: nil)
                     await MainActor.run {
-                        logger.info("HKWorkoutRoute saved to HealthKit")
+                        self.logger.info("HKWorkoutRoute saved to HealthKit")
                     }
                 }
             } catch {
                 await MainActor.run {
-                    logger.error("Failed to finalize route: \(error.localizedDescription)")
+                    self.logger.error("Failed to finalize route: \(error.localizedDescription)")
                 }
             }
         }
-
-        routeBuilder = nil
     }
 }
 

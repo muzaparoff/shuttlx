@@ -10,30 +10,20 @@ struct ShuttlXWatchApp: App {
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "AppInitialization")
     
     init() {
-        logger.info("🚀 ShuttlXWatchApp initialization starting...")
-        
-        logger.info("📱 Using SharedDataManager.shared...")
+        logger.info("ShuttlXWatchApp initialization starting")
+
         let dataManager = SharedDataManager.shared
-        logger.info("✅ SharedDataManager.shared retrieved successfully")
-        
-        logger.info("⌚ Creating WatchWorkoutManager...")
         let manager = WatchWorkoutManager()
-        logger.info("✅ WatchWorkoutManager created successfully")
-        
-        logger.info("🔗 Setting up dependency injection...")
         manager.setSharedDataManager(dataManager)
-        logger.info("✅ Dependency injection completed")
-        
-        logger.info("🎯 Setting up StateObjects...")
+
         self._sharedDataManager = StateObject(wrappedValue: dataManager)
         self._workoutManager = StateObject(wrappedValue: manager)
-        logger.info("✅ StateObjects initialized successfully")
-        
-        logger.info("🎉 ShuttlXWatchApp initialization completed successfully!")
+
+        logger.info("ShuttlXWatchApp initialization completed")
     }
     
     var body: some Scene {
-        logger.info("🏗️ Building WindowGroup scene...")
+        logger.info("Building WindowGroup scene")
         return WindowGroup {
             ContentView()
                 .environment(ThemeManager.shared)
@@ -48,12 +38,12 @@ struct ShuttlXWatchApp: App {
                     }
                 }
                 .onAppear {
-                    logger.info("📺 ContentView appeared - app launched successfully!")
+                    logger.info("ContentView appeared")
                     // Request HealthKit permissions early (must be after window exists)
                     workoutManager.requestHealthKitPermissionsIfNeeded()
                     // Crash recovery: check for unsaved workout backup
                     if !workoutManager.isWorkoutActive, let recovered = workoutManager.recoverCrashedWorkout() {
-                        logger.info("🔄 Recovering crashed workout session")
+                        logger.info("Recovering crashed workout session")
                         workoutManager.saveRecoveredSession(recovered)
                     }
                 }

@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showingSignOutConfirmation = false
+    @State private var showingDeleteAccountConfirmation = false
+    @State private var isDeletingAccount = false
     @State private var showSuccessMessage = false
     @State private var successMessage = ""
     @State private var isSyncing = false
@@ -63,6 +65,11 @@ struct SettingsView: View {
                     Button("Sign Out", role: .destructive) {
                         showingSignOutConfirmation = true
                     }
+
+                    Button("Delete Account", role: .destructive) {
+                        showingDeleteAccountConfirmation = true
+                    }
+                    .disabled(isDeletingAccount)
                 } else {
                     NavigationLink {
                         SignInView()
@@ -284,6 +291,34 @@ struct SettingsView: View {
             }
         } message: {
             Text("Your local data will be kept, but it will no longer sync to iCloud.")
+        }
+        .alert("Delete Account", isPresented: $showingDeleteAccountConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Account & Data", role: .destructive) {
+                isDeletingAccount = true
+                Task {
+                    do {
+                        try await authManager.deleteAccount(
+                            dataManager: dataManager,
+                            sharedDataManager: sharedDataManager
+                        )
+                        successMessage = "Account deleted"
+                        showSuccessMessage = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            showSuccessMessage = false
+                        }
+                    } catch {
+                        successMessage = "Failed to delete account"
+                        showSuccessMessage = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
+                            showSuccessMessage = false
+                        }
+                    }
+                    isDeletingAccount = false
+                }
+            }
+        } message: {
+            Text("This will permanently delete your account, all iCloud data, and all local training sessions. This cannot be undone.")
         }
         .themedScreenBackground()
     }

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import HealthKit
+import StoreKit
 import WidgetKit
 
 @MainActor
@@ -54,6 +55,26 @@ class DataManager: ObservableObject {
         }
         if hasChanges {
             saveSessionsToAppGroup()
+            requestAppReviewIfEligible()
+        }
+    }
+
+    // MARK: - App Review
+
+    private func requestAppReviewIfEligible() {
+        let key = "com.shuttlx.reviewRequestedForSessionCount"
+        let lastPromptCount = UserDefaults.standard.integer(forKey: key)
+        let totalSessions = sessions.count
+
+        // Prompt after 3rd workout, then again at 10, 25, etc.
+        let milestones = [3, 10, 25, 50, 100]
+        guard let milestone = milestones.first(where: { totalSessions >= $0 && lastPromptCount < $0 }) else { return }
+
+        UserDefaults.standard.set(milestone, forKey: key)
+
+        if let scene = UIApplication.shared.connectedScenes
+            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
         }
     }
 
@@ -80,7 +101,7 @@ class DataManager: ObservableObject {
         do {
             try await healthStore.requestAuthorization(toShare: typesToWrite, read: typesToRead)
             await MainActor.run {
-                self.healthKitAuthorized = true
+                self.checkHealthKitAuthorizationStatus()
             }
         } catch {
             print("HealthKit permission request failed: \(error)")

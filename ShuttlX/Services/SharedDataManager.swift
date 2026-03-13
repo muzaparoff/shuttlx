@@ -292,7 +292,12 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         if let containerURL = getWorkingContainer() {
             let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
-            try? JSONEncoder().encode([TrainingSession]()).write(to: sessionsURL)
+            do {
+                let data = try JSONEncoder().encode([TrainingSession]())
+                try data.write(to: sessionsURL)
+            } catch {
+                logger.error("Failed to purge sessions: \(error.localizedDescription)")
+            }
         }
     }
 

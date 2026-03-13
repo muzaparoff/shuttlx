@@ -49,9 +49,5 @@
 	<true/>
 	<key>WKRunsIndependentlyOfCompanionApp</key>
 	<true/>
-	<key>com.apple.security.application-groups</key>
-	<array>
-		<string>group.com.shuttlx.shared</string>
-	</array>
 </dict>
 </plist>

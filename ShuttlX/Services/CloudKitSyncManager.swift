@@ -1,5 +1,6 @@
 import Foundation
 import CloudKit
+import os.log
 
 @MainActor
 class CloudKitSyncManager: ObservableObject {
@@ -9,6 +10,7 @@ class CloudKitSyncManager: ObservableObject {
     @Published var lastSyncDate: Date?
     @Published var syncError: String?
 
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "CloudKitSync")
     private lazy var container = CKContainer(identifier: "iCloud.com.shuttlx.app")
     private var database: CKDatabase { container.privateCloudDatabase }
 
@@ -57,7 +59,7 @@ class CloudKitSyncManager: ObservableObject {
                 lastSyncDate = Date()
             } catch {
                 syncError = error.localizedDescription
-                print("CloudKit sync failed: \(error)")
+                logger.error("CloudKit sync failed: \(error.localizedDescription)")
             }
 
             isSyncing = false
@@ -75,7 +77,7 @@ class CloudKitSyncManager: ObservableObject {
                 try await pushSessions(dataManager.sessions)
                 lastSyncDate = Date()
             } catch {
-                print("CloudKit migration failed: \(error)")
+                logger.error("CloudKit migration failed: \(error.localizedDescription)")
             }
         }
     }
@@ -164,13 +166,13 @@ class CloudKitSyncManager: ObservableObject {
         record["duration"] = session.duration
         record["modifiedDate"] = session.modifiedDate ?? session.startDate
 
-        // Store full session as JSON asset for complete fidelity
-        guard let data = try? JSONEncoder().encode(session) else { return nil }
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(session.id.uuidString).json")
         do {
+            let data = try JSONEncoder().encode(session)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(session.id.uuidString).json")
             try data.write(to: tempURL)
             record["jsonData"] = CKAsset(fileURL: tempURL)
         } catch {
+            logger.error("Failed to encode session \(session.id): \(error.localizedDescription)")
             return nil
         }
 
@@ -186,12 +188,13 @@ class CloudKitSyncManager: ObservableObject {
         record["createdDate"] = template.createdDate
         record["modifiedDate"] = template.modifiedDate ?? template.createdDate
 
-        guard let data = try? JSONEncoder().encode(template) else { return nil }
-        let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(template.id.uuidString).json")
         do {
+            let data = try JSONEncoder().encode(template)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(template.id.uuidString).json")
             try data.write(to: tempURL)
             record["jsonData"] = CKAsset(fileURL: tempURL)
         } catch {
+            logger.error("Failed to encode template \(template.id): \(error.localizedDescription)")
             return nil
         }
 
@@ -207,6 +210,58 @@ class CloudKitSyncManager: ObservableObject {
             return try JSONDecoder().decode(TrainingSession.self, from: data)
         } catch {
             return nil
+        }
+    }
+
+    // MARK: - Delete All User Data
+
+    func deleteAllUserData() async throws {
+        // Delete all sessions
+        let sessionsQuery = CKQuery(recordType: sessionsRecordType, predicate: NSPredicate(value: true))
+        try await deleteAllRecords(matching: sessionsQuery)
+
+        // Delete all templates
+        let templatesQuery = CKQuery(recordType: templatesRecordType, predicate: NSPredicate(value: true))
+        try await deleteAllRecords(matching: templatesQuery)
+
+        lastSyncDate = nil
+        logger.info("All CloudKit user data deleted")
+    }
+
+    private func deleteAllRecords(matching query: CKQuery) async throws {
+        var cursor: CKQueryOperation.Cursor?
+
+        let (results, nextCursor) = try await database.records(matching: query, resultsLimit: 400)
+        let ids = results.compactMap { try? $0.1.get().recordID }
+        if !ids.isEmpty {
+            try await deleteRecordBatch(ids)
+        }
+        cursor = nextCursor
+
+        while let currentCursor = cursor {
+            let (pageResults, pageCursor) = try await database.records(continuingMatchFrom: currentCursor, resultsLimit: 400)
+            let pageIDs = pageResults.compactMap { try? $0.1.get().recordID }
+            if !pageIDs.isEmpty {
+                try await deleteRecordBatch(pageIDs)
+            }
+            cursor = pageCursor
+        }
+    }
+
+    private func deleteRecordBatch(_ recordIDs: [CKRecord.ID]) async throws {
+        let operation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: recordIDs)
+        operation.qualityOfService = .userInitiated
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            operation.modifyRecordsResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            database.add(operation)
         }
     }
 
