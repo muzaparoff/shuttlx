@@ -75,7 +75,8 @@ struct LastWorkoutComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: LastWorkoutComplicationProvider()) { entry in
             LastWorkoutComplicationView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(.clear, for: .widget)
+                .widgetURL(URL(string: "shuttlx://last-workout"))
         }
         .configurationDisplayName("Last Workout")
         .description("Shows your most recent workout details.")
@@ -91,17 +92,23 @@ struct LastWorkoutComplicationView: View {
             HStack(spacing: 4) {
                 if entry.isToday {
                     Image(systemName: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
+                        .widgetAccentable()
                 }
                 Text(entry.isToday ? "Today's Workout" : entry.timeSince)
                     .font(.headline)
+                    .lineLimit(1)
                     .widgetAccentable()
             }
             HStack(spacing: 8) {
                 Label(entry.distance, systemImage: "figure.run")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Label(entry.duration, systemImage: "timer")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
-            .font(.caption)
+            .font(.caption.weight(.medium))
+            .monospacedDigit()
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(entry.isToday ? "Today's workout" : "Last workout \(entry.timeSince)"), \(entry.distance), \(entry.duration)")

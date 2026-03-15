@@ -19,8 +19,11 @@ struct WeeklyProgressProvider: TimelineProvider {
     private func makeEntry() -> WeeklyProgressEntry {
         let count = WatchWidgetDataProvider.thisWeekSessionCount()
         let defaults = UserDefaults(suiteName: "group.com.shuttlx.shared")
-        let goal = defaults?.integer(forKey: "weeklyWorkoutGoal")
-        return WeeklyProgressEntry(date: Date(), count: count, goal: goal ?? 5)
+        // integer(forKey:) returns 0 when key is missing — guard against 0 to prevent
+        // Gauge(value:in:0...0) which crashes. Fall back to 5, then clamp to minimum 1.
+        let rawGoal = defaults?.integer(forKey: "weeklyWorkoutGoal") ?? 0
+        let goal = max(1, rawGoal == 0 ? 5 : rawGoal)
+        return WeeklyProgressEntry(date: Date(), count: count, goal: goal)
     }
 }
 
@@ -36,7 +39,7 @@ struct WeeklyProgressComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: WeeklyProgressProvider()) { entry in
             WeeklyProgressComplicationView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(.clear, for: .widget)
         }
         .configurationDisplayName("Weekly Progress")
         .description("Shows workouts completed this week.")
@@ -48,6 +51,11 @@ struct WeeklyProgressComplicationView: View {
     let entry: WeeklyProgressEntry
     @Environment(\.widgetFamily) var family
 
+    private var remaining: Int { max(0, entry.goal - entry.count) }
+    private var goalStatusText: String {
+        remaining == 0 ? "Goal reached" : "\(remaining) more to go"
+    }
+
     var body: some View {
         switch family {
         case .accessoryRectangular:
@@ -57,21 +65,24 @@ struct WeeklyProgressComplicationView: View {
                     .widgetAccentable()
                 HStack(spacing: 4) {
                     ProgressView(value: Double(min(entry.count, entry.goal)), total: Double(entry.goal))
-                        .tint(.green)
+                        .widgetAccentable()
                     Text("\(entry.count)/\(entry.goal)")
                         .font(.caption)
                         .monospacedDigit()
                 }
-                Text("\(entry.count) workout\(entry.count == 1 ? "" : "s") this week")
+                Text(goalStatusText)
                     .font(.caption2)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(entry.count) of \(entry.goal) workouts this week. \(goalStatusText).")
         default:
             Gauge(value: Double(min(entry.count, entry.goal)), in: 0...Double(entry.goal)) {
                 Image(systemName: "figure.run")
             } currentValueLabel: {
                 Text("\(entry.count)")
                     .font(.system(.title3, design: .rounded, weight: .bold))
+                    .monospacedDigit()
             }
             .gaugeStyle(.accessoryCircular)
             .widgetAccentable()

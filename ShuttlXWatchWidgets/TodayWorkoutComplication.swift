@@ -10,7 +10,9 @@ struct TodayWorkoutProvider: TimelineProvider {
             sportTypeIcon: "figure.run",
             caloriesBurned: "245",
             heartRate: "142",
-            totalSteps: "3500"
+            totalSteps: "3500",
+            weekCount: 3,
+            weekGoal: 5
         )
     }
 
@@ -25,6 +27,11 @@ struct TodayWorkoutProvider: TimelineProvider {
     }
 
     private func makeEntry() -> TodayWorkoutEntry {
+        let weekCount = WatchWidgetDataProvider.thisWeekSessionCount()
+        let defaults = UserDefaults(suiteName: "group.com.shuttlx.shared")
+        let rawGoal = defaults?.integer(forKey: "weeklyWorkoutGoal") ?? 0
+        let weekGoal = max(1, rawGoal == 0 ? 5 : rawGoal)
+
         guard let session = WatchWidgetDataProvider.todaySession() else {
             return TodayWorkoutEntry(
                 date: Date(),
@@ -33,7 +40,9 @@ struct TodayWorkoutProvider: TimelineProvider {
                 sportTypeIcon: "figure.run",
                 caloriesBurned: "--",
                 heartRate: "--",
-                totalSteps: "--"
+                totalSteps: "--",
+                weekCount: weekCount,
+                weekGoal: weekGoal
             )
         }
 
@@ -48,7 +57,9 @@ struct TodayWorkoutProvider: TimelineProvider {
             sportTypeIcon: session.sportType?.systemImage ?? "figure.run",
             caloriesBurned: cal,
             heartRate: hr,
-            totalSteps: steps
+            totalSteps: steps,
+            weekCount: weekCount,
+            weekGoal: weekGoal
         )
     }
 }
@@ -61,6 +72,8 @@ struct TodayWorkoutEntry: TimelineEntry {
     let caloriesBurned: String
     let heartRate: String
     let totalSteps: String
+    let weekCount: Int
+    let weekGoal: Int
 }
 
 struct TodayWorkoutComplication: Widget {
@@ -69,7 +82,7 @@ struct TodayWorkoutComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: TodayWorkoutProvider()) { entry in
             TodayWorkoutComplicationView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(.clear, for: .widget)
                 .widgetURL(URL(string: "shuttlx://start-workout"))
         }
         .configurationDisplayName("Today's Workout")
@@ -81,13 +94,20 @@ struct TodayWorkoutComplication: Widget {
 struct TodayWorkoutComplicationView: View {
     let entry: TodayWorkoutEntry
 
+    private var weekRemaining: Int { max(0, entry.weekGoal - entry.weekCount) }
+    private var weekGoalText: String {
+        weekRemaining == 0
+            ? "Weekly goal done"
+            : "\(weekRemaining) of \(entry.weekGoal) left"
+    }
+
     var body: some View {
         if entry.hasSession {
             // Trained today — show summary
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Image(systemName: entry.sportTypeIcon)
-                        .foregroundStyle(.green)
+                        .widgetAccentable()
                     Text(entry.sportTypeName)
                         .font(.headline)
                         .lineLimit(1)
@@ -99,9 +119,12 @@ struct TodayWorkoutComplicationView: View {
                     Label(entry.totalSteps, systemImage: "shoeprints.fill")
                 }
                 .font(.caption2)
+                .monospacedDigit()
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Today's workout: \(entry.sportTypeName), \(entry.caloriesBurned) calories, \(entry.heartRate) bpm, \(entry.totalSteps) steps")
         } else {
-            // No workout today — quick start prompt
+            // No workout today — show weekly goal progress
             HStack(spacing: 8) {
                 Image(systemName: "figure.run")
                     .font(.title2)
@@ -109,11 +132,14 @@ struct TodayWorkoutComplicationView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("No workout yet")
                         .font(.headline)
-                    Text("Tap to start")
+                    Text(weekGoalText)
                         .font(.caption)
+                        .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("No workout today. \(weekGoalText) this week.")
         }
     }
 }

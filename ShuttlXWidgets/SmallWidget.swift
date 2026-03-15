@@ -52,7 +52,25 @@ struct SmallWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: SmallWidgetProvider()) { entry in
             SmallWidgetView(entry: entry)
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(for: .widget) {
+                    // Warm gradient when streak is active, subtle blue-grey otherwise
+                    if entry.streak > 0 {
+                        LinearGradient(
+                            colors: [Color(red: 0.85, green: 0.25, blue: 0.05),
+                                     Color(red: 0.60, green: 0.14, blue: 0.02)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    } else {
+                        LinearGradient(
+                            colors: [Color(red: 0.22, green: 0.26, blue: 0.32),
+                                     Color(red: 0.14, green: 0.17, blue: 0.22)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    }
+                }
+                .widgetURL(URL(string: "shuttlx://dashboard"))
         }
         .configurationDisplayName("Training Streak")
         .description("Shows your training streak and time since last workout.")
@@ -65,37 +83,50 @@ struct SmallWidgetView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+            // Header row: flame icon + today indicator
             HStack {
                 Image(systemName: "flame.fill")
-                    .foregroundStyle(.orange)
+                    .foregroundStyle(.white.opacity(0.9))
                     .font(.title3)
                 Spacer()
                 if entry.trainedToday {
-                    Label("Today", systemImage: "checkmark.circle.fill")
-                        .font(.caption2.bold())
-                        .foregroundStyle(.green)
+                    HStack(spacing: 3) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.white.opacity(0.9))
+                            .font(.caption2)
+                        Text("Today")
+                            .font(.caption2.bold())
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                    }
                 } else {
                     Image(systemName: "figure.run")
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.5))
                 }
             }
 
             Spacer()
 
+            // Metric content — bottom-aligned in both branches
             if entry.streak > 0 {
                 Text("\(entry.streak)")
-                    .font(.system(size: 40, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary)
+                    .font(.system(.largeTitle, design: .rounded, weight: .heavy))
+                    .monospacedDigit()
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
                 Text("day streak")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .lineLimit(1)
             } else {
                 Text(entry.timeSince)
                     .font(.headline)
-                    .foregroundStyle(.primary)
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
                 Text("Last workout")
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.white.opacity(0.75))
+                    .lineLimit(1)
             }
         }
         .accessibilityElement(children: .combine)

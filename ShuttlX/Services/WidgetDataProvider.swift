@@ -6,7 +6,7 @@ enum WidgetDataProvider {
     private static let sessionsFileName = "sessions.json"
     private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "WidgetDataProvider")
 
-    /// Cached sessions to avoid re-decoding JSON multiple times per timeline update
+    /// Cached sessions — stored pre-sorted descending by startDate to avoid re-sorting on every call
     private static var cachedSessions: [TrainingSession]?
     private static var cacheTimestamp: Date?
 
@@ -28,27 +28,30 @@ enum WidgetDataProvider {
         do {
             let data = try Data(contentsOf: url)
             let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            cachedSessions = sessions
+            // Sort once at cache time — all callers get a pre-sorted slice
+            cachedSessions = sessions.sorted { $0.startDate > $1.startDate }
             cacheTimestamp = Date()
-            return sessions
+            return cachedSessions!
         } catch {
             logger.error("Widget: Failed to decode sessions: \(error.localizedDescription)")
             return []
         }
     }
 
+    /// Returns sessions sorted descending by startDate (most recent first).
+    /// Prefer this over `loadSessions()` when you need ordering.
+    static func sortedSessions() -> [TrainingSession] {
+        loadSessions() // already sorted at cache time
+    }
+
     static func lastSession() -> TrainingSession? {
-        loadSessions()
-            .sorted { $0.startDate > $1.startDate }
-            .first
+        sortedSessions().first
     }
 
     static func todaySession() -> TrainingSession? {
         let cal = Calendar.current
-        return loadSessions()
-            .filter { cal.isDateInToday($0.startDate) }
-            .sorted { $0.startDate > $1.startDate }
-            .first
+        return sortedSessions()
+            .first { cal.isDateInToday($0.startDate) }
     }
 
     static func isToday(_ date: Date) -> Bool {
@@ -59,12 +62,12 @@ enum WidgetDataProvider {
         let calendar = Calendar.current
         let now = Date()
         guard let weekStart = calendar.dateInterval(of: .weekOfYear, for: now)?.start else { return 0 }
-        return loadSessions().filter { $0.startDate >= weekStart }.count
+        return sortedSessions().filter { $0.startDate >= weekStart }.count
     }
 
     static func currentStreak() -> Int {
         let calendar = Calendar.current
-        let sessions = loadSessions()
+        let sessions = sortedSessions()
         guard !sessions.isEmpty else { return 0 }
 
         let workoutDays = Set(sessions.map { calendar.startOfDay(for: $0.startDate) })

@@ -24,14 +24,14 @@ struct QuickStartComplication: Widget {
     let kind = "QuickStartComplication"
 
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: kind, provider: QuickStartProvider()) { entry in
+        StaticConfiguration(kind: kind, provider: QuickStartProvider()) { _ in
             QuickStartComplicationView()
-                .containerBackground(.fill.tertiary, for: .widget)
+                .containerBackground(.clear, for: .widget)
                 .widgetURL(URL(string: "shuttlx://start-workout"))
         }
         .configurationDisplayName("Quick Start")
         .description("Tap to start a workout.")
-        .supportedFamilies([.accessoryCircular, .accessoryRectangular])
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
     }
 }
 
@@ -40,19 +40,18 @@ struct QuickStartComplicationView: View {
 
     var body: some View {
         switch family {
+        case .accessoryInline:
+            Text("Start Workout")
+                .accessibilityLabel("Start workout")
         case .accessoryRectangular:
             HStack(spacing: 8) {
                 Image(systemName: "figure.run")
                     .font(.title2)
                     .widgetAccentable()
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Start Workout")
-                        .font(.headline)
-                    Text("Tap to begin")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+                Text("Start Workout")
+                    .font(.headline)
             }
+            .accessibilityLabel("Start workout")
         default:
             ZStack {
                 AccessoryWidgetBackground()

@@ -28,9 +28,10 @@ enum WatchWidgetDataProvider {
         do {
             let data = try Data(contentsOf: url)
             let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            cachedSessions = sessions
+            // Sort descending by startDate once at cache time — all callers benefit
+            cachedSessions = sessions.sorted { $0.startDate > $1.startDate }
             cacheTimestamp = Date()
-            return sessions
+            return cachedSessions!
         } catch {
             logger.error("Watch Widget: Failed to decode sessions: \(error.localizedDescription)")
             return []
@@ -38,17 +39,14 @@ enum WatchWidgetDataProvider {
     }
 
     static func lastSession() -> TrainingSession? {
-        loadSessions()
-            .sorted { $0.startDate > $1.startDate }
-            .first
+        // Cache is pre-sorted descending — first element is the most recent
+        loadSessions().first
     }
 
     static func todaySession() -> TrainingSession? {
         let cal = Calendar.current
-        return loadSessions()
-            .filter { cal.isDateInToday($0.startDate) }
-            .sorted { $0.startDate > $1.startDate }
-            .first
+        // Cache is pre-sorted descending — first match is the most recent today session
+        return loadSessions().first { cal.isDateInToday($0.startDate) }
     }
 
     static func thisWeekSessionCount() -> Int {
