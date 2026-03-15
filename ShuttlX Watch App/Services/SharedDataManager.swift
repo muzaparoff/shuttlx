@@ -131,7 +131,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let fileURL = tempDir.appendingPathComponent(fileName)
 
         do {
-            try sessionData.write(to: fileURL)
+            try sessionData.write(to: fileURL, options: .atomic)
             let metadata: [String: Any] = [
                 "action": "saveSession",
                 "sessionID": session.id.uuidString,
@@ -215,7 +215,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 try? FileManager.default.removeItem(at: url)
             } else {
                 let data = try JSONEncoder().encode(pendingSessions)
-                try data.write(to: url)
+                try data.write(to: url, options: .atomic)
             }
         } catch {
             logger.error("Failed to save pending sessions: \(error.localizedDescription)")
@@ -256,13 +256,17 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
             if FileManager.default.fileExists(atPath: sessionsURL.path) {
                 let data = try Data(contentsOf: sessionsURL)
-                sessions = (try? JSONDecoder().decode([TrainingSession].self, from: data)) ?? []
+                do {
+                    sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+                } catch {
+                    logger.error("Failed to decode sessions.json: \(error.localizedDescription)")
+                }
             }
 
             if !sessions.contains(where: { $0.id == session.id }) {
                 sessions.append(session)
                 let data = try JSONEncoder().encode(sessions)
-                try data.write(to: sessionsURL)
+                try data.write(to: sessionsURL, options: .atomic)
                 logger.info("Session saved to App Group")
                 WidgetCenter.shared.reloadAllTimelines()
             }
@@ -520,23 +524,48 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let url = containerURL.appendingPathComponent("workout_templates.json")
         do {
             let data = try JSONEncoder().encode(templates)
-            try data.write(to: url)
+            try data.write(to: url, options: .atomic)
         } catch {
             logger.error("Failed to save templates to disk: \(error.localizedDescription)")
         }
     }
 
     private func loadTemplatesFromDisk() {
-        guard let containerURL = getWorkingContainer() else { return }
+        guard let containerURL = getWorkingContainer() else {
+            loadFallbackTemplates()
+            return
+        }
         let url = containerURL.appendingPathComponent("workout_templates.json")
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            loadFallbackTemplates()
+            return
+        }
         do {
             let data = try Data(contentsOf: url)
             workoutTemplates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
             logger.info("Loaded \(self.workoutTemplates.count) template(s) from disk")
         } catch {
             logger.error("Failed to load templates from disk: \(error.localizedDescription)")
+            loadFallbackTemplates()
         }
+    }
+
+    /// Provides a default interval template when no iPhone-synced templates are available
+    private func loadFallbackTemplates() {
+        guard workoutTemplates.isEmpty else { return }
+        workoutTemplates = [
+            WorkoutTemplate(
+                name: "Quick Intervals",
+                intervals: [
+                    IntervalStep(type: .work, duration: 60, label: "Run"),
+                    IntervalStep(type: .rest, duration: 30, label: "Walk")
+                ],
+                repeatCount: 5,
+                warmup: IntervalStep(type: .warmup, duration: 120, label: "Warm Up"),
+                cooldown: IntervalStep(type: .cooldown, duration: 120, label: "Cool Down")
+            )
+        ]
+        logger.info("Loaded fallback template (no iPhone sync available)")
     }
 
     // MARK: - Helpers

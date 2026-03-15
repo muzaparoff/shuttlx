@@ -104,6 +104,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - HealthKit Permissions
 
     func requestHealthKitPermissionsIfNeeded() {
+        guard !healthKitAuthorized else { return }
         requestHealthPermissions()
     }
 
@@ -368,9 +369,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         newTimer.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(50))
 
         newTimer.setEventHandler { [weak self] in
-            Task { @MainActor [weak self] in
-                self?.updateElapsedTime()
-            }
+            self?.updateElapsedTime()
         }
 
         displayTimer = newTimer
@@ -786,13 +785,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         do {
             let data = try JSONEncoder().encode(session)
-            let fileManager = FileManager.default
-            guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else {
-                logger.error("Could not access documents directory for workout backup")
+            guard let backupURL = workoutBackupURL() else {
+                logger.error("Could not resolve backup URL for workout backup")
                 return
             }
-            let backupURL = docsURL.appendingPathComponent("active_workout_backup.json")
-            try data.write(to: backupURL)
+            try data.write(to: backupURL, options: .atomic)
             logger.info("Workout data backed up")
         } catch {
             logger.error("Failed to backup workout data: \(error.localizedDescription)")
@@ -801,9 +798,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// Check for a crashed workout backup and recover the session
     func recoverCrashedWorkout() -> TrainingSession? {
+        guard let backupURL = workoutBackupURL() else { return nil }
         let fileManager = FileManager.default
-        guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
-        let backupURL = docsURL.appendingPathComponent("active_workout_backup.json")
         guard fileManager.fileExists(atPath: backupURL.path) else { return nil }
 
         do {
@@ -818,18 +814,37 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    /// Save a recovered session and clear the backup
+    /// Save a recovered session if not already saved, and clear the backup
     func saveRecoveredSession(_ session: TrainingSession) {
+        // Prevent duplicate: check if this session ID already exists in stored sessions
+        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
+            let url = containerURL.appendingPathComponent("sessions.json")
+            if FileManager.default.fileExists(atPath: url.path),
+               let data = try? Data(contentsOf: url),
+               let existing = try? JSONDecoder().decode([TrainingSession].self, from: data),
+               existing.contains(where: { $0.id == session.id }) {
+                logger.info("Recovered session \(session.id) already exists — skipping duplicate save")
+                clearWorkoutBackup()
+                return
+            }
+        }
         sharedDataManager?.sendSessionToiOS(session)
         clearWorkoutBackup()
         logger.info("Recovered session sent to iOS and backup cleared")
     }
 
     private func clearWorkoutBackup() {
-        let fileManager = FileManager.default
-        guard let docsURL = fileManager.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
-        let backupURL = docsURL.appendingPathComponent("active_workout_backup.json")
-        try? fileManager.removeItem(at: backupURL)
+        guard let backupURL = workoutBackupURL() else { return }
+        try? FileManager.default.removeItem(at: backupURL)
+    }
+
+    /// Returns backup URL in App Group container (preferred) or Documents dir (fallback)
+    private func workoutBackupURL() -> URL? {
+        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
+            return container.appendingPathComponent("active_workout_backup.json")
+        }
+        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        return docsURL.appendingPathComponent("active_workout_backup.json")
     }
 
     func saveWorkoutData() {
@@ -882,26 +897,31 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func finalizeRouteBuilder() {
         guard let builder = routeBuilder else { return }
-        let sport = activeTemplate?.sportType ?? .running
-        let start = workoutStartTime ?? Date()
 
         // Nil the property first so no other code uses it, then finish async with local ref
         routeBuilder = nil
 
+        // Query HealthKit for the most recent workout from this session to attach the route
+        let start = workoutStartTime ?? Date()
+        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
+
         Task {
             do {
-                let config = HKWorkoutConfiguration()
-                config.activityType = sport.hkActivityType
-                config.locationType = sport.hkLocationType
-
-                let workoutBuilder = HKWorkoutBuilder(healthStore: healthStore, configuration: config, device: nil)
-                try await workoutBuilder.beginCollection(at: start)
-                try await workoutBuilder.endCollection(at: Date())
-
-                if let workout = try await workoutBuilder.finishWorkout() {
+                let workoutType = HKWorkoutType.workoutType()
+                let descriptor = HKSampleQueryDescriptor(
+                    predicates: [.sample(type: workoutType, predicate: predicate)],
+                    sortDescriptors: [SortDescriptor(\.startDate, order: .reverse)],
+                    limit: 1
+                )
+                let results = try await descriptor.result(for: healthStore)
+                if let workout = results.first as? HKWorkout {
                     try await builder.finishRoute(with: workout, metadata: nil)
                     await MainActor.run {
-                        self.logger.info("HKWorkoutRoute saved to HealthKit")
+                        self.logger.info("HKWorkoutRoute saved to HealthKit (attached to session workout)")
+                    }
+                } else {
+                    await MainActor.run {
+                        self.logger.warning("No matching HKWorkout found for route — route discarded")
                     }
                 }
             } catch {

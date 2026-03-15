@@ -6,7 +6,16 @@ enum WidgetDataProvider {
     private static let sessionsFileName = "sessions.json"
     private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "WidgetDataProvider")
 
+    /// Cached sessions to avoid re-decoding JSON multiple times per timeline update
+    private static var cachedSessions: [TrainingSession]?
+    private static var cacheTimestamp: Date?
+
     static func loadSessions() -> [TrainingSession] {
+        // Return cache if fresh (within 5 seconds — covers a single timeline build)
+        if let cached = cachedSessions, let ts = cacheTimestamp, Date().timeIntervalSince(ts) < 5 {
+            return cached
+        }
+
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
             logger.warning("Widget: App Group container not available")
             return []
@@ -19,7 +28,8 @@ enum WidgetDataProvider {
         do {
             let data = try Data(contentsOf: url)
             let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            logger.info("Widget: Loaded \(sessions.count) sessions")
+            cachedSessions = sessions
+            cacheTimestamp = Date()
             return sessions
         } catch {
             logger.error("Widget: Failed to decode sessions: \(error.localizedDescription)")

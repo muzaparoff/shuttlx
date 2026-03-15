@@ -5,6 +5,9 @@ struct DashboardView: View {
     @EnvironmentObject var planManager: PlanManager
     @EnvironmentObject var authManager: AuthenticationManager
     @ObservedObject var sharedData = SharedDataManager.shared
+    @State private var cachedStreak: Int = 0
+    @State private var cachedLastSession: TrainingSession?
+    @State private var lastSessionCount: Int = 0
 
     private var greetingTitle: String {
         if authManager.isSignedIn, let name = authManager.userName {
@@ -14,29 +17,28 @@ struct DashboardView: View {
         return "Training"
     }
 
-    private var lastSession: TrainingSession? {
-        dataManager.sessions.sorted(by: { $0.startDate > $1.startDate }).first
+    private func refreshCachedData() {
+        guard dataManager.sessions.count != lastSessionCount else { return }
+        lastSessionCount = dataManager.sessions.count
+        cachedLastSession = dataManager.sessions.max(by: { $0.startDate < $1.startDate })
+        cachedStreak = computeStreak()
     }
 
-    private var currentStreak: Int {
+    private func computeStreak() -> Int {
         let calendar = Calendar.current
-        let sorted = dataManager.sessions.sorted(by: { $0.startDate > $1.startDate })
-        guard !sorted.isEmpty else { return 0 }
+        let sessions = dataManager.sessions
+        guard !sessions.isEmpty else { return 0 }
 
+        let workoutDays = Set(sessions.map { calendar.startOfDay(for: $0.startDate) })
         var streak = 0
         var checkDate = calendar.startOfDay(for: Date())
 
-        // Check if there's a session today
-        let todaySessions = sorted.filter { calendar.isDate($0.startDate, inSameDayAs: checkDate) }
-        if todaySessions.isEmpty {
-            // No session today — check from yesterday
+        if !workoutDays.contains(checkDate) {
             guard let yesterday = calendar.date(byAdding: .day, value: -1, to: checkDate) else { return 0 }
             checkDate = yesterday
         }
 
-        while true {
-            let daySessions = sorted.filter { calendar.isDate($0.startDate, inSameDayAs: checkDate) }
-            if daySessions.isEmpty { break }
+        while workoutDays.contains(checkDate) {
             streak += 1
             guard let prevDay = calendar.date(byAdding: .day, value: -1, to: checkDate) else { break }
             checkDate = prevDay
@@ -83,7 +85,7 @@ struct DashboardView: View {
                     }
 
                     // 4. Last workout card
-                    if let session = lastSession {
+                    if let session = cachedLastSession {
                         NavigationLink(destination: SessionDetailView(session: session)) {
                             LastWorkoutCard(session: session)
                         }
@@ -94,14 +96,16 @@ struct DashboardView: View {
                     WeekSummaryCard(sessions: dataManager.sessions)
 
                     // 6. Streak badge
-                    if currentStreak > 1 {
-                        StreakBadge(streakDays: currentStreak)
+                    if cachedStreak > 1 {
+                        StreakBadge(streakDays: cachedStreak)
                     }
                 }
                 .padding(.horizontal)
                 .padding(.top, 8)
             }
             .navigationTitle(greetingTitle)
+            .onAppear { refreshCachedData() }
+            .onChange(of: dataManager.sessions.count) { refreshCachedData() }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     NavigationLink(destination: SettingsView()) {

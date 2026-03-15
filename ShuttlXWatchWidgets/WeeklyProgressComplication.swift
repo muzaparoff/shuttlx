@@ -75,6 +75,7 @@ struct WeeklyProgressComplicationView: View {
             }
             .gaugeStyle(.accessoryCircular)
             .widgetAccentable()
+            .accessibilityLabel("\(entry.count) of \(entry.goal) workouts this week")
         }
     }
 }

@@ -1,12 +1,17 @@
 import Foundation
 
 enum BuiltInPlans {
+    // Stable UUIDs for built-in plans — never change these
+    private static let couchTo5KID = UUID(uuidString: "B1000001-0000-0000-0000-000000000001") ?? UUID()
+    private static let hiitStarterID = UUID(uuidString: "B1000001-0000-0000-0000-000000000002") ?? UUID()
+    private static let fiveKImprovementID = UUID(uuidString: "B1000001-0000-0000-0000-000000000003") ?? UUID()
+
     static let all: [TrainingPlan] = [couchTo5K, hiitStarter, fiveKImprovement]
 
     // MARK: - Couch to 5K (8 weeks)
 
     static let couchTo5K: TrainingPlan = {
-        let id = UUID(uuidString: "B1000001-0000-0000-0000-000000000001")!
+        let id = couchTo5KID
 
         func week(_ num: Int, label: String, workouts: [(day: Int, name: String)]) -> PlanWeek {
             var days: [PlanDay] = []
@@ -42,7 +47,7 @@ enum BuiltInPlans {
     // MARK: - HIIT Starter (4 weeks)
 
     static let hiitStarter: TrainingPlan = {
-        let id = UUID(uuidString: "B1000001-0000-0000-0000-000000000002")!
+        let id = hiitStarterID
 
         func week(_ num: Int, label: String, workouts: [(day: Int, name: String)]) -> PlanWeek {
             var days: [PlanDay] = []
@@ -74,7 +79,7 @@ enum BuiltInPlans {
     // MARK: - 5K Improvement (6 weeks)
 
     static let fiveKImprovement: TrainingPlan = {
-        let id = UUID(uuidString: "B1000001-0000-0000-0000-000000000003")!
+        let id = fiveKImprovementID
 
         func week(_ num: Int, label: String, workouts: [(day: Int, name: String)]) -> PlanWeek {
             var days: [PlanDay] = []

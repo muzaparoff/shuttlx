@@ -105,6 +105,8 @@ Additional rules load automatically based on the files being edited:
 
 | Agent | Purpose | Model |
 |-------|---------|-------|
+| `senior-ios-developer` | Review + implement iOS/watchOS tasks with Apple platform best practices | sonnet |
+| `senior-architect` | Architecture, data structures, monitoring, production tooling review + implementation | opus |
 | `app-auditor` | Pre-release readiness audit (crash risks, metadata, features) | sonnet |
 | `design-reviewer` | UI/UX + Apple HIG compliance review | sonnet |
 | `growth-strategist` | ASO, marketing, solo-dev launch strategy | opus |
@@ -118,14 +120,18 @@ Additional rules load automatically based on the files being edited:
 **Run in PARALLEL (independent, read-only):**
 - `app-auditor` + `design-reviewer` + `growth-strategist` → pre-release report
 - `accessibility-auditor` + `performance-auditor` + `security-reviewer` → code health report
+- `senior-architect` (review mode) can run in parallel with read-only auditors
 
 **Run SEQUENTIALLY (output feeds the next):**
-- `app-auditor` → implementer (fix what auditor found)
-- `design-reviewer` → design fixes (apply UI changes)
+- `app-auditor` → `senior-ios-developer` (fix what auditor found)
+- `design-reviewer` → `senior-ios-developer` (apply UI changes)
+- `senior-architect` (review) → `senior-ios-developer` (implement architecture fixes)
+- `senior-architect` (review) → `senior-architect` (implement tooling)
 
 **Never parallelize:**
+- `senior-ios-developer` + any other writing agent (writes to Swift files)
+- `senior-architect` (implement mode) + `senior-ios-developer` (overlapping scope)
 - Any two agents that write to the same Swift files
-- Agents with overlapping file scope
 
 ## Frameworks Used
 

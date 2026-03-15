@@ -60,6 +60,7 @@ struct QuickStartComplicationView: View {
                     .font(.title2)
                     .widgetAccentable()
             }
+            .accessibilityLabel("Start workout")
         }
     }
 }

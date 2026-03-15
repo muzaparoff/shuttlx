@@ -1,5 +1,6 @@
 import Foundation
 import AuthenticationServices
+import os.log
 
 @MainActor
 class AuthenticationManager: ObservableObject {
@@ -9,6 +10,7 @@ class AuthenticationManager: ObservableObject {
     @Published var userName: String?
     @Published var userEmail: String?
 
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "Authentication")
     private let userIDKey = "com.shuttlx.appleUserID"
     private let userNameKey = "com.shuttlx.appleUserName"
 
@@ -43,7 +45,7 @@ class AuthenticationManager: ObservableObject {
             isSignedIn = true
 
         case .failure(let error):
-            print("Sign in with Apple failed: \(error.localizedDescription)")
+            logger.error("Sign in with Apple failed: \(error.localizedDescription)")
         }
     }
 

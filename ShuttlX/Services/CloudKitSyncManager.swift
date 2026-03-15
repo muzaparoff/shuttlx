@@ -107,6 +107,9 @@ class CloudKitSyncManager: ObservableObject {
                 database.add(operation)
             }
         }
+
+        // Clean up temp files created for CKAsset encoding
+        cleanupTempFiles(for: sessions.map { $0.id })
     }
 
     func pushTemplates(_ templates: [WorkoutTemplate]) async throws {
@@ -129,6 +132,9 @@ class CloudKitSyncManager: ObservableObject {
             }
             database.add(operation)
         }
+
+        // Clean up temp files created for CKAsset encoding
+        cleanupTempFiles(for: templates.map { $0.id })
     }
 
     // MARK: - Pull
@@ -202,13 +208,19 @@ class CloudKitSyncManager: ObservableObject {
     }
 
     private func decodeSession(from result: Result<CKRecord, Error>) -> TrainingSession? {
-        guard case .success(let record) = result else { return nil }
+        guard case .success(let record) = result else {
+            if case .failure(let error) = result {
+                logger.error("CloudKit record fetch failed: \(error.localizedDescription)")
+            }
+            return nil
+        }
         guard let asset = record["jsonData"] as? CKAsset,
               let fileURL = asset.fileURL else { return nil }
         do {
             let data = try Data(contentsOf: fileURL)
             return try JSONDecoder().decode(TrainingSession.self, from: data)
         } catch {
+            logger.error("Failed to decode session from CloudKit record \(record.recordID.recordName): \(error.localizedDescription)")
             return nil
         }
     }
@@ -262,6 +274,16 @@ class CloudKitSyncManager: ObservableObject {
                 }
             }
             database.add(operation)
+        }
+    }
+
+    // MARK: - Temp File Cleanup
+
+    private func cleanupTempFiles(for ids: [UUID]) {
+        let tempDir = FileManager.default.temporaryDirectory
+        for id in ids {
+            let tempURL = tempDir.appendingPathComponent("\(id.uuidString).json")
+            try? FileManager.default.removeItem(at: tempURL)
         }
     }
 

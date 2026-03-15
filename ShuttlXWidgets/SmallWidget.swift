@@ -86,7 +86,7 @@ struct SmallWidgetView: View {
                 Text("\(entry.streak)")
                     .font(.system(size: 40, weight: .bold, design: .rounded))
                     .foregroundStyle(.primary)
-                Text(entry.streak == 1 ? "day streak" : "day streak")
+                Text("day streak")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -98,5 +98,9 @@ struct SmallWidgetView: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(entry.streak > 0
+            ? "\(entry.streak) day training streak\(entry.trainedToday ? ", trained today" : "")"
+            : "Last workout \(entry.timeSince)")
     }
 }

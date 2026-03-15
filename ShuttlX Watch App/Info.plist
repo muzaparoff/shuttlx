@@ -21,7 +21,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>1.1.0</string>
 	<key>CFBundleVersion</key>
-	<string>1</string>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
@@ -29,9 +29,9 @@
 	<key>NSMotionUsageDescription</key>
 	<string>ShuttlX uses motion data to automatically detect whether you are running or walking during your workout.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>We need access to your health data to record your workouts</string>
+	<string>ShuttlX uses HealthKit to read your fitness data including heart rate, calories burned, and distance to provide real-time workout metrics and training insights.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>We need to be able to save your workout data to your health records</string>
+	<string>ShuttlX uses HealthKit to save your workout sessions and fitness activities to keep your health information up to date across all your devices.</string>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>

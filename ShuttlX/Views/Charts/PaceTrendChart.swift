@@ -5,7 +5,7 @@ struct PaceTrendChart: View {
     let summaries: [DailyWorkoutSummary]
 
     private var paceData: [DailyWorkoutSummary] {
-        summaries.filter { $0.averagePace != nil && $0.averagePace! > 0 }
+        summaries.filter { ($0.averagePace ?? 0) > 0 }
     }
 
     var body: some View {

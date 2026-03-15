@@ -1,6 +1,7 @@
 import Foundation
 
-struct RoutePoint: Codable, Hashable {
+struct RoutePoint: Identifiable, Codable, Hashable {
+    var id: Date { timestamp }
     let latitude: Double
     let longitude: Double
     let altitude: Double?

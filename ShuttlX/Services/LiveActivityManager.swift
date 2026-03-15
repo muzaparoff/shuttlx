@@ -44,7 +44,7 @@ class LiveActivityManager {
             pace: 0
         )
 
-        let content = ActivityContent(state: initialState, staleDate: Date().addingTimeInterval(15))
+        let content = ActivityContent(state: initialState, staleDate: Date().addingTimeInterval(60))
 
         do {
             currentActivity = try Activity.request(
@@ -94,7 +94,7 @@ class LiveActivityManager {
             pace: pace
         )
 
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(15))
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(60))
 
         Task {
             await activity.update(content)

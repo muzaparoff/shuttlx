@@ -23,8 +23,7 @@ struct ShuttlXWatchApp: App {
     }
     
     var body: some Scene {
-        logger.info("Building WindowGroup scene")
-        return WindowGroup {
+        WindowGroup {
             ContentView()
                 .environment(ThemeManager.shared)
                 .environmentObject(sharedDataManager)

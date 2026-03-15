@@ -44,9 +44,13 @@ struct SettingsView: View {
                         isCloudSyncing = true
                         CloudKitSyncManager.shared.performFullSync(dataManager: dataManager) {
                             isCloudSyncing = false
-                            successMessage = "Sync complete"
+                            if let error = CloudKitSyncManager.shared.syncError {
+                                successMessage = "Sync failed: \(error)"
+                            } else {
+                                successMessage = "Sync complete"
+                            }
                             showSuccessMessage = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
                                 showSuccessMessage = false
                             }
                         }
@@ -61,6 +65,12 @@ struct SettingsView: View {
                         }
                     }
                     .disabled(isCloudSyncing)
+
+                    if let syncDate = CloudKitSyncManager.shared.lastSyncDate {
+                        Text("Last synced: \(syncDate, style: .relative) ago")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     Button("Sign Out", role: .destructive) {
                         showingSignOutConfirmation = true
@@ -266,6 +276,7 @@ struct SettingsView: View {
             Button("Delete All", role: .destructive) {
                 SharedDataManager.shared.purgeAllSessionsFromStorage()
                 dataManager.sessions = []
+                dataManager.saveSessionsToAppGroup()
                 successMessage = "All sessions cleared!"
                 showSuccessMessage = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

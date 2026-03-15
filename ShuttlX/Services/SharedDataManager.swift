@@ -70,10 +70,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             guard let self = self else { return }
             self.backgroundSyncTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
-                Task.detached {
-                    await MainActor.run {
-                        self.performBackgroundSync()
-                    }
+                Task { @MainActor in
+                    self.performBackgroundSync()
                 }
             }
         }
@@ -260,7 +258,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let data = try JSONEncoder().encode(sessions)
-            try data.write(to: url)
+            try data.write(to: url, options: .atomic)
         } catch {
             log("Failed to save sessions: \(error)")
         }
@@ -294,7 +292,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
             do {
                 let data = try JSONEncoder().encode([TrainingSession]())
-                try data.write(to: sessionsURL)
+                try data.write(to: sessionsURL, options: .atomic)
             } catch {
                 logger.error("Failed to purge sessions: \(error.localizedDescription)")
             }
@@ -414,17 +412,21 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         do {
             let data = try JSONEncoder().encode(templates)
+
+            // Update combined applicationContext (preserves theme + templates together)
+            updateCombinedApplicationContext(merging: [
+                "action": "syncTemplates",
+                "templatesData": data.base64EncodedString(),
+                "timestamp": Date().timeIntervalSince1970
+            ])
+            log("Templates sent via applicationContext (\(templates.count))")
+
+            // Also transfer via userInfo for guaranteed delivery
             let payload: [String: Any] = [
                 "action": "syncTemplates",
                 "templatesData": data.base64EncodedString(),
                 "timestamp": Date().timeIntervalSince1970
             ]
-
-            // Application context — Watch gets latest on next launch
-            try session.updateApplicationContext(payload)
-            log("Templates sent via applicationContext (\(templates.count))")
-
-            // Also transfer via userInfo for guaranteed delivery
             session.transferUserInfo(payload)
             log("Templates queued via transferUserInfo (\(templates.count))")
         } catch {
@@ -449,12 +451,27 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             log("Theme sent to Watch via sendMessage: \(themeID)")
         }
 
-        // Persistent delivery for when watch app launches later
+        // Update combined applicationContext (preserves theme + templates together)
+        updateCombinedApplicationContext(merging: [
+            "action": "syncTheme",
+            "themeID": themeID
+        ])
+        log("Theme sent to Watch via applicationContext: \(themeID)")
+    }
+
+    // MARK: - Combined Application Context
+
+    /// Merges new keys into the existing applicationContext to prevent overwrites.
+    /// Templates and themes coexist in the same context dictionary.
+    private func updateCombinedApplicationContext(merging newKeys: [String: Any]) {
         do {
-            try session.updateApplicationContext(payload)
-            log("Theme sent to Watch via applicationContext: \(themeID)")
+            var context = session.applicationContext
+            for (key, value) in newKeys {
+                context[key] = value
+            }
+            try session.updateApplicationContext(context)
         } catch {
-            log("Failed to send theme context: \(error.localizedDescription)")
+            log("Failed to update applicationContext: \(error.localizedDescription)")
         }
     }
 

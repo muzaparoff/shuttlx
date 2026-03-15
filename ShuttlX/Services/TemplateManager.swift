@@ -61,7 +61,7 @@ class TemplateManager: ObservableObject {
 
         do {
             let data = try JSONEncoder().encode(templates)
-            try data.write(to: url)
+            try data.write(to: url, options: .atomic)
             logger.info("Saved \(self.templates.count) template(s)")
         } catch {
             logger.error("Failed to save templates: \(error.localizedDescription)")

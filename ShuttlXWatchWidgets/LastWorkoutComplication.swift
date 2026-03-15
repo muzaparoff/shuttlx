@@ -103,5 +103,7 @@ struct LastWorkoutComplicationView: View {
             }
             .font(.caption)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(entry.isToday ? "Today's workout" : "Last workout \(entry.timeSince)"), \(entry.distance), \(entry.duration)")
     }
 }

@@ -175,6 +175,8 @@ struct MediumWidgetView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("\(entry.isToday ? "Today's" : "Last") workout: \(entry.sportTypeName), \(entry.heartRate) heart rate, \(entry.caloriesBurned) calories, \(entry.weekCount) workouts this week")
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "figure.run")
@@ -186,6 +188,8 @@ struct MediumWidgetView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("No workouts yet. Start one on your Apple Watch.")
         }
     }
 }

@@ -23,20 +23,29 @@ enum FormattingUtils {
         return String(format: "%02d:%02d", m, s)
     }
 
-    /// "Feb 27, 2:30 PM"
-    static func formatSessionDate(_ date: Date) -> String {
+    // Cached formatters to avoid repeated allocation
+    private static let sessionDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateStyle = .medium
         f.timeStyle = .short
-        return f.string(from: date)
+        return f
+    }()
+
+    private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return f
+    }()
+
+    /// "Feb 27, 2:30 PM"
+    static func formatSessionDate(_ date: Date) -> String {
+        sessionDateFormatter.string(from: date)
     }
 
     /// "Feb 27"
     static func formatShortDate(_ date: Date) -> String {
-        let f = DateFormatter()
-        f.dateStyle = .medium
-        f.timeStyle = .none
-        return f.string(from: date)
+        shortDateFormatter.string(from: date)
     }
 
     /// "2.10 km" or "450 m"

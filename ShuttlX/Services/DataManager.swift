@@ -3,15 +3,19 @@ import Combine
 import HealthKit
 import StoreKit
 import WidgetKit
+import os.log
 
 @MainActor
 class DataManager: ObservableObject {
     @Published var sessions: [TrainingSession] = []
     @Published var healthKitAuthorized = false
 
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "DataManager")
+
     private var processedSessionIds = Set<UUID>()
     private var cancellables = Set<AnyCancellable>()
     private let healthStore = HKHealthStore()
+    private var cloudSyncDebounceTask: Task<Void, Never>?
 
     // MARK: - App Group Properties
     private let sessionsKey = "sessions.json"
@@ -46,7 +50,10 @@ class DataManager: ObservableObject {
             guard !processedSessionIds.contains(session.id) else { continue }
             processedSessionIds.insert(session.id)
 
-            guard sessions.count < 500 else { continue }
+            guard sessions.count < 500 else {
+                logger.warning("Session cap reached (500). Dropping session \(session.id)")
+                continue
+            }
 
             if !sessions.contains(where: { $0.id == session.id }) {
                 sessions.append(session)
@@ -104,24 +111,33 @@ class DataManager: ObservableObject {
                 self.checkHealthKitAuthorizationStatus()
             }
         } catch {
-            print("HealthKit permission request failed: \(error)")
+            logger.error("HealthKit permission request failed: \(error.localizedDescription)")
         }
     }
 
     // MARK: - App Group Storage
-    private func saveSessionsToAppGroup() {
+    func saveSessionsToAppGroup() {
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let data = try JSONEncoder().encode(sessions)
-            try data.write(to: url)
+            try data.write(to: url, options: .atomic)
             WidgetCenter.shared.reloadAllTimelines()
-            if AuthenticationManager.shared.isSignedIn {
-                CloudKitSyncManager.shared.performFullSync(dataManager: self)
-            }
+            debouncedCloudSync()
         } catch {
-            print("Failed to save sessions: \(error)")
+            logger.error("Failed to save sessions: \(error.localizedDescription)")
+        }
+    }
+
+    /// Debounce CloudKit sync to avoid firing on every rapid save (e.g. batch imports)
+    private func debouncedCloudSync() {
+        guard AuthenticationManager.shared.isSignedIn else { return }
+        cloudSyncDebounceTask?.cancel()
+        cloudSyncDebounceTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
+            guard !Task.isCancelled, let self = self else { return }
+            CloudKitSyncManager.shared.performFullSync(dataManager: self)
         }
     }
 
@@ -150,10 +166,10 @@ class DataManager: ObservableObject {
                 sessions = loaded
                 processedSessionIds = Set(loaded.map { $0.id })
             } else if hasNew {
-                print("Loaded \(sessions.count - existingIds.count) new session(s) from disk")
+                logger.info("Loaded \(self.sessions.count - existingIds.count) new session(s) from disk")
             }
         } catch {
-            print("Failed to load sessions: \(error)")
+            logger.error("Failed to load sessions: \(error.localizedDescription)")
         }
     }
 
