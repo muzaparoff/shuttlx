@@ -1,23 +1,75 @@
 import WidgetKit
 import SwiftUI
 
-// MARK: - Semantic widget colors (no access to ShuttlXColor in widget extension)
+// MARK: - WidgetTheme
+// Provides background, surface, and accent colors per theme ID.
+// Widget extensions cannot access ShuttlXColor/ThemeManager — all colors are defined locally.
 
-private enum WidgetColor {
-    /// Warm amber — calories
-    static let calories = Color(red: 0.95, green: 0.55, blue: 0.10)
-    /// Muted rose — heart rate
-    static let heartRate = Color(red: 0.85, green: 0.30, blue: 0.35)
-    /// Muted teal — duration
-    static let duration  = Color(red: 0.30, green: 0.65, blue: 0.75)
-    /// Brand gradient start
-    static let gradientTop    = Color(red: 0.10, green: 0.14, blue: 0.22)
-    /// Brand gradient end
-    static let gradientBottom = Color(red: 0.06, green: 0.10, blue: 0.18)
-    /// Active sport accent
-    static let activeAccent   = Color(red: 0.25, green: 0.80, blue: 0.45)
-    /// Inactive sport accent
-    static let inactiveAccent = Color(red: 0.85, green: 0.50, blue: 0.15)
+struct WidgetTheme {
+    let background: Color
+    let backgroundDark: Color  // slightly darker, used as gradient end
+    let surface: Color
+    let accent: Color
+
+    static func forID(_ id: String) -> WidgetTheme {
+        switch id {
+        case "synthwave":
+            return WidgetTheme(
+                background:     Color(red: 0.04, green: 0.04, blue: 0.10),
+                backgroundDark: Color(red: 0.02, green: 0.02, blue: 0.07),
+                surface:        Color(red: 0.08, green: 0.08, blue: 0.16),
+                accent:         Color(red: 0.20, green: 0.90, blue: 0.50)   // neon green
+            )
+        case "mixtape":
+            return WidgetTheme(
+                background:     Color(red: 0.05, green: 0.08, blue: 0.13),
+                backgroundDark: Color(red: 0.03, green: 0.05, blue: 0.09),
+                surface:        Color(red: 0.10, green: 0.19, blue: 0.38),
+                accent:         Color(red: 0.20, green: 0.65, blue: 0.95)   // blue
+            )
+        case "arcade":
+            return WidgetTheme(
+                background:     Color(red: 0.06, green: 0.06, blue: 0.18),
+                backgroundDark: Color(red: 0.03, green: 0.03, blue: 0.12),
+                surface:        Color(red: 0.10, green: 0.10, blue: 0.24),
+                accent:         Color(red: 0.30, green: 0.95, blue: 0.35)   // phosphor green
+            )
+        case "classicradio":
+            return WidgetTheme(
+                background:     Color(red: 0.11, green: 0.08, blue: 0.03),
+                backgroundDark: Color(red: 0.07, green: 0.05, blue: 0.02),
+                surface:        Color(red: 0.23, green: 0.18, blue: 0.12),
+                accent:         Color(red: 0.95, green: 0.80, blue: 0.50)   // amber/cream
+            )
+        case "vumeter":
+            return WidgetTheme(
+                background:     Color(red: 0.10, green: 0.09, blue: 0.06),
+                backgroundDark: Color(red: 0.06, green: 0.05, blue: 0.03),
+                surface:        Color(red: 0.07, green: 0.05, blue: 0.03),
+                accent:         Color(red: 0.95, green: 0.65, blue: 0.20)   // amber
+            )
+        default: // "clean"
+            return WidgetTheme(
+                background:     Color(red: 0.08, green: 0.08, blue: 0.12),
+                backgroundDark: Color(red: 0.04, green: 0.04, blue: 0.08),
+                surface:        Color(red: 0.14, green: 0.14, blue: 0.20),
+                accent:         Color(red: 0.25, green: 0.80, blue: 0.45)   // system green
+            )
+        }
+    }
+
+    static func fromDefaults() -> WidgetTheme {
+        let id = UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: "selectedThemeID") ?? "clean"
+        return forID(id)
+    }
+}
+
+// MARK: - Semantic metric colors (fixed, independent of theme)
+
+private enum MetricColor {
+    static let distance  = Color(red: 0.30, green: 0.75, blue: 0.55)  // teal-green
+    static let heartRate = Color(red: 0.88, green: 0.32, blue: 0.35)  // rose
+    static let calories  = Color(red: 0.95, green: 0.55, blue: 0.10)  // amber-orange
 }
 
 // MARK: - Timeline provider
@@ -31,10 +83,12 @@ struct MediumWidgetProvider: TimelineProvider {
             workoutDate: "Today, 8:30 AM",
             sportTypeName: "Free Run",
             sportTypeIcon: "figure.run",
-            heartRate: "142 bpm",
-            caloriesBurned: "245 cal",
+            heartRate: "142",
+            caloriesBurned: "245",
             duration: "28 min",
-            weekCount: 3
+            distance: "3.2 km",
+            weekCount: 3,
+            themeID: currentThemeID()
         )
     }
 
@@ -48,8 +102,13 @@ struct MediumWidgetProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 
+    private func currentThemeID() -> String {
+        UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: "selectedThemeID") ?? "clean"
+    }
+
     private func makeEntry() -> MediumWidgetEntry {
         let weekCount = WidgetDataProvider.thisWeekSessionCount()
+        let themeID = currentThemeID()
 
         // Prefer today's session, fall back to last session
         let todaySession = WidgetDataProvider.todaySession()
@@ -73,7 +132,9 @@ struct MediumWidgetProvider: TimelineProvider {
                 heartRate: "--",
                 caloriesBurned: "--",
                 duration: "--",
-                weekCount: weekCount
+                distance: "--",
+                weekCount: weekCount,
+                themeID: themeID
             )
         }
 
@@ -87,16 +148,28 @@ struct MediumWidgetProvider: TimelineProvider {
 
         let hr: String
         if let avg = session.averageHeartRate, avg > 0 {
-            hr = "\(Int(avg)) bpm"
+            hr = "\(Int(avg))"
         } else {
             hr = "--"
         }
 
         let cal: String
         if let c = session.caloriesBurned, c > 0 {
-            cal = "\(Int(c)) cal"
+            cal = "\(Int(c))"
         } else {
             cal = "--"
+        }
+
+        let dist: String
+        if let d = session.distance, d > 0 {
+            if d >= 1000 {
+                let km = d / 1000
+                dist = String(format: "%.1f km", km)
+            } else {
+                dist = String(format: "%.0f m", d)
+            }
+        } else {
+            dist = "--"
         }
 
         let dur = formatDuration(session.duration)
@@ -111,7 +184,9 @@ struct MediumWidgetProvider: TimelineProvider {
             heartRate: hr,
             caloriesBurned: cal,
             duration: dur,
-            weekCount: weekCount
+            distance: dist,
+            weekCount: weekCount,
+            themeID: themeID
         )
     }
 
@@ -139,7 +214,9 @@ struct MediumWidgetEntry: TimelineEntry {
     let heartRate: String
     let caloriesBurned: String
     let duration: String
+    let distance: String
     let weekCount: Int
+    let themeID: String
 }
 
 // MARK: - Widget
@@ -151,8 +228,9 @@ struct MediumWidget: Widget {
         StaticConfiguration(kind: kind, provider: MediumWidgetProvider()) { entry in
             MediumWidgetView(entry: entry)
                 .containerBackground(for: .widget) {
+                    let theme = WidgetTheme.forID(entry.themeID)
                     LinearGradient(
-                        colors: [WidgetColor.gradientTop, WidgetColor.gradientBottom],
+                        colors: [theme.background, theme.backgroundDark],
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
@@ -170,18 +248,21 @@ struct MediumWidget: Widget {
 struct MediumWidgetView: View {
     let entry: MediumWidgetEntry
 
+    private var theme: WidgetTheme { WidgetTheme.forID(entry.themeID) }
+
     var body: some View {
         if entry.hasSession {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 // Row 1: Sport icon + name + date
-                HStack {
+                HStack(spacing: 6) {
                     Image(systemName: entry.sportTypeIcon)
-                        .font(.title3)
-                        .foregroundStyle(entry.isToday ? WidgetColor.activeAccent : WidgetColor.inactiveAccent)
-                        .frame(width: 28)
+                        .font(.headline)
+                        .foregroundStyle(theme.accent)
+                        .frame(width: 22)
 
                     Text(entry.sportTypeName)
                         .font(.headline)
+                        .fontWeight(.bold)
                         .foregroundStyle(.white)
                         .lineLimit(1)
 
@@ -189,45 +270,63 @@ struct MediumWidgetView: View {
 
                     Text(entry.workoutDate)
                         .font(.caption)
-                        .foregroundStyle(.white.opacity(0.65))
+                        .foregroundStyle(.white.opacity(0.60))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.75)
                 }
 
-                // Row 2: Metrics (calories, bpm, duration) — equal width columns
-                HStack(spacing: 8) {
-                    MetricRow(icon: "flame.fill",    color: WidgetColor.calories,  value: entry.caloriesBurned)
-                    MetricRow(icon: "heart.fill",    color: WidgetColor.heartRate, value: entry.heartRate)
-                    MetricRow(icon: "timer",         color: WidgetColor.duration,  value: entry.duration)
+                // Row 2: Three metric boxes
+                HStack(spacing: 6) {
+                    MetricBox(
+                        icon: "location.fill",
+                        color: MetricColor.distance,
+                        value: entry.distance,
+                        label: "Distance",
+                        surface: theme.surface
+                    )
+                    MetricBox(
+                        icon: "heart.fill",
+                        color: MetricColor.heartRate,
+                        value: entry.heartRate,
+                        label: "Avg HR",
+                        surface: theme.surface
+                    )
+                    MetricBox(
+                        icon: "flame.fill",
+                        color: MetricColor.calories,
+                        value: entry.caloriesBurned,
+                        label: "Cal",
+                        surface: theme.surface
+                    )
                 }
+                .frame(maxHeight: .infinity)
 
-                Spacer()
-
-                // Row 3: Status label + week count
-                HStack {
+                // Row 3: Status + week count
+                HStack(spacing: 4) {
                     Image(systemName: entry.isToday ? "checkmark.circle.fill" : "clock")
-                        .font(.caption)
-                        .foregroundStyle(entry.isToday ? WidgetColor.activeAccent : .white.opacity(0.5))
+                        .font(.caption2)
+                        .foregroundStyle(entry.isToday ? theme.accent : .white.opacity(0.45))
+
                     Text(entry.isToday ? "Today's Workout" : "Last Workout")
-                        .font(.caption)
-                        .foregroundStyle(entry.isToday ? WidgetColor.activeAccent : .white.opacity(0.5))
+                        .font(.caption2)
+                        .foregroundStyle(entry.isToday ? theme.accent : .white.opacity(0.45))
                         .lineLimit(1)
 
                     Spacer()
 
                     Text("\(entry.weekCount) this week")
-                        .font(.caption)
-                        .foregroundStyle(.white.opacity(0.65))
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.60))
                         .lineLimit(1)
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(entry.isToday ? "Today's" : "Last") workout: \(entry.sportTypeName), \(entry.heartRate) heart rate, \(entry.caloriesBurned) calories, \(entry.duration), \(entry.weekCount) workouts this week")
+            .accessibilityLabel("\(entry.isToday ? "Today's" : "Last") workout: \(entry.sportTypeName), \(entry.distance) distance, \(entry.heartRate) bpm heart rate, \(entry.caloriesBurned) calories, \(entry.weekCount) workouts this week")
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "figure.run")
                     .font(.largeTitle)
-                    .foregroundStyle(.white.opacity(0.5))
+                    .foregroundStyle(theme.accent.opacity(0.60))
                 Text("No workouts yet")
                     .font(.headline)
                     .foregroundStyle(.white)
@@ -242,24 +341,38 @@ struct MediumWidgetView: View {
     }
 }
 
-// MARK: - MetricRow
+// MARK: - MetricBox
 
-private struct MetricRow: View {
+private struct MetricBox: View {
     let icon: String
     let color: Color
     let value: String
+    let label: String
+    let surface: Color
 
     var body: some View {
-        HStack(spacing: 4) {
+        VStack(spacing: 3) {
             Image(systemName: icon)
-                .font(.footnote)
+                .font(.caption)
                 .foregroundStyle(color)
-                .frame(width: 14)
+
             Text(value)
-                .font(.footnote.monospacedDigit())
+                .font(.title3.bold().monospacedDigit())
                 .foregroundStyle(.white)
                 .lineLimit(1)
+                .minimumScaleFactor(0.65)
+
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.white.opacity(0.60))
+                .lineLimit(1)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding(.vertical, 6)
+        .padding(.horizontal, 4)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(surface)
+        )
     }
 }

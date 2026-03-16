@@ -3,7 +3,13 @@ import SwiftUI
 
 struct SmallWidgetProvider: TimelineProvider {
     func placeholder(in context: Context) -> SmallWidgetEntry {
-        SmallWidgetEntry(date: Date(), streak: 3, timeSince: "2h ago", trainedToday: true)
+        SmallWidgetEntry(
+            date: Date(),
+            streak: 3,
+            timeSince: "2h ago",
+            trainedToday: true,
+            themeID: currentThemeID()
+        )
     }
 
     func getSnapshot(in context: Context, completion: @escaping (SmallWidgetEntry) -> Void) {
@@ -16,6 +22,10 @@ struct SmallWidgetProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(nextUpdate)))
     }
 
+    private func currentThemeID() -> String {
+        UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: "selectedThemeID") ?? "clean"
+    }
+
     private func makeEntry() -> SmallWidgetEntry {
         let streak = WidgetDataProvider.currentStreak()
         let trainedToday = WidgetDataProvider.todaySession() != nil
@@ -25,7 +35,13 @@ struct SmallWidgetProvider: TimelineProvider {
         } else {
             timeSince = "No workouts"
         }
-        return SmallWidgetEntry(date: Date(), streak: streak, timeSince: timeSince, trainedToday: trainedToday)
+        return SmallWidgetEntry(
+            date: Date(),
+            streak: streak,
+            timeSince: timeSince,
+            trainedToday: trainedToday,
+            themeID: currentThemeID()
+        )
     }
 
     private func formatTimeSince(_ date: Date) -> String {
@@ -44,6 +60,7 @@ struct SmallWidgetEntry: TimelineEntry {
     let streak: Int
     let timeSince: String
     let trainedToday: Bool
+    let themeID: String
 }
 
 struct SmallWidget: Widget {
@@ -53,22 +70,12 @@ struct SmallWidget: Widget {
         StaticConfiguration(kind: kind, provider: SmallWidgetProvider()) { entry in
             SmallWidgetView(entry: entry)
                 .containerBackground(for: .widget) {
-                    // Warm gradient when streak is active, subtle blue-grey otherwise
-                    if entry.streak > 0 {
-                        LinearGradient(
-                            colors: [Color(red: 0.85, green: 0.25, blue: 0.05),
-                                     Color(red: 0.60, green: 0.14, blue: 0.02)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    } else {
-                        LinearGradient(
-                            colors: [Color(red: 0.22, green: 0.26, blue: 0.32),
-                                     Color(red: 0.14, green: 0.17, blue: 0.22)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    }
+                    let theme = WidgetTheme.forID(entry.themeID)
+                    LinearGradient(
+                        colors: [theme.background, theme.backgroundDark],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                 }
                 .widgetURL(URL(string: "shuttlx://dashboard"))
         }
@@ -81,27 +88,29 @@ struct SmallWidget: Widget {
 struct SmallWidgetView: View {
     let entry: SmallWidgetEntry
 
+    private var theme: WidgetTheme { WidgetTheme.forID(entry.themeID) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             // Header row: flame icon + today indicator
             HStack {
                 Image(systemName: "flame.fill")
-                    .foregroundStyle(.white.opacity(0.9))
+                    .foregroundStyle(theme.accent)
                     .font(.title3)
                 Spacer()
                 if entry.trainedToday {
                     HStack(spacing: 3) {
                         Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(theme.accent)
                             .font(.caption2)
                         Text("Today")
                             .font(.caption2.bold())
-                            .foregroundStyle(.white.opacity(0.9))
+                            .foregroundStyle(theme.accent)
                             .lineLimit(1)
                     }
                 } else {
                     Image(systemName: "figure.run")
-                        .foregroundStyle(.white.opacity(0.5))
+                        .foregroundStyle(.white.opacity(0.45))
                 }
             }
 
