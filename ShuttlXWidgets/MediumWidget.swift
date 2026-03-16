@@ -67,6 +67,7 @@ struct WidgetTheme {
 // MARK: - Semantic metric colors (fixed, independent of theme)
 
 private enum MetricColor {
+    static let duration  = Color(red: 0.30, green: 0.65, blue: 0.85)  // blue
     static let distance  = Color(red: 0.30, green: 0.75, blue: 0.55)  // teal-green
     static let heartRate = Color(red: 0.88, green: 0.32, blue: 0.35)  // rose
     static let calories  = Color(red: 0.95, green: 0.55, blue: 0.10)  // amber-orange
@@ -86,7 +87,7 @@ struct MediumWidgetProvider: TimelineProvider {
             heartRate: "142",
             caloriesBurned: "245",
             duration: "28 min",
-            distance: "3.2 km",
+            distance: "3.20 km",
             weekCount: 3,
             themeID: currentThemeID()
         )
@@ -132,7 +133,7 @@ struct MediumWidgetProvider: TimelineProvider {
                 heartRate: "--",
                 caloriesBurned: "--",
                 duration: "--",
-                distance: "--",
+                distance: "",
                 weekCount: weekCount,
                 themeID: themeID
             )
@@ -160,16 +161,12 @@ struct MediumWidgetProvider: TimelineProvider {
             cal = "--"
         }
 
+        // Distance is stored in km
         let dist: String
         if let d = session.distance, d > 0 {
-            if d >= 1000 {
-                let km = d / 1000
-                dist = String(format: "%.1f km", km)
-            } else {
-                dist = String(format: "%.0f m", d)
-            }
+            dist = String(format: "%.2f km", d)
         } else {
-            dist = "--"
+            dist = ""
         }
 
         let dur = formatDuration(session.duration)
@@ -275,15 +272,24 @@ struct MediumWidgetView: View {
                         .minimumScaleFactor(0.75)
                 }
 
-                // Row 2: Three metric boxes
+                // Row 2: Metric boxes — Duration + Distance (if Run/Walk) + HR + Cal
                 HStack(spacing: 6) {
                     MetricBox(
-                        icon: "location.fill",
-                        color: MetricColor.distance,
-                        value: entry.distance,
-                        label: "Distance",
+                        icon: "timer",
+                        color: MetricColor.duration,
+                        value: entry.duration,
+                        label: "Duration",
                         surface: theme.surface
                     )
+                    if !entry.distance.isEmpty {
+                        MetricBox(
+                            icon: "location.fill",
+                            color: MetricColor.distance,
+                            value: entry.distance,
+                            label: "Distance",
+                            surface: theme.surface
+                        )
+                    }
                     MetricBox(
                         icon: "heart.fill",
                         color: MetricColor.heartRate,
@@ -321,7 +327,7 @@ struct MediumWidgetView: View {
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(entry.isToday ? "Today's" : "Last") workout: \(entry.sportTypeName), \(entry.distance) distance, \(entry.heartRate) bpm heart rate, \(entry.caloriesBurned) calories, \(entry.weekCount) workouts this week")
+            .accessibilityLabel("\(entry.isToday ? "Today's" : "Last") workout: \(entry.sportTypeName), \(entry.duration), \(entry.distance.isEmpty ? "" : "\(entry.distance), ")\(entry.heartRate) bpm heart rate, \(entry.caloriesBurned) calories, \(entry.weekCount) workouts this week")
         } else {
             VStack(spacing: 8) {
                 Image(systemName: "figure.run")

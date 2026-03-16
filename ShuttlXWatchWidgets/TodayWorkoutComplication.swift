@@ -8,9 +8,9 @@ struct TodayWorkoutProvider: TimelineProvider {
             hasSession: true,
             sportTypeName: "Free Run",
             sportTypeIcon: "figure.run",
-            caloriesBurned: "245",
+            duration: "28 min",
             heartRate: "142",
-            totalSteps: "3500",
+            caloriesBurned: "245",
             weekCount: 3,
             weekGoal: 5
         )
@@ -38,29 +38,40 @@ struct TodayWorkoutProvider: TimelineProvider {
                 hasSession: false,
                 sportTypeName: "",
                 sportTypeIcon: "figure.run",
-                caloriesBurned: "--",
+                duration: "--",
                 heartRate: "--",
-                totalSteps: "--",
+                caloriesBurned: "--",
                 weekCount: weekCount,
                 weekGoal: weekGoal
             )
         }
 
-        let cal = session.caloriesBurned.map { "\(Int($0))" } ?? "--"
+        let dur = formatDuration(session.duration)
         let hr = session.averageHeartRate.map { "\(Int($0))" } ?? "--"
-        let steps = session.totalSteps.map { "\($0)" } ?? "--"
+        let cal = session.caloriesBurned.map { "\(Int($0))" } ?? "--"
 
         return TodayWorkoutEntry(
             date: Date(),
             hasSession: true,
             sportTypeName: session.displayName,
             sportTypeIcon: session.sportType?.systemImage ?? "figure.run",
-            caloriesBurned: cal,
+            duration: dur,
             heartRate: hr,
-            totalSteps: steps,
+            caloriesBurned: cal,
             weekCount: weekCount,
             weekGoal: weekGoal
         )
+    }
+
+    private func formatDuration(_ interval: TimeInterval) -> String {
+        guard interval > 0 else { return "--" }
+        let totalSeconds = Int(interval)
+        let hours = totalSeconds / 3600
+        let minutes = (totalSeconds % 3600) / 60
+        if hours > 0 {
+            return "\(hours)h \(minutes)m"
+        }
+        return "\(max(1, minutes))m"
     }
 }
 
@@ -69,9 +80,9 @@ struct TodayWorkoutEntry: TimelineEntry {
     let hasSession: Bool
     let sportTypeName: String
     let sportTypeIcon: String
-    let caloriesBurned: String
+    let duration: String
     let heartRate: String
-    let totalSteps: String
+    let caloriesBurned: String
     let weekCount: Int
     let weekGoal: Int
 }
@@ -103,7 +114,7 @@ struct TodayWorkoutComplicationView: View {
 
     var body: some View {
         if entry.hasSession {
-            // Trained today — show summary
+            // Trained today — show name + duration + HR + cal
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Image(systemName: entry.sportTypeIcon)
@@ -114,15 +125,15 @@ struct TodayWorkoutComplicationView: View {
                         .widgetAccentable()
                 }
                 HStack(spacing: 6) {
-                    Label(entry.caloriesBurned, systemImage: "flame.fill")
+                    Label(entry.duration, systemImage: "timer")
                     Label(entry.heartRate, systemImage: "heart.fill")
-                    Label(entry.totalSteps, systemImage: "shoeprints.fill")
+                    Label(entry.caloriesBurned, systemImage: "flame.fill")
                 }
                 .font(.caption2)
                 .monospacedDigit()
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Today's workout: \(entry.sportTypeName), \(entry.caloriesBurned) calories, \(entry.heartRate) bpm, \(entry.totalSteps) steps")
+            .accessibilityLabel("Today's workout: \(entry.sportTypeName), \(entry.duration), \(entry.heartRate) bpm, \(entry.caloriesBurned) calories")
         } else {
             // No workout today — show weekly goal progress
             HStack(spacing: 8) {
