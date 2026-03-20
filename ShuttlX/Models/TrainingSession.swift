@@ -26,6 +26,11 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var planID: UUID?
     var planDayIndex: Int?
 
+    // Exercise device & calorie estimation
+    var deviceID: UUID?
+    var deviceName: String?
+    var estimatedCalories: Double?
+
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
     var programName: String?

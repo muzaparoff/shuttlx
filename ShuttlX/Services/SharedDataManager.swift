@@ -403,6 +403,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // Reload from disk first — picks up sessions saved while app was backgrounded
         loadSessionsFromSharedStorage()
         checkForNewSessions()
+
+        // Force pull from Watch if available
+        if WCSession.default.isReachable {
+            requestSessionsFromWatch { _ in }
+        }
     }
 
     // MARK: - Template Sync

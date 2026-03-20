@@ -24,6 +24,7 @@ Models are **duplicated** between iOS (`ShuttlX/Models/`) and watchOS (`ShuttlX 
 | TrainingSession | `ShuttlX/Models/TrainingSession.swift` | `ShuttlX Watch App/Models/TrainingSession.swift` |
 | WorkoutSport | `ShuttlX/Models/WorkoutSport.swift` | `ShuttlX Watch App/Models/WorkoutSport.swift` |
 | WorkoutTemplate | `ShuttlX/Models/WorkoutTemplate.swift` | `ShuttlX Watch App/Models/WorkoutTemplate.swift` |
+| ExerciseDevice | `ShuttlX/Models/ExerciseDevice.swift` | `ShuttlX Watch App/Models/ExerciseDevice.swift` |
 
 ## iOS-Only Models
 

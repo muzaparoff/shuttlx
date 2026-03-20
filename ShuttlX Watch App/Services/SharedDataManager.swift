@@ -59,11 +59,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         logger.info("Retrying \(self.pendingSessions.count) pending sessions")
 
-        let sessionsToSync = pendingSessions
-        pendingSessions = []
-        savePendingSessionsToDisk()
-
-        for session in sessionsToSync {
+        // Send each session — they stay in pendingSessions until
+        // removePendingSession is called from didFinish handlers
+        for session in pendingSessions {
             sendSessionToiOS(session)
         }
     }
@@ -126,6 +124,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func sendSessionViaFileTransfer(_ session: TrainingSession, sessionData: Data) {
+        // Queue as pending safety net — removed on successful delivery
+        queuePendingSession(session)
+
         let tempDir = FileManager.default.temporaryDirectory
         let fileName = "session_\(session.id.uuidString).json"
         let fileURL = tempDir.appendingPathComponent(fileName)
@@ -409,8 +410,13 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             if let error = error {
                 self.logger.error("File transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
-                if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String {
-                    self.logger.info("Will retry session \(sessionID) on next cycle")
+                // Re-queue the session for retry
+                if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String,
+                   let uuid = UUID(uuidString: sessionID) {
+                    let allSessions = self.loadAllLocalSessions()
+                    if let session = allSessions.first(where: { $0.id == uuid }) {
+                        self.queuePendingSession(session)
+                    }
                 }
             } else {
                 self.logger.info("File transfer completed successfully")

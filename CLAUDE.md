@@ -6,15 +6,15 @@ Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI. Ze
 - **Team**: `83HPSY452Y`
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
-- **Codebase**: ~12,800 LOC across 111 Swift files
+- **Codebase**: ~13,200 LOC across 117 Swift files
 - **CI**: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 59 | SharedDataManager (605), AnalyticsView (514), ThemeManager + 12 theme files |
-| watchOS | `ShuttlX Watch App` | 36 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 12 theme files |
+| iOS | `ShuttlX` | 64 | SharedDataManager (605), AnalyticsView (514), DeviceManager, CalorieEstimationEngine, ThemeManager + 12 theme files |
+| watchOS | `ShuttlX Watch App` | 37 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 12 theme files |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
 | Widgets | `ShuttlXWidgets` | 3 | SmallWidget, MediumWidget |
 
@@ -68,7 +68,7 @@ Theme sync:
 
 ## Data Storage
 
-- JSON files in App Group container: `sessions.json`, `workout_templates.json`
+- JSON files in App Group container: `sessions.json`, `workout_templates.json`, `exercise_devices.json`
 - Theme selection: App Group UserDefaults key `selectedThemeID`
 - Sync: WatchConnectivity (`sendMessage` + `transferUserInfo` + `applicationContext`)
 - HealthKit: workout sessions, heart rate, distance, calories

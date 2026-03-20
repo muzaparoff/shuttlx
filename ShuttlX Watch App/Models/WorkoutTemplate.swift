@@ -46,6 +46,8 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
     var createdDate: Date
     var modifiedDate: Date?
     var sportType: WorkoutSport?
+    var deviceID: UUID?
+    var deviceName: String?
 
     init(
         id: UUID = UUID(),

@@ -133,6 +133,11 @@
 		WW100031 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00012 /* ArcadeTheme.swift */; };
 		WW100032 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00013 /* ClassicRadioTheme.swift */; };
 		WW100033 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00014 /* VUMeterTheme.swift */; };
+		ED000011 /* ExerciseDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000001 /* ExerciseDevice.swift */; };
+		ED000012 /* CalorieEstimationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000002 /* CalorieEstimationEngine.swift */; };
+		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
+		ED000014 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000004 /* DeviceListView.swift */; };
+		ED000015 /* DevicePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000005 /* DevicePickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -312,6 +317,11 @@
 		WW000007 /* WatchWidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetDataProvider.swift; sourceTree = "<group>"; };
 		WW000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		WW000009 /* ShuttlXWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlXWatchWidgets.entitlements; sourceTree = "<group>"; };
+		ED000001 /* ExerciseDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDevice.swift; sourceTree = "<group>"; };
+		ED000002 /* CalorieEstimationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieEstimationEngine.swift; sourceTree = "<group>"; };
+		ED000003 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
+		ED000004 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
+		ED000005 /* DevicePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -430,6 +440,8 @@
 				WG000007 /* WidgetDataProvider.swift */,
 				F5923001 /* AuthenticationManager.swift */,
 				F5923002 /* CloudKitSyncManager.swift */,
+				ED000002 /* CalorieEstimationEngine.swift */,
+				ED000003 /* DeviceManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -446,6 +458,7 @@
 				H5923001F /* WorkoutSport.swift */,
 				G5923001F /* TrainingPlan.swift */,
 				G5923002F /* BuiltInPlans.swift */,
+				ED000001 /* ExerciseDevice.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -474,6 +487,8 @@
 				P5923004F /* PlanEditorView.swift */,
 				R5923001F /* ElevationProfileView.swift */,
 				R5923002F /* LiveRouteView.swift */,
+				ED000004 /* DeviceListView.swift */,
+				ED000005 /* DevicePickerView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
 			);
@@ -865,6 +880,11 @@
 				F5923011 /* AuthenticationManager.swift in Sources */,
 				F5923012 /* CloudKitSyncManager.swift in Sources */,
 				F5923013 /* SignInView.swift in Sources */,
+				ED000011 /* ExerciseDevice.swift in Sources */,
+				ED000012 /* CalorieEstimationEngine.swift in Sources */,
+				ED000013 /* DeviceManager.swift in Sources */,
+				ED000014 /* DeviceListView.swift in Sources */,
+				ED000015 /* DevicePickerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

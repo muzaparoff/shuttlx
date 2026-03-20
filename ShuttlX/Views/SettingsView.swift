@@ -16,6 +16,9 @@ struct SettingsView: View {
     @State private var successMessage = ""
     @State private var isSyncing = false
     @State private var isCloudSyncing = false
+    @ObservedObject var deviceManager = DeviceManager.shared
+    @State private var weightText: String = ""
+    @State private var ageText: String = ""
 
     var body: some View {
         List {
@@ -178,6 +181,66 @@ struct SettingsView: View {
                 .accessibilityHint("Shows information about how health data is used")
             }
 
+            // Exercise Devices Section
+            Section("Exercise Devices") {
+                NavigationLink {
+                    DeviceListView()
+                } label: {
+                    HStack {
+                        Image(systemName: "dumbbell.fill")
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                        Text("Manage Devices")
+                        Spacer()
+                        Text("\(deviceManager.devices.count)")
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                    }
+                }
+                .accessibilityHint("View and manage exercise devices for calorie estimation")
+            }
+
+            // Body Metrics Section (for calorie estimation)
+            Section("Body Metrics") {
+                HStack {
+                    Image(systemName: "scalemass.fill")
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    Text("Weight (kg)")
+                    Spacer()
+                    TextField("70", text: $weightText)
+                        .keyboardType(.decimalPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .onChange(of: weightText) { _, newValue in
+                            deviceManager.userWeightKg = Double(newValue)
+                        }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Weight in kilograms")
+
+                HStack {
+                    Image(systemName: "person.fill")
+                        .foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                    Text("Age")
+                    Spacer()
+                    TextField("30", text: $ageText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .onChange(of: ageText) { _, newValue in
+                            deviceManager.userAge = Int(newValue)
+                        }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Age in years")
+
+                Text("Used for calorie estimation when HealthKit data is unavailable.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             // Appearance Section
             Section("Appearance") {
                 ForEach(AppTheme.all) { theme in
@@ -332,6 +395,14 @@ struct SettingsView: View {
             Text("This will permanently delete your account, all iCloud data, and all local training sessions. This cannot be undone.")
         }
         .themedScreenBackground()
+        .onAppear {
+            if let weight = deviceManager.userWeightKg {
+                weightText = String(format: "%.1f", weight)
+            }
+            if let age = deviceManager.userAge {
+                ageText = "\(age)"
+            }
+        }
     }
 
     // MARK: - Watch Helpers
