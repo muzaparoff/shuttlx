@@ -893,6 +893,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         sharedDataManager?.sendSessionToiOS(session)
         clearWorkoutBackup()
         logger.info("Session saved: Duration \(Int(session.duration))s")
+
+        // Request extended background time for sync to complete
+        ProcessInfo.processInfo.performExpiringActivity(
+            withReason: "Syncing workout session to iPhone"
+        ) { expired in
+            if !expired {
+                Thread.sleep(forTimeInterval: 10)
+            }
+        }
     }
 
     private func finalizeRouteBuilder() {

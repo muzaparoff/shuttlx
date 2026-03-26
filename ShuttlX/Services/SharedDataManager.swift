@@ -663,16 +663,29 @@ extension SharedDataManager {
     }
 
     nonisolated func session(_ session: WCSession, didReceive file: WCSessionFile) {
+        // MUST read file data synchronously — fileURL is only valid during this callback
+        let fileData: Data?
+        let metadata = file.metadata
+        do {
+            fileData = try Data(contentsOf: file.fileURL)
+        } catch {
+            fileData = nil
+        }
+
         Task { @MainActor in
-            guard let metadata = file.metadata,
+            guard let data = fileData else {
+                self.log("Failed to read file transfer data — file may have been cleaned up")
+                self.consecutiveFailures += 1
+                self.updateConnectivityHealth()
+                return
+            }
+            guard let metadata = metadata,
                   let action = metadata["action"] as? String,
                   action == "saveSession" else {
                 self.log("Received file with unknown metadata")
                 return
             }
-
             do {
-                let data = try Data(contentsOf: file.fileURL)
                 let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: data)
                 self.handleReceivedSession(trainingSession)
                 self.log("Session received via file transfer (\(data.count) bytes)")

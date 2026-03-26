@@ -185,6 +185,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 guard let self = self else { return }
                 self.logger.error("sendMessage failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
+                self.queuePendingSession(session)
                 self.updateConnectivityHealth()
             }
         })
@@ -391,6 +392,14 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             if let error = error {
                 self.logger.error("UserInfo transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
+                // Re-queue the session for retry
+                if let sessionID = userInfoTransfer.userInfo["sessionID"] as? String,
+                   let uuid = UUID(uuidString: sessionID) {
+                    let allSessions = self.loadAllLocalSessions()
+                    if let session = allSessions.first(where: { $0.id == uuid }) {
+                        self.queuePendingSession(session)
+                    }
+                }
             } else {
                 self.logger.info("UserInfo transfer completed")
                 self.consecutiveFailures = 0
@@ -466,15 +475,26 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Send all locally stored sessions to iPhone via size-aware routing
     func sendAllStoredSessions() {
-        let sessions = loadAllLocalSessions()
-        guard !sessions.isEmpty else { return }
+        let allSessions = loadAllLocalSessions()
+        guard !allSessions.isEmpty else { return }
 
-        logger.info("Sending all \(sessions.count) stored session(s) to iPhone")
+        // Only resend sessions from the last 24 hours (not the entire history)
+        let cutoff = Date().addingTimeInterval(-86400)
+        let recentSessions = allSessions.filter { $0.startDate > cutoff }
 
-        for session in sessions {
+        // Include older pending sessions that never delivered
+        let pendingIDs = Set(pendingSessions.map { $0.id })
+        let olderPending = allSessions.filter { pendingIDs.contains($0.id) && $0.startDate <= cutoff }
+
+        let sessionsToSend = recentSessions + olderPending
+        guard !sessionsToSend.isEmpty else { return }
+
+        logger.info("Sending \(sessionsToSend.count) of \(allSessions.count) stored session(s) to iPhone")
+
+        for session in sessionsToSend {
             sendSessionToiOS(session)
         }
-        updateSyncStatus("Sent \(sessions.count) session(s) to iPhone")
+        updateSyncStatus("Sent \(sessionsToSend.count) session(s) to iPhone")
     }
 
     private func loadAllLocalSessions() -> [TrainingSession] {
