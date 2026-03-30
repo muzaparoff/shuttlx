@@ -4,7 +4,7 @@ import SwiftUI
 
 extension View {
     @ViewBuilder
-    func themedCard() -> some View {
+    func themedCard(accent: Color? = nil, statusLine: (mode: String, file: String, position: String)? = nil) -> some View {
         let theme = ThemeManager.shared
         switch theme.effects.cardStyle {
         case .glass:
@@ -69,16 +69,68 @@ extension View {
                         .stroke(theme.colors.surfaceBorder, lineWidth: 1)
                 )
         case .terminal:
+            let barWidth = theme.effects.cardAccentBarWidth
+            let accentColor = accent ?? theme.colors.ctaPrimary
+            VStack(spacing: 0) {
+                self.padding(0)
+                // Statusline at bottom of card (Neovim-style)
+                if let sl = statusLine {
+                    TerminalStatusLine(mode: sl.mode, file: sl.file, position: sl.position, modeColor: accentColor)
+                }
+            }
+            .background(
+                RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                    .fill(theme.colors.surface)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                    .stroke(theme.colors.surfaceBorder, lineWidth: 1)
+            )
+            .overlay(alignment: .leading) {
+                if barWidth > 0 {
+                    UnevenRoundedRectangle(
+                        topLeadingRadius: theme.effects.cardCornerRadius,
+                        bottomLeadingRadius: theme.effects.cardCornerRadius
+                    )
+                    .fill(accentColor)
+                    .frame(width: barWidth)
+                }
+            }
+        }
+    }
+
+    // MARK: - Theme Mode Tag (Neovim)
+
+    @ViewBuilder
+    func themeModeTag(_ text: String) -> some View {
+        let theme = ThemeManager.shared
+        if theme.effects.cardStyle == .terminal {
+            VStack(spacing: 4) {
+                Text("-- \(text) --")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(theme.colors.ctaPrimary)
+                self
+            }
+        } else {
             self
-                .padding(0)
-                .background(
-                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
-                        .fill(theme.colors.surface)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
-                        .stroke(theme.colors.surfaceBorder, lineWidth: 1)
-                )
+        }
+    }
+
+    // MARK: - Theme Line Number (Neovim)
+
+    @ViewBuilder
+    func themeLineNumber(_ number: Int) -> some View {
+        let theme = ThemeManager.shared
+        if theme.effects.cardStyle == .terminal {
+            HStack(spacing: 6) {
+                Text("\(number)")
+                    .font(.system(size: 9, weight: .regular, design: .monospaced))
+                    .foregroundStyle(Color(red: 0.314, green: 0.286, blue: 0.271)) // bg2 #504945
+                    .frame(width: 14, alignment: .trailing)
+                self
+            }
+        } else {
+            self
         }
     }
 
@@ -377,5 +429,46 @@ extension View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
             )
+    }
+}
+
+// MARK: - Terminal Status Line (Neovim)
+
+struct TerminalStatusLine: View {
+    let mode: String
+    let file: String
+    let position: String
+    var modeColor: Color = Color(red: 0.722, green: 0.733, blue: 0.149) // Gruvbox green
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(mode)
+                .font(.system(size: 8, weight: .bold, design: .monospaced))
+                .foregroundStyle(Color(red: 0.157, green: 0.157, blue: 0.157)) // bg0
+                .padding(.horizontal, 6)
+                .frame(height: 16)
+                .background(modeColor)
+
+            Text(file)
+                .font(.system(size: 7, weight: .regular, design: .monospaced))
+                .foregroundStyle(Color(red: 0.659, green: 0.600, blue: 0.518)) // fg4 #A89984
+                .padding(.horizontal, 6)
+                .frame(height: 16, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(red: 0.235, green: 0.220, blue: 0.212)) // bg1
+
+            Text(position)
+                .font(.system(size: 8, weight: .regular, design: .monospaced))
+                .foregroundStyle(Color(red: 0.922, green: 0.859, blue: 0.698)) // fg
+                .padding(.horizontal, 6)
+                .frame(height: 16)
+                .background(Color(red: 0.314, green: 0.286, blue: 0.271)) // bg2
+        }
+        .clipShape(
+            UnevenRoundedRectangle(
+                bottomLeadingRadius: ThemeManager.shared.effects.cardCornerRadius,
+                bottomTrailingRadius: ThemeManager.shared.effects.cardCornerRadius
+            )
+        )
     }
 }

@@ -33,7 +33,7 @@ struct StartOnWatchCard: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
-        .themedCard()
+        .themedCard(accent: ShuttlXColor.steps)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Start training on Apple Watch. Watch is \(isPaired ? "paired" : "not paired") and \(isReachable ? "reachable" : "not reachable")")
     }

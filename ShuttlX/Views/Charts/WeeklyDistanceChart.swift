@@ -43,7 +43,7 @@ struct WeeklyDistanceChart: View {
             .frame(height: 160)
         }
         .padding(16)
-        .themedCard()
+        .themedCard(accent: ShuttlXColor.running)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Weekly distance chart")
     }

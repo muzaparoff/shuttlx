@@ -12,6 +12,7 @@ struct ThemeEffects: Equatable {
     let hasHorizonGrid: Bool
     let hasLCDDotMatrix: Bool
     let hasCRTEffect: Bool
+    let cardAccentBarWidth: CGFloat
 
     enum CardStyle: String, Equatable {
         case glass
@@ -34,5 +35,6 @@ struct ThemeEffects: Equatable {
             && lhs.hasHorizonGrid == rhs.hasHorizonGrid
             && lhs.hasLCDDotMatrix == rhs.hasLCDDotMatrix
             && lhs.hasCRTEffect == rhs.hasCRTEffect
+            && lhs.cardAccentBarWidth == rhs.cardAccentBarWidth
     }
 }

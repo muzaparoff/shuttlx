@@ -78,7 +78,10 @@ struct WeekSummaryCard: View {
             }
         }
         .padding(ShuttlXSpacing.xl)
-        .themedCard()
+        .themedCard(
+            accent: ShuttlXColor.ctaPrimary,
+            statusLine: (mode: "WEEK", file: "stats.json", position: "\(weekSessionCount):1")
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("This week, \(weekSessionCount) sessions, total \(FormattingUtils.formatDuration(weekTotalDuration))")
     }

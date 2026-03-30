@@ -90,7 +90,8 @@ extension AppTheme {
             hasMeshBackground: false,
             hasHorizonGrid: false,
             hasLCDDotMatrix: false,
-            hasCRTEffect: true
+            hasCRTEffect: true,
+            cardAccentBarWidth: 0
         )
     )
 }

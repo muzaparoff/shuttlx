@@ -27,6 +27,7 @@ struct TrainingView: View {
         TabView(selection: $selectedTab) {
             // Tab 1: Full-screen stacked metrics
             workoutDisplayTab
+                .themeModeTag(workoutManager.isPaused ? "PAUSED" : "RUNNING")
                 .tag(0)
 
             // Tab 2: Controls
@@ -357,6 +358,7 @@ struct WorkoutSummaryView: View {
                     .scaleEffect(showBadge ? 1 : 0.3)
                     .opacity(showBadge ? 1 : 0)
                     .animation(.spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
+                    .themeModeTag("COMPLETE")
 
                 Text("Workout Complete")
                     .font(ShuttlXFont.watchHeroTitle)
@@ -398,7 +400,10 @@ struct WorkoutSummaryView: View {
                     }
                 }
                 .padding(.horizontal)
-                .themedCard()
+                .themedCard(
+                    accent: ShuttlXColor.positive,
+                    statusLine: (mode: "DONE", file: "saved", position: "ok")
+                )
 
                 // Done button — primary CTA style
                 Button(action: onDismiss) {

@@ -180,7 +180,10 @@ struct AnalyticsView: View {
             .frame(height: 180)
         }
         .padding(16)
-        .themedCard()
+        .themedCard(
+            accent: ShuttlXColor.running,
+            statusLine: (mode: "LOAD", file: "trend.json", position: "6w")
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Training load trend over 6 weeks")
     }
@@ -243,7 +246,7 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .themedCard()
+        .themedCard(accent: ShuttlXColor.calories)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Weekly training volume over 6 weeks")
     }
@@ -288,7 +291,10 @@ struct AnalyticsView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(16)
-            .themedCard()
+            .themedCard(
+                accent: ShuttlXColor.pace,
+                statusLine: (mode: "VO2", file: "fitness.json", position: "1:1")
+            )
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Estimated VO2 max: \(String(format: "%.1f", vo2)) milliliters per kilogram per minute. \(vo2maxCategory(vo2))")
         }
@@ -363,7 +369,10 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .themedCard()
+        .themedCard(
+            accent: ShuttlXColor.positive,
+            statusLine: (mode: "PR", file: "records.json", position: "4:1")
+        )
     }
 
     // MARK: - Pace Zones Chart
@@ -407,7 +416,10 @@ struct AnalyticsView: View {
                 .padding(.top, 4)
             }
             .padding(16)
-            .themedCard()
+            .themedCard(
+                accent: ShuttlXColor.pace,
+                statusLine: (mode: "PACE", file: "zones.json", position: "5:1")
+            )
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Pace zone distribution: \(paceZones.map { "\($0.zone) \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", "))")
         }
@@ -462,7 +474,7 @@ struct AnalyticsView: View {
                 }
             }
             .padding(16)
-            .themedCard()
+            .themedCard(accent: ShuttlXColor.hiking)
             .accessibilityElement(children: .contain)
         }
     }
