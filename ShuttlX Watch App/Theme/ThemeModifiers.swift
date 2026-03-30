@@ -87,23 +87,25 @@ extension View {
                     ArcadeScoreHeader(label: label)
                 }
                 self.padding(0)
-                ArcadeCreditFooter(label: footerLabel ?? "CREDIT 0")
+                if headerLabel != nil {
+                    ArcadeCreditFooter(label: footerLabel ?? "CREDIT 0")
+                }
             }
             .background(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).fill(theme.colors.surface))
             .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder, lineWidth: 2))
         case .tape:
             VStack(spacing: 0) {
-                RadioDialHeader()
+                if headerLabel != nil { RadioDialHeader() }
                 self.padding(0)
-                RadioBandFooter()
+                if headerLabel != nil { RadioBandFooter() }
             }
             .background(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).fill(theme.colors.surface))
             .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder, lineWidth: 1))
         case .meter:
             VStack(spacing: 0) {
-                VUGaugeHeader()
+                if headerLabel != nil { VUGaugeHeader() }
                 self.padding(0)
-                VUScaleFooter()
+                if headerLabel != nil { VUScaleFooter() }
             }
             .background(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).fill(theme.colors.surface))
             .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder, lineWidth: 1))
