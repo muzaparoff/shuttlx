@@ -94,7 +94,7 @@ struct TodayWorkoutComplication: Widget {
         StaticConfiguration(kind: kind, provider: TodayWorkoutProvider()) { entry in
             TodayWorkoutComplicationView(entry: entry)
                 .containerBackground(.clear, for: .widget)
-                .widgetURL(URL(string: "shuttlx://start-workout"))
+                .widgetURL(URL(string: "shuttlx://home"))
         }
         .configurationDisplayName("Today's Workout")
         .description("Today's workout summary or quick start.")
@@ -126,14 +126,13 @@ struct TodayWorkoutComplicationView: View {
                 }
                 HStack(spacing: 6) {
                     Label(entry.duration, systemImage: "timer")
-                    Label(entry.heartRate, systemImage: "heart.fill")
                     Label(entry.caloriesBurned, systemImage: "flame.fill")
                 }
                 .font(.caption2)
                 .monospacedDigit()
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Today's workout: \(entry.sportTypeName), \(entry.duration), \(entry.heartRate) bpm, \(entry.caloriesBurned) calories")
+            .accessibilityLabel("Today's workout: \(entry.sportTypeName), \(entry.duration), \(entry.caloriesBurned) calories")
         } else {
             // No workout today — show weekly goal progress
             HStack(spacing: 8) {

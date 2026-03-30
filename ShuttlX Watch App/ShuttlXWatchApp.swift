@@ -29,11 +29,15 @@ struct ShuttlXWatchApp: App {
                 .environmentObject(sharedDataManager)
                 .environmentObject(workoutManager)
                 .onOpenURL { url in
-                    if url.scheme == "shuttlx" && url.host == "start-workout" {
+                    guard url.scheme == "shuttlx" else { return }
+                    switch url.host {
+                    case "start-workout":
                         logger.info("Deep link received — starting free-form workout")
                         if !workoutManager.isWorkoutActive {
                             workoutManager.startWorkout()
                         }
+                    default:
+                        logger.info("Deep link received — opening home")
                     }
                 }
                 .onAppear {

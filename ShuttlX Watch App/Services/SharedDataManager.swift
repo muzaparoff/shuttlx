@@ -515,15 +515,16 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Template Sync
 
     private func handleIncomingPayload(_ payload: [String: Any]) {
-        guard let action = payload["action"] as? String else { return }
+        // Process theme if present (regardless of action key — applicationContext
+        // merges both theme and template data with a single action key)
+        if let themeID = payload["themeID"] as? String {
+            ThemeManager.shared.selectTheme(themeID)
+            logger.info("Theme synced from iPhone: \(themeID)")
+        }
 
-        switch action {
-        case "syncTemplates":
-            guard let base64 = payload["templatesData"] as? String,
-                  let data = Data(base64Encoded: base64) else {
-                logger.error("Failed to decode templates payload")
-                return
-            }
+        // Process templates if present
+        if let base64 = payload["templatesData"] as? String,
+           let data = Data(base64Encoded: base64) {
             do {
                 let templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
                 workoutTemplates = templates
@@ -533,15 +534,6 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             } catch {
                 logger.error("Failed to decode templates: \(error.localizedDescription)")
             }
-
-        case "syncTheme":
-            if let themeID = payload["themeID"] as? String {
-                ThemeManager.shared.selectTheme(themeID)
-                logger.info("Theme synced from iPhone: \(themeID)")
-            }
-
-        default:
-            break
         }
     }
 

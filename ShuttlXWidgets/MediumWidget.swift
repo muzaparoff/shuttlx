@@ -89,7 +89,8 @@ struct MediumWidgetProvider: TimelineProvider {
             duration: "28 min",
             distance: "3.20 km",
             weekCount: 3,
-            themeID: currentThemeID()
+            themeID: currentThemeID(),
+            sessionID: nil
         )
     }
 
@@ -135,7 +136,8 @@ struct MediumWidgetProvider: TimelineProvider {
                 duration: "--",
                 distance: "",
                 weekCount: weekCount,
-                themeID: themeID
+                themeID: themeID,
+                sessionID: nil
             )
         }
 
@@ -183,7 +185,8 @@ struct MediumWidgetProvider: TimelineProvider {
             duration: dur,
             distance: dist,
             weekCount: weekCount,
-            themeID: themeID
+            themeID: themeID,
+            sessionID: session.id.uuidString
         )
     }
 
@@ -214,6 +217,7 @@ struct MediumWidgetEntry: TimelineEntry {
     let distance: String
     let weekCount: Int
     let themeID: String
+    let sessionID: String?
 }
 
 // MARK: - Widget
@@ -223,6 +227,12 @@ struct MediumWidget: Widget {
 
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: MediumWidgetProvider()) { entry in
+            let urlString: String = {
+                if let id = entry.sessionID {
+                    return "shuttlx://session/\(id)"
+                }
+                return "shuttlx://dashboard"
+            }()
             MediumWidgetView(entry: entry)
                 .containerBackground(for: .widget) {
                     let theme = WidgetTheme.forID(entry.themeID)
@@ -232,7 +242,7 @@ struct MediumWidget: Widget {
                         endPoint: .bottomTrailing
                     )
                 }
-                .widgetURL(URL(string: "shuttlx://dashboard"))
+                .widgetURL(URL(string: urlString))
         }
         .configurationDisplayName("Today's Workout")
         .description("Shows your latest workout at a glance.")

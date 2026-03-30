@@ -2,13 +2,17 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
+    @Binding var deepLinkSessionID: UUID?
+    @State private var selectedTab = 0
+    @State private var showingDeepLinkSession: TrainingSession?
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
                     Label("Training", systemImage: "figure.run")
                 }
+                .tag(0)
                 .accessibilityLabel("Training tab")
                 .accessibilityHint("Dashboard with workout status and quick start")
 
@@ -16,6 +20,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("Programs", systemImage: "calendar.badge.clock")
                 }
+                .tag(1)
                 .accessibilityLabel("Programs tab")
                 .accessibilityHint("Training plans and interval workout programs")
 
@@ -23,6 +28,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("History", systemImage: "calendar")
                 }
+                .tag(2)
                 .accessibilityLabel("History tab")
                 .accessibilityHint("View your past training sessions")
 
@@ -30,6 +36,7 @@ struct ContentView: View {
                 .tabItem {
                     Label("Analytics", systemImage: "chart.line.uptrend.xyaxis")
                 }
+                .tag(3)
                 .accessibilityLabel("Analytics tab")
                 .accessibilityHint("View training analytics and trends")
 
@@ -39,10 +46,27 @@ struct ContentView: View {
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
+            .tag(4)
             .accessibilityLabel("Settings tab")
             .accessibilityHint("Adjust app preferences")
         }
         .modifier(TabBarMinimizeModifier())
+        .sheet(item: $showingDeepLinkSession) { session in
+            NavigationStack {
+                SessionDetailView(session: session)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { showingDeepLinkSession = nil }
+                        }
+                    }
+            }
+        }
+        .onChange(of: deepLinkSessionID) { _, newID in
+            guard let id = newID,
+                  let session = dataManager.sessions.first(where: { $0.id == id }) else { return }
+            deepLinkSessionID = nil
+            showingDeepLinkSession = session
+        }
     }
 }
 
@@ -61,6 +85,6 @@ private struct TabBarMinimizeModifier: ViewModifier {
 }
 
 #Preview {
-    ContentView()
+    ContentView(deepLinkSessionID: .constant(nil))
         .environmentObject(DataManager())
 }

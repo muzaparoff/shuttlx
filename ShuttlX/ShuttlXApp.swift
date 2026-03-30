@@ -11,6 +11,7 @@ struct ShuttlXApp: App {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var cloudKitSync = CloudKitSyncManager.shared
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
+    @State private var deepLinkSessionID: UUID?
 
     var body: some Scene {
         WindowGroup {
@@ -18,7 +19,7 @@ struct ShuttlXApp: App {
                 if isFirstLaunch {
                     OnboardingView(isFirstLaunch: $isFirstLaunch)
                 } else {
-                    ContentView()
+                    ContentView(deepLinkSessionID: $deepLinkSessionID)
                 }
             }
             .environment(themeManager)
@@ -28,6 +29,14 @@ struct ShuttlXApp: App {
             .environmentObject(planManager)
             .environmentObject(authManager)
             .environmentObject(cloudKitSync)
+            .onOpenURL { url in
+                guard url.scheme == "shuttlx" else { return }
+                if url.host == "session",
+                   let idString = url.pathComponents.last,
+                   let uuid = UUID(uuidString: idString) {
+                    deepLinkSessionID = uuid
+                }
+            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
