@@ -402,7 +402,8 @@ struct WorkoutSummaryView: View {
                 .padding(.horizontal)
                 .themedCard(
                     accent: ShuttlXColor.positive,
-                    statusLine: (mode: "DONE", file: "saved", position: "ok")
+                    statusLine: (mode: "DONE", file: "saved", position: "ok"),
+                    headerLabel: "WORKOUT"
                 )
 
                 // Done button — primary CTA style

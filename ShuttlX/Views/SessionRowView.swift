@@ -60,7 +60,8 @@ struct SessionRowView: View {
         .padding(16)
         .themedCard(
             accent: session.sportType?.themeColor,
-            statusLine: (mode: session.sportType?.rawValue.uppercased().prefix(4).description ?? "RUN", file: "session.json", position: "\(session.segments.count):1")
+            statusLine: (mode: session.sportType?.rawValue.uppercased().prefix(4).description ?? "RUN", file: "session.json", position: "\(session.segments.count):1"),
+            headerLabel: session.displayName.uppercased()
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(sessionAccessibilityLabel)

@@ -57,7 +57,7 @@ struct PaceTrendChart: View {
             }
         }
         .padding(16)
-        .themedCard(accent: ShuttlXColor.pace)
+        .themedCard(accent: ShuttlXColor.pace, headerLabel: "PACE TREND")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Pace trend chart")
     }

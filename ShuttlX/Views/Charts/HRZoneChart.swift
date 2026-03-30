@@ -40,7 +40,7 @@ struct HRZoneChart: View {
             }
         }
         .padding(16)
-        .themedCard(accent: ShuttlXColor.heartRate)
+        .themedCard(accent: ShuttlXColor.heartRate, headerLabel: "HR ZONES")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Heart rate zone distribution")
     }

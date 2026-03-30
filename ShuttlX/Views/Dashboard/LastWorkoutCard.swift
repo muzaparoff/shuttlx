@@ -65,7 +65,8 @@ struct LastWorkoutCard: View {
         .padding(ShuttlXSpacing.xl)
         .themedCard(
             accent: ShuttlXColor.running,
-            statusLine: (mode: "HIST", file: "last_session.json", position: "1:1")
+            statusLine: (mode: "HIST", file: "last_session.json", position: "1:1"),
+            headerLabel: "LAST WORKOUT"
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Last workout, \(FormattingUtils.formatShortDate(session.startDate)), \(FormattingUtils.formatDuration(session.duration))")
