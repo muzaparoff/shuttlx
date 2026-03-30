@@ -23,7 +23,7 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(compact ? 8 : 12)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+        .themedCard(accent: color)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value)")
     }
