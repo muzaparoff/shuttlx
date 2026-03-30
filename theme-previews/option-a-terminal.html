@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Option A: Terminal - Green Phosphor CRT</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; font-family: 'JetBrains Mono', monospace; color: #00FF41; display: flex; gap: 60px; justify-content: center; align-items: flex-start; padding: 40px; min-height: 100vh; }
+
+  .label { color: #888; font-size: 14px; text-align: center; margin-bottom: 12px; font-family: -apple-system, sans-serif; }
+  .sublabel { color: #555; font-size: 11px; text-align: center; margin-top: 8px; font-family: -apple-system, sans-serif; }
+
+  /* iPhone frame */
+  .iphone { width: 390px; height: 844px; background: #050505; border-radius: 44px; border: 3px solid #333; overflow: hidden; position: relative; }
+  .iphone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,255,65,0.015) 2px, rgba(0,255,65,0.015) 4px); pointer-events: none; z-index: 10; }
+  .iphone::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 80%; height: 60%; background: radial-gradient(ellipse, rgba(0,255,65,0.03) 0%, transparent 70%); pointer-events: none; z-index: 5; }
+  .iphone-content { padding: 60px 20px 34px; height: 100%; overflow-y: auto; }
+  .iphone-content::-webkit-scrollbar { display: none; }
+
+  /* Watch frame */
+  .watch { width: 198px; height: 242px; background: #050505; border-radius: 42px; border: 3px solid #333; overflow: hidden; position: relative; }
+  .watch::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(transparent, transparent 2px, rgba(0,255,65,0.02) 2px, rgba(0,255,65,0.02) 4px); pointer-events: none; z-index: 10; }
+  .watch-content { padding: 28px 12px 20px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+  /* Cards */
+  .card { border: 1px solid rgba(0,255,65,0.25); border-radius: 2px; padding: 12px; margin-bottom: 12px; background: rgba(0,255,65,0.02); position: relative; }
+  .card-header { font-size: 10px; color: rgba(0,255,65,0.5); margin-bottom: 8px; letter-spacing: 1px; }
+  .card-header::before { content: '\250C\2500 '; }
+  .card-header::after { content: ' \2500\2510'; }
+
+  /* Metrics */
+  .metric-value { font-size: 28px; font-weight: 700; text-shadow: 0 0 8px rgba(0,255,65,0.3); }
+  .metric-label { font-size: 10px; color: rgba(0,255,65,0.5); margin-top: 2px; }
+  .metric-row { display: flex; justify-content: space-between; align-items: baseline; padding: 4px 0; border-bottom: 1px solid rgba(0,255,65,0.08); }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-row .key { font-size: 11px; color: rgba(0,255,65,0.6); }
+  .metric-row .val { font-size: 13px; font-weight: 700; text-shadow: 0 0 4px rgba(0,255,65,0.2); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* Nav bar */
+  .nav { font-size: 10px; color: rgba(0,255,65,0.4); text-align: center; padding: 8px 0; border-top: 1px solid rgba(0,255,65,0.1); margin-top: 12px; display: flex; justify-content: space-around; }
+  .nav .active { color: #00FF41; text-shadow: 0 0 6px rgba(0,255,65,0.3); }
+
+  /* Section header */
+  .section { font-size: 11px; color: rgba(0,255,65,0.4); margin: 16px 0 8px; }
+  .section::before { content: '$ '; color: rgba(0,255,65,0.6); }
+
+  /* Watch timer */
+  .watch-timer { font-size: 36px; font-weight: 800; text-align: center; text-shadow: 0 0 12px rgba(0,255,65,0.4); letter-spacing: 2px; }
+  .watch-status { font-size: 10px; text-align: center; color: rgba(0,255,65,0.6); margin-top: 4px; }
+  .watch-status .cursor { animation: blink 1s infinite; }
+  @keyframes blink { 0%,50% { opacity: 1; } 51%,100% { opacity: 0; } }
+  .watch-metrics { width: 100%; margin-top: 10px; }
+  .watch-metric-row { display: flex; justify-content: space-between; font-size: 11px; padding: 3px 0; }
+  .watch-metric-row .wk { color: rgba(0,255,65,0.5); }
+  .watch-metric-row .wv { font-weight: 700; text-shadow: 0 0 4px rgba(0,255,65,0.2); }
+
+  /* Buttons */
+  .watch-btns { display: flex; gap: 12px; margin-top: 12px; }
+  .watch-btn { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; }
+  .btn-pause { border: 1.5px solid rgba(0,255,65,0.5); color: #00FF41; background: rgba(0,255,65,0.05); }
+  .btn-stop { border: 1.5px solid rgba(255,102,0,0.5); color: #FF6600; background: rgba(255,102,0,0.05); }
+
+  .title-bar { font-size: 16px; font-weight: 700; text-align: center; margin-bottom: 16px; text-shadow: 0 0 8px rgba(0,255,65,0.2); }
+</style>
+</head>
+<body>
+
+<div>
+  <div class="label">Option A: "Terminal" - iPhone Dashboard</div>
+  <div class="iphone">
+    <div class="iphone-content">
+      <div class="title-bar">> ShuttlX_</div>
+
+      <div class="section">last_session</div>
+      <div class="card">
+        <div class="card-header">LAST WORKOUT</div>
+        <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:8px;">
+          <span style="font-size:13px;">Free Run</span>
+          <span style="font-size:10px; color:rgba(0,255,65,0.4);">Today, 08:30</span>
+        </div>
+        <div class="grid-2">
+          <div>
+            <div class="metric-value">28:43</div>
+            <div class="metric-label">DURATION</div>
+          </div>
+          <div>
+            <div class="metric-value">3.2km</div>
+            <div class="metric-label">DISTANCE</div>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="metric-row"><span class="key">AVG_HR</span><span class="val">142 bpm</span></div>
+          <div class="metric-row"><span class="key">CALORIES</span><span class="val">245 kcal</span></div>
+          <div class="metric-row"><span class="key">AVG_PACE</span><span class="val">5:30/km</span></div>
+        </div>
+      </div>
+
+      <div class="section">weekly_stats</div>
+      <div class="card">
+        <div class="card-header">THIS WEEK</div>
+        <div class="grid-2">
+          <div>
+            <div class="metric-value" style="font-size:22px;">3/5</div>
+            <div class="metric-label">SESSIONS</div>
+          </div>
+          <div>
+            <div class="metric-value" style="font-size:22px;">12.4</div>
+            <div class="metric-label">KM TOTAL</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section">analytics</div>
+      <div class="grid-2">
+        <div class="card" style="text-align:center;">
+          <div class="metric-value" style="font-size:20px;">48.2</div>
+          <div class="metric-label">VO2MAX</div>
+        </div>
+        <div class="card" style="text-align:center;">
+          <div class="metric-value" style="font-size:20px;">+3</div>
+          <div class="metric-label">FORM</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top: 4px;">
+        <div class="card-header">PERSONAL RECORDS</div>
+        <div class="metric-row"><span class="key">FASTEST_5K</span><span class="val">24:15</span></div>
+        <div class="metric-row"><span class="key">LONGEST</span><span class="val">1h 32m</span></div>
+        <div class="metric-row"><span class="key">MAX_HR</span><span class="val">186 bpm</span></div>
+      </div>
+
+      <div class="nav">
+        <span class="active">[training]</span>
+        <span>[programs]</span>
+        <span>[history]</span>
+        <span>[stats]</span>
+        <span>[config]</span>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Monochrome green phosphor. Scanlines. ASCII borders.</div>
+</div>
+
+<div>
+  <div class="label">Watch - Active Workout</div>
+  <div class="watch">
+    <div class="watch-content">
+      <div class="watch-status">> RUNNING<span class="cursor">_</span></div>
+      <div class="watch-timer">28:43</div>
+      <div class="watch-metrics">
+        <div class="watch-metric-row"><span class="wk">HR</span><span class="wv">142</span></div>
+        <div class="watch-metric-row"><span class="wk">PACE</span><span class="wv">5:30</span></div>
+        <div class="watch-metric-row"><span class="wk">DIST</span><span class="wv">3.2km</span></div>
+      </div>
+      <div class="watch-btns">
+        <div class="watch-btn btn-pause">||</div>
+        <div class="watch-btn btn-stop">X</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Green glow. Blinking cursor. Minimal.</div>
+</div>
+
+</body>
+</html>

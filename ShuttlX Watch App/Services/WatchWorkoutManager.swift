@@ -209,6 +209,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         requestLocationAndStartUpdates()
 
         logger.info("Workout started (sport: \(sport.displayName))")
+
+        // Notify iPhone that workout started — transferUserInfo wakes iOS in background
+        if WCSession.default.activationState == .activated {
+            let startPayload: [String: Any] = [
+                "action": "workoutStarted",
+                "activityType": sport.rawValue,
+                "startTime": Date().timeIntervalSince1970
+            ]
+            WCSession.default.transferUserInfo(startPayload)
+        }
     }
 
     func startIntervalWorkout(template: WorkoutTemplate) {
@@ -318,13 +328,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         accumulatedPauseTime = 0
         pauseStartDate = nil
 
-        // Notify iOS that workout ended
+        // Notify iOS that workout ended (immediate + guaranteed)
+        let stopPayload: [String: Any] = ["action": "workoutStopped", "timestamp": Date().timeIntervalSince1970]
         if WCSession.default.isReachable {
-            WCSession.default.sendMessage(
-                ["action": "workoutStopped", "timestamp": Date().timeIntervalSince1970],
-                replyHandler: nil, errorHandler: nil
-            )
+            WCSession.default.sendMessage(stopPayload, replyHandler: nil, errorHandler: nil)
         }
+        WCSession.default.transferUserInfo(stopPayload)
 
         // Reset interval mode
         workoutMode = .freeRun
@@ -414,7 +423,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         lastLiveUpdateTime = now
 
-        guard WCSession.default.isReachable else { return }
+        guard WCSession.default.activationState == .activated else { return }
 
         var payload: [String: Any] = [
             "action": "liveMetrics",

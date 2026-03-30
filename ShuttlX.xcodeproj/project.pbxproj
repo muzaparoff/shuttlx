@@ -44,6 +44,7 @@
 		TH000020 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
 		TH000023 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
 		TH000024 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
+		TH000025 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
 		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
@@ -57,6 +58,7 @@
 		TH000040 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
 		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
 		TH000044 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
+		TH000045 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
 		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
@@ -133,6 +135,7 @@
 		WW100031 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00012 /* ArcadeTheme.swift */; };
 		WW100032 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00013 /* ClassicRadioTheme.swift */; };
 		WW100033 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00014 /* VUMeterTheme.swift */; };
+		WW100034 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00015 /* NeovimTheme.swift */; };
 		ED000011 /* ExerciseDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000001 /* ExerciseDevice.swift */; };
 		ED000012 /* CalorieEstimationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000002 /* CalorieEstimationEngine.swift */; };
 		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
@@ -260,6 +263,7 @@
 		TH000010 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTheme.swift; sourceTree = "<group>"; };
 		TH000050 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTheme.swift; sourceTree = "<group>"; };
 		TH000051 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterTheme.swift; sourceTree = "<group>"; };
+		TH000052 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTheme.swift; sourceTree = "<group>"; };
 		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
 		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
@@ -309,6 +313,7 @@
 		WWT00012 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ArcadeTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ArcadeTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00013 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClassicRadioTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ClassicRadioTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00014 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VUMeterTheme.swift; path = "ShuttlX Watch App/Theme/Themes/VUMeterTheme.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00015 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NeovimTheme.swift; path = "ShuttlX Watch App/Theme/Themes/NeovimTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WW000002 /* LastWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutComplication.swift; sourceTree = "<group>"; };
 		WW000003 /* WeeklyProgressComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressComplication.swift; sourceTree = "<group>"; };
 		WW000004 /* QuickStartComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartComplication.swift; sourceTree = "<group>"; };
@@ -550,6 +555,7 @@
 				TH000010 /* ArcadeTheme.swift */,
 				TH000050 /* ClassicRadioTheme.swift */,
 				TH000051 /* VUMeterTheme.swift */,
+				TH000052 /* NeovimTheme.swift */,
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -840,6 +846,7 @@
 				TH000020 /* ArcadeTheme.swift in Sources */,
 				TH000023 /* ClassicRadioTheme.swift in Sources */,
 				TH000024 /* VUMeterTheme.swift in Sources */,
+				TH000025 /* NeovimTheme.swift in Sources */,
 				A5923B02 /* MetricCard.swift in Sources */,
 				A5923B03 /* ActivityBadge.swift in Sources */,
 				A5923B04 /* StreakBadge.swift in Sources */,
@@ -926,6 +933,7 @@
 				TH000040 /* ArcadeTheme.swift in Sources */,
 				TH000043 /* ClassicRadioTheme.swift in Sources */,
 				TH000044 /* VUMeterTheme.swift in Sources */,
+				TH000045 /* NeovimTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -958,6 +966,7 @@
 				WW100031 /* ArcadeTheme.swift in Sources */,
 				WW100032 /* ClassicRadioTheme.swift in Sources */,
 				WW100033 /* VUMeterTheme.swift in Sources */,
+				WW100034 /* NeovimTheme.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

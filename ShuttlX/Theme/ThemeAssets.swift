@@ -15,6 +15,7 @@ struct ThemedTimerFrame: View {
         case "arcade":       ArcadeTimerFrame(width: width, height: height)
         case "classicradio": ClassicRadioTimerFrame(width: width, height: height)
         case "vumeter":      VUMeterTimerFrame(width: width, height: height)
+        case "neovim":       CleanTimerFrame(width: width, height: height)
         default:             CleanTimerFrame(width: width, height: height)
         }
     }
@@ -849,6 +850,7 @@ struct ThemedCompletionBadge: View {
         case "arcade":       ArcadeCompletionBadge()
         case "classicradio": ClassicRadioCompletionBadge()
         case "vumeter":      VUMeterCompletionBadge()
+        case "neovim":       CleanCompletionBadge()
         default:             CleanCompletionBadge()
         }
     }
@@ -1090,6 +1092,9 @@ struct ThemedControlButtonStyle: ButtonStyle {
         case "vumeter":
             Circle()
                 .fill(Color(red: 0.14, green: 0.11, blue: 0.07))
+        case "neovim":
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color(red: 0.157, green: 0.157, blue: 0.157))
         default:
             RoundedRectangle(cornerRadius: 12)
                 .fill(ShuttlXColor.watchButtonBackground)
@@ -1115,6 +1120,9 @@ struct ThemedControlButtonStyle: ButtonStyle {
         case "vumeter":
             Circle()
                 .stroke(Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.4), lineWidth: 1.5)
+        case "neovim":
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(Color(red: 0.235, green: 0.220, blue: 0.212), lineWidth: 1)
         default:
             RoundedRectangle(cornerRadius: 12)
                 .stroke(Color.white.opacity(0.08), lineWidth: 0.5)

@@ -566,17 +566,32 @@ extension SharedDataManager {
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any]) {
         Task { @MainActor in
-            if let action = userInfo["action"] as? String,
-               action == "saveSession",
-               let sessionDataString = userInfo["sessionData"] as? String,
-               let sessionData = Data(base64Encoded: sessionDataString) {
-                do {
-                    let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
-                    self.handleReceivedSession(trainingSession)
-                    self.log("Session received from watch via userInfo")
-                } catch {
-                    self.log("Failed to decode session: \(error.localizedDescription)")
-                    self.consecutiveFailures += 1
+            if let action = userInfo["action"] as? String {
+                switch action {
+                case "saveSession":
+                    if let sessionDataString = userInfo["sessionData"] as? String,
+                       let sessionData = Data(base64Encoded: sessionDataString) {
+                        do {
+                            let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
+                            self.handleReceivedSession(trainingSession)
+                            self.log("Session received from watch via userInfo")
+                        } catch {
+                            self.log("Failed to decode session: \(error.localizedDescription)")
+                            self.consecutiveFailures += 1
+                        }
+                    }
+                case "workoutStarted":
+                    if let activityType = userInfo["activityType"] as? String {
+                        self.isWorkoutActiveOnWatch = true
+                        self.liveCurrentActivity = activityType
+                        LiveActivityManager.shared.startActivity(activityType: activityType)
+                        self.log("Workout started on Watch (via transferUserInfo) — Live Activity started")
+                    }
+                case "workoutStopped":
+                    self.clearLiveWorkoutState()
+                    self.log("Workout stopped on Watch (via transferUserInfo)")
+                default:
+                    break
                 }
             }
             self.updateConnectivityHealth()

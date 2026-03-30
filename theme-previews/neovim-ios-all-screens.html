@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neovim Theme - All iOS Screens</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#111; font-family:'JetBrains Mono',monospace; color:#EBDBB2; padding:30px; }
+  h1 { font-family:-apple-system,sans-serif; color:#888; font-size:18px; text-align:center; margin-bottom:30px; }
+  .screens { display:flex; flex-wrap:wrap; gap:40px; justify-content:center; }
+  .screen-wrap { text-align:center; }
+  .screen-label { color:#888; font-size:12px; font-family:-apple-system,sans-serif; margin-bottom:8px; }
+
+  /* iPhone */
+  .iphone { width:375px; height:812px; background:#1D2021; border-radius:40px; border:3px solid #333; overflow:hidden; position:relative; }
+  .ip::before { content:''; position:absolute; left:0; top:0; width:22px; bottom:0; background:rgba(60,56,54,0.12); pointer-events:none; z-index:5; }
+  .ip-c { padding:54px 14px 30px; height:100%; overflow-y:auto; }
+  .ip-c::-webkit-scrollbar { display:none; }
+
+  /* Gruvbox colors */
+  .bg0h { background:#1D2021; } .bg0 { background:#282828; } .bg1 { background:#3C3836; } .bg2 { background:#504945; }
+  .fg { color:#EBDBB2; } .gray { color:#928374; } .red { color:#FB4934; } .green { color:#B8BB26; }
+  .yellow { color:#FABD2F; } .blue { color:#83A598; } .purple { color:#D3869B; } .aqua { color:#8EC07C; }
+  .orange { color:#FE8019; } .bg3 { color:#665C54; } .fg4 { color:#A89984; }
+
+  /* Card */
+  .card { border:1px solid #3C3836; border-radius:4px; margin-bottom:10px; background:#282828; overflow:hidden; position:relative; }
+  .card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; }
+  .ag::before { background:#B8BB26; } .ar::before { background:#FB4934; } .ab::before { background:#83A598; }
+  .ay::before { background:#FABD2F; } .ao::before { background:#FE8019; } .ap::before { background:#D3869B; }
+  .aa::before { background:#8EC07C; }
+  .cb { padding:10px 10px 8px 14px; }
+
+  /* Status line */
+  .sl { height:18px; display:flex; align-items:center; font-size:8px; border-top:1px solid #3C3836; }
+  .sl-m { padding:0 6px; height:100%; display:flex; align-items:center; font-weight:700; }
+  .sl-m.gn { background:#B8BB26; color:#282828; } .sl-m.rd { background:#FB4934; color:#282828; }
+  .sl-m.bl { background:#83A598; color:#282828; } .sl-m.yl { background:#FABD2F; color:#282828; }
+  .sl-m.pp { background:#D3869B; color:#282828; } .sl-m.og { background:#FE8019; color:#282828; }
+  .sl-m.aq { background:#8EC07C; color:#282828; }
+  .sl-f { padding:0 6px; flex:1; color:#A89984; background:#3C3836; height:100%; display:flex; align-items:center; }
+  .sl-p { padding:0 6px; color:#EBDBB2; background:#504945; height:100%; display:flex; align-items:center; }
+
+  /* Line numbers */
+  .ln { color:#504945; font-size:8px; width:16px; text-align:right; margin-right:6px; display:inline-block; }
+
+  /* Metric row */
+  .mr { display:flex; align-items:baseline; padding:3px 0; font-size:10px; }
+  .mr .k { color:#928374; width:70px; }
+  .mr .s { color:#504945; margin:0 4px; }
+  .mr .v { font-weight:700; }
+  .cl { background:rgba(60,56,54,0.5); margin:0 -10px 0 -14px; padding:3px 10px 3px 14px; }
+
+  /* Grid */
+  .g2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .g3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; }
+  .g4 { display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; }
+
+  /* Metrics */
+  .mv { font-size:22px; font-weight:700; }
+  .ml { font-size:8px; color:#928374; margin-top:1px; }
+  .mvm { font-size:16px; font-weight:700; }
+
+  /* Mode tag */
+  .mode { display:inline-block; padding:1px 6px; border-radius:2px; font-size:9px; font-weight:700; }
+  .mode-n { background:#83A598; color:#282828; }
+  .mode-i { background:#B8BB26; color:#282828; }
+  .mode-v { background:#FE8019; color:#282828; }
+
+  /* Nav */
+  .nav { display:flex; justify-content:space-around; font-size:8px; padding:6px 0; border-top:1px solid #3C3836; margin-top:8px; }
+  .nav span { padding:3px 5px; border-radius:2px; color:#928374; }
+  .nav .act { background:#3C3836; color:#B8BB26; }
+
+  /* Section */
+  .sec { font-size:9px; color:#665C54; margin:10px 0 6px; }
+  .sec::before { content:'-- '; color:#504945; }
+  .sec::after { content:' --'; color:#504945; }
+
+  /* Title */
+  .ttl { font-size:13px; font-weight:700; }
+
+  /* Progress bar */
+  .pbar { height:6px; background:#3C3836; border-radius:2px; overflow:hidden; margin:4px 0; }
+  .pfill { height:100%; border-radius:2px; }
+
+  /* Badge */
+  .badge { display:inline-block; font-size:8px; padding:1px 6px; border-radius:8px; border:1px solid; }
+
+  /* Map placeholder */
+  .map { background:#1D2021; border:1px solid #3C3836; border-radius:4px; height:160px; position:relative; overflow:hidden; margin:6px 0; }
+  .map-grid { position:absolute; inset:0; background:
+    repeating-linear-gradient(rgba(60,56,54,0.3), rgba(60,56,54,0.3) 1px, transparent 1px, transparent 40px),
+    repeating-linear-gradient(90deg, rgba(60,56,54,0.3), rgba(60,56,54,0.3) 1px, transparent 1px, transparent 40px);
+  }
+  .map-route { position:absolute; top:20%; left:15%; }
+  .map-label { position:absolute; bottom:6px; right:6px; font-size:7px; color:#928374; background:#282828; padding:2px 6px; border-radius:2px; }
+  .map-start { position:absolute; width:8px; height:8px; border-radius:50%; background:#B8BB26; border:1px solid #282828; }
+  .map-end { position:absolute; width:8px; height:8px; background:#FB4934; clip-path:polygon(50% 0%,100% 100%,0% 100%); }
+
+  /* Chart placeholder */
+  .chart { height:80px; border:1px solid #3C3836; border-radius:4px; background:#282828; position:relative; overflow:hidden; margin:4px 0; }
+  .chart-bars { display:flex; align-items:flex-end; gap:4px; height:60px; padding:0 8px; margin-top:10px; }
+  .chart-bar { flex:1; border-radius:2px 2px 0 0; }
+  .chart-labels { display:flex; justify-content:space-around; font-size:7px; color:#504945; padding:2px 8px 0; }
+  .chart-line { position:absolute; bottom:20px; left:8px; right:8px; height:1px; border-bottom:1px dashed #3C3836; }
+
+  /* Segment bar */
+  .segbar { display:flex; height:8px; border-radius:2px; overflow:hidden; gap:1px; margin:6px 0; }
+
+  /* Elevation */
+  .elev { height:50px; position:relative; margin:4px 0; }
+  .elev-area { position:absolute; bottom:0; left:0; right:0; }
+
+  /* Row highlight on hover */
+  .row-h:hover { background:rgba(60,56,54,0.4); }
+
+  /* Week dots */
+  .week-dot { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:8px; }
+  .wd-done { background:rgba(184,187,38,0.2); border:1px solid rgba(184,187,38,0.4); color:#B8BB26; }
+  .wd-empty { background:transparent; border:1px solid #3C3836; color:#504945; }
+  .wd-today { background:rgba(131,165,152,0.2); border:1px solid rgba(131,165,152,0.5); color:#83A598; }
+
+  /* HR Zone bars */
+  .zbar { display:flex; align-items:center; gap:6px; margin:3px 0; font-size:9px; }
+  .zbar-fill { height:10px; border-radius:2px; }
+  .zbar-label { width:30px; text-align:right; }
+  .zbar-val { width:28px; text-align:right; font-weight:600; }
+  .zbar-track { flex:1; height:10px; background:#3C3836; border-radius:2px; overflow:hidden; }
+
+  /* Settings row */
+  .srow { display:flex; align-items:center; padding:8px 10px; border-bottom:1px solid #3C3836; font-size:10px; }
+  .srow:last-child { border-bottom:none; }
+  .srow-icon { width:24px; color:#83A598; margin-right:8px; }
+  .srow-text { flex:1; }
+  .srow-val { color:#928374; font-size:9px; }
+
+  /* Template card */
+  .tpl { display:flex; align-items:center; gap:8px; padding:8px 10px; border-bottom:1px solid #3C3836; }
+  .tpl:last-child { border-bottom:none; }
+  .tpl-icon { font-size:16px; }
+  .tpl-info { flex:1; }
+  .tpl-name { font-size:11px; font-weight:600; }
+  .tpl-sub { font-size:8px; color:#928374; }
+  .tpl-pills { display:flex; gap:3px; margin-top:3px; }
+  .pill { font-size:7px; padding:1px 4px; border-radius:2px; border:1px solid; }
+</style>
+</head>
+<body>
+<h1>Neovim (Gruvbox Dark) Theme — All iOS Screens</h1>
+<div class="screens">
+
+<!-- ===== SCREEN 1: DASHBOARD ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">1. Dashboard (Training Tab)</div>
+  <div class="iphone ip">
+    <div class="ip-c">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="ttl">Good morning</div>
+        <span class="mode mode-n">NORMAL</span>
+      </div>
+
+      <!-- Live workout card -->
+      <div class="card ag">
+        <div class="cb">
+          <div style="display:flex; align-items:center; gap:6px; margin-bottom:6px;">
+            <span style="width:6px; height:6px; border-radius:50%; background:#B8BB26; display:inline-block; animation:pulse 1.5s infinite;"></span>
+            <span class="green" style="font-size:10px; font-weight:700;">LIVE WORKOUT</span>
+            <span class="gray" style="font-size:9px; margin-left:auto;">Running</span>
+          </div>
+          <div class="mv blue" style="text-align:center; font-size:32px;">28:43</div>
+          <div class="g4" style="margin-top:8px;">
+            <div style="text-align:center;"><div class="mvm red">142</div><div class="ml">bpm</div></div>
+            <div style="text-align:center;"><div class="mvm aqua">3.2</div><div class="ml">km</div></div>
+            <div style="text-align:center;"><div class="mvm orange">245</div><div class="ml">cal</div></div>
+            <div style="text-align:center;"><div class="mvm purple">5:30</div><div class="ml">/km</div></div>
+          </div>
+          <!-- Mini map with dark map bg -->
+          <div style="height:80px; margin-top:8px; position:relative; overflow:hidden; border-radius:4px; border:1px solid #3C3836;">
+            <svg width="100%" height="100%" viewBox="0 0 340 80" style="position:absolute;top:0;left:0;">
+              <rect width="340" height="80" fill="#1D2021"/>
+              <!-- Street grid -->
+              <rect x="0" y="0" width="75" height="35" fill="#242424" rx="1"/>
+              <rect x="80" y="0" width="60" height="35" fill="#232323" rx="1"/>
+              <rect x="145" y="0" width="80" height="35" fill="#242424" rx="1"/>
+              <rect x="230" y="0" width="110" height="35" fill="#232323" rx="1"/>
+              <rect x="0" y="40" width="50" height="40" fill="#232323" rx="1"/>
+              <rect x="55" y="40" width="85" height="40" fill="#242424" rx="1"/>
+              <rect x="145" y="40" width="70" height="40" fill="#1e2b1e" rx="1"/>
+              <rect x="220" y="40" width="120" height="40" fill="#242424" rx="1"/>
+              <line x1="75" y1="0" x2="75" y2="80" stroke="#2a2a2a" stroke-width="4"/>
+              <line x1="140" y1="0" x2="140" y2="80" stroke="#2a2a2a" stroke-width="4"/>
+              <line x1="220" y1="0" x2="220" y2="80" stroke="#2a2a2a" stroke-width="4"/>
+              <line x1="0" y1="36" x2="340" y2="36" stroke="#2a2a2a" stroke-width="4"/>
+              <!-- Route -->
+              <polyline points="30,65 55,55 80,48 115,38 140,32 170,40 200,30 230,25 260,30 290,20 310,22" fill="none" stroke="#B8BB26" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <polyline points="30,65 55,55 80,48 115,38 140,32 170,40 200,30 230,25 260,30 290,20 310,22" fill="none" stroke="#B8BB26" stroke-width="7" stroke-linecap="round" opacity="0.08"/>
+              <circle cx="30" cy="65" r="3.5" fill="#B8BB26" stroke="#1D2021" stroke-width="1.5"/>
+              <!-- Current position (pulsing) -->
+              <circle cx="310" cy="22" r="5" fill="#83A598" opacity="0.2"><animate attributeName="r" values="5;8;5" dur="2s" repeatCount="indefinite"/></circle>
+              <circle cx="310" cy="22" r="3.5" fill="#83A598" stroke="#1D2021" stroke-width="1.5"/>
+            </svg>
+          </div>
+        </div>
+        <div class="sl"><span class="sl-m gn">RUN</span><span class="sl-f">live_session.json</span><span class="sl-p">1:1</span></div>
+      </div>
+
+      <!-- Last workout -->
+      <div class="card ab">
+        <div class="cb">
+          <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+            <span class="blue" style="font-size:10px; font-weight:700;">Last Workout</span>
+            <span class="gray" style="font-size:9px;">Yesterday</span>
+          </div>
+          <div style="display:flex; gap:6px; margin-bottom:6px;">
+            <span class="badge" style="border-color:rgba(184,187,38,0.4); color:#B8BB26;">Running 18:20</span>
+            <span class="badge" style="border-color:rgba(254,128,25,0.4); color:#FE8019;">Walking 5:10</span>
+          </div>
+          <div class="g3">
+            <div><div class="mvm aqua">2.4</div><div class="ml">km</div></div>
+            <div><div class="mvm red">138</div><div class="ml">avg hr</div></div>
+            <div><div class="mvm orange">198</div><div class="ml">cal</div></div>
+          </div>
+        </div>
+        <div class="sl"><span class="sl-m bl">HIST</span><span class="sl-f">session_027.json</span><span class="sl-p">3:1</span></div>
+      </div>
+
+      <!-- Week summary -->
+      <div class="card ay">
+        <div class="cb">
+          <span class="yellow" style="font-size:10px; font-weight:700;">This Week</span>
+          <div style="display:flex; justify-content:space-between; margin:8px 0;">
+            <div class="week-dot wd-done">M</div>
+            <div class="week-dot wd-empty">T</div>
+            <div class="week-dot wd-done">W</div>
+            <div class="week-dot wd-done">T</div>
+            <div class="week-dot wd-empty">F</div>
+            <div class="week-dot wd-today">S</div>
+            <div class="week-dot wd-empty">S</div>
+          </div>
+          <div class="g2">
+            <div><div class="mvm green">3/5</div><div class="ml">sessions</div></div>
+            <div><div class="mvm blue">1h 42m</div><div class="ml">total time</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Streak -->
+      <div class="card ao">
+        <div class="cb" style="display:flex; align-items:center; gap:8px;">
+          <span style="font-size:18px;">&#x1F525;</span>
+          <div><div class="mvm orange">5 day streak</div><div class="ml">Keep it up!</div></div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <span class="act">:train</span><span>:plans</span><span>:hist</span><span>:stats</span><span>:set</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 2: SESSION DETAIL + MAP ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">2. Session Detail (with Map & Segments)</div>
+  <div class="iphone ip">
+    <div class="ip-c">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+        <span class="gray" style="font-size:9px;">&#x2190; Back</span>
+        <span class="mode mode-v">VISUAL</span>
+      </div>
+
+      <!-- Duration header -->
+      <div class="card ag">
+        <div class="cb" style="text-align:center;">
+          <div class="green" style="font-size:10px; font-weight:700;">Free Run</div>
+          <div class="mv blue" style="font-size:36px; margin:4px 0;">45:12</div>
+          <div class="gray" style="font-size:9px;">Mar 29, 2026 &middot; 08:30 AM</div>
+          <div style="display:flex; justify-content:center; gap:6px; margin-top:6px;">
+            <span class="badge" style="border-color:rgba(184,187,38,0.4); color:#B8BB26;">Running 32:10</span>
+            <span class="badge" style="border-color:rgba(254,128,25,0.4); color:#FE8019;">Walking 13:02</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity segments -->
+      <div class="card ab">
+        <div class="cb">
+          <div class="blue" style="font-size:9px; font-weight:700; margin-bottom:4px;">Activity Segments</div>
+          <div class="segbar">
+            <div style="flex:3; background:#B8BB26;"></div>
+            <div style="flex:1; background:#FE8019;"></div>
+            <div style="flex:2; background:#B8BB26;"></div>
+            <div style="flex:1; background:#FE8019;"></div>
+            <div style="flex:4; background:#B8BB26;"></div>
+            <div style="flex:1; background:#FE8019;"></div>
+          </div>
+          <div class="mr"><span class="ln">1</span><span class="k">running</span><span class="s">=</span><span class="v green">32:10</span></div>
+          <div class="mr"><span class="ln">2</span><span class="k">walking</span><span class="s">=</span><span class="v orange">13:02</span></div>
+        </div>
+        <div class="sl"><span class="sl-m bl">SEG</span><span class="sl-f">6 segments</span><span class="sl-p">2:1</span></div>
+      </div>
+
+      <!-- Route map — real dark map background -->
+      <div class="card aa">
+        <div class="cb" style="padding:0 0 0 3px;">
+          <div class="aqua" style="font-size:9px; font-weight:700; padding:6px 8px 4px;">Route</div>
+          <div style="height:200px; position:relative; overflow:hidden; border-radius:0 0 3px 0;">
+            <!-- Dark map background with streets, parks, water -->
+            <svg width="100%" height="100%" viewBox="0 0 347 200" style="position:absolute;top:0;left:0;">
+              <defs>
+                <linearGradient id="water" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#1a2a2a"/><stop offset="100%" stop-color="#1e2d2d"/></linearGradient>
+              </defs>
+              <!-- Base -->
+              <rect width="347" height="200" fill="#1D2021"/>
+              <!-- City blocks -->
+              <rect x="0" y="0" width="80" height="55" fill="#242424" rx="1"/>
+              <rect x="85" y="0" width="60" height="55" fill="#232323" rx="1"/>
+              <rect x="150" y="0" width="90" height="55" fill="#242424" rx="1"/>
+              <rect x="245" y="0" width="102" height="55" fill="#232323" rx="1"/>
+              <rect x="0" y="60" width="55" height="45" fill="#232323" rx="1"/>
+              <rect x="60" y="60" width="85" height="45" fill="#242424" rx="1"/>
+              <rect x="150" y="60" width="70" height="45" fill="#232323" rx="1"/>
+              <rect x="225" y="60" width="122" height="45" fill="#242424" rx="1"/>
+              <rect x="0" y="110" width="70" height="90" fill="#242424" rx="1"/>
+              <rect x="75" y="110" width="65" height="40" fill="#232323" rx="1"/>
+              <rect x="75" y="155" width="65" height="45" fill="#242424" rx="1"/>
+              <rect x="145" y="110" width="80" height="90" fill="#232323" rx="1"/>
+              <rect x="230" y="110" width="55" height="50" fill="#242424" rx="1"/>
+              <rect x="290" y="110" width="57" height="90" fill="#232323" rx="1"/>
+              <rect x="230" y="165" width="55" height="35" fill="#232323" rx="1"/>
+              <!-- Park area -->
+              <rect x="150" y="60" width="70" height="45" fill="#1e2b1e" rx="2"/>
+              <circle cx="165" cy="75" r="4" fill="#253025" opacity="0.6"/>
+              <circle cx="180" cy="82" r="5" fill="#243024" opacity="0.5"/>
+              <circle cx="200" cy="70" r="3" fill="#253025" opacity="0.6"/>
+              <!-- Water body -->
+              <path d="M245,120 Q260,110 285,115 Q310,120 320,130 L347,125 L347,165 L230,165 Q235,140 245,120Z" fill="url(#water)" opacity="0.7"/>
+              <!-- Street lines (subtle) -->
+              <line x1="80" y1="0" x2="80" y2="200" stroke="#2a2a2a" stroke-width="5"/>
+              <line x1="145" y1="0" x2="145" y2="200" stroke="#2a2a2a" stroke-width="5"/>
+              <line x1="225" y1="0" x2="225" y2="200" stroke="#2a2a2a" stroke-width="5"/>
+              <line x1="290" y1="60" x2="290" y2="200" stroke="#2a2a2a" stroke-width="4"/>
+              <line x1="0" y1="55" x2="347" y2="55" stroke="#2a2a2a" stroke-width="5"/>
+              <line x1="0" y1="105" x2="347" y2="105" stroke="#2a2a2a" stroke-width="5"/>
+              <line x1="0" y1="155" x2="347" y2="155" stroke="#2a2a2a" stroke-width="4"/>
+              <line x1="70" y1="110" x2="70" y2="200" stroke="#2a2a2a" stroke-width="4"/>
+              <!-- Minor streets -->
+              <line x1="40" y1="55" x2="40" y2="105" stroke="#272727" stroke-width="2"/>
+              <line x1="110" y1="0" x2="110" y2="55" stroke="#272727" stroke-width="2"/>
+              <line x1="185" y1="110" x2="185" y2="200" stroke="#272727" stroke-width="2"/>
+              <line x1="260" y1="0" x2="260" y2="110" stroke="#272727" stroke-width="2"/>
+              <line x1="80" y1="30" x2="225" y2="30" stroke="#272727" stroke-width="2"/>
+              <line x1="0" y1="80" x2="145" y2="80" stroke="#272727" stroke-width="2"/>
+              <line x1="0" y1="135" x2="145" y2="135" stroke="#272727" stroke-width="2"/>
+              <!-- Street labels (very subtle) -->
+              <text x="84" y="10" fill="#3C3836" font-size="4" font-family="JetBrains Mono">Park Ave</text>
+              <text x="4" y="52" fill="#3C3836" font-size="4" font-family="JetBrains Mono">Main St</text>
+              <text x="150" y="102" fill="#3C3836" font-size="4" font-family="JetBrains Mono">River Rd</text>
+              <!-- Park label -->
+              <text x="158" y="92" fill="#2d3d2d" font-size="5" font-family="JetBrains Mono" font-style="italic">Central Park</text>
+
+              <!-- === ROUTE POLYLINE === -->
+              <!-- Running segments (green) -->
+              <polyline points="30,170 40,155 50,135 65,105 82,80 95,60 115,42 135,30 155,38"
+                fill="none" stroke="#B8BB26" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+              <!-- Walking segment 1 (orange) -->
+              <polyline points="155,38 170,55 185,72"
+                fill="none" stroke="#FE8019" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+              <!-- Running (green) -->
+              <polyline points="185,72 200,60 215,50 235,42 255,50 270,60 280,80 275,100"
+                fill="none" stroke="#B8BB26" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+              <!-- Walking segment 2 (orange) -->
+              <polyline points="275,100 260,115 245,125"
+                fill="none" stroke="#FE8019" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+              <!-- Running finish (green) -->
+              <polyline points="245,125 225,135 200,140 175,145 150,155 120,165 90,170 60,172"
+                fill="none" stroke="#B8BB26" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.9"/>
+
+              <!-- Route glow (subtle) -->
+              <polyline points="30,170 40,155 50,135 65,105 82,80 95,60 115,42 135,30 155,38"
+                fill="none" stroke="#B8BB26" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.08"/>
+              <polyline points="185,72 200,60 215,50 235,42 255,50 270,60 280,80 275,100"
+                fill="none" stroke="#B8BB26" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.08"/>
+              <polyline points="245,125 225,135 200,140 175,145 150,155 120,165 90,170 60,172"
+                fill="none" stroke="#B8BB26" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" opacity="0.08"/>
+
+              <!-- Start marker -->
+              <circle cx="30" cy="170" r="6" fill="#B8BB26" stroke="#1D2021" stroke-width="2"/>
+              <circle cx="30" cy="170" r="2.5" fill="#1D2021"/>
+              <!-- End marker -->
+              <circle cx="60" cy="172" r="6" fill="#FB4934" stroke="#1D2021" stroke-width="2"/>
+              <rect x="57" y="164" width="2" height="8" fill="#FB4934" rx="0.5"/>
+              <polygon points="59,164 67,168 59,172" fill="#FB4934" opacity="0.8"/>
+
+              <!-- KM pace labels -->
+              <circle cx="95" cy="60" r="3.5" fill="#1D2021" stroke="#83A598" stroke-width="1"/>
+              <rect x="101" y="54" width="36" height="12" rx="2" fill="#1D2021" opacity="0.85"/>
+              <text x="104" y="63" fill="#83A598" font-size="7" font-family="JetBrains Mono" font-weight="600">1k 5:18</text>
+
+              <circle cx="235" cy="42" r="3.5" fill="#1D2021" stroke="#83A598" stroke-width="1"/>
+              <rect x="205" y="28" width="36" height="12" rx="2" fill="#1D2021" opacity="0.85"/>
+              <text x="208" y="37" fill="#83A598" font-size="7" font-family="JetBrains Mono" font-weight="600">2k 5:42</text>
+
+              <circle cx="175" cy="145" r="3.5" fill="#1D2021" stroke="#83A598" stroke-width="1"/>
+              <rect x="181" y="139" width="36" height="12" rx="2" fill="#1D2021" opacity="0.85"/>
+              <text x="184" y="148" fill="#83A598" font-size="7" font-family="JetBrains Mono" font-weight="600">3k 5:25</text>
+            </svg>
+          </div>
+        </div>
+        <div class="sl"><span class="sl-m aq">MAP</span><span class="sl-f">route_028.gpx</span><span class="sl-p">3.2km</span></div>
+      </div>
+
+      <!-- Elevation profile -->
+      <div class="card ap">
+        <div class="cb">
+          <div class="purple" style="font-size:9px; font-weight:700; margin-bottom:4px;">Elevation</div>
+          <div class="chart" style="height:60px;">
+            <svg width="100%" height="100%" viewBox="0 0 340 60" style="position:absolute;top:0;left:0;">
+              <defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D3869B" stop-opacity="0.3"/><stop offset="100%" stop-color="#D3869B" stop-opacity="0.05"/></linearGradient></defs>
+              <path d="M0,50 L30,42 60,38 90,30 120,25 150,32 180,20 210,18 240,22 270,15 300,20 330,28 340,35 340,60 0,60Z" fill="url(#eg)"/>
+              <polyline points="0,50 30,42 60,38 90,30 120,25 150,32 180,20 210,18 240,22 270,15 300,20 330,28 340,35" fill="none" stroke="#D3869B" stroke-width="1.5"/>
+            </svg>
+          </div>
+          <div class="g4" style="margin-top:4px;">
+            <div style="text-align:center;"><div style="font-size:11px; font-weight:700;" class="green">+42m</div><div class="ml">ascent</div></div>
+            <div style="text-align:center;"><div style="font-size:11px; font-weight:700;" class="red">-38m</div><div class="ml">descent</div></div>
+            <div style="text-align:center;"><div style="font-size:11px; font-weight:700;" class="purple">85m</div><div class="ml">max</div></div>
+            <div style="text-align:center;"><div style="font-size:11px; font-weight:700;" class="blue">62m</div><div class="ml">avg</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="card ar">
+        <div class="cb">
+          <div class="red" style="font-size:9px; font-weight:700; margin-bottom:4px;">Metrics</div>
+          <div class="mr"><span class="ln">1</span><span class="k">distance</span><span class="s">=</span><span class="v aqua">3.21 km</span></div>
+          <div class="mr"><span class="ln">2</span><span class="k">avg_hr</span><span class="s">=</span><span class="v red">142 bpm</span></div>
+          <div class="mr"><span class="ln">3</span><span class="k">max_hr</span><span class="s">=</span><span class="v red">176 bpm</span></div>
+          <div class="mr cl"><span class="ln">4</span><span class="k">calories</span><span class="s">=</span><span class="v orange">245 kcal</span></div>
+          <div class="mr"><span class="ln">5</span><span class="k">steps</span><span class="s">=</span><span class="v yellow">3841</span></div>
+          <div class="mr"><span class="ln">6</span><span class="k">avg_pace</span><span class="s">=</span><span class="v purple">5:30/km</span></div>
+        </div>
+        <div class="sl"><span class="sl-m rd">DATA</span><span class="sl-f">metrics.json</span><span class="sl-p">6:1</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 3: ANALYTICS ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">3. Analytics</div>
+  <div class="iphone ip">
+    <div class="ip-c">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="ttl">Analytics</div>
+        <span class="mode mode-n">NORMAL</span>
+      </div>
+
+      <!-- Recovery -->
+      <div class="card ag">
+        <div class="cb" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="green" style="font-size:9px; font-weight:700;">Recovery</div><div class="mv green" style="font-size:24px;">Fresh</div></div>
+          <div style="text-align:right;"><div class="ml">Form Score</div><div class="mvm green">+3</div></div>
+        </div>
+      </div>
+
+      <!-- Fitness overview -->
+      <div class="g3">
+        <div class="card ab"><div class="cb" style="text-align:center;"><div class="mvm blue">52</div><div class="ml">Fitness</div><div class="green" style="font-size:8px;">&#x25B2; 2</div></div></div>
+        <div class="card ar"><div class="cb" style="text-align:center;"><div class="mvm red">49</div><div class="ml">Fatigue</div><div class="red" style="font-size:8px;">&#x25B2; 5</div></div></div>
+        <div class="card ag"><div class="cb" style="text-align:center;"><div class="mvm green">+3</div><div class="ml">Form</div><div class="aqua" style="font-size:8px;">&#x25B2; 1</div></div></div>
+      </div>
+
+      <!-- Training load chart -->
+      <div class="card ap">
+        <div class="cb">
+          <div class="purple" style="font-size:9px; font-weight:700; margin-bottom:4px;">Training Load (6 wk)</div>
+          <div class="chart" style="height:70px;">
+            <svg width="100%" height="100%" viewBox="0 0 340 70" style="position:absolute;top:0;left:0;">
+              <line x1="0" y1="35" x2="340" y2="35" stroke="#3C3836" stroke-width="1" stroke-dasharray="4,4"/>
+              <defs><linearGradient id="tl" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#D3869B" stop-opacity="0.3"/><stop offset="100%" stop-color="#D3869B" stop-opacity="0.02"/></linearGradient></defs>
+              <path d="M20,55 L75,45 130,40 185,30 240,25 295,20 320,22 320,65 20,65Z" fill="url(#tl)"/>
+              <polyline points="20,55 75,45 130,40 185,30 240,25 295,20 320,22" fill="none" stroke="#D3869B" stroke-width="2"/>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- Weekly volume -->
+      <div class="card ay">
+        <div class="cb">
+          <div class="yellow" style="font-size:9px; font-weight:700; margin-bottom:4px;">Weekly Volume</div>
+          <div class="chart-bars">
+            <div class="chart-bar" style="height:30%; background:#FABD2F;"></div>
+            <div class="chart-bar" style="height:50%; background:#FABD2F;"></div>
+            <div class="chart-bar" style="height:45%; background:#FABD2F;"></div>
+            <div class="chart-bar" style="height:70%; background:#FABD2F;"></div>
+            <div class="chart-bar" style="height:85%; background:#FABD2F;"></div>
+            <div class="chart-bar" style="height:60%; background:#B8BB26;"></div>
+          </div>
+          <div class="chart-labels"><span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span class="green">W6</span></div>
+        </div>
+      </div>
+
+      <!-- VO2max -->
+      <div class="card ab">
+        <div class="cb" style="display:flex; justify-content:space-between; align-items:center;">
+          <div><div class="blue" style="font-size:9px; font-weight:700;">Est. VO2max</div><div class="mv blue" style="font-size:28px;">48.2</div></div>
+          <div style="text-align:right;"><span class="green" style="font-size:12px;">&#x25B2;</span><div class="ml">Good</div></div>
+        </div>
+      </div>
+
+      <!-- PRs -->
+      <div class="sec">Personal Records</div>
+      <div class="g2">
+        <div class="card ag"><div class="cb"><div class="mr"><span class="ln">1</span><span class="k">fast_km</span><span class="s">=</span><span class="v green">4:42</span></div><div class="ml" style="margin-left:22px;">Mar 15</div></div></div>
+        <div class="card ao"><div class="cb"><div class="mr"><span class="ln">1</span><span class="k">longest</span><span class="s">=</span><span class="v orange">1h32</span></div><div class="ml" style="margin-left:22px;">Mar 20</div></div></div>
+        <div class="card ab"><div class="cb"><div class="mr"><span class="ln">1</span><span class="k">best_5k</span><span class="s">=</span><span class="v blue">24:15</span></div><div class="ml" style="margin-left:22px;">Mar 22</div></div></div>
+        <div class="card ar"><div class="cb"><div class="mr"><span class="ln">1</span><span class="k">max_hr</span><span class="s">=</span><span class="v red">186</span></div><div class="ml" style="margin-left:22px;">Mar 18</div></div></div>
+      </div>
+
+      <!-- Pace zones -->
+      <div class="card ap">
+        <div class="cb">
+          <div class="purple" style="font-size:9px; font-weight:700; margin-bottom:6px;">Pace Zones</div>
+          <div class="zbar"><span class="zbar-label red">Hard</span><div class="zbar-track"><div class="zbar-fill" style="width:12%; background:#FB4934;"></div></div><span class="zbar-val red">12%</span></div>
+          <div class="zbar"><span class="zbar-label orange">Thresh</span><div class="zbar-track"><div class="zbar-fill" style="width:22%; background:#FE8019;"></div></div><span class="zbar-val orange">22%</span></div>
+          <div class="zbar"><span class="zbar-label yellow">Tempo</span><div class="zbar-track"><div class="zbar-fill" style="width:35%; background:#FABD2F;"></div></div><span class="zbar-val yellow">35%</span></div>
+          <div class="zbar"><span class="zbar-label aqua">Mod</span><div class="zbar-track"><div class="zbar-fill" style="width:20%; background:#8EC07C;"></div></div><span class="zbar-val aqua">20%</span></div>
+          <div class="zbar"><span class="zbar-label blue">Easy</span><div class="zbar-track"><div class="zbar-fill" style="width:11%; background:#83A598;"></div></div><span class="zbar-val blue">11%</span></div>
+        </div>
+        <div class="sl"><span class="sl-m pp">PACE</span><span class="sl-f">zones.json</span><span class="sl-p">5:1</span></div>
+      </div>
+
+      <div class="nav">
+        <span>:train</span><span>:plans</span><span>:hist</span><span class="act">:stats</span><span>:set</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 4: HISTORY ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">4. Training History</div>
+  <div class="iphone ip">
+    <div class="ip-c">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+        <div class="ttl">History</div>
+        <span class="mode mode-n">NORMAL</span>
+      </div>
+
+      <!-- View mode picker -->
+      <div style="display:flex; gap:4px; margin-bottom:10px; justify-content:center;">
+        <span style="padding:3px 10px; border-radius:3px; font-size:9px; background:#3C3836; color:#B8BB26;">Day</span>
+        <span style="padding:3px 10px; border-radius:3px; font-size:9px; color:#928374;">Week</span>
+        <span style="padding:3px 10px; border-radius:3px; font-size:9px; color:#928374;">Month</span>
+      </div>
+
+      <!-- Period nav -->
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:10px;">
+        <span class="gray">&#x25C0;</span>
+        <span class="fg4">Saturday, Mar 29</span>
+        <span class="gray">&#x25B6;</span>
+      </div>
+
+      <!-- Week strip -->
+      <div style="display:flex; justify-content:space-between; margin-bottom:12px;">
+        <div class="week-dot wd-done">M</div>
+        <div class="week-dot wd-empty">T</div>
+        <div class="week-dot wd-done">W</div>
+        <div class="week-dot wd-done">T</div>
+        <div class="week-dot wd-empty">F</div>
+        <div class="week-dot wd-today">S</div>
+        <div class="week-dot wd-empty">S</div>
+      </div>
+
+      <!-- Session rows -->
+      <div class="card ag">
+        <div class="cb">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span class="green" style="font-size:10px; font-weight:700;">Free Run</span>
+            <span class="gray" style="font-size:9px;">08:30 AM</span>
+          </div>
+          <div style="display:flex; gap:4px; margin-bottom:4px;">
+            <span class="badge" style="border-color:rgba(184,187,38,0.3); color:#B8BB26; font-size:7px;">Run 32:10</span>
+            <span class="badge" style="border-color:rgba(254,128,25,0.3); color:#FE8019; font-size:7px;">Walk 13:02</span>
+          </div>
+          <div class="mr"><span class="ln">1</span><span class="k">duration</span><span class="s">=</span><span class="v blue">45:12</span></div>
+          <div class="mr"><span class="ln">2</span><span class="k">distance</span><span class="s">=</span><span class="v aqua">3.21 km</span></div>
+          <div class="mr"><span class="ln">3</span><span class="k">avg_hr</span><span class="s">=</span><span class="v red">142</span></div>
+        </div>
+        <div class="sl"><span class="sl-m gn">RUN</span><span class="sl-f">session_028.json</span><span class="sl-p">3:1</span></div>
+      </div>
+
+      <div class="card ab">
+        <div class="cb">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span class="blue" style="font-size:10px; font-weight:700;">HIIT Intervals</span>
+            <span class="gray" style="font-size:9px;">06:15 AM</span>
+          </div>
+          <div class="mr"><span class="ln">1</span><span class="k">duration</span><span class="s">=</span><span class="v blue">22:00</span></div>
+          <div class="mr"><span class="ln">2</span><span class="k">avg_hr</span><span class="s">=</span><span class="v red">155</span></div>
+          <div class="mr"><span class="ln">3</span><span class="k">calories</span><span class="s">=</span><span class="v orange">312</span></div>
+        </div>
+        <div class="sl"><span class="sl-m bl">INT</span><span class="sl-f">session_027.json</span><span class="sl-p">3:1</span></div>
+      </div>
+
+      <div class="sec">Yesterday</div>
+      <div class="card aa">
+        <div class="cb">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span class="aqua" style="font-size:10px; font-weight:700;">Free Run</span>
+            <span class="gray" style="font-size:9px;">07:45 AM</span>
+          </div>
+          <div class="mr"><span class="ln">1</span><span class="k">duration</span><span class="s">=</span><span class="v blue">28:43</span></div>
+          <div class="mr"><span class="ln">2</span><span class="k">distance</span><span class="s">=</span><span class="v aqua">2.8 km</span></div>
+        </div>
+        <div class="sl"><span class="sl-m aq">RUN</span><span class="sl-f">session_026.json</span><span class="sl-p">2:1</span></div>
+      </div>
+
+      <div class="card ao">
+        <div class="cb">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span class="orange" style="font-size:10px; font-weight:700;">Tempo Run</span>
+            <span class="gray" style="font-size:9px;">Mar 27</span>
+          </div>
+          <div class="mr"><span class="ln">1</span><span class="k">duration</span><span class="s">=</span><span class="v blue">35:20</span></div>
+          <div class="mr"><span class="ln">2</span><span class="k">distance</span><span class="s">=</span><span class="v aqua">4.5 km</span></div>
+        </div>
+        <div class="sl"><span class="sl-m og">RUN</span><span class="sl-f">session_025.json</span><span class="sl-p">2:1</span></div>
+      </div>
+
+      <div class="nav">
+        <span>:train</span><span>:plans</span><span class="act">:hist</span><span>:stats</span><span>:set</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 5: SETTINGS ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">5. Settings</div>
+  <div class="iphone ip">
+    <div class="ip-c">
+      <div class="ttl" style="margin-bottom:12px;">Settings</div>
+
+      <div class="sec">Account</div>
+      <div class="card ab" style="padding:0;">
+        <div class="srow"><span class="srow-icon">&#x25CF;</span><div class="srow-text"><div style="font-size:10px;">Sergey</div><div class="ml">iCloud sync enabled</div></div><span class="green" style="font-size:10px;">&#x2601;</span></div>
+        <div class="srow"><span class="srow-icon">&#x21BB;</span><div class="srow-text" style="font-size:10px;">Sync Now</div></div>
+      </div>
+
+      <div class="sec">Apple Watch</div>
+      <div class="card ag" style="padding:0;">
+        <div class="srow"><span class="srow-icon">&#x231A;</span><div class="srow-text" style="font-size:10px;">Watch Status</div><span class="srow-val"><span style="color:#B8BB26;">&#x25CF;</span> Paired</span></div>
+        <div class="srow"><span class="srow-icon">&#x21BB;</span><div class="srow-text" style="font-size:10px;">Sync from Watch</div></div>
+      </div>
+
+      <div class="sec">Appearance</div>
+      <div class="card ap" style="padding:0;">
+        <div class="srow"><span class="srow-icon" style="color:#83A598;">&#x25CB;</span><div class="srow-text" style="font-size:10px;">Clean</div><span class="srow-val">Modern & minimal</span></div>
+        <div class="srow"><span class="srow-icon" style="color:#B48EAD;">&#x25CB;</span><div class="srow-text" style="font-size:10px;">Synthwave</div><span class="srow-val">Neon nights</span></div>
+        <div class="srow"><span class="srow-icon" style="color:#83A598;">&#x25CB;</span><div class="srow-text" style="font-size:10px;">Mixtape</div><span class="srow-val">Portable player</span></div>
+        <div class="srow"><span class="srow-icon" style="color:#B8BB26;">&#x25CB;</span><div class="srow-text" style="font-size:10px;">Arcade</div><span class="srow-val">8-bit energy</span></div>
+        <div class="srow"><span class="srow-icon" style="color:#FE8019;">&#x25CB;</span><div class="srow-text" style="font-size:10px;">Classic Radio</div><span class="srow-val">Warm analog tape</span></div>
+        <div class="srow"><span class="srow-icon" style="color:#FABD2F;">&#x25CB;</span><div class="srow-text" style="font-size:10px;">VU Meter</div><span class="srow-val">Hi-fi dashboard</span></div>
+        <div class="srow" style="background:rgba(60,56,54,0.4);"><span class="srow-icon" style="color:#B8BB26;">&#x25CF;</span><div class="srow-text" style="font-size:10px; color:#B8BB26;">Neovim</div><span class="srow-val green">&#x2713; Code editor</span></div>
+      </div>
+      <!-- Color preview -->
+      <div style="display:flex; gap:4px; justify-content:center; margin:8px 0;">
+        <div style="width:14px; height:14px; border-radius:50%; background:#B8BB26;"></div>
+        <div style="width:14px; height:14px; border-radius:50%; background:#FB4934;"></div>
+        <div style="width:14px; height:14px; border-radius:50%; background:#FABD2F;"></div>
+        <div style="width:14px; height:14px; border-radius:50%; background:#83A598;"></div>
+        <div style="width:14px; height:14px; border-radius:50%; background:#D3869B;"></div>
+        <div style="width:14px; height:14px; border-radius:50%; background:#8EC07C;"></div>
+        <div style="width:14px; height:14px; border-radius:50%; background:#FE8019;"></div>
+      </div>
+
+      <div class="sec">Exercise Devices</div>
+      <div class="card ay" style="padding:0;">
+        <div class="srow"><span class="srow-icon">&#x1F3CB;</span><div class="srow-text" style="font-size:10px;">Manage Devices</div><span class="srow-val">8</span></div>
+      </div>
+
+      <div class="sec">Body Metrics</div>
+      <div class="card ao" style="padding:0;">
+        <div class="srow"><span class="srow-icon">&#x2696;</span><div class="srow-text" style="font-size:10px;">Weight (kg)</div><span class="srow-val">75.0</span></div>
+        <div class="srow"><span class="srow-icon">&#x1F464;</span><div class="srow-text" style="font-size:10px;">Age</div><span class="srow-val">32</span></div>
+      </div>
+
+      <div class="sec">About</div>
+      <div class="card" style="padding:0; border-left:3px solid #504945;">
+        <div class="srow"><div class="srow-text" style="font-size:10px;">Version</div><span class="srow-val">1.0.0</span></div>
+        <div class="srow"><div class="srow-text" style="font-size:10px;">Build</div><span class="srow-val">34</span></div>
+      </div>
+
+      <div class="nav">
+        <span>:train</span><span>:plans</span><span>:hist</span><span>:stats</span><span class="act">:set</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== SCREEN 6: PROGRAMS ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">6. Programs & Templates</div>
+  <div class="iphone ip">
+    <div class="ip-c">
+      <div class="ttl" style="margin-bottom:12px;">Programs</div>
+
+      <!-- Active plan -->
+      <div class="card ag">
+        <div class="cb">
+          <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+            <span class="green" style="font-size:10px; font-weight:700;">5K Improver</span>
+            <span class="badge" style="border-color:rgba(184,187,38,0.4); color:#B8BB26; font-size:7px;">ACTIVE</span>
+          </div>
+          <div class="pbar"><div class="pfill" style="width:42%; background:#B8BB26;"></div></div>
+          <div style="display:flex; justify-content:space-between; font-size:8px;">
+            <span class="gray">Week 3, Day 2</span>
+            <span class="green">42%</span>
+          </div>
+          <div class="mr" style="margin-top:4px;"><span class="ln">></span><span class="k">next</span><span class="s">=</span><span class="v aqua">Tempo Run 25m</span></div>
+        </div>
+        <div class="sl"><span class="sl-m gn">PLAN</span><span class="sl-f">5k_improver.json</span><span class="sl-p">42%</span></div>
+      </div>
+
+      <div class="sec">Training Plans</div>
+      <div class="card ab" style="padding:0;">
+        <div class="tpl"><span class="tpl-icon blue">&#x1F3C3;</span><div class="tpl-info"><div class="tpl-name blue">5K Beginner</div><div class="tpl-sub">8 weeks &middot; 3x/week</div></div></div>
+        <div class="tpl"><span class="tpl-icon aqua">&#x1F3C3;</span><div class="tpl-info"><div class="tpl-name aqua">10K Builder</div><div class="tpl-sub">10 weeks &middot; 4x/week</div></div></div>
+        <div class="tpl"><span class="tpl-icon orange">&#x1F3C3;</span><div class="tpl-info"><div class="tpl-name orange">Half Marathon</div><div class="tpl-sub">12 weeks &middot; 4x/week</div></div></div>
+      </div>
+
+      <div class="sec">Interval Workouts</div>
+      <div class="card ay" style="padding:0;">
+        <div class="tpl">
+          <span class="tpl-icon green">&#x1F3C3;</span>
+          <div class="tpl-info">
+            <div class="tpl-name">Free Run</div>
+            <div class="tpl-sub">Auto-detects run & walk</div>
+          </div>
+        </div>
+        <div class="tpl">
+          <span class="tpl-icon yellow">&#x1F525;</span>
+          <div class="tpl-info">
+            <div class="tpl-name yellow">HIIT Blast</div>
+            <div class="tpl-sub">8x &middot; 22m total</div>
+            <div class="tpl-pills">
+              <span class="pill" style="border-color:rgba(251,73,52,0.4); color:#FB4934;">30s W</span>
+              <span class="pill" style="border-color:rgba(131,165,152,0.4); color:#83A598;">30s R</span>
+              <span class="gray" style="font-size:7px;">&times;8</span>
+            </div>
+          </div>
+        </div>
+        <div class="tpl">
+          <span class="tpl-icon orange">&#x1F525;</span>
+          <div class="tpl-info">
+            <div class="tpl-name orange">Tempo Builder</div>
+            <div class="tpl-sub">5x &middot; 30m total</div>
+            <div class="tpl-pills">
+              <span class="pill" style="border-color:rgba(251,73,52,0.4); color:#FB4934;">3m W</span>
+              <span class="pill" style="border-color:rgba(131,165,152,0.4); color:#83A598;">1m R</span>
+              <span class="gray" style="font-size:7px;">&times;5</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="nav">
+        <span>:train</span><span class="act">:plans</span><span>:hist</span><span>:stats</span><span>:set</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<style>
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+</style>
+</body>
+</html>

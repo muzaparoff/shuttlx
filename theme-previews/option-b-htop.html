@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Option B: htop - System Monitor Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #111; font-family: 'JetBrains Mono', monospace; color: #D8DEE9; display: flex; gap: 60px; justify-content: center; align-items: flex-start; padding: 40px; min-height: 100vh; }
+
+  .label { color: #888; font-size: 14px; text-align: center; margin-bottom: 12px; font-family: -apple-system, sans-serif; }
+  .sublabel { color: #555; font-size: 11px; text-align: center; margin-top: 8px; font-family: -apple-system, sans-serif; }
+
+  /* iPhone frame */
+  .iphone { width: 390px; height: 844px; background: #0C0C0C; border-radius: 44px; border: 3px solid #333; overflow: hidden; position: relative; }
+  .iphone::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(transparent, transparent 19px, rgba(255,255,255,0.02) 19px, rgba(255,255,255,0.02) 20px); pointer-events: none; z-index: 5; }
+  .iphone-content { padding: 60px 16px 34px; height: 100%; overflow-y: auto; }
+  .iphone-content::-webkit-scrollbar { display: none; }
+
+  /* Watch frame */
+  .watch { width: 198px; height: 242px; background: #0C0C0C; border-radius: 42px; border: 3px solid #333; overflow: hidden; position: relative; }
+  .watch::before { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: repeating-linear-gradient(transparent, transparent 19px, rgba(255,255,255,0.02) 19px, rgba(255,255,255,0.02) 20px); pointer-events: none; z-index: 5; }
+  .watch-content { padding: 24px 10px 18px; height: 100%; display: flex; flex-direction: column; }
+
+  /* Colors */
+  .c-green { color: #A3BE8C; }
+  .c-red { color: #BF616A; }
+  .c-yellow { color: #EBCB8B; }
+  .c-cyan { color: #88C0D0; }
+  .c-purple { color: #B48EAD; }
+  .c-blue { color: #5E81AC; }
+  .c-teal { color: #8FBCBB; }
+  .c-dim { color: #4C566A; }
+  .c-gray { color: #7B8794; }
+
+  /* Cards */
+  .card { border: 1px solid #3B4252; border-radius: 4px; margin-bottom: 10px; background: #1A1A2E; overflow: hidden; }
+  .card-bar { height: 22px; display: flex; align-items: center; padding: 0 8px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; }
+  .card-bar.green { background: rgba(163,190,140,0.15); color: #A3BE8C; border-bottom: 1px solid rgba(163,190,140,0.2); }
+  .card-bar.cyan { background: rgba(136,192,208,0.15); color: #88C0D0; border-bottom: 1px solid rgba(136,192,208,0.2); }
+  .card-bar.yellow { background: rgba(235,203,139,0.15); color: #EBCB8B; border-bottom: 1px solid rgba(235,203,139,0.2); }
+  .card-bar.red { background: rgba(191,97,106,0.15); color: #BF616A; border-bottom: 1px solid rgba(191,97,106,0.2); }
+  .card-bar.purple { background: rgba(180,142,173,0.15); color: #B48EAD; border-bottom: 1px solid rgba(180,142,173,0.2); }
+  .card-body { padding: 10px; }
+
+  /* Progress bars */
+  .prog-row { display: flex; align-items: center; gap: 8px; margin: 5px 0; font-size: 11px; }
+  .prog-label { width: 50px; text-align: right; font-size: 10px; }
+  .prog-bar { flex: 1; height: 12px; background: #2E3440; border-radius: 2px; overflow: hidden; display: flex; }
+  .prog-fill { height: 100%; }
+  .prog-val { width: 36px; text-align: right; font-size: 10px; font-weight: 700; }
+
+  /* Metrics */
+  .metric-value { font-size: 26px; font-weight: 700; }
+  .metric-label { font-size: 9px; color: #7B8794; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 6px; }
+
+  .metric-row { display: flex; justify-content: space-between; padding: 4px 0; font-size: 11px; border-bottom: 1px solid rgba(59,66,82,0.5); }
+  .metric-row:last-child { border-bottom: none; }
+
+  /* Nav / status bar */
+  .status-bar { font-size: 9px; color: #7B8794; text-align: center; padding: 8px 0; border-top: 1px solid #3B4252; margin-top: 10px; display: flex; justify-content: space-around; }
+  .status-bar .active { color: #A3BE8C; }
+
+  .nav { display: flex; justify-content: space-around; font-size: 9px; padding: 6px 0; border-top: 1px solid #3B4252; margin-top: 8px; }
+  .nav span { padding: 2px 6px; border-radius: 2px; }
+  .nav .active { background: rgba(163,190,140,0.2); color: #A3BE8C; }
+
+  /* Watch */
+  .watch-panel { border: 1px solid #3B4252; border-radius: 3px; background: #1A1A2E; margin-bottom: 6px; overflow: hidden; }
+  .watch-panel-bar { height: 16px; display: flex; align-items: center; padding: 0 6px; font-size: 8px; font-weight: 700; background: rgba(136,192,208,0.15); color: #88C0D0; border-bottom: 1px solid rgba(136,192,208,0.15); }
+  .watch-panel-body { padding: 6px; }
+
+  .watch-timer { font-size: 32px; font-weight: 800; text-align: center; color: #D8DEE9; }
+  .watch-prog { height: 8px; background: #2E3440; border-radius: 2px; overflow: hidden; margin: 4px 0; }
+  .watch-prog-fill { height: 100%; border-radius: 2px; }
+
+  .watch-row { display: flex; justify-content: space-between; font-size: 9px; padding: 2px 0; }
+  .watch-btns { display: flex; gap: 8px; margin-top: 6px; justify-content: center; }
+  .watch-btn { padding: 5px 14px; border-radius: 3px; font-size: 9px; font-weight: 700; }
+  .btn-f1 { border: 1px solid rgba(163,190,140,0.4); color: #A3BE8C; background: rgba(163,190,140,0.08); }
+  .btn-f2 { border: 1px solid rgba(191,97,106,0.4); color: #BF616A; background: rgba(191,97,106,0.08); }
+
+  .title { font-size: 12px; font-weight: 700; color: #88C0D0; margin-bottom: 10px; text-align: center; }
+</style>
+</head>
+<body>
+
+<div>
+  <div class="label">Option B: "htop" - iPhone Dashboard</div>
+  <div class="iphone">
+    <div class="iphone-content">
+      <div class="title">ShuttlX [PID:1337]</div>
+
+      <div class="card">
+        <div class="card-bar green">LAST SESSION</div>
+        <div class="card-body">
+          <div style="display:flex; justify-content:space-between; margin-bottom:8px;">
+            <span class="c-green" style="font-size:13px; font-weight:700;">Free Run</span>
+            <span class="c-gray" style="font-size:10px;">Today 08:30</span>
+          </div>
+          <div class="grid-2">
+            <div><div class="metric-value c-cyan">28:43</div><div class="metric-label">duration</div></div>
+            <div><div class="metric-value c-teal">3.2km</div><div class="metric-label">distance</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-bar cyan">VITAL METRICS</div>
+        <div class="card-body">
+          <div class="prog-row">
+            <span class="prog-label c-red">HR</span>
+            <div class="prog-bar"><div class="prog-fill" style="width:72%; background: linear-gradient(90deg, #A3BE8C, #EBCB8B, #BF616A);"></div></div>
+            <span class="prog-val c-red">142</span>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label c-yellow">CAL</span>
+            <div class="prog-bar"><div class="prog-fill" style="width:41%; background: #EBCB8B;"></div></div>
+            <span class="prog-val c-yellow">245</span>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label c-purple">PACE</span>
+            <div class="prog-bar"><div class="prog-fill" style="width:65%; background: #B48EAD;"></div></div>
+            <span class="prog-val c-purple">5:30</span>
+          </div>
+          <div class="prog-row">
+            <span class="prog-label c-teal">STEPS</span>
+            <div class="prog-bar"><div class="prog-fill" style="width:55%; background: #8FBCBB;"></div></div>
+            <span class="prog-val c-teal">3841</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-bar yellow">WEEKLY LOAD</div>
+        <div class="card-body">
+          <div class="prog-row">
+            <span class="prog-label c-gray">GOAL</span>
+            <div class="prog-bar">
+              <div class="prog-fill" style="width:60%; background: #A3BE8C;"></div>
+            </div>
+            <span class="prog-val c-green">3/5</span>
+          </div>
+          <div class="grid-4" style="margin-top:8px;">
+            <div style="text-align:center;"><div style="font-size:14px; font-weight:700;" class="c-cyan">12.4</div><div class="metric-label">km</div></div>
+            <div style="text-align:center;"><div style="font-size:14px; font-weight:700;" class="c-yellow">734</div><div class="metric-label">cal</div></div>
+            <div style="text-align:center;"><div style="font-size:14px; font-weight:700;" class="c-green">1h42</div><div class="metric-label">time</div></div>
+            <div style="text-align:center;"><div style="font-size:14px; font-weight:700;" class="c-purple">5:18</div><div class="metric-label">pace</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-bar purple">ANALYTICS</div>
+        <div class="card-body">
+          <div class="metric-row"><span class="c-gray">VO2MAX</span><span class="c-cyan" style="font-weight:700;">48.2</span></div>
+          <div class="metric-row"><span class="c-gray">FORM</span><span class="c-green" style="font-weight:700;">+3 Fresh</span></div>
+          <div class="metric-row"><span class="c-gray">STREAK</span><span class="c-yellow" style="font-weight:700;">5 days</span></div>
+          <div class="metric-row"><span class="c-gray">BEST_5K</span><span style="font-weight:700;">24:15</span></div>
+        </div>
+      </div>
+
+      <div class="status-bar">
+        <span>UP: 5d 3h</span>
+        <span>THR: 4</span>
+        <span class="c-green">MEM: OK</span>
+        <span>LOAD: 0.72</span>
+      </div>
+      <div class="nav">
+        <span class="active">[F1 Train]</span>
+        <span>[F2 Plans]</span>
+        <span>[F3 Hist]</span>
+        <span>[F4 Stats]</span>
+        <span>[F5 Conf]</span>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Multi-color Nord palette. htop progress bars. Panel headers.</div>
+</div>
+
+<div>
+  <div class="label">Watch - Active Workout</div>
+  <div class="watch">
+    <div class="watch-content">
+      <div class="watch-panel">
+        <div class="watch-panel-bar">WORKOUT ACTIVE</div>
+        <div class="watch-panel-body">
+          <div class="watch-timer">28:43</div>
+          <div class="watch-prog"><div class="watch-prog-fill" style="width:72%; background: linear-gradient(90deg, #A3BE8C, #EBCB8B, #BF616A);"></div></div>
+          <div class="watch-row"><span class="c-gray">HR</span><span class="c-red" style="font-weight:700;">142 bpm</span></div>
+          <div class="watch-row"><span class="c-gray">PACE</span><span class="c-purple" style="font-weight:700;">5:30/km</span></div>
+          <div class="watch-row"><span class="c-gray">DIST</span><span class="c-teal" style="font-weight:700;">3.2 km</span></div>
+        </div>
+      </div>
+      <div class="watch-btns">
+        <div class="watch-btn btn-f1">F1 PAUSE</div>
+        <div class="watch-btn btn-f2">F2 STOP</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Panel headers. HR zone progress bar. F-key buttons.</div>
+</div>
+
+</body>
+</html>

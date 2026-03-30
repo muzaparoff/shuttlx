@@ -20,6 +20,7 @@ struct ThemeEffects: Equatable {
         case pixel
         case tape
         case meter
+        case terminal
     }
 
     static func == (lhs: ThemeEffects, rhs: ThemeEffects) -> Bool {

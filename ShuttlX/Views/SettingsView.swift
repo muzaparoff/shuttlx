@@ -1,6 +1,7 @@
 import SwiftUI
 import HealthKit
 import WatchConnectivity
+import WidgetKit
 
 struct SettingsView: View {
     @Environment(ThemeManager.self) var themeManager
@@ -249,6 +250,7 @@ struct SettingsView: View {
                             themeManager.selectTheme(theme.id)
                         }
                         sharedDataManager.sendThemeToWatch(theme.id)
+                        WidgetCenter.shared.reloadAllTimelines()
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: theme.icon)
@@ -424,6 +426,7 @@ struct SettingsView: View {
         case "arcade": return "8-bit energy"
         case "classicradio": return "Warm analog tape"
         case "vumeter": return "Hi-fi dashboard"
+        case "neovim": return "Code editor"
         default: return ""
         }
     }

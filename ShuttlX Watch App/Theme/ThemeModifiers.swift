@@ -68,6 +68,17 @@ extension View {
                     RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
                         .stroke(theme.colors.surfaceBorder, lineWidth: 1)
                 )
+        case .terminal:
+            self
+                .padding(0)
+                .background(
+                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                        .fill(theme.colors.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                        .stroke(theme.colors.surfaceBorder, lineWidth: 1)
+                )
         }
     }
 
@@ -126,6 +137,7 @@ extension View {
         case "arcade":       self.arcadeCRTBackground()
         case "classicradio": self.classicRadioBackground()
         case "vumeter":      self.vuMeterBackground()
+        case "neovim":       self.neovimBackground()
         default:             self
         }
     }
@@ -280,6 +292,15 @@ extension View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
             )
+    }
+
+    // MARK: - Neovim Background (Code Editor)
+
+    func neovimBackground() -> some View {
+        self.background(
+            Color(red: 0.114, green: 0.125, blue: 0.129) // #1D2021
+                .ignoresSafeArea()
+        )
     }
 
     // MARK: - VU Meter Background

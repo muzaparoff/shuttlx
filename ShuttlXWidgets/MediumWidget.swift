@@ -48,6 +48,13 @@ struct WidgetTheme {
                 surface:        Color(red: 0.07, green: 0.05, blue: 0.03),
                 accent:         Color(red: 0.95, green: 0.65, blue: 0.20)   // amber
             )
+        case "neovim":
+            return WidgetTheme(
+                background:     Color(red: 0.114, green: 0.125, blue: 0.129), // #1D2021
+                backgroundDark: Color(red: 0.094, green: 0.102, blue: 0.106), // slightly darker
+                surface:        Color(red: 0.157, green: 0.157, blue: 0.157), // #282828
+                accent:         Color(red: 0.722, green: 0.733, blue: 0.149)  // #B8BB26 green
+            )
         default: // "clean"
             return WidgetTheme(
                 background:     Color(red: 0.08, green: 0.08, blue: 0.12),

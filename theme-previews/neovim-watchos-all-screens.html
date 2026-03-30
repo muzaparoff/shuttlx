@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Neovim Theme - All watchOS Screens</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#111; font-family:'JetBrains Mono',monospace; color:#EBDBB2; padding:40px; }
+  h1 { font-family:-apple-system,sans-serif; color:#888; font-size:18px; text-align:center; margin-bottom:30px; }
+  .screens { display:flex; flex-wrap:wrap; gap:50px; justify-content:center; }
+  .screen-wrap { text-align:center; }
+  .screen-label { color:#888; font-size:12px; font-family:-apple-system,sans-serif; margin-bottom:8px; }
+  .sublabel { color:#555; font-size:10px; font-family:-apple-system,sans-serif; margin-top:6px; max-width:198px; }
+
+  /* Watch */
+  .watch { width:198px; height:242px; background:#1D2021; border-radius:42px; border:3px solid #333; overflow:hidden; position:relative; }
+  .wc { padding:22px 10px 16px; height:100%; display:flex; flex-direction:column; overflow-y:auto; }
+  .wc::-webkit-scrollbar { display:none; }
+
+  /* Colors */
+  .fg { color:#EBDBB2; } .gray { color:#928374; } .red { color:#FB4934; } .green { color:#B8BB26; }
+  .yellow { color:#FABD2F; } .blue { color:#83A598; } .purple { color:#D3869B; } .aqua { color:#8EC07C; }
+  .orange { color:#FE8019; } .bg3 { color:#665C54; }
+
+  /* Card */
+  .wcard { border:1px solid #3C3836; border-radius:3px; background:#282828; margin-bottom:6px; overflow:hidden; position:relative; }
+  .wcard::before { content:''; position:absolute; left:0; top:0; bottom:0; width:2px; }
+  .wg::before { background:#B8BB26; } .wr::before { background:#FB4934; }
+  .wb::before { background:#83A598; } .wy::before { background:#FABD2F; }
+  .wo::before { background:#FE8019; } .wp::before { background:#D3869B; }
+  .wa::before { background:#8EC07C; }
+  .wcb { padding:6px 6px 4px 8px; }
+
+  /* Status line */
+  .wsl { height:14px; display:flex; align-items:center; font-size:7px; border-top:1px solid #3C3836; }
+  .wsl-m { padding:0 4px; height:100%; display:flex; align-items:center; font-weight:700; }
+  .wsl-m.gn { background:#B8BB26; color:#282828; } .wsl-m.rd { background:#FB4934; color:#282828; }
+  .wsl-m.bl { background:#83A598; color:#282828; } .wsl-m.yl { background:#FABD2F; color:#282828; }
+  .wsl-m.og { background:#FE8019; color:#282828; } .wsl-m.pp { background:#D3869B; color:#282828; }
+  .wsl-m.aq { background:#8EC07C; color:#282828; }
+  .wsl-f { padding:0 3px; flex:1; color:#A89984; background:#3C3836; height:100%; display:flex; align-items:center; font-size:6px; }
+  .wsl-p { padding:0 3px; color:#EBDBB2; background:#504945; height:100%; display:flex; align-items:center; }
+
+  /* Timer */
+  .timer { font-size:36px; font-weight:800; text-align:center; line-height:1; }
+  .timer-sm { font-size:28px; font-weight:800; text-align:center; line-height:1; }
+
+  /* Mode */
+  .wmode { font-size:8px; font-weight:700; text-align:center; margin-bottom:4px; }
+  .wmode-tag { display:inline-block; padding:1px 6px; border-radius:2px; }
+  .wmode-run { background:#B8BB26; color:#282828; }
+  .wmode-pause { background:#FE8019; color:#282828; }
+
+  /* Metric row */
+  .wmr { display:flex; justify-content:space-between; font-size:9px; padding:2px 0; }
+  .wmr .wk { color:#928374; }
+  .wmr .wv { font-weight:700; }
+
+  /* Progress ring placeholder */
+  .ring { width:80px; height:80px; border-radius:50%; border:4px solid #3C3836; position:relative; margin:0 auto; display:flex; align-items:center; justify-content:center; }
+  .ring-fill { position:absolute; inset:-4px; border-radius:50%; border:4px solid transparent; border-top-color:#FB4934; border-right-color:#FB4934; transform:rotate(45deg); }
+
+  /* Buttons */
+  .wbtns { display:flex; gap:10px; justify-content:center; margin-top:6px; }
+  .wbtn { width:44px; height:44px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:700; }
+  .btn-p { border:1.5px solid rgba(184,187,38,0.5); color:#B8BB26; background:rgba(184,187,38,0.08); }
+  .btn-s { border:1.5px solid rgba(251,73,52,0.5); color:#FB4934; background:rgba(251,73,52,0.08); }
+
+  /* Segment bar */
+  .wsegbar { display:flex; height:4px; border-radius:2px; overflow:hidden; gap:1px; margin:4px 0; }
+
+  /* Progress bar */
+  .wpbar { height:4px; background:#3C3836; border-radius:2px; overflow:hidden; margin:3px 0; }
+  .wpfill { height:100%; border-radius:2px; }
+
+  /* Home card */
+  .hcard { border:1px solid #3C3836; border-radius:6px; background:#282828; padding:8px; margin-bottom:6px; }
+
+  /* Completion */
+  .check { width:40px; height:40px; border-radius:50%; background:rgba(184,187,38,0.15); border:2px solid rgba(184,187,38,0.5); display:flex; align-items:center; justify-content:center; margin:0 auto 6px; font-size:20px; }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+  @keyframes blink { 0%,50% { opacity:1; } 51%,100% { opacity:0; } }
+</style>
+</head>
+<body>
+<h1>Neovim (Gruvbox Dark) Theme — All watchOS Screens</h1>
+<div class="screens">
+
+<!-- ===== WATCH 1: HOME ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">1. Home Screen</div>
+  <div class="watch">
+    <div class="wc">
+      <div style="font-size:10px; font-weight:600; margin-bottom:2px;">Good morning</div>
+      <div class="gray" style="font-size:8px; margin-bottom:8px;">Last: 28m &middot; yesterday</div>
+
+      <div class="hcard" style="position:relative;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:#B8BB26; border-radius:6px 0 0 6px;"></div>
+        <div style="display:flex; align-items:center; gap:6px; margin-left:4px;">
+          <span class="green" style="font-size:14px;">&#x1F3C3;</span>
+          <div>
+            <div style="font-size:10px; font-weight:700;">Free Run</div>
+            <div class="gray" style="font-size:7px;">Auto-detects run & walk</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hcard" style="position:relative;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:#FABD2F; border-radius:6px 0 0 6px;"></div>
+        <div style="display:flex; align-items:center; gap:6px; margin-left:4px;">
+          <span class="yellow" style="font-size:14px;">&#x1F525;</span>
+          <div>
+            <div style="font-size:10px; font-weight:700;">HIIT Blast</div>
+            <div class="gray" style="font-size:7px;">8&times; &middot; 22m total</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hcard" style="position:relative;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:#FE8019; border-radius:6px 0 0 6px;"></div>
+        <div style="display:flex; align-items:center; gap:6px; margin-left:4px;">
+          <span class="orange" style="font-size:14px;">&#x1F525;</span>
+          <div>
+            <div style="font-size:10px; font-weight:700;">Tempo Builder</div>
+            <div class="gray" style="font-size:7px;">5&times; &middot; 30m total</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hcard" style="position:relative;">
+        <div style="position:absolute; left:0; top:0; bottom:0; width:2px; background:#D3869B; border-radius:6px 0 0 6px;"></div>
+        <div style="display:flex; align-items:center; gap:6px; margin-left:4px;">
+          <span class="purple" style="font-size:14px;">&#x1F525;</span>
+          <div>
+            <div style="font-size:10px; font-weight:700;">Quick Intervals</div>
+            <div class="gray" style="font-size:7px;">5&times; &middot; 12m total</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Green sign column on cards. Template list with accent bars.</div>
+</div>
+
+<!-- ===== WATCH 2: FREE RUN ACTIVE ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">2. Free Run - Active</div>
+  <div class="watch">
+    <div class="wc" style="justify-content:center;">
+      <div class="wmode"><span class="wmode-tag wmode-run">-- RUNNING --</span></div>
+      <div class="wcard wg" style="flex:1;">
+        <div class="wcb">
+          <div class="timer blue">28:43</div>
+          <div style="margin-top:8px;">
+            <div class="wmr"><span class="wk">DIST</span><span class="wv aqua">3.21 km</span></div>
+            <div class="wmr"><span class="wk">HR</span><span class="wv red">142 bpm</span></div>
+            <div class="wmr"><span class="wk">PACE</span><span class="wv purple">5:30/km</span></div>
+          </div>
+        </div>
+        <div class="wsl"><span class="wsl-m gn">RUN</span><span class="wsl-f">elapsed</span><span class="wsl-p">3.2km</span></div>
+      </div>
+      <div class="wbtns">
+        <div class="wbtn btn-p">||</div>
+        <div class="wbtn btn-s">&times;</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Vim mode: RUNNING. Large mono timer. Metric rows. Status line.</div>
+</div>
+
+<!-- ===== WATCH 3: FREE RUN PAUSED ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">3. Free Run - Paused</div>
+  <div class="watch">
+    <div class="wc" style="justify-content:center;">
+      <div class="wmode"><span class="wmode-tag wmode-pause">-- PAUSED --</span></div>
+      <div class="wcard wo" style="flex:1;">
+        <div class="wcb">
+          <div class="timer" style="color:#FE8019; animation:pulse 1.5s infinite;">28:43</div>
+          <div style="margin-top:8px;">
+            <div class="wmr"><span class="wk">DIST</span><span class="wv aqua">3.21 km</span></div>
+            <div class="wmr"><span class="wk">HR</span><span class="wv red">128 bpm</span></div>
+            <div class="wmr"><span class="wk">PACE</span><span class="wv purple">5:30/km</span></div>
+          </div>
+        </div>
+        <div class="wsl"><span class="wsl-m og">PAUSE</span><span class="wsl-f">tap to resume</span><span class="wsl-p">--</span></div>
+      </div>
+      <div class="wbtns">
+        <div class="wbtn" style="border:1.5px solid rgba(131,165,152,0.5); color:#83A598; background:rgba(131,165,152,0.08);">&#x25B6;</div>
+        <div class="wbtn btn-s">&times;</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Orange PAUSED mode. Pulsing timer. Resume button.</div>
+</div>
+
+<!-- ===== WATCH 4: INTERVAL ACTIVE ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">4. Interval Workout</div>
+  <div class="watch">
+    <div class="wc" style="justify-content:center;">
+      <div class="wmode"><span class="wmode-tag" style="background:#FB4934; color:#282828;">-- WORK --</span></div>
+      <div class="wcard wr" style="flex:1;">
+        <div class="wcb" style="text-align:center;">
+          <div class="ring">
+            <div class="ring-fill"></div>
+            <div class="timer-sm red">0:18</div>
+          </div>
+          <div style="margin-top:6px;">
+            <div class="gray" style="font-size:8px;">Step 3 of 10</div>
+            <div class="wpbar"><div class="wpfill" style="width:30%; background:#FB4934;"></div></div>
+          </div>
+          <div style="margin-top:4px;">
+            <div class="wmr"><span class="wk">HR</span><span class="wv red">162 bpm</span></div>
+            <div class="wmr"><span class="wk">ELAPSED</span><span class="wv blue">08:42</span></div>
+          </div>
+        </div>
+        <div class="wsl"><span class="wsl-m rd">WORK</span><span class="wsl-f">Run 30s</span><span class="wsl-p">3/10</span></div>
+      </div>
+      <div class="wbtns">
+        <div class="wbtn btn-p">||</div>
+        <div class="wbtn btn-s">&times;</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">WORK mode (red). Progress ring. Step counter. Interval label.</div>
+</div>
+
+<!-- ===== WATCH 5: INTERVAL REST ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">5. Interval - Rest Phase</div>
+  <div class="watch">
+    <div class="wc" style="justify-content:center;">
+      <div class="wmode"><span class="wmode-tag" style="background:#83A598; color:#282828;">-- REST --</span></div>
+      <div class="wcard wb" style="flex:1;">
+        <div class="wcb" style="text-align:center;">
+          <div class="ring" style="border-color:#504945;">
+            <div class="ring-fill" style="border-top-color:#83A598; border-right-color:#83A598; transform:rotate(120deg);"></div>
+            <div class="timer-sm blue">0:22</div>
+          </div>
+          <div style="margin-top:6px;">
+            <div class="gray" style="font-size:8px;">Step 4 of 10</div>
+            <div class="wpbar"><div class="wpfill" style="width:40%; background:#83A598;"></div></div>
+          </div>
+          <div style="margin-top:4px;">
+            <div class="wmr"><span class="wk">HR</span><span class="wv aqua">118 bpm</span></div>
+            <div class="wmr"><span class="wk">ELAPSED</span><span class="wv blue">09:12</span></div>
+          </div>
+        </div>
+        <div class="wsl"><span class="wsl-m bl">REST</span><span class="wsl-f">Walk 30s</span><span class="wsl-p">4/10</span></div>
+      </div>
+      <div class="wbtns">
+        <div class="wbtn btn-p">||</div>
+        <div class="wbtn btn-s">&times;</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">REST mode (blue/aqua). Calmer colors. Step 4 of 10.</div>
+</div>
+
+<!-- ===== WATCH 6: SUMMARY ===== -->
+<div class="screen-wrap">
+  <div class="screen-label">6. Workout Summary</div>
+  <div class="watch">
+    <div class="wc">
+      <div class="check green">&#x2713;</div>
+      <div style="text-align:center; font-size:10px; font-weight:700; margin-bottom:4px;">Workout Complete</div>
+      <div style="text-align:center; font-size:20px; font-weight:800; margin-bottom:8px;" class="blue">45:12</div>
+
+      <div class="wcard wg">
+        <div class="wcb">
+          <div class="wmr"><span class="wk">distance</span><span class="wv aqua">3.21 km</span></div>
+          <div class="wmr"><span class="wk">avg_hr</span><span class="wv red">142 bpm</span></div>
+          <div class="wmr"><span class="wk">calories</span><span class="wv orange">245 kcal</span></div>
+          <div class="wmr"><span class="wk">avg_pace</span><span class="wv purple">5:30/km</span></div>
+          <div class="wmr"><span class="wk">steps</span><span class="wv yellow">3841</span></div>
+        </div>
+        <div class="wsl"><span class="wsl-m gn">DONE</span><span class="wsl-f">saved</span><span class="wsl-p">&#x2713;</span></div>
+      </div>
+
+      <div style="text-align:center; margin-top:4px;">
+        <div style="display:inline-block; padding:6px 24px; border-radius:4px; background:rgba(184,187,38,0.15); border:1px solid rgba(184,187,38,0.4); color:#B8BB26; font-size:10px; font-weight:700;">Done</div>
+      </div>
+    </div>
+  </div>
+  <div class="sublabel">Completion badge. All metrics. Green "Done" button with status line.</div>
+</div>
+
+</div>
+</body>
+</html>
