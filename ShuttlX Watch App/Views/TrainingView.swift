@@ -65,61 +65,55 @@ struct TrainingView: View {
     // MARK: - Workout Display Tab (Full-Screen Stacked Metrics)
 
     private var workoutDisplayTab: some View {
-        GeometryReader { geo in
-            VStack(spacing: ShuttlXSpacing.sm) {
-                Spacer(minLength: 0)
+        VStack(spacing: ShuttlXSpacing.sm) {
+            Spacer(minLength: 0)
 
-                // Line 1: Timer (countdown or elapsed)
-                timerLine
+            // Line 1: Timer (countdown or elapsed)
+            timerLine
 
-                // Line 2: Distance with label
-                metricWithLabel(
-                    label: "DIST",
-                    value: distanceText,
-                    color: ShuttlXColor.textPrimary,
-                    accessibilityText: "Distance \(accessibleDistance)"
-                )
-
-                // Line 3: Heart rate with label — colored by zone
-                metricWithLabel(
-                    label: "HR",
-                    value: heartRateText,
-                    color: ShuttlXColor.forHRZone(workoutManager.heartRate),
-                    accessibilityText: workoutManager.heartRate > 0
-                        ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
-                        : "Heart rate no data"
-                )
-                .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
-
-                // Line 4: Pace with label
-                metricWithLabel(
-                    label: "PACE",
-                    value: paceText,
-                    color: ShuttlXColor.textPrimary,
-                    accessibilityText: accessiblePace
-                )
-
-                // Status badge — pulsing
-                if workoutManager.isPaused {
-                    Text("PAUSED")
-                        .font(ShuttlXFont.watchStatusBadge)
-                        .foregroundColor(ShuttlXColor.ctaWarning)
-                        .opacity(pausePulse ? 0.3 : 1.0)
-                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pausePulse)
-                        .onAppear { pausePulse = true }
-                        .onDisappear { pausePulse = false }
-                        .transition(.opacity)
-                }
-
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, ShuttlXSpacing.md)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                ThemedTimerFrame(width: geo.size.width, height: geo.size.height)
-                    .opacity(0.6)
+            // Line 2: Distance with label
+            metricWithLabel(
+                label: "DIST",
+                value: distanceText,
+                color: ShuttlXColor.textPrimary,
+                accessibilityText: "Distance \(accessibleDistance)"
             )
+
+            // Line 3: Heart rate with label — colored by zone
+            metricWithLabel(
+                label: "HR",
+                value: heartRateText,
+                color: ShuttlXColor.forHRZone(workoutManager.heartRate),
+                accessibilityText: workoutManager.heartRate > 0
+                    ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
+                    : "Heart rate no data"
+            )
+            .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
+
+            // Line 4: Pace with label
+            metricWithLabel(
+                label: "PACE",
+                value: paceText,
+                color: ShuttlXColor.textPrimary,
+                accessibilityText: accessiblePace
+            )
+
+            // Status badge — pulsing
+            if workoutManager.isPaused {
+                Text("PAUSED")
+                    .font(ShuttlXFont.watchStatusBadge)
+                    .foregroundColor(ShuttlXColor.ctaWarning)
+                    .opacity(pausePulse ? 0.3 : 1.0)
+                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pausePulse)
+                    .onAppear { pausePulse = true }
+                    .onDisappear { pausePulse = false }
+                    .transition(.opacity)
+            }
+
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, ShuttlXSpacing.xs)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Metric with Label
@@ -151,28 +145,18 @@ struct TrainingView: View {
             // Interval mode: progress ring + countdown + step counter
             intervalTimerLine(engine: engine)
         } else {
-            // Free run mode: icon + elapsed time
-            VStack(spacing: 2) {
-                HStack(spacing: ShuttlXSpacing.xs) {
-                    Image(systemName: "figure.run")
-                        .font(ShuttlXFont.watchControlLabel)
-                        .foregroundColor(ShuttlXColor.running)
-                    Text("ELAPSED")
-                        .font(ShuttlXFont.watchControlLabel)
-                        .foregroundColor(ShuttlXColor.textSecondary)
-                }
-                Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                    .font(ShuttlXFont.watchTimerDisplay)
-                    .monospacedDigit()
-                    .foregroundColor(ShuttlXColor.textPrimary)
-                    .contentTransition(.numericText())
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
-            .accessibilityAddTraits(.updatesFrequently)
+            // Free run mode: elapsed time
+            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
+                .font(ShuttlXFont.watchTimerDisplay)
+                .monospacedDigit()
+                .foregroundColor(ShuttlXColor.textPrimary)
+                .contentTransition(.numericText())
+                .minimumScaleFactor(0.5)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+                .accessibilityAddTraits(.updatesFrequently)
         }
     }
 

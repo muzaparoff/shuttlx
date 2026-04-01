@@ -160,14 +160,13 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func handleReceivedSession(_ session: TrainingSession) {
         if !syncedSessions.contains(where: { $0.id == session.id }) {
             syncedSessions.append(session)
-            saveSessionsToSharedStorage(syncedSessions)
+            // DataManager is the single writer to sessions.json — don't write here
             log("New session received and saved.")
             consecutiveFailures = 0
             lastSyncTime = Date()
             updateConnectivityHealth()
-            WidgetCenter.shared.reloadAllTimelines()
 
-            // Directly forward to DataManager — don't rely solely on Combine binding
+            // Forward to DataManager which saves to App Group + reloads widgets
             dataManager?.handleReceivedSessions([session])
         }
     }
@@ -316,7 +315,6 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func clearAndReloadSessions() {
         let allSessions = Set(loadSessionsFromAppGroup())
         syncedSessions = Array(allSessions)
-        saveSessionsToSharedStorage(syncedSessions)
     }
 
     /// Request all sessions from Watch via sendMessage with automatic retries.
@@ -375,7 +373,6 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     }
                 }
                 if newCount > 0 {
-                    saveSessionsToSharedStorage(syncedSessions)
                     dataManager?.handleReceivedSessions(sessions)
                     log("Pulled \(newCount) new session(s) from Watch")
                 }
