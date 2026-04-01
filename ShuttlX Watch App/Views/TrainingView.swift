@@ -65,7 +65,7 @@ struct TrainingView: View {
     // MARK: - Workout Display Tab (Full-Screen Stacked Metrics)
 
     private var workoutDisplayTab: some View {
-        VStack(spacing: ShuttlXSpacing.sm) {
+        VStack(spacing: ShuttlXSpacing.md) {
             Spacer(minLength: 0)
 
             // Line 1: Timer (countdown or elapsed)
@@ -119,16 +119,17 @@ struct TrainingView: View {
     // MARK: - Metric with Label
 
     private func metricWithLabel(label: String, value: String, color: Color, accessibilityText: String) -> some View {
-        VStack(spacing: 0) {
+        HStack {
             Text(label)
                 .font(ShuttlXFont.watchControlLabel)
                 .foregroundColor(ShuttlXColor.textSecondary)
+                .frame(width: 44, alignment: .leading)
+            Spacer()
             Text(value)
                 .font(ShuttlXFont.watchMetricSecondary)
                 .monospacedDigit()
                 .foregroundColor(color)
                 .contentTransition(.numericText())
-                .minimumScaleFactor(0.5)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
