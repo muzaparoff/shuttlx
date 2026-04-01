@@ -42,6 +42,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Interval Mode
     enum WorkoutMode { case freeRun, interval }
     @Published var workoutMode: WorkoutMode = .freeRun
+    @Published var workoutName: String = "Free Run"
     var intervalEngine: IntervalEngine?
     private var activeTemplate: WorkoutTemplate?
 
@@ -164,6 +165,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         logger.info("Starting free-form workout")
         requestHealthKitPermissionsIfNeeded()
+        workoutName = "Free Run"
 
         let now = Date()
         workoutStartTime = now
@@ -228,6 +230,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         logger.info("Starting interval workout: \(template.name)")
         workoutMode = .interval
+        workoutName = template.name
         activeTemplate = template
         intervalEngine = IntervalEngine()
         intervalEngine?.configure(template: template)
