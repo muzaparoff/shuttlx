@@ -64,69 +64,67 @@ struct TrainingView: View {
     // MARK: - Workout Display Tab (Full-Screen Stacked Metrics)
 
     private var workoutDisplayTab: some View {
-        VStack(spacing: ShuttlXSpacing.md) {
-            // Top row: workout name left, system time handled by watchOS
-            HStack {
-                Text(workoutManager.workoutName.uppercased())
-                    .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                    .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
-                    .lineLimit(1)
-                    .opacity(workoutManager.isPaused && pausePulse ? 0.3 : 1.0)
-                    .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pausePulse)
-                Spacer()
+        GeometryReader { geo in
+            let h = geo.size.height
+            let valueSize = max(15, h * 0.12)
+            let labelSize = max(9, h * 0.06)
+            let labelWidth = h * 0.22
+            let rowSpacing = h * 0.03
+
+            VStack(spacing: rowSpacing) {
+                // Top row: workout name
+                HStack {
+                    Text(workoutManager.workoutName.uppercased())
+                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                        .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .opacity(workoutManager.isPaused && pausePulse ? 0.3 : 1.0)
+                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pausePulse)
+                    Spacer()
+                }
+                .onAppear { if workoutManager.isPaused { pausePulse = true } }
+
+                Spacer(minLength: 0)
+
+                // Timer row
+                timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth)
+
+                // Metric rows — all same size as timer
+                metricRow("DIST", distanceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                          accessibilityText: "Distance \(accessibleDistance)")
+
+                metricRow("HR", heartRateText, ShuttlXColor.forHRZone(workoutManager.heartRate), valueSize, labelSize, labelWidth,
+                          accessibilityText: workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute" : "Heart rate no data")
+                    .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
+
+                metricRow("PACE", paceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                          accessibilityText: accessiblePace)
+
+                Spacer(minLength: 0)
             }
-            .onAppear { if workoutManager.isPaused { pausePulse = true } }
-
-            Spacer(minLength: 0)
-
-            // Timer row (countdown or elapsed) — same horizontal pattern
-            timerLine
-
-            // Metric rows — label left, value right
-            metricWithLabel(
-                label: "DIST",
-                value: distanceText,
-                color: ShuttlXColor.textPrimary,
-                accessibilityText: "Distance \(accessibleDistance)"
-            )
-
-            metricWithLabel(
-                label: "HR",
-                value: heartRateText,
-                color: ShuttlXColor.forHRZone(workoutManager.heartRate),
-                accessibilityText: workoutManager.heartRate > 0
-                    ? "\(workoutManager.heartRate) beats per minute, \(heartRateZoneName)"
-                    : "Heart rate no data"
-            )
-            .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
-
-            metricWithLabel(
-                label: "PACE",
-                value: paceText,
-                color: ShuttlXColor.textPrimary,
-                accessibilityText: accessiblePace
-            )
-
-            Spacer(minLength: 0)
+            .padding(.horizontal, ShuttlXSpacing.xs)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.horizontal, ShuttlXSpacing.xs)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    // MARK: - Metric with Label
+    // MARK: - Metric Row (unified for all metrics including timer)
 
-    private func metricWithLabel(label: String, value: String, color: Color, accessibilityText: String) -> some View {
+    private func metricRow(_ label: String, _ value: String, _ color: Color,
+                           _ valueSize: CGFloat, _ labelSize: CGFloat, _ labelWidth: CGFloat,
+                           accessibilityText: String) -> some View {
         HStack {
             Text(label)
-                .font(ShuttlXFont.watchControlLabel)
+                .font(.system(size: labelSize, weight: .medium, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
-                .frame(width: 44, alignment: .leading)
+                .frame(width: labelWidth, alignment: .leading)
             Spacer()
             Text(value)
-                .font(ShuttlXFont.watchMetricSecondary)
+                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(color)
                 .contentTransition(.numericText())
+                .minimumScaleFactor(0.6)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
@@ -138,29 +136,13 @@ struct TrainingView: View {
     // MARK: - Timer Line
 
     @ViewBuilder
-    private var timerLine: some View {
+    private func timerRow(valueSize: CGFloat, labelSize: CGFloat, labelWidth: CGFloat) -> some View {
         if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
-            // Interval mode: progress ring + countdown + step counter
             intervalTimerLine(engine: engine)
         } else {
-            // Free run mode: TIME label + elapsed value (horizontal row, larger)
-            HStack {
-                Text("TIME")
-                    .font(ShuttlXFont.watchControlLabel)
-                    .foregroundColor(ShuttlXColor.textSecondary)
-                    .frame(width: 44, alignment: .leading)
-                Spacer()
-                Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                    .font(ShuttlXFont.watchTimerDisplay)
-                    .monospacedDigit()
-                    .foregroundColor(ShuttlXColor.textPrimary)
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
-            .accessibilityAddTraits(.updatesFrequently)
+            metricRow("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
+                      ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                      accessibilityText: "Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
         }
     }
 
