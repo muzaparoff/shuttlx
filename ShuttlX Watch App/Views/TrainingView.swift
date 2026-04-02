@@ -66,10 +66,10 @@ struct TrainingView: View {
     private var workoutDisplayTab: some View {
         GeometryReader { geo in
             let h = geo.size.height
-            let valueSize = max(15, h * 0.12)
-            let labelSize = max(9, h * 0.06)
-            let labelWidth = h * 0.22
-            let rowSpacing = h * 0.03
+            let valueSize = max(20, h * 0.17)
+            let labelSize = max(10, h * 0.07)
+            let labelWidth = h * 0.24
+            let rowSpacing = h * 0.025
 
             VStack(spacing: rowSpacing) {
                 // Top row: workout name
