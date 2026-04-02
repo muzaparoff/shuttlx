@@ -66,9 +66,9 @@ struct TrainingView: View {
     private var workoutDisplayTab: some View {
         GeometryReader { geo in
             let h = geo.size.height
-            let valueSize = max(20, h * 0.17)
-            let labelSize = max(10, h * 0.07)
-            let labelWidth = h * 0.24
+            let valueSize = max(20, h * 0.19)
+            let labelSize = max(10, h * 0.08)
+            let labelWidth = h * 0.20
             let rowSpacing = h * 0.025
 
             VStack(spacing: rowSpacing) {
@@ -84,8 +84,6 @@ struct TrainingView: View {
                     Spacer()
                 }
                 .onAppear { if workoutManager.isPaused { pausePulse = true } }
-
-                Spacer(minLength: 0)
 
                 // Timer row
                 timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth)
@@ -115,7 +113,7 @@ struct TrainingView: View {
                            accessibilityText: String) -> some View {
         HStack {
             Text(label)
-                .font(.system(size: labelSize, weight: .medium, design: .monospaced))
+                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
                 .frame(width: labelWidth, alignment: .leading)
             Spacer()
