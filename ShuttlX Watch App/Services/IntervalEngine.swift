@@ -54,6 +54,13 @@ class IntervalEngine: ObservableObject {
             stepHeartRateSamples.append(Double(heartRate))
         }
 
+        // 5-second countdown haptic
+        #if os(watchOS)
+        if currentStepTimeRemaining == 5 {
+            WKInterfaceDevice.current().play(.notification)
+        }
+        #endif
+
         // Step complete?
         if currentStepTimeRemaining <= 0 {
             completeCurrentStep(distance: distance)
@@ -125,7 +132,7 @@ class IntervalEngine: ObservableObject {
         let haptic: WKHapticType
         switch stepType {
         case .work: haptic = .start
-        case .rest: haptic = .stop
+        case .rest: haptic = .directionDown
         case .warmup, .cooldown: haptic = .click
         }
         WKInterfaceDevice.current().play(haptic)

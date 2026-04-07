@@ -11,6 +11,7 @@ struct TrainingView: View {
     @State private var savedSummary: WorkoutSummary?
     @State private var pausePulse = false
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
     var body: some View {
         if showingSummary, let summary = savedSummary {
@@ -63,7 +64,44 @@ struct TrainingView: View {
 
     // MARK: - Workout Display Tab (Full-Screen Stacked Metrics)
 
+    @ViewBuilder
     private var workoutDisplayTab: some View {
+        if isLuminanceReduced {
+            aodMinimalView
+        } else {
+            fullWorkoutDisplayTab
+        }
+    }
+
+    // MARK: - Always-On Display (Reduced Luminance)
+
+    private var aodMinimalView: some View {
+        VStack(spacing: 12) {
+            Spacer()
+            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
+                .font(.system(size: 36, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(.white.opacity(0.7))
+            if workoutManager.heartRate > 0 {
+                Text("\(workoutManager.heartRate) BPM")
+                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(.red.opacity(0.7))
+            }
+            if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine, let step = engine.currentStep {
+                Text(step.type.displayName.uppercased())
+                    .font(.system(size: 14, weight: .bold, design: .monospaced))
+                    .foregroundColor(ShuttlXColor.forStepType(step.type).opacity(0.6))
+            }
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.black)
+    }
+
+    // MARK: - Full Workout Display
+
+    private var fullWorkoutDisplayTab: some View {
         GeometryReader { geo in
             let h = geo.size.height
             let valueSize = max(20, h * 0.19)
@@ -261,7 +299,7 @@ struct TrainingView: View {
     // MARK: - Computed Properties
 
     private var heartRateText: String {
-        guard workoutManager.heartRate > 0 else { return "-- BPM" }
+        guard workoutManager.heartRate > 0 else { return "\u{2014} BPM" }
         return "\(workoutManager.heartRate) BPM"
     }
 

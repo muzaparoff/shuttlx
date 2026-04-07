@@ -99,7 +99,7 @@ struct PlanDetailView: View {
             }
         }
         .padding()
-        .background(ShuttlXColor.cardBackground, in: RoundedRectangle(cornerRadius: 12))
+        .themedCard()
     }
 
     private func dayRow(_ day: PlanDay, weekNumber: Int) -> some View {
@@ -140,6 +140,8 @@ struct PlanDetailView: View {
                 }) {
                     Image(systemName: "circle")
                         .foregroundStyle(.secondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Circle())
                 }
                 .buttonStyle(.plain)
                 .disabled(activeProgress == nil)

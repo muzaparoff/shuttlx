@@ -12,7 +12,7 @@ struct SignInView: View {
                 Spacer(minLength: 40)
 
                 Image(systemName: "icloud.fill")
-                    .font(.system(size: 64))
+                    .font(ShuttlXFont.onboardingIcon)
                     .foregroundStyle(.tint)
 
                 VStack(spacing: 12) {

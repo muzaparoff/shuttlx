@@ -39,7 +39,7 @@ struct PlanProgressCard: View {
             }
         }
         .padding()
-        .background(ShuttlXColor.cardBackground, in: RoundedRectangle(cornerRadius: 12))
+        .themedCard(accent: ShuttlXColor.ctaPrimary)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(plan.name), \(Int(completion * 100)) percent complete")
     }

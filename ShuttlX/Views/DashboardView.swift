@@ -81,7 +81,7 @@ struct DashboardView: View {
                                 nextWorkout: planManager.nextWorkout(for: active.progress)
                             )
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleButtonStyle())
                     }
 
                     // 4. Last workout card
@@ -89,7 +89,7 @@ struct DashboardView: View {
                         NavigationLink(destination: SessionDetailView(session: session)) {
                             LastWorkoutCard(session: session)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleButtonStyle())
                     }
 
                     // 5. Week summary

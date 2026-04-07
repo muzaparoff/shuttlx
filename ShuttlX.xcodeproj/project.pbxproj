@@ -64,6 +64,7 @@
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
 		A5923B04 /* StreakBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A04 /* StreakBadge.swift */; };
 		A5923B05 /* FormattingUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A05 /* FormattingUtils.swift */; };
+		A5923B06 /* PressScaleButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A06 /* PressScaleButtonStyle.swift */; };
 		A5923E01 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D01 /* DashboardView.swift */; };
 		A5923E02 /* LiveWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D02 /* LiveWorkoutCard.swift */; };
 		A5923E03 /* StartOnWatchCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D03 /* StartOnWatchCard.swift */; };
@@ -268,6 +269,7 @@
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
 		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
 		A5923A04 /* StreakBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadge.swift; sourceTree = "<group>"; };
+		A5923A06 /* PressScaleButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressScaleButtonStyle.swift; sourceTree = "<group>"; };
 		A5923A05 /* FormattingUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormattingUtils.swift; sourceTree = "<group>"; };
 		A5923D01 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		A5923D02 /* LiveWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkoutCard.swift; sourceTree = "<group>"; };
@@ -566,6 +568,7 @@
 				A5923A02 /* MetricCard.swift */,
 				A5923A03 /* ActivityBadge.swift */,
 				A5923A04 /* StreakBadge.swift */,
+				A5923A06 /* PressScaleButtonStyle.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -851,6 +854,7 @@
 				A5923B03 /* ActivityBadge.swift in Sources */,
 				A5923B04 /* StreakBadge.swift in Sources */,
 				A5923B05 /* FormattingUtils.swift in Sources */,
+				A5923B06 /* PressScaleButtonStyle.swift in Sources */,
 				A5923E01 /* DashboardView.swift in Sources */,
 				A5923E02 /* LiveWorkoutCard.swift in Sources */,
 				A5923E03 /* StartOnWatchCard.swift in Sources */,

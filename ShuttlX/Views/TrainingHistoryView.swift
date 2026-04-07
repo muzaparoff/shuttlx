@@ -78,6 +78,7 @@ struct TrainingHistoryView: View {
             Button { changeDate(-1) } label: {
                 Image(systemName: "chevron.left")
                     .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
             }
             .accessibilityLabel("Previous \(viewMode.rawValue.lowercased())")
 
@@ -91,6 +92,7 @@ struct TrainingHistoryView: View {
             Button { changeDate(1) } label: {
                 Image(systemName: "chevron.right")
                     .font(.title3)
+                    .frame(minWidth: 44, minHeight: 44)
             }
             .accessibilityLabel("Next \(viewMode.rawValue.lowercased())")
         }
@@ -177,7 +179,7 @@ struct TrainingHistoryView: View {
                 NavigationLink(destination: SessionDetailView(session: session)) {
                     SessionRowView(session: session)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleButtonStyle())
             }
         }
         .padding(.horizontal)

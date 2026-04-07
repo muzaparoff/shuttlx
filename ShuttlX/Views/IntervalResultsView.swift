@@ -94,7 +94,6 @@ struct IntervalResultsView: View {
         let restIntervals = intervals.filter { $0.intervalType == .rest }
 
         return VStack(spacing: 6) {
-            Divider()
 
             HStack {
                 if !workIntervals.isEmpty {

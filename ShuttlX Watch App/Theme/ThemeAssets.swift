@@ -1030,9 +1030,9 @@ private struct ArcadeCompletionBadge: View {
                 .shadow(color: orange.opacity(0.4), radius: 2)
 
             HStack(spacing: 2) {
-                Image(systemName: "star.fill").foregroundColor(.yellow)
-                Image(systemName: "star.fill").foregroundColor(.cyan)
-                Image(systemName: "star.fill").foregroundColor(.pink)
+                Image(systemName: "star.fill").foregroundColor(ShuttlXColor.ctaWarning)
+                Image(systemName: "star.fill").foregroundColor(ShuttlXColor.steps)
+                Image(systemName: "star.fill").foregroundColor(ShuttlXColor.heartRate)
             }
             .font(.system(size: 8))
 
@@ -1072,50 +1072,26 @@ struct ThemedControlButtonStyle: ButtonStyle {
 
     @ViewBuilder
     private func buttonBackground(themeID: String) -> some View {
-        switch themeID {
-        case "synthwave":
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color(red: 0.08, green: 0.08, blue: 0.16))
-        case "mixtape":
-            RoundedRectangle(cornerRadius: 6)
-                .fill(Color(red: 0.08, green: 0.12, blue: 0.20))
-        case "arcade":
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color(red: 0.08, green: 0.08, blue: 0.2))
-        case "classicradio":
-            RoundedRectangle(cornerRadius: 4)
-                .fill(Color(red: 0.23, green: 0.18, blue: 0.12))
-        case "vumeter":
-            Circle()
-                .fill(Color(red: 0.14, green: 0.11, blue: 0.07))
-        default:
-            RoundedRectangle(cornerRadius: 12)
-                .fill(ShuttlXColor.watchButtonBackground)
-        }
+        Circle()
+            .fill(ShuttlXColor.watchButtonBackground)
     }
 
     @ViewBuilder
     private func buttonOverlay(themeID: String, effects: ThemeEffects) -> some View {
         switch themeID {
         case "synthwave":
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color(red: 0.0, green: 0.96, blue: 1.0).opacity(0.4), lineWidth: 1.5)
-                .shadow(color: Color(red: 0.0, green: 0.96, blue: 1.0).opacity(0.3), radius: 4)
-        case "mixtape":
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color(red: 0.29, green: 0.42, blue: 0.60), lineWidth: 1.5)
+            Circle()
+                .stroke(ShuttlXColor.surfaceBorder.opacity(0.4), lineWidth: 1.5)
+                .shadow(color: ShuttlXColor.surfaceBorder.opacity(0.3), radius: 4)
         case "arcade":
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color(red: 0.0, green: 1.0, blue: 0.0).opacity(0.4), lineWidth: 2)
-        case "classicradio":
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(Color(red: 0.35, green: 0.29, blue: 0.20), lineWidth: 1.5)
+            Circle()
+                .stroke(ShuttlXColor.ctaPrimary.opacity(0.4), lineWidth: 2)
         case "vumeter":
             Circle()
-                .stroke(Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.4), lineWidth: 1.5)
+                .stroke(ShuttlXColor.ctaPrimary.opacity(0.4), lineWidth: 1.5)
         default:
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.white.opacity(0.08), lineWidth: 0.5)
+            Circle()
+                .stroke(ShuttlXColor.surfaceBorder.opacity(0.3), lineWidth: 1)
         }
     }
 }

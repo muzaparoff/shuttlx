@@ -47,7 +47,7 @@ struct DebugView: View {
                     .padding(.vertical, 2)
                 }
 
-                Divider()
+                // spacing separator
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Connectivity Health")
@@ -58,7 +58,7 @@ struct DebugView: View {
                 }
                 .padding(.vertical, 2)
 
-                Divider()
+                // spacing separator
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Recent Activity")

@@ -16,6 +16,7 @@ struct MetricCard: View {
             Text(value)
                 .font(compact ? ShuttlXFont.metricSmall : ShuttlXFont.metricMedium)
                 .monospacedDigit()
+                .contentTransition(.numericText())
 
             Text(label)
                 .font(.caption2)
