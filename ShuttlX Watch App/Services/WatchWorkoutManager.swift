@@ -104,12 +104,47 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - HealthKit Permissions
 
+    /// Fire-and-forget pre-warm: called from onAppear to prompt the user early.
+    /// Does NOT await result — use requestHealthAuthorizationAsync() when a result is needed.
     func requestHealthKitPermissionsIfNeeded() {
         guard !healthKitAuthorized else { return }
-        requestHealthPermissions()
+        Task { [weak self] in
+            await self?.requestHealthAuthorizationAsync()
+        }
     }
 
-    private func requestHealthPermissions() {
+    /// Async, awaitable authorization request.
+    /// Returns `true` if all critical types are authorized, `false` otherwise.
+    /// Uses the fast-path `authorizationStatus` check to avoid showing the sheet on repeat launches.
+    @discardableResult
+    private func requestHealthAuthorizationAsync() async -> Bool {
+        // Fast path: check current status without presenting the sheet again.
+        // On watchOS, HKAuthorizationStatus is not queryable per-type the same way as iOS,
+        // so we always call requestAuthorization — it is a no-op if already granted.
+        let (readTypes, writeTypes) = buildHealthKitTypes()
+
+        guard !readTypes.isEmpty else {
+            logger.error("No valid HealthKit types available for authorization")
+            healthKitAuthorized = false
+            authorizationDenied = true
+            return false
+        }
+
+        do {
+            try await healthStore.requestAuthorization(toShare: writeTypes, read: readTypes)
+            logger.info("HealthKit authorization granted")
+            healthKitAuthorized = true
+            authorizationDenied = false
+            return true
+        } catch {
+            logger.error("HealthKit authorization error: \(error.localizedDescription)")
+            healthKitAuthorized = false
+            authorizationDenied = true
+            return false
+        }
+    }
+
+    private func buildHealthKitTypes() -> (read: Set<HKQuantityType>, write: Set<HKSampleType>) {
         var readTypes = Set<HKQuantityType>()
         var writeTypes = Set<HKSampleType>()
 
@@ -129,43 +164,47 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
 
         writeTypes.insert(HKWorkoutType.workoutType())
-
-        guard !readTypes.isEmpty else {
-            logger.error("No valid HealthKit types available for authorization")
-            return
-        }
-
-        healthStore.requestAuthorization(toShare: writeTypes, read: readTypes) { [weak self] success, error in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                if let error = error {
-                    self.logger.error("HealthKit authorization error: \(error.localizedDescription)")
-                    self.authorizationDenied = true
-                    self.healthKitAuthorized = false
-                } else if !success {
-                    self.logger.warning("HealthKit authorization denied")
-                    self.authorizationDenied = true
-                    self.healthKitAuthorized = false
-                } else {
-                    self.logger.info("HealthKit authorization granted")
-                    self.healthKitAuthorized = true
-                    self.authorizationDenied = false
-                }
-            }
-        }
+        return (readTypes, writeTypes)
     }
 
     // MARK: - Workout Lifecycle
 
+    /// Starts a free-run workout. Authorization is awaited before any HealthKit session
+    /// or queries begin. If the user has denied access the workout is aborted and
+    /// `authorizationDenied` is set to `true` so the UI can show an error.
     func startWorkout() {
         guard !isWorkoutActive else {
             logger.warning("Workout already active")
             return
         }
 
-        logger.info("Starting free-form workout")
-        requestHealthKitPermissionsIfNeeded()
-        workoutName = "Free Run"
+        // Name must be set before the async task so the UI reflects the correct
+        // workout name if it reads the property during the auth wait.
+        if workoutMode != .interval {
+            workoutName = "Free Run"
+        }
+
+        Task { [weak self] in
+            guard let self = self else { return }
+            await self.startWorkoutAfterAuth()
+        }
+    }
+
+    /// Async core of workout startup — awaits HealthKit authorization, then
+    /// initialises state and starts all sensors/queries.
+    private func startWorkoutAfterAuth() async {
+        // Abort if another workout snuck in while we were waiting.
+        guard !isWorkoutActive else {
+            logger.warning("Workout became active while awaiting authorization")
+            return
+        }
+
+        let authorized = await requestHealthAuthorizationAsync()
+        guard authorized else {
+            logger.warning("Workout start aborted — HealthKit not authorized")
+            // authorizationDenied is already set by requestHealthAuthorizationAsync
+            return
+        }
 
         let now = Date()
         workoutStartTime = now
@@ -193,7 +232,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         caloriesAnchor = nil
         accumulatedPauseTime = 0
         pauseStartDate = nil
-
         routePoints = []
 
         // Start first segment as unknown
@@ -349,6 +387,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - HKWorkoutSession
 
     private func startWorkoutSession() {
+        guard healthKitAuthorized else {
+            logger.warning("startWorkoutSession skipped — HealthKit not authorized")
+            return
+        }
         guard HKHealthStore.isHealthDataAvailable() else {
             logger.warning("HealthKit not available")
             return
@@ -626,6 +668,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Heart Rate Query
 
     private func startHeartRateQuery() {
+        guard healthKitAuthorized else {
+            logger.warning("startHeartRateQuery skipped — HealthKit not authorized")
+            return
+        }
         guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate),
               let startDate = workoutStartTime else { return }
 
@@ -700,6 +746,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Calories Query
 
     private func startCaloriesQuery() {
+        guard healthKitAuthorized else {
+            logger.warning("startCaloriesQuery skipped — HealthKit not authorized")
+            return
+        }
         guard let caloriesType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
               let startDate = workoutStartTime else { return }
 
