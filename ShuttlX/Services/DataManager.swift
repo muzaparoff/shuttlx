@@ -152,7 +152,7 @@ class DataManager: ObservableObject {
         let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let data = try JSONEncoder().encode(sessions)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
             WidgetCenter.shared.reloadAllTimelines()
             debouncedCloudSync()
         } catch {

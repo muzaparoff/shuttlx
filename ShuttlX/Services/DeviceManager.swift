@@ -113,7 +113,7 @@ class DeviceManager: ObservableObject {
         let url = containerURL.appendingPathComponent(fileName)
         do {
             let data = try JSONEncoder().encode(devices)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
         } catch {
             logger.error("Failed to save devices: \(error.localizedDescription)")
         }
