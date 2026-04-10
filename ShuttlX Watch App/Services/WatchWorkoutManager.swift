@@ -318,8 +318,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopDisplayTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
-        stopHeartRateQuery()
-        stopCaloriesQuery()
+        // Heart rate and calorie queries are intentionally kept running through pause/resume
+        // to avoid the HKAnchoredObjectQuery replay bug: stopping and restarting a query
+        // causes the initial results handler to re-deliver all samples since the last anchor,
+        // double-counting calories/HR samples already processed.
         stopLocationUpdates()
 
         workoutSession?.pause()
@@ -350,8 +352,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startMotionUpdates()
             startPedometerUpdates()
         }
-        startHeartRateQuery()
-        startCaloriesQuery()
+        // Heart rate and calorie queries are kept running continuously — do not restart them
+        // here. Restarting an HKAnchoredObjectQuery replays all samples since the stored
+        // anchor in the initial results handler, causing double-counting on every resume.
         startLocationUpdates()
         logger.info("Workout resumed")
     }
