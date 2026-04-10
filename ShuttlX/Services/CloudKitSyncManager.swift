@@ -175,7 +175,7 @@ class CloudKitSyncManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(session)
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(session.id.uuidString).json")
-            try data.write(to: tempURL)
+            try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
             record["jsonData"] = CKAsset(fileURL: tempURL)
         } catch {
             logger.error("Failed to encode session \(session.id): \(error.localizedDescription)")
@@ -197,7 +197,7 @@ class CloudKitSyncManager: ObservableObject {
         do {
             let data = try JSONEncoder().encode(template)
             let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(template.id.uuidString).json")
-            try data.write(to: tempURL)
+            try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
             record["jsonData"] = CKAsset(fileURL: tempURL)
         } catch {
             logger.error("Failed to encode template \(template.id): \(error.localizedDescription)")

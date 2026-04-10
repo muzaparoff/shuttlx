@@ -102,7 +102,7 @@ class PlanManager: ObservableObject {
         guard let url = fileURL(plansFileName) else { return }
         do {
             let data = try JSONEncoder().encode(plans)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
             logger.info("Saved \(self.plans.count) plan(s)")
         } catch {
             logger.error("Failed to save plans: \(error.localizedDescription)")
@@ -124,7 +124,7 @@ class PlanManager: ObservableObject {
         guard let url = fileURL(progressFileName) else { return }
         do {
             let data = try JSONEncoder().encode(progresses)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
         } catch {
             logger.error("Failed to save progress: \(error.localizedDescription)")
         }

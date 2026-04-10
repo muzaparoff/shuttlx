@@ -257,7 +257,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let url = containerURL.appendingPathComponent(sessionsKey)
         do {
             let data = try JSONEncoder().encode(sessions)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
         } catch {
             log("Failed to save sessions: \(error)")
         }
@@ -291,7 +291,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
             do {
                 let data = try JSONEncoder().encode([TrainingSession]())
-                try data.write(to: sessionsURL, options: .atomic)
+                try data.write(to: sessionsURL, options: [.atomic, .completeFileProtection])
             } catch {
                 logger.error("Failed to purge sessions: \(error.localizedDescription)")
             }

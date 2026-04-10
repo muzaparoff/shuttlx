@@ -132,7 +132,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let fileURL = tempDir.appendingPathComponent(fileName)
 
         do {
-            try sessionData.write(to: fileURL, options: .atomic)
+            try sessionData.write(to: fileURL, options: [.atomic, .completeFileProtection])
             let metadata: [String: Any] = [
                 "action": "saveSession",
                 "sessionID": session.id.uuidString,
@@ -217,7 +217,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 try? FileManager.default.removeItem(at: url)
             } else {
                 let data = try JSONEncoder().encode(pendingSessions)
-                try data.write(to: url, options: .atomic)
+                try data.write(to: url, options: [.atomic, .completeFileProtection])
             }
         } catch {
             logger.error("Failed to save pending sessions: \(error.localizedDescription)")
@@ -268,7 +268,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             if !sessions.contains(where: { $0.id == session.id }) {
                 sessions.append(session)
                 let data = try JSONEncoder().encode(sessions)
-                try data.write(to: sessionsURL, options: .atomic)
+                try data.write(to: sessionsURL, options: [.atomic, .completeFileProtection])
                 logger.info("Session saved to App Group")
                 WidgetCenter.shared.reloadAllTimelines()
             }
@@ -542,7 +542,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let url = containerURL.appendingPathComponent("workout_templates.json")
         do {
             let data = try JSONEncoder().encode(templates)
-            try data.write(to: url, options: .atomic)
+            try data.write(to: url, options: [.atomic, .completeFileProtection])
         } catch {
             logger.error("Failed to save templates to disk: \(error.localizedDescription)")
         }

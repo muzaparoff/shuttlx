@@ -801,7 +801,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 logger.error("Could not resolve backup URL for workout backup")
                 return
             }
-            try data.write(to: backupURL, options: .atomic)
+            try data.write(to: backupURL, options: [.atomic, .completeFileProtection])
             logger.info("Workout data backed up")
         } catch {
             logger.error("Failed to backup workout data: \(error.localizedDescription)")
