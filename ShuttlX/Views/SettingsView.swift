@@ -20,6 +20,7 @@ struct SettingsView: View {
     @ObservedObject var deviceManager = DeviceManager.shared
     @State private var weightText: String = ""
     @State private var ageText: String = ""
+    @State private var maxHRText: String = ""
 
     var body: some View {
         List {
@@ -237,7 +238,36 @@ struct SettingsView: View {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Age in years")
 
-                Text("Used for calorie estimation when HealthKit data is unavailable.")
+                HStack {
+                    Image(systemName: "heart.circle.fill")
+                        .foregroundStyle(ShuttlXColor.heartRate)
+                        .accessibilityHidden(true)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Max Heart Rate (BPM)")
+                        Text("Override auto-calculated value")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer()
+                    TextField(maxHRPlaceholder, text: $maxHRText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                        .onChange(of: maxHRText) { _, newValue in
+                            if let bpm = Double(newValue), bpm > 0 {
+                                HeartRateZoneCalculator.saveMaxHR(bpm)
+                                sharedDataManager.sendMaxHRToWatch(bpm)
+                            } else if newValue.isEmpty {
+                                HeartRateZoneCalculator.saveMaxHR(0)   // 0 means "clear"
+                                sharedDataManager.sendMaxHRToWatch(0)
+                            }
+                        }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Maximum heart rate in beats per minute")
+                .accessibilityHint("Leave blank to use the Tanaka formula based on your age")
+
+                Text("Used for personalised heart rate zones. Auto-detected from HealthKit age when blank.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -404,6 +434,10 @@ struct SettingsView: View {
             if let age = deviceManager.userAge {
                 ageText = "\(age)"
             }
+            // Load manually saved max HR (empty string when using auto-calculation)
+            if let savedMaxHR = HeartRateZoneCalculator.loadSavedMaxHR(), savedMaxHR > 0 {
+                maxHRText = "\(Int(savedMaxHR.rounded()))"
+            }
         }
     }
 
@@ -416,6 +450,16 @@ struct SettingsView: View {
     private var watchStatusText: String {
         guard WCSession.isSupported() else { return "Not Supported" }
         return WCSession.default.isPaired ? "Paired" : "Not Paired"
+    }
+
+    /// Shows the Tanaka-formula estimate as the placeholder when no manual override is stored.
+    private var maxHRPlaceholder: String {
+        let calculator = HeartRateZoneCalculator(
+            age: deviceManager.userAge,
+            manualMaxHR: nil
+        )
+        let estimated = Int(calculator.estimatedMaxHR.rounded())
+        return "\(estimated)"
     }
 
     private func themeSubtitle(for id: String) -> String {

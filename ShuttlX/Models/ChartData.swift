@@ -24,13 +24,21 @@ struct HRZoneDistribution: Identifiable {
     let percentage: Double
     let color: Color
 
-    static let zones: [(name: String, range: ClosedRange<Double>, color: Color)] = [
-        ("Zone 1", 0...103, .blue),
-        ("Zone 2", 104...124, .green),
-        ("Zone 3", 125...145, .yellow),
-        ("Zone 4", 146...166, .orange),
-        ("Zone 5", 167...220, .red)
-    ]
+    /// Zone definitions computed from the user's personalised max HR.
+    /// Call this each time you need zones — the calculator reads shared UserDefaults
+    /// so the boundaries stay current when the user changes their max HR in Settings.
+    static func calculatedZones() -> [(name: String, range: ClosedRange<Double>, color: Color)] {
+        let calculator = HeartRateZoneCalculator.fromSharedDefaults()
+        let boundaries = calculator.zoneBoundaries()
+        let colors: [Color] = [.blue, .green, .yellow, .orange, .red]
+        return boundaries.enumerated().map { index, boundary in
+            let lower = Double(boundary.lower)
+            let upper = index == boundaries.count - 1
+                ? calculator.estimatedMaxHR + 20   // extend Zone 5 ceiling
+                : Double(boundary.upper)
+            return (boundary.name, lower...upper, colors[index])
+        }
+    }
 }
 
 // MARK: - DataManager Extensions for Charts
@@ -72,7 +80,7 @@ extension DataManager {
         let heartRates = sessions.compactMap(\.averageHeartRate)
         guard !heartRates.isEmpty else { return [] }
 
-        return HRZoneDistribution.zones.map { zone in
+        return HRZoneDistribution.calculatedZones().map { zone in
             let count = heartRates.filter { zone.range.contains($0) }.count
             let pct = Double(count) / Double(heartRates.count) * 100
             return HRZoneDistribution(zone: zone.name, percentage: pct, color: zone.color)
