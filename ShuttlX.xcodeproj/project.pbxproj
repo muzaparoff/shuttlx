@@ -142,6 +142,9 @@
 		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
 		ED000014 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000004 /* DeviceListView.swift */; };
 		ED000015 /* DevicePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000005 /* DevicePickerView.swift */; };
+		LA000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LA000008 /* PrivacyInfo.xcprivacy */; };
+		WG000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WG000008 /* PrivacyInfo.xcprivacy */; };
+		WW200099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WW000010 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -329,6 +332,9 @@
 		ED000003 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		ED000004 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
 		ED000005 /* DevicePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePickerView.swift; sourceTree = "<group>"; };
+		LA000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		WG000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		WW000010 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -585,6 +591,7 @@
 			isa = PBXGroup;
 			children = (
 				LA000007 /* Info.plist */,
+				LA000008 /* PrivacyInfo.xcprivacy */,
 				LA000001 /* ShuttlXLiveActivityBundle.swift */,
 				LA000002 /* ShuttlXLiveActivity.swift */,
 				LA000003 /* LockScreenView.swift */,
@@ -596,6 +603,7 @@
 			isa = PBXGroup;
 			children = (
 				WG000004 /* Info.plist */,
+				WG000008 /* PrivacyInfo.xcprivacy */,
 				WG000005 /* ShuttlXWidgets.entitlements */,
 				WG000001 /* ShuttlXWidgetsBundle.swift */,
 				WG000002 /* SmallWidget.swift */,
@@ -608,6 +616,7 @@
 			isa = PBXGroup;
 			children = (
 				WW000008 /* Info.plist */,
+				WW000010 /* PrivacyInfo.xcprivacy */,
 				WW000009 /* ShuttlXWatchWidgets.entitlements */,
 				WW000001 /* ShuttlXWatchWidgets.swift */,
 				WW000002 /* LastWorkoutComplication.swift */,
@@ -790,6 +799,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				LA000033 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -797,6 +807,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WG000033 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -804,6 +815,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				WW200099 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
