@@ -10,8 +10,14 @@ struct TrainingView: View {
     @State private var showingSummary = false
     @State private var savedSummary: WorkoutSummary?
     @State private var pausePulse = false
+    /// Tracks whether the high-intensity warning haptic has already fired this threshold crossing.
+    @State private var highIntensityHapticFired = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+
+    private var hrCalculator: HeartRateZoneCalculator {
+        HeartRateZoneCalculator.fromSharedDefaults()
+    }
 
     var body: some View {
         if showingSummary, let summary = savedSummary {
@@ -133,6 +139,22 @@ struct TrainingView: View {
                 metricRow("HR", heartRateText, ShuttlXColor.forHRZone(workoutManager.heartRate), valueSize, labelSize, labelWidth,
                           accessibilityText: workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute" : "Heart rate no data")
                     .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
+                    .onChange(of: workoutManager.heartRate) { _, newHR in
+                        let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
+                        if isHigh && !highIntensityHapticFired {
+                            highIntensityHapticFired = true
+                            #if os(watchOS)
+                            WKInterfaceDevice.current().play(.notification)
+                            #endif
+                        } else if !isHigh {
+                            highIntensityHapticFired = false
+                        }
+                    }
+
+                // HIGH INTENSITY warning — shown when HR > 85% of estimated max HR
+                if isHighIntensityWarning {
+                    highIntensityWarningView(labelSize: labelSize)
+                }
 
                 metricRow("PACE", paceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
                           accessibilityText: accessiblePace)
@@ -305,12 +327,32 @@ struct TrainingView: View {
 
     private var heartRateZoneName: String {
         let hr = workoutManager.heartRate
-        if hr <= 0 { return "" }
-        if hr < 104 { return "Zone 1 Easy" }
-        if hr < 125 { return "Zone 2 Fat Burn" }
-        if hr < 146 { return "Zone 3 Cardio" }
-        if hr < 167 { return "Zone 4 Hard" }
-        return "Zone 5 Peak"
+        guard hr > 0 else { return "" }
+        return hrCalculator.zoneName(for: Double(hr))
+    }
+
+    private var isHighIntensityWarning: Bool {
+        hrCalculator.isHighIntensityWarning(heartRate: Double(workoutManager.heartRate))
+    }
+
+    @ViewBuilder
+    private func highIntensityWarningView(labelSize: CGFloat) -> some View {
+        HStack {
+            Spacer()
+            Text("HIGH INTENSITY")
+                .font(.system(size: max(9, labelSize * 0.85), weight: .bold, design: .monospaced))
+                .foregroundColor(ShuttlXColor.ctaDestructive)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(ShuttlXColor.ctaDestructive, lineWidth: 1)
+                )
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        .animation(.easeInOut(duration: 0.4), value: isHighIntensityWarning)
+        .accessibilityLabel("High intensity warning: heart rate above 85 percent of maximum")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     private var distanceText: String {

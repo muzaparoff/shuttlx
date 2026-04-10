@@ -461,6 +461,27 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         log("Theme sent to Watch via applicationContext: \(themeID)")
     }
 
+    // MARK: - Max HR Sync
+
+    /// Syncs the user's max HR override to the Watch so it uses the same zone boundaries.
+    /// Pass 0 to clear a manual override (Watch will fall back to Tanaka formula or HealthKit age).
+    func sendMaxHRToWatch(_ maxHR: Double) {
+        guard WCSession.isSupported(), session.isPaired else { return }
+        let payload: [String: Any] = [
+            "action": "syncMaxHR",
+            "maxHR": maxHR
+        ]
+
+        if session.isReachable {
+            session.sendMessage(payload, replyHandler: nil, errorHandler: { [weak self] error in
+                self?.log("Max HR sendMessage failed: \(error.localizedDescription)")
+            })
+        }
+
+        updateCombinedApplicationContext(merging: payload)
+        log("Max HR sent to Watch: \(maxHR == 0 ? "cleared" : "\(Int(maxHR)) BPM")")
+    }
+
     // MARK: - Combined Application Context
 
     /// Merges new keys into the existing applicationContext to prevent overwrites.

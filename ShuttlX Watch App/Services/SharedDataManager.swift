@@ -326,7 +326,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     self.logger.info("Ping received from iPhone")
                     self.updateSyncStatus("Connection verified")
                     self.consecutiveFailures = 0
-                case "syncTheme", "syncTemplates":
+                case "syncTheme", "syncTemplates", "syncMaxHR":
                     self.handleIncomingPayload(message)
                 default:
                     break
@@ -374,7 +374,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                         }
                         self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone (requested)")
                     }
-                case "syncTheme", "syncTemplates":
+                case "syncTheme", "syncTemplates", "syncMaxHR":
                     self.handleIncomingPayload(message)
                     replyHandler(["status": "received"])
                 default:
@@ -520,6 +520,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         if let themeID = payload["themeID"] as? String {
             ThemeManager.shared.selectTheme(themeID)
             logger.info("Theme synced from iPhone: \(themeID)")
+        }
+
+        // Process max HR override if present
+        if let maxHR = payload["maxHR"] as? Double {
+            if maxHR > 0 {
+                HeartRateZoneCalculator.saveMaxHR(maxHR)
+                logger.info("Max HR synced from iPhone: \(Int(maxHR)) BPM")
+            } else {
+                // 0 means "clear manual override"
+                HeartRateZoneCalculator.saveMaxHR(0)
+                logger.info("Max HR override cleared by iPhone")
+            }
         }
 
         // Process templates if present

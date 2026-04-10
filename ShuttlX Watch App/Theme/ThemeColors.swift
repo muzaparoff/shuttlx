@@ -82,12 +82,15 @@ struct ThemeColors: Equatable {
     }
 
     func forHRZone(_ heartRate: Int) -> Color {
-        if heartRate <= 0 { return self.heartRate }
-        if heartRate < 104 { return hrZone1 }
-        if heartRate < 125 { return hrZone2 }
-        if heartRate < 146 { return hrZone3 }
-        if heartRate < 167 { return hrZone4 }
-        return hrZone5
+        guard heartRate > 0 else { return self.heartRate }
+        let calculator = HeartRateZoneCalculator.fromSharedDefaults()
+        switch calculator.zone(for: Double(heartRate)) {
+        case 1: return hrZone1
+        case 2: return hrZone2
+        case 3: return hrZone3
+        case 4: return hrZone4
+        default: return hrZone5
+        }
     }
 
     func forPaceZone(_ zone: String) -> Color {

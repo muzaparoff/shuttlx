@@ -142,6 +142,9 @@
 		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
 		ED000014 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000004 /* DeviceListView.swift */; };
 		ED000015 /* DevicePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000005 /* DevicePickerView.swift */; };
+		HR000011 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000001 /* HeartRateZoneCalculator.swift */; };
+		HR000012 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000001 /* HeartRateZoneCalculator.swift */; };
+		HR000013 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000002 /* HeartRateZoneCalculator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -325,6 +328,8 @@
 		WW000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		WW000009 /* ShuttlXWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlXWatchWidgets.entitlements; sourceTree = "<group>"; };
 		ED000001 /* ExerciseDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDevice.swift; sourceTree = "<group>"; };
+		HR000001 /* HeartRateZoneCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZoneCalculator.swift; sourceTree = "<group>"; };
+		HR000002 /* HeartRateZoneCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeartRateZoneCalculator.swift; path = "ShuttlX Watch App/Models/HeartRateZoneCalculator.swift"; sourceTree = SOURCE_ROOT; };
 		ED000002 /* CalorieEstimationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieEstimationEngine.swift; sourceTree = "<group>"; };
 		ED000003 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		ED000004 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
@@ -466,6 +471,7 @@
 				G5923001F /* TrainingPlan.swift */,
 				G5923002F /* BuiltInPlans.swift */,
 				ED000001 /* ExerciseDevice.swift */,
+				HR000001 /* HeartRateZoneCalculator.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -896,6 +902,7 @@
 				ED000013 /* DeviceManager.swift in Sources */,
 				ED000014 /* DeviceListView.swift in Sources */,
 				ED000015 /* DevicePickerView.swift in Sources */,
+				HR000011 /* HeartRateZoneCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -924,6 +931,7 @@
 				WG000016 /* RoutePoint.swift in Sources */,
 				WG000017 /* WidgetDataProvider.swift in Sources */,
 				WG000020B /* ShuttlXTheme.swift in Sources */,
+				HR000012 /* HeartRateZoneCalculator.swift in Sources */,
 				TH000031 /* ThemeColors.swift in Sources */,
 				TH000032 /* ThemeFonts.swift in Sources */,
 				TH000033 /* ThemeEffects.swift in Sources */,
@@ -957,6 +965,7 @@
 				WW100010 /* WorkoutSport.swift in Sources */,
 				WW100011 /* RoutePoint.swift in Sources */,
 				WW100020 /* ShuttlXTheme.swift in Sources */,
+				HR000013 /* HeartRateZoneCalculator.swift in Sources */,
 				WW100021 /* ThemeColors.swift in Sources */,
 				WW100022 /* ThemeFonts.swift in Sources */,
 				WW100023 /* ThemeEffects.swift in Sources */,

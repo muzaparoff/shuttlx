@@ -130,12 +130,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         writeTypes.insert(HKWorkoutType.workoutType())
 
+        // Request date of birth access so we can compute personalised HR zones.
+        let dateOfBirthType = HKCharacteristicType.characteristicType(forIdentifier: .dateOfBirth)
+        let readCharacteristics: Set<HKObjectType> = dateOfBirthType.map { [$0] } ?? []
+
         guard !readTypes.isEmpty else {
             logger.error("No valid HealthKit types available for authorization")
             return
         }
 
-        healthStore.requestAuthorization(toShare: writeTypes, read: readTypes) { [weak self] success, error in
+        let allRead: Set<HKObjectType> = Set(readTypes).union(readCharacteristics)
+
+        healthStore.requestAuthorization(toShare: writeTypes, read: allRead) { [weak self] success, error in
             Task { @MainActor [weak self] in
                 guard let self = self else { return }
                 if let error = error {
@@ -150,8 +156,35 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     self.logger.info("HealthKit authorization granted")
                     self.healthKitAuthorized = true
                     self.authorizationDenied = false
+                    self.updateMaxHRFromHealthKit()
                 }
             }
+        }
+    }
+
+    /// Reads date of birth from HealthKit and persists the Tanaka-derived max HR
+    /// to the App Group UserDefaults. A manual override stored there is not clobbered —
+    /// the UI max HR field takes precedence over the formula.
+    private func updateMaxHRFromHealthKit() {
+        // Only update from HealthKit when no manual override exists
+        guard HeartRateZoneCalculator.loadSavedMaxHR() == nil else {
+            logger.info("Manual max HR override present — skipping HealthKit age lookup")
+            return
+        }
+
+        do {
+            let components = try healthStore.dateOfBirthComponents()
+            let calendar = Calendar.current
+            let now = calendar.dateComponents([.year], from: Date())
+            guard let birthYear = components.year, let currentYear = now.year else { return }
+            let age = currentYear - birthYear
+            guard age > 0, age < 120 else { return }
+
+            let calculator = HeartRateZoneCalculator(age: age, manualMaxHR: nil)
+            HeartRateZoneCalculator.saveMaxHR(calculator.estimatedMaxHR)
+            logger.info("Max HR updated from HealthKit age \(age): \(calculator.estimatedMaxHR) BPM")
+        } catch {
+            logger.info("Date of birth not available in HealthKit: \(error.localizedDescription)")
         }
     }
 
