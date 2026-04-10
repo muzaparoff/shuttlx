@@ -8,6 +8,7 @@ struct TrainingView: View {
     @State private var selectedTab = 0
     @State private var showingStopConfirmation = false
     @State private var showingSummary = false
+    @State private var showingHealthKitError = false
     @State private var savedSummary: WorkoutSummary?
     @State private var pausePulse = false
     @Environment(\.dismiss) private var dismiss
@@ -59,6 +60,16 @@ struct TrainingView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("Save this training session?")
+        }
+        .alert("Health App Save Failed", isPresented: $showingHealthKitError) {
+            Button("OK", role: .cancel) {
+                workoutManager.healthKitSaveError = nil
+            }
+        } message: {
+            Text(workoutManager.healthKitSaveError ?? "The workout was saved in ShuttlX but could not be written to the Health app.")
+        }
+        .onChange(of: workoutManager.healthKitSaveError) { _, newValue in
+            showingHealthKitError = newValue != nil
         }
     }
 

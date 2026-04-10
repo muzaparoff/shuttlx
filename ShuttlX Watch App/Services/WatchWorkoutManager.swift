@@ -32,6 +32,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var lastCompletedKm: Int = 0
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
+    @Published var healthKitSaveError: String? = nil
 
     /// True average heart rate across all collected samples (excludes paused periods)
     var averageHeartRate: Int {
@@ -48,6 +49,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Private State
     private var workoutSession: HKWorkoutSession?
+    private var workoutBuilder: HKLiveWorkoutBuilder?
     private var healthStore = HKHealthStore()
     private var displayTimer: DispatchSourceTimer?
     private var workoutStartTime: Date?
@@ -295,6 +297,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         workoutSession?.end()
         workoutSession = nil
+        workoutBuilder = nil
 
         // Close final segment
         closeCurrentSegment()
@@ -361,9 +364,23 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         configuration.locationType = sport.hkLocationType
 
         do {
-            workoutSession = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
+            let session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
+            workoutSession = session
             workoutSession?.delegate = self
+            let builder = session.associatedWorkoutBuilder()
+            workoutBuilder = builder
+            builder.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
             workoutSession?.startActivity(with: Date())
+            builder.beginCollection(withStart: Date()) { [weak self] success, error in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    if let error = error {
+                        self.logger.error("Failed to begin workout builder collection: \(error.localizedDescription)")
+                    } else {
+                        self.logger.info("HKLiveWorkoutBuilder collection started")
+                    }
+                }
+            }
             routeBuilder = HKWorkoutRouteBuilder(healthStore: healthStore, device: nil)
             logger.info("HKWorkoutSession started (sport: \(sport.displayName))")
         } catch {
@@ -899,12 +916,50 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Set sport type from template
         session.sportType = activeTemplate?.sportType
 
-        // Finalize HKWorkoutRouteBuilder (saves route to HealthKit)
-        finalizeRouteBuilder()
+        // Capture mutable copies for use in the async Task below
+        let sessionToSend = session
+        let builderToFinish = workoutBuilder
+        let routeBuilderToFinish = routeBuilder
 
-        sharedDataManager?.sendSessionToiOS(session)
+        // Nil out builder/route references before async work so no other call reuses them
+        workoutBuilder = nil
+        routeBuilder = nil
+
+        // Finalize HKLiveWorkoutBuilder → saves HKWorkout to HealthKit, then attach route
+        Task {
+            if let builder = builderToFinish {
+                do {
+                    let endDate = Date()
+                    try await builder.endCollection(at: endDate)
+                    let workout = try await builder.finishWorkout()
+                    await MainActor.run {
+                        self.logger.info("HKWorkout saved to HealthKit: \(workout.uuid)")
+                    }
+                    // Attach GPS route to the saved HKWorkout
+                    if let rb = routeBuilderToFinish {
+                        await self.finalizeRouteBuilder(rb, with: workout)
+                    }
+                } catch {
+                    await MainActor.run {
+                        self.logger.error("Failed to save HKWorkout: \(error.localizedDescription)")
+                        self.healthKitSaveError = error.localizedDescription
+                    }
+                }
+            } else {
+                // No builder — best-effort route finalization (won't find a matching workout)
+                if let rb = routeBuilderToFinish {
+                    await self.finalizeRouteBuilder(rb, with: nil)
+                }
+                await MainActor.run {
+                    self.logger.warning("No HKLiveWorkoutBuilder — workout not saved to HealthKit")
+                    self.healthKitSaveError = "Workout builder unavailable — workout may not appear in Health app"
+                }
+            }
+        }
+
+        sharedDataManager?.sendSessionToiOS(sessionToSend)
         clearWorkoutBackup()
-        logger.info("Session saved: Duration \(Int(session.duration))s")
+        logger.info("Session saved: Duration \(Int(sessionToSend.duration))s")
 
         // Request extended background time for sync to complete
         ProcessInfo.processInfo.performExpiringActivity(
@@ -916,40 +971,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    private func finalizeRouteBuilder() {
-        guard let builder = routeBuilder else { return }
-
-        // Nil the property first so no other code uses it, then finish async with local ref
-        routeBuilder = nil
-
-        // Query HealthKit for the most recent workout from this session to attach the route
-        let start = workoutStartTime ?? Date()
-        let predicate = HKQuery.predicateForSamples(withStart: start, end: Date(), options: .strictStartDate)
-
-        Task {
-            do {
-                let workoutType = HKWorkoutType.workoutType()
-                let descriptor = HKSampleQueryDescriptor(
-                    predicates: [.sample(type: workoutType, predicate: predicate)],
-                    sortDescriptors: [SortDescriptor(\.startDate, order: .reverse)],
-                    limit: 1
-                )
-                let results = try await descriptor.result(for: healthStore)
-                if let workout = results.first as? HKWorkout {
-                    try await builder.finishRoute(with: workout, metadata: nil)
-                    await MainActor.run {
-                        self.logger.info("HKWorkoutRoute saved to HealthKit (attached to session workout)")
-                    }
-                } else {
-                    await MainActor.run {
-                        self.logger.warning("No matching HKWorkout found for route — route discarded")
-                    }
-                }
-            } catch {
-                await MainActor.run {
-                    self.logger.error("Failed to finalize route: \(error.localizedDescription)")
-                }
-            }
+    private func finalizeRouteBuilder(_ builder: HKWorkoutRouteBuilder, with workout: HKWorkout?) async {
+        guard let workout = workout else {
+            logger.warning("No HKWorkout available — GPS route will not be attached to HealthKit")
+            return
+        }
+        do {
+            try await builder.finishRoute(with: workout, metadata: nil)
+            logger.info("HKWorkoutRoute saved to HealthKit (attached to workout \(workout.uuid))")
+        } catch {
+            logger.error("Failed to finalize route: \(error.localizedDescription)")
         }
     }
 }
