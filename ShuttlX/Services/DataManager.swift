@@ -120,14 +120,21 @@ class DataManager: ObservableObject {
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
-        do {
-            let data = try JSONEncoder().encode(sessions)
-            try data.write(to: url, options: .atomic)
-            WidgetCenter.shared.reloadAllTimelines()
-            debouncedCloudSync()
-        } catch {
-            logger.error("Failed to save sessions: \(error.localizedDescription)")
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
+            do {
+                let data = try JSONEncoder().encode(self.sessions)
+                try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+            } catch {
+                self.logger.error("Failed to save sessions: \(error.localizedDescription)")
+            }
         }
+        if let coordinatorError {
+            logger.error("File coordination error saving sessions: \(coordinatorError.localizedDescription)")
+        }
+        WidgetCenter.shared.reloadAllTimelines()
+        debouncedCloudSync()
     }
 
     /// Debounce CloudKit sync to avoid firing on every rapid save (e.g. batch imports)
@@ -145,31 +152,46 @@ class DataManager: ObservableObject {
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
-        do {
-            guard FileManager.default.fileExists(atPath: url.path) else { return }
-            let data = try Data(contentsOf: url)
-            let loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
 
-            // Merge: add sessions from disk that aren't already in memory
-            let existingIds = Set(sessions.map { $0.id })
-            var hasNew = false
-            for session in loaded {
-                processedSessionIds.insert(session.id)
-                if !existingIds.contains(session.id) {
-                    sessions.append(session)
-                    hasNew = true
-                }
+        var loaded: [TrainingSession] = []
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+            do {
+                let data = try Data(contentsOf: readURL)
+                loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
+            } catch {
+                self.logger.error("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
+                // Preserve corrupt file for potential recovery — don't overwrite history
+                let backupURL = url.deletingLastPathComponent()
+                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
             }
+        }
+        if let coordinatorError {
+            logger.error("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
+            return
+        }
 
-            // If first load (empty), just replace
-            if existingIds.isEmpty {
-                sessions = loaded
-                processedSessionIds = Set(loaded.map { $0.id })
-            } else if hasNew {
-                logger.info("Loaded \(self.sessions.count - existingIds.count) new session(s) from disk")
+        // Merge: add sessions from disk that aren't already in memory
+        let existingIds = Set(sessions.map { $0.id })
+        var hasNew = false
+        for session in loaded {
+            processedSessionIds.insert(session.id)
+            if !existingIds.contains(session.id) {
+                sessions.append(session)
+                hasNew = true
             }
-        } catch {
-            logger.error("Failed to load sessions: \(error.localizedDescription)")
+        }
+
+        // If first load (empty), just replace
+        if existingIds.isEmpty {
+            sessions = loaded
+            processedSessionIds = Set(loaded.map { $0.id })
+        } else if hasNew {
+            logger.info("Loaded \(self.sessions.count - existingIds.count) new session(s) from disk")
         }
     }
 

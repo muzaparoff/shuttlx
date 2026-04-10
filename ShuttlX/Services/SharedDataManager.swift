@@ -160,7 +160,8 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func handleReceivedSession(_ session: TrainingSession) {
         if !syncedSessions.contains(where: { $0.id == session.id }) {
             syncedSessions.append(session)
-            // DataManager is the single writer to sessions.json — don't write here
+            // Persist immediately so sessions survive app termination before DataManager saves
+            saveSessionsToSharedStorage(syncedSessions)
             log("New session received and saved.")
             consecutiveFailures = 0
             lastSyncTime = Date()
@@ -255,11 +256,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
-        do {
-            let data = try JSONEncoder().encode(sessions)
-            try data.write(to: url, options: .atomic)
-        } catch {
-            log("Failed to save sessions: \(error)")
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
+            do {
+                let data = try JSONEncoder().encode(sessions)
+                try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+            } catch {
+                self.log("Failed to save sessions: \(error.localizedDescription)")
+            }
+        }
+        if let coordinatorError {
+            log("File coordination error saving sessions: \(coordinatorError.localizedDescription)")
         }
     }
 
@@ -273,13 +281,29 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     func loadSessionsFromAppGroup() -> [TrainingSession] {
         guard let containerURL = getWorkingContainer() else { return [] }
 
-        do {
-            let url = containerURL.appendingPathComponent(sessionsKey)
-            let data = try Data(contentsOf: url)
-            return try JSONDecoder().decode([TrainingSession].self, from: data)
-        } catch {
-            return []
+        let url = containerURL.appendingPathComponent(sessionsKey)
+        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
+
+        var result: [TrainingSession] = []
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+            do {
+                let data = try Data(contentsOf: readURL)
+                result = try JSONDecoder().decode([TrainingSession].self, from: data)
+            } catch {
+                self.log("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
+                // Preserve corrupt file for potential recovery — never silently drop history
+                let backupURL = url.deletingLastPathComponent()
+                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                self.log("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+            }
         }
+        if let coordinatorError {
+            log("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
+        }
+        return result
     }
 
     // MARK: - Public Debug
@@ -289,11 +313,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         if let containerURL = getWorkingContainer() {
             let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
-            do {
-                let data = try JSONEncoder().encode([TrainingSession]())
-                try data.write(to: sessionsURL, options: .atomic)
-            } catch {
-                logger.error("Failed to purge sessions: \(error.localizedDescription)")
+            let coordinator = NSFileCoordinator()
+            var coordinatorError: NSError?
+            coordinator.coordinate(writingItemAt: sessionsURL, options: .forReplacing, error: &coordinatorError) { writeURL in
+                do {
+                    let data = try JSONEncoder().encode([TrainingSession]())
+                    try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+                } catch {
+                    self.logger.error("Failed to purge sessions: \(error.localizedDescription)")
+                }
+            }
+            if let coordinatorError {
+                logger.error("File coordination error purging sessions: \(coordinatorError.localizedDescription)")
             }
         }
     }

@@ -252,28 +252,43 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
 
         let sessionsURL = containerURL.appendingPathComponent("sessions.json")
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
 
-        do {
+        // Read-then-write under a single write coordination to prevent races
+        coordinator.coordinate(writingItemAt: sessionsURL, options: .forReplacing, error: &coordinatorError) { writeURL in
             var sessions: [TrainingSession] = []
 
-            if FileManager.default.fileExists(atPath: sessionsURL.path) {
-                let data = try Data(contentsOf: sessionsURL)
+            // Read existing sessions if the file exists (using the coordinator-provided URL)
+            if FileManager.default.fileExists(atPath: writeURL.path) {
                 do {
+                    let data = try Data(contentsOf: writeURL)
                     sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
                 } catch {
-                    logger.error("Failed to decode sessions.json: \(error.localizedDescription)")
+                    self.logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
+                    // Preserve corrupt file — don't overwrite workout history
+                    let backupURL = writeURL.deletingLastPathComponent()
+                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                    try? FileManager.default.copyItem(at: writeURL, to: backupURL)
+                    self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                    // Continue with empty array — better to have one session than lose all
                 }
             }
 
-            if !sessions.contains(where: { $0.id == session.id }) {
-                sessions.append(session)
+            guard !sessions.contains(where: { $0.id == session.id }) else { return }
+            sessions.append(session)
+
+            do {
                 let data = try JSONEncoder().encode(sessions)
-                try data.write(to: sessionsURL, options: .atomic)
-                logger.info("Session saved to App Group")
+                try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+                self.logger.info("Session saved to App Group")
                 WidgetCenter.shared.reloadAllTimelines()
+            } catch {
+                self.logger.error("Failed to save session to App Group: \(error.localizedDescription)")
             }
-        } catch {
-            logger.error("Failed to save session to App Group: \(error.localizedDescription)")
+        }
+        if let coordinatorError {
+            logger.error("File coordination error saving session to App Group: \(coordinatorError.localizedDescription)")
         }
     }
 
@@ -498,18 +513,30 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func loadAllLocalSessions() -> [TrainingSession] {
-        guard let containerURL = getWorkingContainer() else {
-            return []
-        }
+        guard let containerURL = getWorkingContainer() else { return [] }
         let url = containerURL.appendingPathComponent("sessions.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-        do {
-            let data = try Data(contentsOf: url)
-            return try JSONDecoder().decode([TrainingSession].self, from: data)
-        } catch {
-            logger.error("Failed to load local sessions: \(error.localizedDescription)")
-            return []
+
+        var result: [TrainingSession] = []
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+            do {
+                let data = try Data(contentsOf: readURL)
+                result = try JSONDecoder().decode([TrainingSession].self, from: data)
+            } catch {
+                self.logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
+                // Preserve corrupt file for potential recovery
+                let backupURL = url.deletingLastPathComponent()
+                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+            }
         }
+        if let coordinatorError {
+            logger.error("File coordination error loading sessions on watch: \(coordinatorError.localizedDescription)")
+        }
+        return result
     }
 
     // MARK: - Template Sync

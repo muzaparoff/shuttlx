@@ -25,17 +25,26 @@ enum WidgetDataProvider {
             logger.info("Widget: No sessions.json found")
             return []
         }
-        do {
-            let data = try Data(contentsOf: url)
-            let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            // Sort once at cache time — all callers get a pre-sorted slice
-            cachedSessions = sessions.sorted { $0.startDate > $1.startDate }
-            cacheTimestamp = Date()
-            return cachedSessions!
-        } catch {
-            logger.error("Widget: Failed to decode sessions: \(error.localizedDescription)")
-            return []
+
+        var decoded: [TrainingSession] = []
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+            do {
+                let data = try Data(contentsOf: readURL)
+                decoded = try JSONDecoder().decode([TrainingSession].self, from: data)
+            } catch {
+                logger.error("Widget: Failed to decode sessions: \(error.localizedDescription)")
+            }
         }
+        if let coordinatorError {
+            logger.error("Widget: File coordination error: \(coordinatorError.localizedDescription)")
+        }
+
+        // Sort once at cache time — all callers get a pre-sorted slice
+        cachedSessions = decoded.sorted { $0.startDate > $1.startDate }
+        cacheTimestamp = Date()
+        return cachedSessions ?? []
     }
 
     /// Returns sessions sorted descending by startDate (most recent first).

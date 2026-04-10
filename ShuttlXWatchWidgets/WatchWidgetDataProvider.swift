@@ -25,17 +25,26 @@ enum WatchWidgetDataProvider {
             logger.info("Watch Widget: No sessions.json found")
             return []
         }
-        do {
-            let data = try Data(contentsOf: url)
-            let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-            // Sort descending by startDate once at cache time — all callers benefit
-            cachedSessions = sessions.sorted { $0.startDate > $1.startDate }
-            cacheTimestamp = Date()
-            return cachedSessions!
-        } catch {
-            logger.error("Watch Widget: Failed to decode sessions: \(error.localizedDescription)")
-            return []
+
+        var decoded: [TrainingSession] = []
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+            do {
+                let data = try Data(contentsOf: readURL)
+                decoded = try JSONDecoder().decode([TrainingSession].self, from: data)
+            } catch {
+                logger.error("Watch Widget: Failed to decode sessions: \(error.localizedDescription)")
+            }
         }
+        if let coordinatorError {
+            logger.error("Watch Widget: File coordination error: \(coordinatorError.localizedDescription)")
+        }
+
+        // Sort descending by startDate once at cache time — all callers benefit
+        cachedSessions = decoded.sorted { $0.startDate > $1.startDate }
+        cacheTimestamp = Date()
+        return cachedSessions ?? []
     }
 
     static func lastSession() -> TrainingSession? {
