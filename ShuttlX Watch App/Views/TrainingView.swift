@@ -11,6 +11,7 @@ struct TrainingView: View {
     @State private var showingHealthKitError = false
     @State private var savedSummary: WorkoutSummary?
     @State private var pausePulse = false
+    @State private var showingAuthDeniedAlert = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
 
@@ -70,6 +71,16 @@ struct TrainingView: View {
         }
         .onChange(of: workoutManager.healthKitSaveError) { _, newValue in
             showingHealthKitError = newValue != nil
+        }
+        .alert("Health Access Required", isPresented: $showingAuthDeniedAlert) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("ShuttlX needs Health access to record your workout. Open the Health app or iPhone Settings to grant permission.")
+        }
+        .onChange(of: workoutManager.authorizationDenied) { _, isDenied in
+            if isDenied {
+                showingAuthDeniedAlert = true
+            }
         }
     }
 
