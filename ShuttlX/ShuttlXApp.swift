@@ -43,6 +43,7 @@ struct ShuttlXApp: App {
                 dataManager.loadSessionsFromAppGroup()
                 sharedDataManager.reconcileWithDataManager()
                 sharedDataManager.requestSessionsFromWatch { _ in }
+                sharedDataManager.reconcileSessionIDs()
                 if authManager.isSignedIn {
                     cloudKitSync.performFullSync(dataManager: dataManager)
                 }

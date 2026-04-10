@@ -389,6 +389,20 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                         }
                         self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone (requested)")
                     }
+                case "reconcileSessions":
+                    let knownIDs = Set((message["knownSessionIDs"] as? [String]) ?? [])
+                    let allSessions = self.loadAllLocalSessions()
+                    let missingSessions = allSessions.filter { !knownIDs.contains($0.id.uuidString) }
+
+                    if missingSessions.isEmpty {
+                        replyHandler(["status": "in_sync", "missingCount": 0])
+                    } else {
+                        self.logger.info("iPhone missing \(missingSessions.count) session(s) — resending")
+                        for session in missingSessions {
+                            self.sendSessionToiOS(session)
+                        }
+                        replyHandler(["status": "resending", "missingCount": missingSessions.count])
+                    }
                 case "syncTheme", "syncTemplates", "syncMaxHR":
                     self.handleIncomingPayload(message)
                     replyHandler(["status": "received"])

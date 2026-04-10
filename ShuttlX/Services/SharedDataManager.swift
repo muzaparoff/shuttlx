@@ -43,6 +43,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private var lastPingTime: Date?
     private var backgroundSyncTimer: Timer?
     private weak var dataManager: DataManager?
+    private var pendingForDataManager: [TrainingSession] = []
 
     private var session: WCSession {
         return WCSession.default
@@ -153,6 +154,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     func setDataManager(_ dataManager: DataManager) {
         self.dataManager = dataManager
+        if !pendingForDataManager.isEmpty {
+            log("Flushing \(pendingForDataManager.count) buffered session(s) to DataManager")
+            dataManager.handleReceivedSessions(pendingForDataManager)
+            pendingForDataManager.removeAll()
+        }
     }
 
     // MARK: - Session Handling
@@ -162,13 +168,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             syncedSessions.append(session)
             // Persist immediately so sessions survive app termination before DataManager saves
             saveSessionsToSharedStorage(syncedSessions)
-            log("New session received and saved.")
+            log("New session received and saved: \(session.id)")
             consecutiveFailures = 0
             lastSyncTime = Date()
             updateConnectivityHealth()
 
             // Forward to DataManager which saves to App Group + reloads widgets
-            dataManager?.handleReceivedSessions([session])
+            if let dataManager = dataManager {
+                dataManager.handleReceivedSessions([session])
+            } else {
+                log("Warning: dataManager nil — buffering session \(session.id)")
+                pendingForDataManager.append(session)
+            }
         }
     }
 
@@ -432,10 +443,37 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         loadSessionsFromSharedStorage()
         checkForNewSessions()
 
-        // Force pull from Watch if available
-        if WCSession.default.isReachable {
-            requestSessionsFromWatch { _ in }
+        // Always attempt pull — sendMessage's errorHandler handles unreachable case,
+        // isReachable can be stale
+        requestSessionsFromWatch { [weak self] count in
+            if count > 0 {
+                self?.log("Reconciliation pulled \(count) session(s)")
+            }
         }
+    }
+
+    /// Sends known session IDs to Watch so Watch can re-send any missing ones
+    func reconcileSessionIDs() {
+        guard let dataManager = dataManager else { return }
+        let knownIDs = dataManager.sessions.map { $0.id.uuidString }
+
+        let message: [String: Any] = [
+            "action": "reconcileSessions",
+            "knownSessionIDs": knownIDs
+        ]
+
+        WCSession.default.sendMessage(message, replyHandler: { [weak self] reply in
+            Task { @MainActor in
+                guard let self = self else { return }
+                if let missingCount = reply["missingCount"] as? Int, missingCount > 0 {
+                    self.log("Watch found \(missingCount) session(s) missing from iPhone — resending")
+                }
+            }
+        }, errorHandler: { [weak self] error in
+            Task { @MainActor in
+                self?.log("Session reconciliation failed: \(error.localizedDescription)")
+            }
+        })
     }
 
     // MARK: - Template Sync
@@ -625,9 +663,12 @@ extension SharedDataManager {
                             self.handleReceivedSession(trainingSession)
                             self.log("Session received from watch via userInfo")
                         } catch {
-                            self.log("Failed to decode session: \(error.localizedDescription)")
+                            self.log("Failed to decode session from userInfo: \(error.localizedDescription)")
                             self.consecutiveFailures += 1
                         }
+                    } else {
+                        self.log("Missing or invalid sessionData in userInfo")
+                        self.consecutiveFailures += 1
                     }
                 case "workoutStarted":
                     if let activityType = userInfo["activityType"] as? String {
@@ -659,8 +700,12 @@ extension SharedDataManager {
                             self.handleReceivedSession(trainingSession)
                             self.consecutiveFailures = 0
                         } catch {
+                            self.log("Failed to decode session from message: \(error.localizedDescription)")
                             self.consecutiveFailures += 1
                         }
+                    } else {
+                        self.log("Missing or invalid sessionData in message")
+                        self.consecutiveFailures += 1
                     }
                 case "liveMetrics":
                     self.handleLiveMetrics(message)
@@ -689,10 +734,12 @@ extension SharedDataManager {
                             self.consecutiveFailures = 0
                             replyHandler(["status": "saved", "timestamp": Date().timeIntervalSince1970])
                         } catch {
+                            self.log("Failed to decode session from message(reply): \(error.localizedDescription)")
                             self.consecutiveFailures += 1
                             replyHandler(["error": "Failed to decode session"])
                         }
                     } else {
+                        self.log("Missing or invalid sessionData in message(reply)")
                         replyHandler(["error": "Missing sessionData"])
                     }
                 case "liveMetrics":

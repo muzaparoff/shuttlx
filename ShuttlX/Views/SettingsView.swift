@@ -126,6 +126,7 @@ struct SettingsView: View {
                     Button {
                         isSyncing = true
                         sharedDataManager.requestSessionsFromWatch { count in
+                            sharedDataManager.reconcileSessionIDs()
                             isSyncing = false
                             if count > 0 {
                                 dataManager.loadSessionsFromAppGroup()
@@ -150,6 +151,22 @@ struct SettingsView: View {
                     }
                     .disabled(isSyncing)
                     .accessibilityHint("Pulls training sessions directly from your Apple Watch")
+
+                    HStack {
+                        Label("Last Sync", systemImage: "clock")
+                        Spacer()
+                        Text(sharedDataManager.lastSyncTime.map { FormattingUtils.formatShortDate($0) } ?? "Never")
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+
+                    HStack {
+                        Label("Connection", systemImage: "antenna.radiowaves.left.and.right")
+                        Spacer()
+                        Text("\(Int(sharedDataManager.connectivityHealth * 100))%")
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(sharedDataManager.connectivityHealth > 0.5 ? ShuttlXColor.positive : ShuttlXColor.ctaWarning)
+                    }
                 }
             }
 
