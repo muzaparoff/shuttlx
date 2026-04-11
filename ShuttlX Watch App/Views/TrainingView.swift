@@ -12,6 +12,7 @@ struct TrainingView: View {
     @State private var pausePulse = false
     @Environment(\.dismiss) private var dismiss
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if showingSummary, let summary = savedSummary {
@@ -117,11 +118,14 @@ struct TrainingView: View {
                         .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
-                        .opacity(workoutManager.isPaused && pausePulse ? 0.3 : 1.0)
-                        .animation(.easeInOut(duration: 0.8).repeatForever(autoreverses: true), value: pausePulse)
+                        .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.3 : 1.0)
+                        .animation(
+                            reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                            value: pausePulse
+                        )
                     Spacer()
                 }
-                .onAppear { if workoutManager.isPaused { pausePulse = true } }
+                .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
 
                 // Timer row
                 timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth)
@@ -231,8 +235,8 @@ struct TrainingView: View {
         }
         .frame(maxWidth: .infinity)
         .id(engine.currentStepIndex)
-        .transition(.opacity.combined(with: .scale(scale: 0.9)))
-        .animation(.easeInOut(duration: 0.3), value: engine.currentStepIndex)
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9)))
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: engine.currentStepIndex)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Time remaining \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), step \(engine.currentStepIndex + 1) of \(engine.totalStepsCount)")
         .accessibilityAddTraits(.updatesFrequently)
@@ -356,14 +360,15 @@ struct WorkoutSummaryView: View {
     let summary: WorkoutSummary
     let onDismiss: () -> Void
     @State private var showBadge = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         ScrollView {
             VStack(spacing: ShuttlXSpacing.lg) {
                 ThemedCompletionBadge()
-                    .scaleEffect(showBadge ? 1 : 0.3)
+                    .scaleEffect(reduceMotion ? 1 : (showBadge ? 1 : 0.3))
                     .opacity(showBadge ? 1 : 0)
-                    .animation(.spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
+                    .animation(reduceMotion ? .easeIn(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
                     .themeModeTag("COMPLETE")
 
                 Text("Workout Complete")

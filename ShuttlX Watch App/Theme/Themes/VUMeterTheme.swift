@@ -47,7 +47,7 @@ extension AppTheme {
             paceModerate: Color(red: 0.22, green: 1.0, blue: 0.08),      // green
             paceEasy: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
             textPrimary: Color(red: 0.91, green: 0.63, blue: 0.19),      // #E8A030 amber text
-            textSecondary: Color(red: 0.35, green: 0.29, blue: 0.20),    // #5A4A32 muted
+            textSecondary: Color(red: 0.58, green: 0.50, blue: 0.38),    // #948060 muted (4.5:1 vs #1A1610)
             cardBackground: Color(red: 0.07, green: 0.05, blue: 0.03),
             watchCardBackground: Color(red: 0.07, green: 0.05, blue: 0.03),
             watchButtonBackground: Color(red: 0.14, green: 0.11, blue: 0.07)

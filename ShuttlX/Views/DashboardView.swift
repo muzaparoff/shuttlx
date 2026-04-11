@@ -8,6 +8,7 @@ struct DashboardView: View {
     @State private var cachedStreak: Int = 0
     @State private var cachedLastSession: TrainingSession?
     @State private var lastSessionCount: Int = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var greetingTitle: String {
         if authManager.isSignedIn, let name = authManager.userName {
@@ -54,10 +55,13 @@ struct DashboardView: View {
                     // 1. Live workout card (when Watch workout is active)
                     if sharedData.isWorkoutActiveOnWatch {
                         LiveWorkoutCard(sharedData: sharedData)
-                            .transition(.asymmetric(
-                                insertion: .move(edge: .top).combined(with: .opacity),
-                                removal: .opacity
-                            ))
+                            .transition(reduceMotion
+                                ? .opacity
+                                : .asymmetric(
+                                    insertion: .move(edge: .top).combined(with: .opacity),
+                                    removal: .opacity
+                                )
+                            )
 
                         // Inline live route map
                         if sharedData.liveRoutePoints.count >= 2 {
@@ -115,7 +119,7 @@ struct DashboardView: View {
                     .accessibilityLabel(authManager.isSignedIn ? "Settings, signed in" : "Settings, not signed in")
                 }
             }
-            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: sharedData.isWorkoutActiveOnWatch)
+            .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: sharedData.isWorkoutActiveOnWatch)
             .themedScreenBackground()
         }
     }
