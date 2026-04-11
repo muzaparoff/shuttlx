@@ -4,17 +4,20 @@ import Charts
 struct AnalyticsView: View {
     @EnvironmentObject var dataManager: DataManager
 
+    // Cached analytics results — updated only when session count changes via .task(id:)
+    @State private var weeklyTrend: [WeeklySummary] = []
+    @State private var records: PersonalRecords = PersonalRecords()
+    @State private var recovery: RecoveryStatus = .normal
+    @State private var vo2max: Double? = nil
+    @State private var previousVO2max: Double? = nil
+    @State private var paceZones: [PaceZoneDistribution] = []
+    @State private var elevationSummary: AnalyticsEngine.ElevationSummary? = nil
+    @State private var latestElevationRoute: [RoutePoint]? = nil
+    @State private var fitnessScore: Double = 0
+    @State private var fatigueScore: Double = 0
+    @State private var formScore: Double = 0
+
     private var sessions: [TrainingSession] { dataManager.sessions }
-    private var weeklyTrend: [WeeklySummary] { AnalyticsEngine.weeklyTrend(sessions: sessions, weeks: 6) }
-    private var records: PersonalRecords { AnalyticsEngine.personalRecords(sessions: sessions) }
-    private var recovery: RecoveryStatus { AnalyticsEngine.recoveryStatus(sessions: sessions) }
-    private var vo2max: Double? { AnalyticsEngine.estimatedVO2Max(sessions: sessions) }
-    private var paceZones: [PaceZoneDistribution] { AnalyticsEngine.paceZones(sessions: sessions) }
-    private var elevationSummary: AnalyticsEngine.ElevationSummary? { AnalyticsEngine.elevationSummary(sessions: sessions) }
-    private var latestElevationRoute: [RoutePoint]? { AnalyticsEngine.latestElevationRoute(sessions: sessions) }
-    private var fitnessScore: Double { AnalyticsEngine.fitnessScore(sessions: sessions) }
-    private var fatigueScore: Double { AnalyticsEngine.fatigue(sessions: sessions) }
-    private var formScore: Double { AnalyticsEngine.form(sessions: sessions) }
 
     var body: some View {
         NavigationStack {
@@ -39,6 +42,26 @@ struct AnalyticsView: View {
             .navigationTitle("Analytics")
             .themedScreenBackground()
         }
+        .task(id: dataManager.sessions.count) {
+            recomputeAnalytics()
+        }
+    }
+
+    // MARK: - Analytics Cache
+
+    private func recomputeAnalytics() {
+        let currentSessions = dataManager.sessions
+        weeklyTrend = AnalyticsEngine.weeklyTrend(sessions: currentSessions, weeks: 6)
+        records = AnalyticsEngine.personalRecords(sessions: currentSessions)
+        recovery = AnalyticsEngine.recoveryStatus(sessions: currentSessions)
+        vo2max = AnalyticsEngine.estimatedVO2Max(sessions: currentSessions)
+        previousVO2max = estimatePreviousVO2Max(sessions: currentSessions)
+        paceZones = AnalyticsEngine.paceZones(sessions: currentSessions)
+        elevationSummary = AnalyticsEngine.elevationSummary(sessions: currentSessions)
+        latestElevationRoute = AnalyticsEngine.latestElevationRoute(sessions: currentSessions)
+        fitnessScore = AnalyticsEngine.fitnessScore(sessions: currentSessions)
+        fatigueScore = AnalyticsEngine.fatigue(sessions: currentSessions)
+        formScore = AnalyticsEngine.form(sessions: currentSessions)
     }
 
     // MARK: - Empty State
@@ -257,8 +280,7 @@ struct AnalyticsView: View {
     @ViewBuilder
     private var vo2maxCard: some View {
         if let vo2 = vo2max {
-            let previousVO2 = estimatePreviousVO2Max()
-            let trending = previousVO2.map { vo2 > $0 }
+            let trending = previousVO2max.map { vo2 > $0 }
 
             VStack(spacing: 8) {
                 HStack {
@@ -302,7 +324,7 @@ struct AnalyticsView: View {
         }
     }
 
-    private func estimatePreviousVO2Max() -> Double? {
+    private func estimatePreviousVO2Max(sessions: [TrainingSession]) -> Double? {
         let calendar = Calendar.current
         guard let fourWeeksAgo = calendar.date(byAdding: .day, value: -28, to: Date()) else { return nil }
         let olderSessions = sessions.filter { $0.startDate < fourWeeksAgo }
