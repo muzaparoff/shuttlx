@@ -14,6 +14,7 @@ struct SignInView: View {
                 Image(systemName: "icloud.fill")
                     .font(ShuttlXFont.onboardingIcon)
                     .foregroundStyle(.tint)
+                    .accessibilityHidden(true)
 
                 VStack(spacing: 12) {
                     Text("Sync Your Data")
@@ -25,6 +26,7 @@ struct SignInView: View {
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
                 }
+                .accessibilityElement(children: .combine)
 
                 VStack(alignment: .leading, spacing: 16) {
                     FeatureRow(icon: "arrow.triangle.2.circlepath", title: "Automatic Sync", subtitle: "Workouts sync across iPhone, iPad")
@@ -45,12 +47,14 @@ struct SignInView: View {
                     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
                     .frame(height: 50)
                     .cornerRadius(12)
+                    .accessibilityHint("Sign in to sync your workouts across devices")
 
                     Text("Without signing in, your data is stored locally and could be lost if you reset or lose your device.")
                         .font(.caption)
                         .foregroundStyle(ShuttlXColor.ctaWarning)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal)
+                        .accessibilityLabel("Warning: Without signing in, your data is stored locally and could be lost if you reset or lose your device.")
                 }
 
                 Spacer(minLength: 40)
@@ -74,6 +78,7 @@ private struct FeatureRow: View {
                 .font(.title2)
                 .foregroundStyle(.tint)
                 .frame(width: 32)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.subheadline.bold())
@@ -82,5 +87,7 @@ private struct FeatureRow: View {
                     .foregroundStyle(.secondary)
             }
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title). \(subtitle)")
     }
 }
