@@ -17,6 +17,27 @@ class CloudKitSyncManager: ObservableObject {
     private let sessionsRecordType = "TrainingSession"
     private let templatesRecordType = "WorkoutTemplate"
 
+    // MARK: - H7: Change token for incremental pull
+    // Stored separately from the UI-facing `lastSyncDate` so it survives across cold launches.
+    private let pullTokenKey = "cloudKitPullSinceDate"
+
+    /// Date of the last successful pull. Used as `modifiedAfter` predicate on the next pull.
+    /// On first launch (nil) the pull fetches all records — same behaviour as before.
+    private var pullSinceDate: Date? {
+        get {
+            let ti = UserDefaults.standard.double(forKey: pullTokenKey)
+            guard ti > 0 else { return nil }
+            return Date(timeIntervalSinceReferenceDate: ti)
+        }
+        set {
+            if let d = newValue {
+                UserDefaults.standard.set(d.timeIntervalSinceReferenceDate, forKey: pullTokenKey)
+            } else {
+                UserDefaults.standard.removeObject(forKey: pullTokenKey)
+            }
+        }
+    }
+
     private init() {}
 
     // MARK: - Full Sync
@@ -82,7 +103,7 @@ class CloudKitSyncManager: ObservableObject {
         }
     }
 
-    // MARK: - Push
+    // MARK: - Push (H8: fetch-before-write via ifServerRecordUnchanged + conflict retry)
 
     private func pushSessions(_ sessions: [TrainingSession]) async throws {
         guard !sessions.isEmpty else { return }
@@ -91,12 +112,72 @@ class CloudKitSyncManager: ObservableObject {
 
         // CloudKit batch limit is 400 records per operation
         for batch in records.chunked(into: 400) {
-            let operation = CKModifyRecordsOperation(recordsToSave: batch, recordIDsToDelete: nil)
-            operation.savePolicy = .changedKeys
-            operation.qualityOfService = .userInitiated
+            try await pushRecordBatch(batch, sessions: sessions)
+        }
+
+        // Clean up temp files created for CKAsset encoding
+        cleanupTempFiles(for: sessions.map { $0.id })
+    }
+
+    /// Push a batch of records using `.ifServerRecordUnchanged` policy.
+    /// If a record conflicts (server has a newer version), we apply our local data
+    /// onto the server record and retry — sessions are append-only so local wins.
+    private func pushRecordBatch(_ records: [CKRecord], sessions: [TrainingSession]) async throws {
+        // Build a lookup so we can re-apply local data onto conflicting server records
+        let sessionByRecordName: [String: TrainingSession] = Dictionary(
+            uniqueKeysWithValues: sessions.compactMap { session -> (String, TrainingSession)? in
+                return (session.id.uuidString, session)
+            }
+        )
+
+        var retryRecords: [CKRecord] = []
+
+        let operation = CKModifyRecordsOperation(recordsToSave: records, recordIDsToDelete: nil)
+        // H8: Use ifServerRecordUnchanged so we don't silently overwrite concurrent edits.
+        operation.savePolicy = .ifServerRecordUnchanged
+        operation.qualityOfService = .userInitiated
+
+        operation.perRecordSaveBlock = { [weak self] recordID, result in
+            guard let self else { return }
+            if case .failure(let error) = result {
+                let ckError = error as? CKError
+                if ckError?.code == .serverRecordChanged,
+                   let serverRecord = ckError?.userInfo[CKRecordChangedErrorServerRecordKey] as? CKRecord,
+                   let session = sessionByRecordName[recordID.recordName] {
+                    // Server has a different version. Sessions are append-only — local data is
+                    // authoritative for completed workouts, so overwrite server record fields
+                    // with our data and queue for retry. The server record already carries the
+                    // correct `recordChangeTag`, so the retry will succeed.
+                    self.applySession(session, to: serverRecord)
+                    retryRecords.append(serverRecord)
+                    self.logger.info("CloudKit conflict on \(recordID.recordName) — queued for retry with server record")
+                } else {
+                    self.logger.error("CloudKit save failed for \(recordID.recordName): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            operation.modifyRecordsResultBlock = { result in
+                switch result {
+                case .success:
+                    continuation.resume()
+                case .failure(let error):
+                    continuation.resume(throwing: error)
+                }
+            }
+            database.add(operation)
+        }
+
+        // Retry conflicting records (now carrying the server's recordChangeTag)
+        if !retryRecords.isEmpty {
+            logger.info("Retrying \(retryRecords.count) conflicting CloudKit records")
+            let retryOp = CKModifyRecordsOperation(recordsToSave: retryRecords, recordIDsToDelete: nil)
+            retryOp.savePolicy = .ifServerRecordUnchanged
+            retryOp.qualityOfService = .userInitiated
 
             try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-                operation.modifyRecordsResultBlock = { result in
+                retryOp.modifyRecordsResultBlock = { result in
                     switch result {
                     case .success:
                         continuation.resume()
@@ -104,12 +185,26 @@ class CloudKitSyncManager: ObservableObject {
                         continuation.resume(throwing: error)
                     }
                 }
-                database.add(operation)
+                database.add(retryOp)
             }
         }
+    }
 
-        // Clean up temp files created for CKAsset encoding
-        cleanupTempFiles(for: sessions.map { $0.id })
+    /// Apply all fields from a local TrainingSession onto an existing CKRecord (for conflict retry).
+    private func applySession(_ session: TrainingSession, to record: CKRecord) {
+        record["uuid"] = session.id.uuidString
+        record["startDate"] = session.startDate
+        record["duration"] = session.duration
+        record["modifiedDate"] = session.modifiedDate ?? session.startDate
+
+        do {
+            let data = try JSONEncoder().encode(session)
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("\(session.id.uuidString)-retry.json")
+            try data.write(to: tempURL, options: [.atomic, .completeFileProtection])
+            record["jsonData"] = CKAsset(fileURL: tempURL)
+        } catch {
+            logger.error("Failed to encode session \(session.id) for retry: \(error.localizedDescription)")
+        }
     }
 
     func pushTemplates(_ templates: [WorkoutTemplate]) async throws {
@@ -137,10 +232,25 @@ class CloudKitSyncManager: ObservableObject {
         cleanupTempFiles(for: templates.map { $0.id })
     }
 
-    // MARK: - Pull
+    // MARK: - Pull (H7: incremental via modifiedDate predicate)
 
     private func pullSessions() async throws -> [TrainingSession] {
-        let query = CKQuery(recordType: sessionsRecordType, predicate: NSPredicate(value: true))
+        // H7: Only fetch records modified after our last successful pull.
+        // On the very first sync (pullSinceDate == nil) we fetch everything, same as before.
+        let predicate: NSPredicate
+        if let since = pullSinceDate {
+            predicate = NSPredicate(format: "modifiedDate > %@", since as CVarArg)
+            logger.info("CloudKit incremental pull: changes since \(since)")
+        } else {
+            predicate = NSPredicate(value: true)
+            logger.info("CloudKit full pull: no previous token")
+        }
+
+        // Capture the time just before the query so we don't miss records created
+        // during the fetch window.
+        let fetchStartedAt = Date()
+
+        let query = CKQuery(recordType: sessionsRecordType, predicate: predicate)
         query.sortDescriptors = [NSSortDescriptor(key: "startDate", ascending: false)]
 
         var allResults: [TrainingSession] = []
@@ -157,6 +267,9 @@ class CloudKitSyncManager: ObservableObject {
             allResults.append(contentsOf: pageResults.compactMap { decodeSession(from: $0.1) })
             cursor = pageCursor
         }
+
+        // Persist the token only after a fully successful fetch
+        pullSinceDate = fetchStartedAt
 
         return allResults
     }
@@ -237,6 +350,7 @@ class CloudKitSyncManager: ObservableObject {
         try await deleteAllRecords(matching: templatesQuery)
 
         lastSyncDate = nil
+        pullSinceDate = nil
         logger.info("All CloudKit user data deleted")
     }
 
@@ -284,6 +398,9 @@ class CloudKitSyncManager: ObservableObject {
         for id in ids {
             let tempURL = tempDir.appendingPathComponent("\(id.uuidString).json")
             try? FileManager.default.removeItem(at: tempURL)
+            // Also clean up any retry temp files
+            let retryURL = tempDir.appendingPathComponent("\(id.uuidString)-retry.json")
+            try? FileManager.default.removeItem(at: retryURL)
         }
     }
 
