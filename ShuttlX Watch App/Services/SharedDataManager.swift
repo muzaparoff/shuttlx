@@ -20,6 +20,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private var consecutiveFailures = 0
     private var backgroundSyncTimer: Timer?
     private let pendingSessionsFileName = "pending_sync_sessions.json"
+    private var lastFullResendTime: Date?
 
     // MARK: - Initialization
 
@@ -310,7 +311,14 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             if session.isReachable {
                 self.updateSyncStatus("iPhone became reachable")
                 self.retryPendingSessions()
-                self.sendAllStoredSessions()
+
+                // Throttle full resend to once per 60 seconds to prevent burst transfers
+                // during Bluetooth reconnect flicker in active workouts
+                let now = Date()
+                if self.lastFullResendTime == nil || now.timeIntervalSince(self.lastFullResendTime!) > 60 {
+                    self.sendAllStoredSessions()
+                    self.lastFullResendTime = now
+                }
             } else {
                 self.updateSyncStatus("iPhone not reachable")
             }

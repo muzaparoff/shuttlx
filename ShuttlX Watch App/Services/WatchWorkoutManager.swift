@@ -74,6 +74,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private let locationManager = CLLocationManager()
     private var routePoints: [RoutePoint] = []
     private var routeBuilder: HKWorkoutRouteBuilder?
+    private let maxRoutePoints = 2000
 
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
@@ -998,6 +999,22 @@ extension WatchWorkoutManager: CLLocationManagerDelegate {
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
+
+            // Cap in-memory route points for long workouts to avoid exceeding watchOS memory limit.
+            // Full-resolution route is preserved in HealthKit via HKWorkoutRouteBuilder.
+            if self.routePoints.count >= self.maxRoutePoints {
+                var downsampled: [RoutePoint] = []
+                let half = self.routePoints.count / 2
+                for (index, point) in self.routePoints.enumerated() {
+                    if index < half {
+                        if index % 2 == 0 { downsampled.append(point) }
+                    } else {
+                        downsampled.append(point)
+                    }
+                }
+                self.routePoints = downsampled
+                self.logger.info("Route points downsampled from \(self.maxRoutePoints) to \(self.routePoints.count)")
+            }
             self.routePoints.append(contentsOf: points)
 
             // Feed HKWorkoutRouteBuilder for official HealthKit route
