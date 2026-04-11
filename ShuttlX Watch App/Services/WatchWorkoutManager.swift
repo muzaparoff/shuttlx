@@ -1020,7 +1020,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     try await builder.endCollection(at: endDate)
                     let workout = try await builder.finishWorkout()
                     await MainActor.run {
-                        self.logger.info("HKWorkout saved to HealthKit: \(workout.uuid)")
+                        self.logger.info("HKWorkout saved to HealthKit: \(workout?.uuid.uuidString ?? "unknown")")
                     }
                     // Attach GPS route to the saved HKWorkout
                     if let rb = routeBuilderToFinish {
