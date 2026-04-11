@@ -69,6 +69,8 @@ struct TemplateEditorView: View {
                                 .tag(sport)
                         }
                     }
+                    .accessibilityLabel("Sport type")
+                    .accessibilityHint("Select the type of sport for this workout")
                 } header: {
                     Text("Sport Type")
                 }
@@ -76,6 +78,7 @@ struct TemplateEditorView: View {
                 // Name
                 Section {
                     TextField("Program Name", text: $name)
+                        .accessibilityLabel("Workout template name")
                 } header: {
                     Text("Name")
                 }
@@ -83,8 +86,9 @@ struct TemplateEditorView: View {
                 // Warmup
                 Section {
                     Toggle("Warm Up", isOn: $hasWarmup.animation())
+                        .accessibilityLabel("Warm up, \(hasWarmup ? "enabled" : "disabled")")
                     if hasWarmup {
-                        DurationPicker(duration: $warmupDuration, label: "Duration")
+                        DurationPicker(duration: $warmupDuration, label: "Warm up duration")
                     }
                 }
 
@@ -103,6 +107,8 @@ struct TemplateEditorView: View {
                     Button(action: addInterval) {
                         Label("Add Interval", systemImage: "plus.circle")
                     }
+                    .accessibilityLabel("Add interval step")
+                    .accessibilityHint("Adds a new work or rest interval to the workout")
                 } header: {
                     Text("Intervals")
                 }
@@ -110,6 +116,8 @@ struct TemplateEditorView: View {
                 // Repeat
                 Section {
                     Stepper("Repeat: \(repeatCount)\u{00D7}", value: $repeatCount, in: 1...50)
+                        .accessibilityLabel("Number of repeats")
+                        .accessibilityValue("\(repeatCount) \(repeatCount == 1 ? "time" : "times")")
                 } header: {
                     Text("Repeat Count")
                 } footer: {
@@ -119,8 +127,9 @@ struct TemplateEditorView: View {
                 // Cooldown
                 Section {
                     Toggle("Cool Down", isOn: $hasCooldown.animation())
+                        .accessibilityLabel("Cool down, \(hasCooldown ? "enabled" : "disabled")")
                     if hasCooldown {
-                        DurationPicker(duration: $cooldownDuration, label: "Duration")
+                        DurationPicker(duration: $cooldownDuration, label: "Cool down duration")
                     }
                 }
 
@@ -133,6 +142,8 @@ struct TemplateEditorView: View {
                             .font(ShuttlXFont.metricSmall)
                             .monospacedDigit()
                     }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Total duration, \(FormattingUtils.formatDuration(totalDuration))")
                 }
             }
             .themedScreenBackground()
@@ -141,11 +152,13 @@ struct TemplateEditorView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                        .accessibilityLabel("Cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") { saveTemplate() }
                         .disabled(!isValid)
                         .fontWeight(.semibold)
+                        .accessibilityLabel("Save workout template")
                 }
             }
         }
@@ -181,6 +194,19 @@ struct TemplateEditorView: View {
 private struct IntervalStepRow: View {
     @Binding var step: IntervalStep
 
+    private var durationLabel: String {
+        let total = Int(step.duration)
+        let minutes = total / 60
+        let seconds = total % 60
+        if minutes > 0 && seconds > 0 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") \(seconds) second\(seconds == 1 ? "" : "s")"
+        } else if minutes > 0 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s")"
+        } else {
+            return "\(seconds) second\(seconds == 1 ? "" : "s")"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 8) {
             HStack {
@@ -189,6 +215,8 @@ private struct IntervalStepRow: View {
                     Text("Rest").tag(IntervalType.rest)
                 }
                 .pickerStyle(.segmented)
+                .accessibilityLabel("Interval type")
+                .accessibilityHint("Select work or rest for this interval")
             }
 
             DurationPicker(duration: $step.duration, label: "Duration")
@@ -199,8 +227,11 @@ private struct IntervalStepRow: View {
             ))
             .font(.subheadline)
             .foregroundStyle(.secondary)
+            .accessibilityLabel("Interval label, optional")
         }
         .padding(.vertical, 4)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(step.type.displayName) interval, \(durationLabel)\(step.label.map { ", \($0)" } ?? "")")
     }
 }
 
@@ -216,6 +247,16 @@ private struct DurationPicker: View {
 
     private var seconds: Int {
         Int(duration) % 60
+    }
+
+    private var currentValueLabel: String {
+        if minutes > 0 && seconds > 0 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s") \(seconds) second\(seconds == 1 ? "" : "s")"
+        } else if minutes > 0 {
+            return "\(minutes) minute\(minutes == 1 ? "" : "s")"
+        } else {
+            return "\(seconds) second\(seconds == 1 ? "" : "s")"
+        }
     }
 
     var body: some View {
@@ -234,6 +275,7 @@ private struct DurationPicker: View {
                 .pickerStyle(.wheel)
                 .frame(width: 70, height: 100)
                 .clipped()
+                .accessibilityLabel("Minutes")
 
                 Picker("Seconds", selection: Binding(
                     get: { seconds },
@@ -246,8 +288,12 @@ private struct DurationPicker: View {
                 .pickerStyle(.wheel)
                 .frame(width: 70, height: 100)
                 .clipped()
+                .accessibilityLabel("Seconds")
             }
         }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(label)
+        .accessibilityValue(currentValueLabel)
     }
 }
 
