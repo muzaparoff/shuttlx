@@ -31,7 +31,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private let sessionsKey = "sessions.json"
     private let appGroupIdentifier = "group.com.shuttlx.shared"
-    private let sharedContainer = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
+    private var sharedContainer: URL? {
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
+    }
 
     private var fallbackContainer: URL? {
         guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
