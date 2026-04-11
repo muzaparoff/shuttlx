@@ -14,6 +14,11 @@ class AuthenticationManager: ObservableObject {
     private let userIDKey = "com.shuttlx.appleUserID"
     private let userNameKey = "com.shuttlx.appleUserName"
 
+    // MARK: - Keychain Constants
+
+    private let keychainService = "com.shuttlx.ShuttlX"
+    private let userNameAccount = "shuttlx_user_name"
+
     private init() {
         loadStoredCredentials()
         verifyCredentialState()
@@ -34,7 +39,7 @@ class AuthenticationManager: ObservableObject {
                 let name = PersonNameComponentsFormatter().string(from: fullName)
                 if !name.isEmpty {
                     userName = name
-                    UserDefaults.standard.set(name, forKey: userNameKey)
+                    saveNameToKeychain(name)
                 }
             }
 
@@ -53,7 +58,7 @@ class AuthenticationManager: ObservableObject {
 
     func signOut() {
         deleteFromKeychain()
-        UserDefaults.standard.removeObject(forKey: userNameKey)
+        deleteNameFromKeychain()
         isSignedIn = false
         userName = nil
         userEmail = nil
@@ -71,7 +76,7 @@ class AuthenticationManager: ObservableObject {
         sharedDataManager.purgeAllSessionsFromStorage()
         dataManager.sessions = []
 
-        // 3. Sign out (clears keychain + UserDefaults)
+        // 3. Sign out (clears keychain + name keychain item)
         signOut()
     }
 
@@ -116,25 +121,45 @@ class AuthenticationManager: ObservableObject {
         if loadFromKeychain() != nil {
             isSignedIn = true
         }
-        userName = UserDefaults.standard.string(forKey: userNameKey)
+
+        // Migrate display name from UserDefaults to Keychain (one-time)
+        if let legacyName = UserDefaults.standard.string(forKey: userNameKey),
+           loadNameFromKeychain() == nil {
+            saveNameToKeychain(legacyName)
+            UserDefaults.standard.removeObject(forKey: userNameKey)
+            logger.info("Migrated display name from UserDefaults to Keychain")
+        }
+
+        userName = loadNameFromKeychain()
     }
 
-    // MARK: - Keychain
+    // MARK: - Keychain (User ID)
 
     private func saveToKeychain(userID: String) {
         let data = Data(userID.utf8)
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
             kSecAttrAccount as String: userIDKey,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
             kSecValueData as String: data
         ]
-        SecItemDelete(query as CFDictionary)
-        SecItemAdd(query as CFDictionary, nil)
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: userIDKey
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            logger.error("Failed to save user ID to Keychain: \(status)")
+        }
     }
 
     private func loadFromKeychain() -> String? {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
             kSecAttrAccount as String: userIDKey,
             kSecReturnData as String: true,
             kSecMatchLimit as String: kSecMatchLimitOne
@@ -148,7 +173,57 @@ class AuthenticationManager: ObservableObject {
     private func deleteFromKeychain() {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
             kSecAttrAccount as String: userIDKey
+        ]
+        SecItemDelete(query as CFDictionary)
+    }
+
+    // MARK: - Keychain (Display Name)
+
+    private func saveNameToKeychain(_ name: String) {
+        guard let data = name.data(using: .utf8) else {
+            logger.error("Failed to encode display name as UTF-8")
+            return
+        }
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: userNameAccount,
+            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecValueData as String: data
+        ]
+        let deleteQuery: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: userNameAccount
+        ]
+        SecItemDelete(deleteQuery as CFDictionary)
+        let status = SecItemAdd(query as CFDictionary, nil)
+        if status != errSecSuccess {
+            logger.error("Failed to save display name to Keychain: \(status)")
+        }
+    }
+
+    private func loadNameFromKeychain() -> String? {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: userNameAccount,
+            kSecReturnData as String: true,
+            kSecMatchLimit as String: kSecMatchLimitOne
+        ]
+        var result: AnyObject?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        guard status == errSecSuccess, let data = result as? Data else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    private func deleteNameFromKeychain() {
+        let query: [String: Any] = [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: keychainService,
+            kSecAttrAccount as String: userNameAccount
         ]
         SecItemDelete(query as CFDictionary)
     }
