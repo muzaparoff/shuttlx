@@ -571,12 +571,15 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Helpers
 
+    private static let logDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter
+    }()
+
     private func log(_ message: String) {
         logger.info("\(message)")
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .medium
-        syncLog.append("[\(formatter.string(from: Date()))] \(message)")
+        syncLog.append("[\(Self.logDateFormatter.string(from: Date()))] \(message)")
         if syncLog.count > 100 {
             syncLog.removeFirst()
         }

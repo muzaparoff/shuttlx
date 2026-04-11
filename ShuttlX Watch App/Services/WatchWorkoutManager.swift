@@ -650,7 +650,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func startLocationUpdates() {
-        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         locationManager.distanceFilter = 10
         locationManager.activityType = .fitness
         locationManager.startUpdatingLocation()
@@ -1047,15 +1047,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         sharedDataManager?.sendSessionToiOS(sessionToSend)
         clearWorkoutBackup()
         logger.info("Session saved: Duration \(Int(sessionToSend.duration))s")
-
-        // Request extended background time for sync to complete
-        ProcessInfo.processInfo.performExpiringActivity(
-            withReason: "Syncing workout session to iPhone"
-        ) { expired in
-            if !expired {
-                Thread.sleep(forTimeInterval: 10)
-            }
-        }
     }
 
     private func finalizeRouteBuilder(_ builder: HKWorkoutRouteBuilder, with workout: HKWorkout?) async {
