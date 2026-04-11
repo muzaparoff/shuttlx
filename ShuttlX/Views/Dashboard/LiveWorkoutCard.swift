@@ -118,12 +118,18 @@ private struct LiveMetricPill: View {
 
 private struct PulseModifier: ViewModifier {
     @State private var isAnimating = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
         content
-            .opacity(isAnimating ? 0.3 : 1.0)
-            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: isAnimating)
-            .onAppear { isAnimating = true }
+            .opacity(reduceMotion ? 1.0 : (isAnimating ? 0.3 : 1.0))
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 1.0).repeatForever(autoreverses: true),
+                value: isAnimating
+            )
+            .onAppear {
+                if !reduceMotion { isAnimating = true }
+            }
     }
 }
 
