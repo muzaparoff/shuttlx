@@ -553,6 +553,15 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         log("Max HR sent to Watch: \(maxHR == 0 ? "cleared" : "\(Int(maxHR)) BPM")")
     }
 
+    // MARK: - Subscription Sync
+
+    /// Syncs the user's Pro subscription status to Watch so it can gate features locally.
+    func sendSubscriptionStatusToWatch(_ isPro: Bool) {
+        guard WCSession.isSupported(), session.isPaired else { return }
+        updateCombinedApplicationContext(merging: ["isPro": isPro])
+        log("Subscription status sent to Watch: \(isPro ? "Pro" : "Free")")
+    }
+
     // MARK: - Combined Application Context
 
     /// Merges new keys into the existing applicationContext to prevent overwrites.

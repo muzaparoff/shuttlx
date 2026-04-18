@@ -12,6 +12,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var syncLog: [String] = []
     @Published var connectivityHealth: Double = 1.0
     @Published var workoutTemplates: [WorkoutTemplate] = []
+    @Published var isPro: Bool = false
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
     private let appGroupIdentifier = "group.com.shuttlx.shared"
@@ -564,6 +565,12 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Template Sync
 
     private func handleIncomingPayload(_ payload: [String: Any]) {
+        // Process subscription status if present
+        if let proStatus = payload["isPro"] as? Bool {
+            isPro = proStatus
+            logger.info("Subscription status synced from iPhone: \(proStatus ? "Pro" : "Free")")
+        }
+
         // Process theme if present (regardless of action key — applicationContext
         // merges both theme and template data with a single action key)
         if let themeID = payload["themeID"] as? String {

@@ -109,6 +109,11 @@
 		F5923011 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923001 /* AuthenticationManager.swift */; };
 		F5923012 /* CloudKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923002 /* CloudKitSyncManager.swift */; };
 		F5923013 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923003 /* SignInView.swift */; };
+		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
+		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
+		RC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = RC100001 /* RevenueCat */; };
+		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
+		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
 		WG000020B /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
 		WW100001 /* ShuttlXWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000001 /* ShuttlXWatchWidgets.swift */; };
 		WW100002 /* LastWorkoutComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000002 /* LastWorkoutComplication.swift */; };
@@ -306,6 +311,8 @@
 		F5923001 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		F5923002 /* CloudKitSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSyncManager.swift; sourceTree = "<group>"; };
 		F5923003 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		SM000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		SM000002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		WW000001 /* ShuttlXWatchWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWatchWidgets.swift; sourceTree = "<group>"; };
 		WWT00001 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ShuttlXTheme.swift; path = "ShuttlX Watch App/Theme/ShuttlXTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00002 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeColors.swift; path = "ShuttlX Watch App/Theme/ThemeColors.swift"; sourceTree = SOURCE_ROOT; };
@@ -375,6 +382,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				RC000001 /* RevenueCat in Frameworks */,
+				RC000002 /* RevenueCatUI in Frameworks */,
+				TD000001 /* TelemetryDeck in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -460,6 +470,7 @@
 				F5923002 /* CloudKitSyncManager.swift */,
 				ED000002 /* CalorieEstimationEngine.swift */,
 				ED000003 /* DeviceManager.swift */,
+				SM000001 /* SubscriptionManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -508,6 +519,7 @@
 				R5923002F /* LiveRouteView.swift */,
 				ED000004 /* DeviceListView.swift */,
 				ED000005 /* DevicePickerView.swift */,
+				SM000002 /* PaywallView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
 			);
@@ -679,6 +691,11 @@
 				WG000061 /* PBXTargetDependency */,
 			);
 			name = ShuttlX;
+			packageProductDependencies = (
+				RC100001 /* RevenueCat */,
+				RC100002 /* RevenueCatUI */,
+				TD100001 /* TelemetryDeck */,
+			);
 			productName = ShuttlX;
 			productReference = A59234DE /* ShuttlX.app */;
 			productType = "com.apple.product-type.application";
@@ -770,6 +787,10 @@
 			);
 			mainGroup = A59234D5;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
+				TD200001 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A59234DF /* Products */;
 			projectDirPath = "";
@@ -915,6 +936,8 @@
 				ED000014 /* DeviceListView.swift in Sources */,
 				ED000015 /* DevicePickerView.swift in Sources */,
 				HR000011 /* HeartRateZoneCalculator.swift in Sources */,
+				SM000011 /* SubscriptionManager.swift in Sources */,
+				SM000012 /* PaywallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1502,6 +1525,43 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 5.0.0;
+			};
+		};
+		TD200001 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		RC100001 /* RevenueCat */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCat;
+		};
+		RC100002 /* RevenueCatUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
+			productName = RevenueCatUI;
+		};
+		TD100001 /* TelemetryDeck */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = TD200001 /* XCRemoteSwiftPackageReference "SwiftSDK" */;
+			productName = TelemetryDeck;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A59234D6 /* Project object */;
 }

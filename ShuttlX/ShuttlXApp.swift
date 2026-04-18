@@ -1,4 +1,6 @@
 import SwiftUI
+import RevenueCat
+import TelemetryDeck
 
 @main
 struct ShuttlXApp: App {
@@ -12,6 +14,15 @@ struct ShuttlXApp: App {
     @StateObject private var cloudKitSync = CloudKitSyncManager.shared
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
     @State private var deepLinkSessionID: UUID?
+
+    private let subscriptionManager = SubscriptionManager.shared
+
+    init() {
+        subscriptionManager.configure()
+
+        let telemetryConfig = TelemetryDeck.Config(appID: "2323535F-7F18-45F3-ACA2-215164CD22BC")
+        TelemetryDeck.initialize(config: telemetryConfig)
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -45,6 +56,9 @@ struct ShuttlXApp: App {
                 sharedDataManager.reconcileSessionIDs()
                 if authManager.isSignedIn {
                     cloudKitSync.performFullSync(dataManager: dataManager)
+                }
+                Task {
+                    await subscriptionManager.refreshEntitlementStatus()
                 }
             }
         }

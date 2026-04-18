@@ -3,6 +3,7 @@ import Combine
 import HealthKit
 import StoreKit
 import WidgetKit
+import TelemetryDeck
 import os.log
 
 @MainActor
@@ -61,12 +62,25 @@ class DataManager: ObservableObject {
             if !sessions.contains(where: { $0.id == session.id }) {
                 sessions.append(session)
                 hasChanges = true
+                trackWorkoutCompleted(session)
             }
         }
         if hasChanges {
             saveSessionsToAppGroup()
             requestAppReviewIfEligible()
         }
+    }
+
+    // MARK: - Analytics
+
+    /// Sends a privacy-safe workout completion event to TelemetryDeck.
+    /// No PII is included — only aggregate-safe metadata.
+    private func trackWorkoutCompleted(_ session: TrainingSession) {
+        TelemetryDeck.signal("workoutCompleted", parameters: [
+            "sport": session.sportType?.rawValue ?? "unknown",
+            "durationMinutes": String(Int(session.duration / 60)),
+            "isInterval": String(session.completedIntervals != nil && !(session.completedIntervals!.isEmpty))
+        ])
     }
 
     // MARK: - App Review

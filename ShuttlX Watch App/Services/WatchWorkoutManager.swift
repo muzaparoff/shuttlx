@@ -49,7 +49,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Private State
     private var workoutSession: HKWorkoutSession?
+    #if os(watchOS)
     private var workoutBuilder: HKLiveWorkoutBuilder?
+    #endif
     private var healthStore = HKHealthStore()
     private var displayTimer: DispatchSourceTimer?
     private var workoutStartTime: Date?
@@ -372,7 +374,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         workoutSession?.end()
         workoutSession = nil
+        #if os(watchOS)
         workoutBuilder = nil
+        #endif
 
         // Close final segment
         closeCurrentSegment()
@@ -1005,15 +1009,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Capture mutable copies for use in the async Task below
         let sessionToSend = session
-        let builderToFinish = workoutBuilder
         let routeBuilderToFinish = routeBuilder
 
+        #if os(watchOS)
+        let builderToFinish = workoutBuilder
         // Nil out builder/route references before async work so no other call reuses them
         workoutBuilder = nil
+        #endif
         routeBuilder = nil
 
         // Finalize HKLiveWorkoutBuilder → saves HKWorkout to HealthKit, then attach route
         Task {
+            #if os(watchOS)
             if let builder = builderToFinish {
                 do {
                     let endDate = Date()
@@ -1042,6 +1049,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     self.healthKitSaveError = "Workout builder unavailable — workout may not appear in Health app"
                 }
             }
+            #else
+            if let rb = routeBuilderToFinish {
+                await self.finalizeRouteBuilder(rb, with: nil)
+            }
+            #endif
         }
 
         sharedDataManager?.sendSessionToiOS(sessionToSend)

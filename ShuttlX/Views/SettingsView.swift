@@ -2,6 +2,8 @@ import SwiftUI
 import HealthKit
 import WatchConnectivity
 import WidgetKit
+import RevenueCatUI
+import TelemetryDeck
 
 struct SettingsView: View {
     @Environment(ThemeManager.self) var themeManager
@@ -21,6 +23,10 @@ struct SettingsView: View {
     @State private var weightText: String = ""
     @State private var ageText: String = ""
     @State private var maxHRText: String = ""
+    @State private var showingPaywall = false
+    @State private var showingCustomerCenter = false
+    @State private var isRestoringPurchases = false
+    private var subscriptionManager = SubscriptionManager.shared
 
     var body: some View {
         List {
@@ -298,6 +304,7 @@ struct SettingsView: View {
                         }
                         sharedDataManager.sendThemeToWatch(theme.id)
                         WidgetCenter.shared.reloadAllTimelines()
+                        TelemetryDeck.signal("themeChanged", parameters: ["theme": theme.id])
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: theme.icon)
@@ -343,6 +350,70 @@ struct SettingsView: View {
                 .padding(.vertical, 4)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Theme color preview")
+            }
+
+            // Subscription Section
+            Section("Subscription") {
+                HStack {
+                    Image(systemName: subscriptionManager.isPro ? "checkmark.seal.fill" : "lock.fill")
+                        .foregroundStyle(subscriptionManager.isPro ? ShuttlXColor.positive : .secondary)
+                        .accessibilityHidden(true)
+                    Text(subscriptionManager.isPro ? "ShuttlX Pro" : "Free Plan")
+                    Spacer()
+                    if subscriptionManager.isPro {
+                        Text("Active")
+                            .font(.caption)
+                            .foregroundStyle(ShuttlXColor.positive)
+                    }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Subscription status")
+                .accessibilityValue(subscriptionManager.isPro ? "Pro, active" : "Free plan")
+
+                if !subscriptionManager.isPro {
+                    Button {
+                        showingPaywall = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "bolt.heart.fill")
+                                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                            Text("Upgrade to Pro")
+                                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                        }
+                    }
+                    .accessibilityHint("Opens the subscription purchase screen")
+                }
+
+                if subscriptionManager.isPro {
+                    Button {
+                        showingCustomerCenter = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "gearshape.fill")
+                                .foregroundStyle(.tint)
+                            Text("Manage Subscription")
+                        }
+                    }
+                    .accessibilityHint("Opens subscription management, cancellation, and support")
+                }
+
+                Button {
+                    isRestoringPurchases = true
+                    Task {
+                        _ = await subscriptionManager.restorePurchases()
+                        isRestoringPurchases = false
+                    }
+                } label: {
+                    HStack {
+                        Text("Restore Purchases")
+                        Spacer()
+                        if isRestoringPurchases {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(isRestoringPurchases)
+                .accessibilityHint("Restores previously purchased subscriptions")
             }
 
             // Data Management Section
@@ -442,6 +513,12 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will permanently delete your account, all iCloud data, and all local training sessions. This cannot be undone.")
+        }
+        .sheet(isPresented: $showingPaywall) {
+            ShuttlXPaywallView()
+        }
+        .sheet(isPresented: $showingCustomerCenter) {
+            ShuttlXCustomerCenterView()
         }
         .themedScreenBackground()
         .onAppear {
