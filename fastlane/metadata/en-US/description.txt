@@ -1,0 +1,55 @@
+Build your perfect interval workout. Start it from your Apple Watch. See every heartbeat, split, and stride on your wrist. ShuttlX is the interval training app that works the way runners think.
+
+DESIGN YOUR WORKOUTS
+
+Create custom interval sessions with work, rest, warmup, and cooldown phases. Set repeat counts, adjust durations, pick your sport. Save templates and reuse them forever. No account required. No signup wall. Just open the app and build.
+
+TRAIN FROM YOUR WATCH
+
+Start workouts directly on Apple Watch. Live heart rate, pace, distance, calories, and elapsed time update every second on your wrist. Haptic taps tell you when to push and when to recover. Your iPhone lock screen shows a Live Activity with real-time stats so you never miss a beat.
+
+THREE BUILT-IN TRAINING PLANS
+
+Couch to 5K: 8 weeks from zero to your first 5K.
+HIIT Starter: 4 weeks of progressive high-intensity intervals.
+5K Improvement: 6 weeks to get faster with tempo runs and speed work.
+
+Follow the schedule, check off workouts, track your progress week by week.
+
+ANALYTICS THAT MAKE YOU FASTER
+
+Estimated VO2max shows your aerobic fitness trend over time. Training load scoring (TSB model) tells you when you are fit, when you are fatigued, and when you are in peak form. Personal records are tracked automatically. Pace zone distribution shows where you spend your effort. Kilometer splits break down every run.
+
+GPS ROUTES & ELEVATION
+
+Every outdoor workout is mapped with GPS. Review your route after each run with color-coded pace segments. Elevation profiles show the hills you conquered.
+
+HEART RATE ZONES
+
+Five personalized heart rate zones based on your max HR (Tanaka formula or manual input). See zone distribution for every workout. Know when you are in the fat-burning zone versus peak effort.
+
+MULTI-SPORT SUPPORT
+
+Running, walking, cycling, swimming, hiking, elliptical, and cross training. Each sport connects to HealthKit with the correct activity type.
+
+7 VISUAL THEMES
+
+Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, and Neovim. Every screen, card, and chart adapts to your chosen aesthetic. Your Watch matches your iPhone.
+
+WIDGETS & COMPLICATIONS
+
+iOS widgets show your last workout and weekly progress right on your home screen. Watch complications let you start a workout with one tap or see your weekly stats at a glance.
+
+PRIVACY FIRST
+
+No account required. No tracking. No ads. Your data stays on your device and syncs through iCloud. Sign In with Apple is optional and used only for cloud backup.
+
+FREE RUN MODE
+
+Do not want intervals? Tap Free Run and go. Full metrics, full tracking, no template needed.
+
+BUILT FOR RUNNERS WHO WANT MORE
+
+Most running apps either cost $15/month for AI coaching you do not need or give you a basic stopwatch. ShuttlX fills the gap: serious interval training tools, real analytics, deep Watch integration, and a design you actually enjoy looking at.
+
+Download ShuttlX and start your first interval workout today.

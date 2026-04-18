@@ -32,5 +32,53 @@ platform :ios do
     UI.success("Both iOS and watchOS targets built successfully.")
   end
 
+  # --------------------------------------------------------------------------
+  # upload_metadata — Push description, keywords, etc. to App Store Connect
+  # --------------------------------------------------------------------------
+  desc "Upload App Store metadata (description, keywords, promotional text)"
+  lane :upload_metadata do
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"),
+      in_house: false
+    )
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "com.shuttlx.ShuttlX",
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      force: true,
+      metadata_path: "./fastlane/metadata"
+    )
+  end
+
+  # --------------------------------------------------------------------------
+  # set_release_notes — Set "What's New" for a specific version
+  # --------------------------------------------------------------------------
+  desc "Set release notes for a version (pass version: and notes:)"
+  lane :set_release_notes do |options|
+    version = options[:version]
+    notes_text = options[:notes] || File.read("./fastlane/metadata/en-US/release_notes.txt")
+
+    api_key = app_store_connect_api_key(
+      key_id: ENV["APP_STORE_CONNECT_API_KEY_ID"],
+      issuer_id: ENV["APP_STORE_CONNECT_ISSUER_ID"],
+      key_filepath: File.expand_path("~/.appstoreconnect/private_keys/AuthKey_#{ENV['APP_STORE_CONNECT_API_KEY_ID']}.p8"),
+      in_house: false
+    )
+
+    deliver(
+      api_key: api_key,
+      app_identifier: "com.shuttlx.ShuttlX",
+      app_version: version,
+      skip_binary_upload: true,
+      skip_screenshots: true,
+      skip_metadata: true,
+      release_notes: { "en-US" => notes_text },
+      force: true
+    )
+  end
+
 end
-# Version 1.0.1

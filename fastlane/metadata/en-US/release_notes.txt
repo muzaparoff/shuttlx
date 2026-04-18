@@ -1,0 +1,8 @@
+What's New in ShuttlX
+
+- 7 visual themes: Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, and Neovim. Every screen adapts to your style.
+- Improved Apple Watch workout performance and battery efficiency
+- Training plan progress tracking refinements
+- Bug fixes and stability improvements
+
+Thank you for training with ShuttlX. If you enjoy the app, a quick rating helps other runners find it.

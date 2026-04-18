@@ -202,7 +202,120 @@ jobs:
           echo "Build number: $BUILD_NUMBER"
 
       # ----------------------------------------------------------------
-      # 7. Update project version
+      # 7. Generate release notes from git commits
+      # ----------------------------------------------------------------
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          TRIGGER_TYPE="${{ steps.trigger.outputs.type }}"
+
+          # Find the last version tag to diff against
+          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+
+          if [ -n "$LAST_TAG" ]; then
+            echo "Generating notes since $LAST_TAG..."
+            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges 2>/dev/null || echo "")
+          else
+            echo "No previous tag, using last 20 commits..."
+            COMMITS=$(git log -20 --pretty=format:"%s" --no-merges 2>/dev/null || echo "")
+          fi
+
+          if [ -z "$COMMITS" ]; then
+            COMMITS="Maintenance update"
+          fi
+
+          # Export commits for python
+          export COMMITS
+
+          # Parse conventional commits into user-friendly "What's New" text
+          python3 << 'PYEOF'
+          import os, re
+
+          commits = os.environ.get("COMMITS", "").strip().split("\n")
+          commits = [c.strip() for c in commits if c.strip()]
+
+          features = []
+          fixes = []
+          other = []
+
+          for msg in commits:
+              # Skip CI/release commits
+              if "[skip ci]" in msg or msg.startswith("chore(release)"):
+                  continue
+
+              # Strip conventional commit prefix
+              clean = re.sub(r'^(feat|fix|perf|refactor|style|docs|test|ci|chore|build)(\(.*?\))?[!]?:\s*', '', msg)
+              clean = clean.strip()
+              if not clean:
+                  continue
+              # Capitalize first letter
+              clean = clean[0].upper() + clean[1:]
+
+              if msg.startswith("feat"):
+                  features.append(clean)
+              elif msg.startswith("fix"):
+                  fixes.append(clean)
+              elif msg.startswith(("perf", "refactor")):
+                  other.append(clean)
+              else:
+                  other.append(clean)
+
+          # Build "What's New" for App Store (max 4000 chars)
+          lines = []
+          for f in features[:8]:
+              lines.append(f"- {f}")
+          for f in fixes[:5]:
+              lines.append(f"- {f}")
+          for f in other[:3]:
+              lines.append(f"- {f}")
+
+          if not lines:
+              lines = ["- Performance improvements and bug fixes"]
+
+          whats_new = "\n".join(lines)
+
+          # Build detailed notes for GitHub Release
+          sections = []
+          if features:
+              sections.append("### New Features\n" + "\n".join(f"- {f}" for f in features))
+          if fixes:
+              sections.append("### Bug Fixes\n" + "\n".join(f"- {f}" for f in fixes))
+          if other:
+              sections.append("### Improvements\n" + "\n".join(f"- {f}" for f in other))
+
+          detailed = "\n\n".join(sections) if sections else "- Maintenance update"
+
+          # Write to files for later steps
+          with open("whats_new.txt", "w") as f:
+              f.write(whats_new)
+          with open("release_notes.md", "w") as f:
+              f.write(detailed)
+
+          print("=== What's New (App Store) ===")
+          print(whats_new)
+          print("\n=== Detailed (GitHub Release) ===")
+          print(detailed)
+          PYEOF
+
+          # Also write to fastlane metadata if directory exists
+          mkdir -p fastlane/metadata/en-US
+          cp whats_new.txt fastlane/metadata/en-US/release_notes.txt
+
+          # Set multiline output
+          {
+            echo "whats_new<<ENDOFNOTES"
+            cat whats_new.txt
+            echo "ENDOFNOTES"
+          } >> $GITHUB_OUTPUT
+
+          {
+            echo "detailed<<ENDOFDETAILED"
+            cat release_notes.md
+            echo "ENDOFDETAILED"
+          } >> $GITHUB_OUTPUT
+
+      # ----------------------------------------------------------------
+      # 7b. Update project version
       # ----------------------------------------------------------------
       - name: Update project version
         run: |
@@ -493,7 +606,33 @@ jobs:
           fi
 
       # ----------------------------------------------------------------
-      # 16. Commit version changes (main + manual only)
+      # 16. Upload release notes to App Store Connect (App Store builds only)
+      # ----------------------------------------------------------------
+      - name: Upload release notes to App Store Connect
+        if: steps.trigger.outputs.release_type == 'appstore'
+        continue-on-error: true
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+
+          # Write auto-generated notes to fastlane metadata
+          mkdir -p fastlane/metadata/en-US
+          cat whats_new.txt > fastlane/metadata/en-US/release_notes.txt
+
+          # Install fastlane and push release notes
+          gem install fastlane --no-document 2>/dev/null
+
+          fastlane set_release_notes \
+            version:"$NEW_VERSION" \
+            notes:"$(cat whats_new.txt)" || {
+              echo "Warning: Could not push release notes via fastlane"
+              echo "Notes will need to be set manually in App Store Connect"
+            }
+        env:
+          APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+
+      # ----------------------------------------------------------------
+      # 17. Commit version changes (main + manual only)
       # ----------------------------------------------------------------
       - name: Commit version changes
         if: steps.trigger.outputs.type == 'automatic' || steps.trigger.outputs.type == 'manual'
@@ -549,11 +688,12 @@ jobs:
 
             **Build:** ${{ steps.build_number.outputs.number }}
             **Destination:** ${{ steps.trigger.outputs.release_type == 'testflight' && 'TestFlight' || 'App Store' }}
-            **Trigger:** ${{ steps.trigger.outputs.type }}
-            **Date:** ${{ github.event.head_commit.timestamp }}
+
+            ${{ steps.release_notes.outputs.detailed }}
 
             ---
-            *Automated by GitHub Actions*
+            **What's New (App Store):**
+            ${{ steps.release_notes.outputs.whats_new }}
           draft: false
           prerelease: ${{ steps.trigger.outputs.release_type == 'testflight' }}
 
