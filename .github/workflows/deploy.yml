@@ -1,39 +1,65 @@
 # =============================================================================
-# ShuttlX — Deploy to TestFlight on push to main
+# ShuttlX — Release Pipeline
 # =============================================================================
 #
-# Build number strategy:
-#   - Reads the latest `build/N` git tag to determine the last uploaded build
-#   - Increments by 1 for the new build
-#   - After successful upload, creates and pushes `build/N` tag
-#   - Falls back to build 3 if no tags exist (builds 1-2 already uploaded)
+# Branch strategy:
+#   - Push to main          → App Store distribution (auto patch version bump)
+#   - Push to other branch  → TestFlight beta build (no version increment)
+#   - Tag v*.*.*            → Production App Store release (version from tag)
+#   - workflow_dispatch     → Manual (choose version type + destination)
+#
+# Build number: github.run_number + offset for monotonic uniqueness.
 #
 # Required GitHub Secrets:
 #
-#   APP_STORE_CONNECT_API_KEY_ID       App Store Connect API Key ID
-#   APP_STORE_CONNECT_ISSUER_ID        App Store Connect Issuer ID (UUID)
-#   APP_STORE_CONNECT_API_KEY_CONTENT  Base64-encoded .p8 private key
-#   KEYCHAIN_PASSWORD                  Password for the temporary CI keychain
-#   BUILD_CERTIFICATE_BASE64           Base64-encoded .p12 distribution certificate
-#   P12_PASSWORD                       Password for the .p12 certificate
-#   APPLE_TEAM_ID                      Apple Developer Team ID
-#   IOS_PROVISIONING_PROFILE_BASE64    Base64 App Store profile for com.shuttlx.ShuttlX
-#   WATCH_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.watchkitapp
-#   LIVEACTIVITY_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.ShuttlXLiveActivity
-#   WIDGETS_PROVISIONING_PROFILE_BASE64      Base64 App Store profile for com.shuttlx.ShuttlX.ShuttlXWidgets
-#   WATCH_WIDGETS_PROVISIONING_PROFILE_BASE64  Base64 App Store profile for com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets
+#   APP_STORE_CONNECT_API_KEY_ID                   API Key ID
+#   APP_STORE_CONNECT_ISSUER_ID                    Issuer ID (UUID)
+#   APP_STORE_CONNECT_API_KEY_CONTENT              Base64-encoded .p8 key
+#   KEYCHAIN_PASSWORD                              CI keychain password
+#   BUILD_CERTIFICATE_BASE64                       Base64 .p12 distribution cert
+#   P12_PASSWORD                                   .p12 password
+#   APPLE_TEAM_ID                                  Team ID (83HPSY452Y)
+#   IOS_PROVISIONING_PROFILE_BASE64                com.shuttlx.ShuttlX
+#   WATCH_PROVISIONING_PROFILE_BASE64              com.shuttlx.ShuttlX.watchkitapp
+#   LIVEACTIVITY_PROVISIONING_PROFILE_BASE64       com.shuttlx.ShuttlX.ShuttlXLiveActivity
+#   WIDGETS_PROVISIONING_PROFILE_BASE64            com.shuttlx.ShuttlX.ShuttlXWidgets
+#   WATCH_WIDGETS_PROVISIONING_PROFILE_BASE64      com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets
 #
 # =============================================================================
 
-name: Deploy to TestFlight
+name: Release Pipeline
 
 on:
   push:
-    branches: [main]
+    branches:
+      - '**'
     paths-ignore:
       - '**.md'
       - '.github/workflows/test.yml'
+      - '.claude/**'
+      - 'agents/**'
+      - 'docs/**'
+    tags:
+      - 'v*.*.*'
   workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+      release_type:
+        description: 'Release destination'
+        required: true
+        default: 'testflight'
+        type: choice
+        options:
+        - testflight
+        - appstore
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -43,37 +69,162 @@ permissions:
   contents: write
 
 jobs:
-  deploy:
-    name: Build & Upload to TestFlight
+  build-and-release:
+    name: Build & Release
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 60
 
     steps:
-      # ------------------------------------------------------------------
-      # 1. Checkout (with full history and tags)
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 1. Checkout
+      # ----------------------------------------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           fetch-tags: true
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-      # ------------------------------------------------------------------
-      # 2. Select Xcode 26 (iOS 26 SDK required for App Store)
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 2. Select Xcode
+      # ----------------------------------------------------------------
       - name: Select Xcode version
         run: |
           XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
           if [ -z "$XCODE_PATH" ]; then
             XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
           fi
+          if [ -z "$XCODE_PATH" ]; then
+            XCODE_PATH="/Applications/Xcode.app"
+          fi
           echo "Using Xcode at: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
+          sudo xcode-select -switch "$XCODE_PATH"
           xcodebuild -version
+          xcodebuild -showsdks | grep -E "iOS|watchOS" | head -5
 
-      # ------------------------------------------------------------------
-      # 3. Import Code Signing Certificate
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 3. Resolve SPM packages
+      # ----------------------------------------------------------------
+      - name: Resolve Swift packages
+        run: |
+          xcodebuild -project ShuttlX.xcodeproj \
+            -scheme ShuttlX \
+            -resolvePackageDependencies
+
+      # ----------------------------------------------------------------
+      # 4. Set release parameters
+      # ----------------------------------------------------------------
+      - name: Set release parameters
+        id: trigger
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_VERSION="${{ github.ref }}"
+            TAG_VERSION="${TAG_VERSION#refs/tags/v}"
+            echo "type=tag" >> $GITHUB_OUTPUT
+            echo "version_type=tag" >> $GITHUB_OUTPUT
+            echo "release_type=appstore" >> $GITHUB_OUTPUT
+            echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+            echo "Production release triggered by tag: v$TAG_VERSION"
+
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "type=manual" >> $GITHUB_OUTPUT
+            echo "version_type=${{ github.event.inputs.version_type }}" >> $GITHUB_OUTPUT
+            echo "release_type=${{ github.event.inputs.release_type }}" >> $GITHUB_OUTPUT
+            echo "tag_version=" >> $GITHUB_OUTPUT
+            echo "Manual release: ${{ github.event.inputs.version_type }} → ${{ github.event.inputs.release_type }}"
+
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "type=automatic" >> $GITHUB_OUTPUT
+            echo "version_type=patch" >> $GITHUB_OUTPUT
+            echo "release_type=appstore" >> $GITHUB_OUTPUT
+            echo "tag_version=" >> $GITHUB_OUTPUT
+            echo "App Store release triggered by push to main"
+
+          else
+            BRANCH_NAME="${{ github.ref_name }}"
+            echo "type=branch" >> $GITHUB_OUTPUT
+            echo "version_type=none" >> $GITHUB_OUTPUT
+            echo "release_type=testflight" >> $GITHUB_OUTPUT
+            echo "tag_version=" >> $GITHUB_OUTPUT
+            echo "branch_name=$BRANCH_NAME" >> $GITHUB_OUTPUT
+            echo "TestFlight beta build from branch: $BRANCH_NAME"
+          fi
+
+      # ----------------------------------------------------------------
+      # 5. Calculate version
+      # ----------------------------------------------------------------
+      - name: Calculate version
+        id: new_version
+        run: |
+          TRIGGER_TYPE="${{ steps.trigger.outputs.type }}"
+          VERSION_TYPE="${{ steps.trigger.outputs.version_type }}"
+          TAG_TRIGGER_VERSION="${{ steps.trigger.outputs.tag_version }}"
+
+          # Get latest version from git tags
+          LATEST_TAG_VERSION=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//' || echo "1.0.0")
+          echo "Latest tag version: $LATEST_TAG_VERSION"
+
+          if [ "$TRIGGER_TYPE" = "branch" ]; then
+            NEW_VERSION="$LATEST_TAG_VERSION"
+            echo "Branch build: using current version $NEW_VERSION"
+
+          elif [ "$TRIGGER_TYPE" = "tag" ]; then
+            NEW_VERSION="$TAG_TRIGGER_VERSION"
+            echo "Tag release: using version $NEW_VERSION"
+
+          else
+            # Auto-increment
+            IFS='.' read -ra V <<< "$LATEST_TAG_VERSION"
+            MAJOR=${V[0]:-1}; MINOR=${V[1]:-0}; PATCH=${V[2]:-0}
+
+            case $VERSION_TYPE in
+              major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+              minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+              patch) PATCH=$((PATCH + 1)) ;;
+            esac
+
+            NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+            echo "Auto-incremented: $LATEST_TAG_VERSION → $NEW_VERSION ($VERSION_TYPE)"
+          fi
+
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      # ----------------------------------------------------------------
+      # 6. Calculate build number
+      # ----------------------------------------------------------------
+      - name: Calculate build number
+        id: build_number
+        run: |
+          # Offset ensures continuity from previous sequential build numbers
+          OFFSET=33
+          BUILD_NUMBER=$(( ${{ github.run_number }} + OFFSET ))
+          echo "number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "Build number: $BUILD_NUMBER"
+
+      # ----------------------------------------------------------------
+      # 7. Update project version
+      # ----------------------------------------------------------------
+      - name: Update project version
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
+
+          echo "Setting version to $NEW_VERSION (build $BUILD_NUMBER)"
+
+          # Update project.pbxproj
+          sed -i '' "s/MARKETING_VERSION = [^;]*;/MARKETING_VERSION = $NEW_VERSION;/g" ShuttlX.xcodeproj/project.pbxproj
+          sed -i '' "s/CURRENT_PROJECT_VERSION = [^;]*;/CURRENT_PROJECT_VERSION = $BUILD_NUMBER;/g" ShuttlX.xcodeproj/project.pbxproj
+
+          # agvtool as backup
+          agvtool new-marketing-version "$NEW_VERSION" || true
+          agvtool new-version -all "$BUILD_NUMBER" || true
+
+          echo "Version: $(agvtool what-marketing-version -terse1 2>/dev/null || echo $NEW_VERSION)"
+          echo "Build: $(agvtool what-version -terse 2>/dev/null || echo $BUILD_NUMBER)"
+
+      # ----------------------------------------------------------------
+      # 8. Import code signing certificate
+      # ----------------------------------------------------------------
       - name: Import code signing certificate
         env:
           P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
@@ -81,27 +232,21 @@ jobs:
         run: |
           KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
 
-          # Create temporary keychain
           security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
           security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
-          # Import certificate
           echo "${{ secrets.BUILD_CERTIFICATE_BASE64 }}" | base64 --decode > certificate.p12
           security import certificate.p12 -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
           security list-keychain -d user -s $KEYCHAIN_PATH
-
-          # Allow codesign to access the keychain
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> $GITHUB_ENV
-
-          # Verify
           security find-identity -v -p codesigning $KEYCHAIN_PATH
 
-      # ------------------------------------------------------------------
-      # 4. Install Provisioning Profiles
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 9. Install provisioning profiles
+      # ----------------------------------------------------------------
       - name: Install provisioning profiles
         id: install_profiles
         run: |
@@ -115,15 +260,11 @@ jobs:
               echo "|"
               return
             fi
-
             echo "$profile_base64" | base64 --decode > "temp_${profile_label}.mobileprovision"
-
             UUID=$(security cms -D -i "temp_${profile_label}.mobileprovision" | grep -A1 '<key>UUID</key>' | grep '<string>' | sed 's/<[^>]*>//g' | tr -d '[:space:]')
             PROFILE_NAME=$(security cms -D -i "temp_${profile_label}.mobileprovision" | grep -A1 '<key>Name</key>' | grep '<string>' | sed 's/<[^>]*>//g' | xargs)
-
             mv "temp_${profile_label}.mobileprovision" ~/Library/MobileDevice/Provisioning\ Profiles/${UUID}.mobileprovision
-
-            echo "  Installed $profile_label: $PROFILE_NAME (UUID: $UUID)" >&2
+            echo "  Installed $profile_label: $PROFILE_NAME ($UUID)" >&2
             echo "$UUID|$PROFILE_NAME"
           }
 
@@ -139,89 +280,43 @@ jobs:
           echo "widgets_name=$(echo "$WIDGETS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
           echo "watch_widgets_name=$(echo "$WATCH_WIDGETS_INFO" | cut -d'|' -f2)" >> $GITHUB_OUTPUT
 
-          echo "Installed profiles:"
-          ls -la ~/Library/MobileDevice/Provisioning\ Profiles/
-
-      # ------------------------------------------------------------------
-      # 5. Setup App Store Connect API key
-      # ------------------------------------------------------------------
-      - name: Setup App Store Connect API key
-        run: |
-          mkdir -p ~/.appstoreconnect/private_keys
-          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 --decode \
-            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
-          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
-
-      # ------------------------------------------------------------------
-      # 6. Calculate build number from latest build/ tag
-      # ------------------------------------------------------------------
-      - name: Calculate build number
-        id: build_number
-        run: |
-          # Find the latest build/N tag
-          LAST_BUILD_TAG=$(git tag -l 'build/*' --sort=-version:refname | head -1)
-
-          if [ -n "$LAST_BUILD_TAG" ]; then
-            LAST_BUILD=${LAST_BUILD_TAG#build/}
-            echo "Last uploaded build tag: $LAST_BUILD_TAG (build $LAST_BUILD)"
-          else
-            # No build tags yet — builds 1 and 2 are already on App Store Connect
-            LAST_BUILD=2
-            echo "No build tags found, starting after known uploaded build $LAST_BUILD"
-          fi
-
-          BUILD_NUMBER=$((LAST_BUILD + 1))
-          echo "number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
-          echo "New build number: $BUILD_NUMBER"
-
-      # ------------------------------------------------------------------
-      # 7. Update build number in project
-      # ------------------------------------------------------------------
-      - name: Update build number
-        run: |
-          BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
-          agvtool new-version -all "$BUILD_NUMBER"
-          echo "Set CFBundleVersion to $BUILD_NUMBER in all targets"
-
-      # ------------------------------------------------------------------
-      # 8. Create ExportOptions.plist
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 10. Create ExportOptions.plist
+      # ----------------------------------------------------------------
       - name: Create ExportOptions.plist
         run: |
+          RELEASE_TYPE="${{ steps.trigger.outputs.release_type }}"
           IOS_NAME="${{ steps.install_profiles.outputs.ios_name }}"
           WATCH_NAME="${{ steps.install_profiles.outputs.watch_name }}"
           LIVEACTIVITY_NAME="${{ steps.install_profiles.outputs.liveactivity_name }}"
           WIDGETS_NAME="${{ steps.install_profiles.outputs.widgets_name }}"
           WATCH_WIDGETS_NAME="${{ steps.install_profiles.outputs.watch_widgets_name }}"
 
-          # Build LiveActivity entry only if profile exists
-          LIVEACTIVITY_PLIST=""
-          if [ -n "$LIVEACTIVITY_NAME" ]; then
-            LIVEACTIVITY_PLIST="            <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key>
-                      <string>$LIVEACTIVITY_NAME</string>"
+          if [ "$RELEASE_TYPE" = "appstore" ]; then
+            METHOD="app-store"
+          else
+            METHOD="app-store-connect"
           fi
 
-          # Build Widgets entry only if profile exists
-          WIDGETS_PLIST=""
-          if [ -n "$WIDGETS_NAME" ]; then
-            WIDGETS_PLIST="            <key>com.shuttlx.ShuttlX.ShuttlXWidgets</key>
-                      <string>$WIDGETS_NAME</string>"
-          fi
+          # Build optional profile entries
+          EXTRA_PROFILES=""
+          [ -n "$LIVEACTIVITY_NAME" ] && EXTRA_PROFILES="$EXTRA_PROFILES
+                  <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key>
+                  <string>$LIVEACTIVITY_NAME</string>"
+          [ -n "$WIDGETS_NAME" ] && EXTRA_PROFILES="$EXTRA_PROFILES
+                  <key>com.shuttlx.ShuttlX.ShuttlXWidgets</key>
+                  <string>$WIDGETS_NAME</string>"
+          [ -n "$WATCH_WIDGETS_NAME" ] && EXTRA_PROFILES="$EXTRA_PROFILES
+                  <key>com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets</key>
+                  <string>$WATCH_WIDGETS_NAME</string>"
 
-          # Build Watch Widgets entry only if profile exists
-          WATCH_WIDGETS_PLIST=""
-          if [ -n "$WATCH_WIDGETS_NAME" ]; then
-            WATCH_WIDGETS_PLIST="            <key>com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets</key>
-                      <string>$WATCH_WIDGETS_NAME</string>"
-          fi
-
-          cat > ExportOptions.plist <<EXPORTEOF
+          cat > ExportOptions.plist << EOF
           <?xml version="1.0" encoding="UTF-8"?>
           <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
           <plist version="1.0">
           <dict>
               <key>method</key>
-              <string>app-store-connect</string>
+              <string>$METHOD</string>
               <key>teamID</key>
               <string>${{ secrets.APPLE_TEAM_ID }}</string>
               <key>uploadBitcode</key>
@@ -242,24 +337,22 @@ jobs:
                   <string>$IOS_NAME</string>
                   <key>com.shuttlx.ShuttlX.watchkitapp</key>
                   <string>$WATCH_NAME</string>
-          $LIVEACTIVITY_PLIST
-          $WIDGETS_PLIST
-          $WATCH_WIDGETS_PLIST
+          $EXTRA_PROFILES
               </dict>
           </dict>
           </plist>
-          EXPORTEOF
+          EOF
 
-          echo "ExportOptions.plist created"
+          echo "ExportOptions created ($METHOD)"
           echo "  iOS: $IOS_NAME"
           echo "  Watch: $WATCH_NAME"
-          echo "  LiveActivity: ${LIVEACTIVITY_NAME:-auto-provisioned}"
-          echo "  Widgets: ${WIDGETS_NAME:-auto-provisioned}"
-          echo "  WatchWidgets: ${WATCH_WIDGETS_NAME:-auto-provisioned}"
+          echo "  LiveActivity: ${LIVEACTIVITY_NAME:-skipped}"
+          echo "  Widgets: ${WIDGETS_NAME:-skipped}"
+          echo "  WatchWidgets: ${WATCH_WIDGETS_NAME:-skipped}"
 
-      # ------------------------------------------------------------------
-      # 9. Configure manual signing in project
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 11. Configure manual signing
+      # ----------------------------------------------------------------
       - name: Configure manual signing
         env:
           IOS_PROFILE: ${{ steps.install_profiles.outputs.ios_name }}
@@ -271,88 +364,70 @@ jobs:
           python3 << 'PYEOF'
           import os
 
-          ios_profile = os.environ['IOS_PROFILE']
-          watch_profile = os.environ['WATCH_PROFILE']
-          liveactivity_profile = os.environ.get('LIVEACTIVITY_PROFILE', '')
-          widgets_profile = os.environ.get('WIDGETS_PROFILE', '')
-          watch_widgets_profile = os.environ.get('WATCH_WIDGETS_PROFILE', '')
+          ios = os.environ['IOS_PROFILE']
+          watch = os.environ['WATCH_PROFILE']
+          la = os.environ.get('LIVEACTIVITY_PROFILE', '')
+          wg = os.environ.get('WIDGETS_PROFILE', '')
+          ww = os.environ.get('WATCH_WIDGETS_PROFILE', '')
 
           pbx = 'ShuttlX.xcodeproj/project.pbxproj'
           with open(pbx, 'r') as f:
               content = f.read()
 
-          # Switch ALL targets to manual signing
           content = content.replace('CODE_SIGN_STYLE = Automatic', 'CODE_SIGN_STYLE = Manual')
 
-          # Add profile specifiers for iOS target
           content = content.replace(
               'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;',
               'CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;\n'
-              '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + ios_profile + '";')
+              '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + ios + '";')
 
-          # Add profile specifiers for Watch target
           content = content.replace(
               'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";',
               'CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";\n'
-              '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + watch_profile + '";')
+              '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + watch + '";')
 
-          # Add profile specifier for LiveActivity target
-          if liveactivity_profile:
+          if la:
               content = content.replace(
                   'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;',
                   'PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;\n'
-                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + liveactivity_profile + '";')
-              print(f'  LiveActivity: {liveactivity_profile}')
-          else:
-              print('  WARNING: No LiveActivity profile available!')
+                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + la + '";')
 
-          # Add profile specifier for Widgets target
-          if widgets_profile:
+          if wg:
               content = content.replace(
                   'CODE_SIGN_ENTITLEMENTS = ShuttlXWidgets/ShuttlXWidgets.entitlements;',
                   'CODE_SIGN_ENTITLEMENTS = ShuttlXWidgets/ShuttlXWidgets.entitlements;\n'
-                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + widgets_profile + '";')
-              print(f'  Widgets: {widgets_profile}')
-          else:
-              print('  WARNING: No Widgets profile available!')
+                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + wg + '";')
 
-          # Add profile specifier for Watch Widgets extension target
-          if watch_widgets_profile:
+          if ww:
               content = content.replace(
                   'CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;',
                   'CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;\n'
-                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + watch_widgets_profile + '";')
-              print(f'  WatchWidgets: {watch_widgets_profile}')
-          else:
-              print('  WARNING: No WatchWidgets profile available!')
+                  '\t\t\t\tPROVISIONING_PROFILE_SPECIFIER = "' + ww + '";')
 
           with open(pbx, 'w') as f:
               f.write(content)
 
-          print(f'  iOS: {ios_profile}')
-          print(f'  Watch: {watch_profile}')
-
-          missing = []
-          if not liveactivity_profile:
-              missing.append(('LIVEACTIVITY_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.ShuttlXLiveActivity'))
-          if not widgets_profile:
-              missing.append(('WIDGETS_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.ShuttlXWidgets'))
-          if not watch_widgets_profile:
-              missing.append(('WATCH_WIDGETS_PROVISIONING_PROFILE_BASE64', 'com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets'))
-
-          if missing:
-              print()
-              for secret_name, bundle_id in missing:
-                  print(f'ERROR: {secret_name} secret is not set!')
-                  print(f'Create an App Store distribution profile for bundle ID:')
-                  print(f'  {bundle_id}')
-                  print()
-              import sys; sys.exit(1)
+          print(f'Manual signing configured:')
+          print(f'  iOS: {ios}')
+          print(f'  Watch: {watch}')
+          print(f'  LiveActivity: {la or "skipped"}')
+          print(f'  Widgets: {wg or "skipped"}')
+          print(f'  WatchWidgets: {ww or "skipped"}')
           PYEOF
 
-      # ------------------------------------------------------------------
-      # 10. Archive (manual signing)
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 12. Setup App Store Connect API key
+      # ----------------------------------------------------------------
+      - name: Setup App Store Connect API key
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}" | base64 --decode \
+            > ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+          chmod 600 ~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
+
+      # ----------------------------------------------------------------
+      # 13. Build and archive
+      # ----------------------------------------------------------------
       - name: Build and archive
         run: |
           API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
@@ -371,9 +446,9 @@ jobs:
             -authenticationKeyIssuerID "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
             archive
 
-      # ------------------------------------------------------------------
-      # 11. Export
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 14. Export archive
+      # ----------------------------------------------------------------
       - name: Export archive
         run: |
           API_KEY_PATH=~/.appstoreconnect/private_keys/AuthKey_${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}.p8
@@ -395,11 +470,14 @@ jobs:
             exit 1
           fi
 
-      # ------------------------------------------------------------------
-      # 12. Upload to App Store Connect
-      # ------------------------------------------------------------------
+      # ----------------------------------------------------------------
+      # 15. Upload to App Store Connect
+      # ----------------------------------------------------------------
       - name: Upload to App Store Connect
         run: |
+          RELEASE_TYPE="${{ steps.trigger.outputs.release_type }}"
+          echo "Uploading to App Store Connect ($RELEASE_TYPE)..."
+
           xcrun altool \
             --upload-app \
             --type ios \
@@ -408,39 +486,125 @@ jobs:
             --apiIssuer "${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}" \
             --verbose
 
-      # ------------------------------------------------------------------
-      # 13. Tag successful build
-      # ------------------------------------------------------------------
-      - name: Tag successful build
+          if [ "$RELEASE_TYPE" = "testflight" ]; then
+            echo "Build will be available in TestFlight after processing"
+          else
+            echo "Build uploaded for App Store distribution"
+          fi
+
+      # ----------------------------------------------------------------
+      # 16. Commit version changes (main + manual only)
+      # ----------------------------------------------------------------
+      - name: Commit version changes
+        if: steps.trigger.outputs.type == 'automatic' || steps.trigger.outputs.type == 'manual'
         run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
           BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
-          TAG="build/${BUILD_NUMBER}"
 
-          git tag "$TAG"
-          git push origin "$TAG"
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
 
-          echo "Tagged successful upload as $TAG"
+          rm -f certificate.p12 ExportOptions.plist *.mobileprovision
 
-      # ------------------------------------------------------------------
-      # 14. Cleanup
-      # ------------------------------------------------------------------
+          if ! git diff --quiet; then
+            git add ShuttlX.xcodeproj/project.pbxproj || true
+            git commit -m "chore(release): v$NEW_VERSION (build $BUILD_NUMBER) [skip ci]"
+            git push origin main
+            echo "Version changes committed"
+          fi
+
+      # ----------------------------------------------------------------
+      # 17. Create git tag (main + manual only)
+      # ----------------------------------------------------------------
+      - name: Create git tag
+        if: steps.trigger.outputs.type == 'automatic' || steps.trigger.outputs.type == 'manual'
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          TAG_NAME="v$NEW_VERSION"
+
+          git config --local user.email "actions@github.com"
+          git config --local user.name "GitHub Actions"
+
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Tag $TAG_NAME already exists, skipping"
+          else
+            git tag -a "$TAG_NAME" -m "Release $NEW_VERSION"
+            git push origin "$TAG_NAME"
+            echo "Created tag: $TAG_NAME"
+          fi
+
+      # ----------------------------------------------------------------
+      # 18. Create GitHub Release (not for branch builds)
+      # ----------------------------------------------------------------
+      - name: Create GitHub Release
+        if: steps.trigger.outputs.type != 'branch'
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.new_version.outputs.version }}
+          name: ShuttlX v${{ steps.new_version.outputs.version }}
+          body: |
+            ## ShuttlX v${{ steps.new_version.outputs.version }}
+
+            **Build:** ${{ steps.build_number.outputs.number }}
+            **Destination:** ${{ steps.trigger.outputs.release_type == 'testflight' && 'TestFlight' || 'App Store' }}
+            **Trigger:** ${{ steps.trigger.outputs.type }}
+            **Date:** ${{ github.event.head_commit.timestamp }}
+
+            ---
+            *Automated by GitHub Actions*
+          draft: false
+          prerelease: ${{ steps.trigger.outputs.release_type == 'testflight' }}
+
+      # ----------------------------------------------------------------
+      # 19. Upload build artifacts
+      # ----------------------------------------------------------------
+      - name: Upload IPA artifact
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ShuttlX-v${{ steps.new_version.outputs.version }}-Build-${{ steps.build_number.outputs.number }}
+          path: build/export/ShuttlX.ipa
+          retention-days: 30
+
+      # ----------------------------------------------------------------
+      # 20. Cleanup
+      # ----------------------------------------------------------------
       - name: Cleanup
         if: always()
         run: |
-          rm -f certificate.p12 ExportOptions.plist
+          rm -f certificate.p12 ExportOptions.plist *.mobileprovision
           rm -rf ~/.appstoreconnect
           rm -rf ~/Library/MobileDevice/Provisioning\ Profiles
           if [ -f "$KEYCHAIN_PATH" ]; then
             security delete-keychain "$KEYCHAIN_PATH" || true
           fi
 
-      # ------------------------------------------------------------------
-      # 15. Upload build artifacts
-      # ------------------------------------------------------------------
-      - name: Upload IPA artifact
+      # ----------------------------------------------------------------
+      # 21. Summary
+      # ----------------------------------------------------------------
+      - name: Summary
         if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ShuttlX-v${{ steps.build_number.outputs.number }}-${{ github.sha }}
-          path: build/export/ShuttlX.ipa
-          retention-days: 30
+        run: |
+          NEW_VERSION="${{ steps.new_version.outputs.version }}"
+          BUILD_NUMBER="${{ steps.build_number.outputs.number }}"
+          RELEASE_TYPE="${{ steps.trigger.outputs.release_type }}"
+          TRIGGER_TYPE="${{ steps.trigger.outputs.type }}"
+
+          echo ""
+          echo "ShuttlX Release Complete"
+          echo "========================"
+          echo "  Version:     $NEW_VERSION"
+          echo "  Build:       $BUILD_NUMBER"
+          echo "  Destination: $RELEASE_TYPE"
+          echo "  Trigger:     $TRIGGER_TYPE"
+          echo "  Branch:      ${{ github.ref_name }}"
+          echo ""
+          if [ "$RELEASE_TYPE" = "appstore" ]; then
+            echo "  -> App Store distribution build uploaded"
+            echo "  -> Submit for review in App Store Connect"
+          else
+            echo "  -> TestFlight build uploaded"
+            echo "  -> Available after processing (~5-10 min)"
+          fi
