@@ -63,14 +63,22 @@
             align-items: center;
         }
         .logo {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 12px;
             text-decoration: none;
-            letter-spacing: -0.5px;
+            color: var(--text);
         }
-        .logo span { color: var(--text); }
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+        }
+        .logo span {
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            font-size: 18px;
+        }
         .nav-links { display: flex; gap: 28px; align-items: center; }
         .nav-links a {
             color: var(--text-secondary);
@@ -335,7 +343,10 @@
 
 <div class="container">
     <nav>
-        <a href="/" class="logo">Shuttl<span>X</span></a>
+        <a href="#" class="logo">
+            <img src="app-icon.png" alt="" class="logo-icon"/>
+            <span>ShuttlX</span>
+        </a>
         <div class="nav-links">
             <a href="#features">Features</a>
             <a href="#themes">Themes</a>
@@ -346,7 +357,7 @@
 
     <!-- Hero -->
     <section class="hero">
-        <img src="https://raw.githubusercontent.com/muzaparoff/shuttlx/main/ShuttlX/Assets.xcassets/AppIcon.appiconset/icon_2_app_store.png" alt="ShuttlX" class="hero-icon"/>
+        <img src="app-icon.png" alt="ShuttlX" class="hero-icon"/>
         <div class="hero-badge">iPhone + Apple Watch</div>
         <h1>Train smarter with<br><span class="accent">interval precision</span></h1>
         <p>Custom interval workouts, real-time metrics on your wrist, training plans, and analytics — all in a beautifully themed app. No subscription wall.</p>
