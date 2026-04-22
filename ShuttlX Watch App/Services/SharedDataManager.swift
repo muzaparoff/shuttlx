@@ -35,8 +35,10 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             logger.info("WCSession activated")
         }
 
-        loadPendingSessionsFromDisk()
-        loadTemplatesFromDisk()
+        Task { @MainActor [weak self] in
+            self?.loadPendingSessionsFromDisk()
+            self?.loadTemplatesFromDisk()
+        }
         setupBackgroundTasks()
     }
 

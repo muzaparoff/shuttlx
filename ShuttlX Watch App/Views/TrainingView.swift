@@ -18,9 +18,12 @@ struct TrainingView: View {
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    private var hrCalculator: HeartRateZoneCalculator {
-        HeartRateZoneCalculator.fromSharedDefaults()
-    }
+    @State private var hrCalculator = HeartRateZoneCalculator.fromSharedDefaults()
+    #if os(watchOS)
+    private let screenHeight = WKInterfaceDevice.current().screenBounds.height
+    #else
+    private let screenHeight: CGFloat = 224
+    #endif
 
     var body: some View {
         if showingSummary, let summary = savedSummary {
@@ -131,14 +134,13 @@ struct TrainingView: View {
     // MARK: - Full Workout Display
 
     private var fullWorkoutDisplayTab: some View {
-        GeometryReader { geo in
-            let h = geo.size.height
-            let valueSize = max(20, h * 0.19)
-            let labelSize = max(10, h * 0.08)
-            let labelWidth = h * 0.20
-            let rowSpacing = h * 0.025
+        let h = screenHeight
+        let valueSize = max(20, h * 0.19)
+        let labelSize = max(10, h * 0.08)
+        let labelWidth = h * 0.20
+        let rowSpacing = h * 0.025
 
-            VStack(spacing: rowSpacing) {
+        return VStack(spacing: rowSpacing) {
                 // Top row: workout name
                 HStack {
                     Text(workoutManager.workoutName.uppercased())
@@ -189,7 +191,6 @@ struct TrainingView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-        }
     }
 
     // MARK: - Metric Row (unified for all metrics including timer)

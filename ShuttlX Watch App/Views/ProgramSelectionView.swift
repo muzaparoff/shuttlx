@@ -74,10 +74,15 @@ struct StartTrainingView: View {
                     workoutManager.startWorkout()
                 }) {
                     HStack(spacing: ShuttlXSpacing.md) {
-                        Image(systemName: "figure.run")
-                            .font(ShuttlXFont.watchTemplateTitle)
-                            .foregroundStyle(ShuttlXColor.running)
-                            .frame(width: 28)
+                        if workoutManager.isStarting && workoutManager.workoutMode == .freeRun {
+                            ProgressView()
+                                .frame(width: 28)
+                        } else {
+                            Image(systemName: "figure.run")
+                                .font(ShuttlXFont.watchTemplateTitle)
+                                .foregroundStyle(ShuttlXColor.running)
+                                .frame(width: 28)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Free Run")
                                 .font(ShuttlXFont.watchTemplateTitle)
@@ -107,10 +112,15 @@ struct StartTrainingView: View {
                         workoutManager.startIntervalWorkout(template: template)
                     }) {
                         HStack(spacing: ShuttlXSpacing.md) {
-                            Image(systemName: "flame.fill")
-                                .font(ShuttlXFont.watchTemplateTitle)
-                                .foregroundStyle(ShuttlXColor.calories)
-                                .frame(width: 28)
+                            if workoutManager.isStarting && workoutManager.workoutName == template.name {
+                                ProgressView()
+                                    .frame(width: 28)
+                            } else {
+                                Image(systemName: "flame.fill")
+                                    .font(ShuttlXFont.watchTemplateTitle)
+                                    .foregroundStyle(ShuttlXColor.calories)
+                                    .frame(width: 28)
+                            }
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(template.name)
                                     .font(ShuttlXFont.watchTemplateTitle)

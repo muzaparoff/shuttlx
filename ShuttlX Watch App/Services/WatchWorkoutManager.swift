@@ -33,11 +33,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
     @Published var healthKitSaveError: String? = nil
+    /// True while a workout start is in progress (auth + session setup). Used for immediate UI feedback.
+    @Published var isStarting: Bool = false
 
     /// True average heart rate across all collected samples (excludes paused periods)
     var averageHeartRate: Int {
-        guard !heartRateSamples.isEmpty else { return 0 }
-        return Int((heartRateSamples.reduce(0, +) / Double(heartRateSamples.count)).rounded())
+        guard heartRateSampleCount > 0 else { return 0 }
+        return Int((heartRateSampleSum / Double(heartRateSampleCount)).rounded())
     }
 
     // MARK: - Interval Mode
@@ -64,7 +66,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var caloriesQuery: HKAnchoredObjectQuery?
     private var heartRateAnchor: HKQueryAnchor?
     private var caloriesAnchor: HKQueryAnchor?
-    private var heartRateSamples: [Double] = []
+    // Running accumulators replace the full samples array — O(1) average, not O(n)
+    private var heartRateSampleSum: Double = 0
+    private var heartRateSampleCount: Int = 0
     private var maxHeartRateValue: Double = 0
     private var totalCaloriesAccumulated: Double = 0
 
@@ -211,10 +215,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// or queries begin. If the user has denied access the workout is aborted and
     /// `authorizationDenied` is set to `true` so the UI can show an error.
     func startWorkout() {
-        guard !isWorkoutActive else {
-            logger.warning("Workout already active")
+        guard !isWorkoutActive, !isStarting else {
+            logger.warning("Workout already active or starting")
             return
         }
+
+        // Set isStarting immediately so the UI shows a spinner on the very next frame —
+        // before any async work begins.
+        isStarting = true
 
         // Name must be set before the async task so the UI reflects the correct
         // workout name if it reads the property during the auth wait.
@@ -225,6 +233,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         Task { [weak self] in
             guard let self = self else { return }
             await self.startWorkoutAfterAuth()
+            self.isStarting = false
         }
     }
 
@@ -263,7 +272,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentActivity = .unknown
         pendingActivity = nil
         pendingActivityStartTime = nil
-        heartRateSamples = []
+        heartRateSampleSum = 0
+        heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
@@ -300,8 +310,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     func startIntervalWorkout(template: WorkoutTemplate) {
-        guard !isWorkoutActive else {
-            logger.warning("Workout already active")
+        guard !isWorkoutActive, !isStarting else {
+            logger.warning("Workout already active or starting")
             return
         }
         logger.info("Starting interval workout: \(template.name)")
@@ -403,7 +413,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentSegmentStartTime = nil
         pendingActivity = nil
         pendingActivityStartTime = nil
-        heartRateSamples = []
+        heartRateSampleSum = 0
+        heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
@@ -477,11 +488,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private func startDisplayTimer() {
         stopDisplayTimer()
 
-        let newTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.main)
+        // Use a background queue for the timer source so the 1-second tick does not
+        // compete with SwiftUI rendering on the main queue. State updates inside
+        // updateElapsedTime() hop back to @MainActor via the class isolation.
+        let newTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInteractive))
         newTimer.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(50))
 
         newTimer.setEventHandler { [weak self] in
-            self?.updateElapsedTime()
+            Task { @MainActor [weak self] in
+                self?.updateElapsedTime()
+            }
         }
 
         displayTimer = newTimer
@@ -526,7 +542,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         lastLiveUpdateTime = now
 
-        guard WCSession.default.activationState == .activated else { return }
+        guard WCSession.default.activationState == .activated,
+              WCSession.default.isReachable else { return }
 
         var payload: [String: Any] = [
             "action": "liveMetrics",
@@ -783,7 +800,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             guard let self = self else { return }
             // Only include samples taken while workout is not paused
             if !self.isPaused {
-                self.heartRateSamples.append(contentsOf: bpmValues)
+                self.heartRateSampleSum += bpmValues.reduce(0, +)
+                self.heartRateSampleCount += bpmValues.count
             }
             if let latestBPM = bpmValues.last {
                 self.heartRate = Int(latestBPM.rounded())
@@ -893,7 +911,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startDate: startTime,
             endDate: Date(),
             duration: Date().timeIntervalSince(startTime) - totalPause,
-            averageHeartRate: heartRateSamples.isEmpty ? nil : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count),
+            averageHeartRate: heartRateSampleCount > 0 ? heartRateSampleSum / Double(heartRateSampleCount) : nil,
             maxHeartRate: maxHeartRateValue > 0 ? maxHeartRateValue : nil,
             caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
             distance: totalDistance > 0 ? totalDistance : nil,
@@ -986,7 +1004,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startDate: startTime,
             endDate: Date(),
             duration: Date().timeIntervalSince(startTime) - totalPauseTime,
-            averageHeartRate: heartRateSamples.isEmpty ? nil : heartRateSamples.reduce(0, +) / Double(heartRateSamples.count),
+            averageHeartRate: heartRateSampleCount > 0 ? heartRateSampleSum / Double(heartRateSampleCount) : nil,
             maxHeartRate: maxHeartRateValue > 0 ? maxHeartRateValue : nil,
             caloriesBurned: totalCaloriesAccumulated > 0 ? totalCaloriesAccumulated : nil,
             distance: totalDistance > 0 ? totalDistance : nil,

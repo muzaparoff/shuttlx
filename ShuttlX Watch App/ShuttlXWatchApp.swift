@@ -44,10 +44,12 @@ struct ShuttlXWatchApp: App {
                     logger.info("ContentView appeared")
                     // Request HealthKit permissions early (must be after window exists)
                     workoutManager.requestHealthKitPermissionsIfNeeded()
-                    // Crash recovery: check for unsaved workout backup
-                    if !workoutManager.isWorkoutActive, let recovered = workoutManager.recoverCrashedWorkout() {
-                        logger.info("Recovering crashed workout session")
-                        workoutManager.saveRecoveredSession(recovered)
+                    // Crash recovery: deferred off first render to avoid blocking the UI
+                    Task {
+                        if !workoutManager.isWorkoutActive, let recovered = workoutManager.recoverCrashedWorkout() {
+                            logger.info("Recovering crashed workout session")
+                            workoutManager.saveRecoveredSession(recovered)
+                        }
                     }
                 }
         }
