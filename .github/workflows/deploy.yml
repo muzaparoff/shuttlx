@@ -285,11 +285,11 @@ jobs:
 
           detailed = "\n\n".join(sections) if sections else "- Maintenance update"
 
-          # Write to files for later steps
+          # Write to files for later steps (trailing newline required for shell heredoc delimiter)
           with open("whats_new.txt", "w") as f:
-              f.write(whats_new)
+              f.write(whats_new + "\n")
           with open("release_notes.md", "w") as f:
-              f.write(detailed)
+              f.write(detailed + "\n")
 
           print("=== What's New (App Store) ===")
           print(whats_new)
