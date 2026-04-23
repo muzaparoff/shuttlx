@@ -10,7 +10,7 @@ final class SubscriptionManager {
     // MARK: - Configuration
 
     /// RevenueCat public API key (safe to ship — read-only).
-    static let apiKey = "test_HUaJIAnYKOWLAofxryvAqiMOSwU"
+    static let apiKey = "appl_mHeFHuftdLXvNyxHabCOxrzHBIr"
 
     /// Entitlement identifier configured in RevenueCat dashboard.
     static let proEntitlementID = "shuttlx Pro"
@@ -37,7 +37,11 @@ final class SubscriptionManager {
 
     /// Call once from ShuttlXApp.init() before any other RevenueCat usage.
     func configure() {
+        #if DEBUG
         Purchases.logLevel = .debug
+        #else
+        Purchases.logLevel = .error
+        #endif
         Purchases.configure(
             with: .builder(withAPIKey: Self.apiKey)
                 .with(entitlementVerificationMode: .informational)
