@@ -160,8 +160,9 @@ jobs:
           VERSION_TYPE="${{ steps.trigger.outputs.version_type }}"
           TAG_TRIGGER_VERSION="${{ steps.trigger.outputs.tag_version }}"
 
-          # Get latest version from git tags
-          LATEST_TAG_VERSION=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//' || echo "1.0.0")
+          # Get latest version from git tags — sort by semver so v1.1.0 beats v1.0.2
+          LATEST_TAG_VERSION=$(git tag --sort=-version:refname --list 'v*' | head -1 | sed 's/^v//')
+          if [ -z "$LATEST_TAG_VERSION" ]; then LATEST_TAG_VERSION="1.0.0"; fi
           echo "Latest tag version: $LATEST_TAG_VERSION"
 
           if [ "$TRIGGER_TYPE" = "branch" ]; then
@@ -209,8 +210,8 @@ jobs:
         run: |
           TRIGGER_TYPE="${{ steps.trigger.outputs.type }}"
 
-          # Find the last version tag to diff against
-          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
+          # Find the last version tag to diff against — sort by semver
+          LAST_TAG=$(git tag --sort=-version:refname --list 'v*' | head -1 || echo "")
 
           if [ -n "$LAST_TAG" ]; then
             echo "Generating notes since $LAST_TAG..."
