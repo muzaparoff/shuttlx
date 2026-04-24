@@ -2,6 +2,7 @@ import WatchConnectivity
 import Foundation
 import Combine
 import WidgetKit
+import AppIntents
 import os.log
 
 @MainActor
@@ -15,6 +16,9 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     // Live workout state from Watch
     @Published var isWorkoutActiveOnWatch = false
+    /// Anchor for self-ticking timer UI (`Text(timerInterval:)`). Set when Watch
+    /// signals "workoutStarted" and kept stable until the workout ends.
+    @Published var liveWorkoutStartDate: Date?
     @Published var liveElapsedTime: TimeInterval = 0
     @Published var liveHeartRate: Int = 0
     @Published var liveDistance: Double = 0
@@ -200,6 +204,16 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveIsPaused = message["isPaused"] as? Bool ?? false
         livePace = message["pace"] as? TimeInterval ?? 0
 
+        // Anchor timer UI to the Watch's actual workout start time. Prefer the
+        // message's explicit startTime; fall back to reconstructing from elapsed.
+        if liveWorkoutStartDate == nil {
+            if let ts = message["startTime"] as? TimeInterval {
+                liveWorkoutStartDate = Date(timeIntervalSince1970: ts)
+            } else {
+                liveWorkoutStartDate = Date().addingTimeInterval(-liveElapsedTime)
+            }
+        }
+
         // Accumulate live route points for real-time map
         if let lat = message["latitude"] as? Double, let lon = message["longitude"] as? Double {
             let point = RoutePoint(latitude: lat, longitude: lon, timestamp: Date())
@@ -221,10 +235,14 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // will cause updateActivity() to retry on subsequent metric updates.
         if !wasActive {
             log("Workout started on Watch — starting Live Activity")
-            LiveActivityManager.shared.startActivity(activityType: liveCurrentActivity)
+            LiveActivityManager.shared.startActivity(
+                activityType: liveCurrentActivity,
+                startDate: liveWorkoutStartDate ?? Date()
+            )
         }
 
         LiveActivityManager.shared.updateActivity(
+            startDate: liveWorkoutStartDate,
             elapsedTime: liveElapsedTime,
             heartRate: liveHeartRate,
             distance: liveDistance,
@@ -247,6 +265,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         let wasActive = isWorkoutActiveOnWatch
         LiveActivityManager.shared.endActivity()
         isWorkoutActiveOnWatch = false
+        liveWorkoutStartDate = nil
         liveElapsedTime = 0
         liveHeartRate = 0
         liveDistance = 0
@@ -688,7 +707,19 @@ extension SharedDataManager {
                     if let activityType = userInfo["activityType"] as? String {
                         self.isWorkoutActiveOnWatch = true
                         self.liveCurrentActivity = activityType
-                        LiveActivityManager.shared.startActivity(activityType: activityType)
+                        let startDate: Date
+                        if let ts = userInfo["startTime"] as? TimeInterval {
+                            startDate = Date(timeIntervalSince1970: ts)
+                        } else {
+                            startDate = Date()
+                        }
+                        self.liveWorkoutStartDate = startDate
+                        LiveActivityManager.shared.startActivity(activityType: activityType, startDate: startDate)
+                        // Donate workout-start intent so Shortcut automations
+                        // (e.g. "Turn on Fitness Focus") can fire.
+                        Task {
+                            try? await IntentDonationManager.shared.donate(intent: StartWorkoutIntent())
+                        }
                         self.log("Workout started on Watch (via transferUserInfo) — Live Activity started")
                     }
                 case "workoutStopped":

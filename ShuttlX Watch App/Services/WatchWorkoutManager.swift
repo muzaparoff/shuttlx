@@ -61,12 +61,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var segments: [ActivitySegment] = []
     private var sharedDataManager: SharedDataManager?
 
-    // HealthKit live queries
-    private var heartRateQuery: HKAnchoredObjectQuery?
-    private var caloriesQuery: HKAnchoredObjectQuery?
-    private var heartRateAnchor: HKQueryAnchor?
-    private var caloriesAnchor: HKQueryAnchor?
-    // Running accumulators replace the full samples array — O(1) average, not O(n)
+    // HealthKit builder-driven metrics (fed by HKLiveWorkoutBuilderDelegate)
     private var heartRateSampleSum: Double = 0
     private var heartRateSampleCount: Int = 0
     private var maxHeartRateValue: Double = 0
@@ -276,8 +271,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
-        heartRateAnchor = nil
-        caloriesAnchor = nil
         accumulatedPauseTime = 0
         pauseStartDate = nil
         routePoints = []
@@ -292,8 +285,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startMotionUpdates()
             startPedometerUpdates()
         }
-        startHeartRateQuery()
-        startCaloriesQuery()
+        // Heart rate and calories are delivered via HKLiveWorkoutBuilderDelegate
+        // (see workoutBuilder(_:didCollectDataOf:)) — no separate HKAnchoredObjectQuery
+        // is needed. The builder automatically handles pause/resume sample gating.
         requestLocationAndStartUpdates()
 
         logger.info("Workout started (sport: \(sport.displayName))")
@@ -331,10 +325,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopDisplayTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
-        // Heart rate and calorie queries are intentionally kept running through pause/resume
-        // to avoid the HKAnchoredObjectQuery replay bug: stopping and restarting a query
-        // causes the initial results handler to re-deliver all samples since the last anchor,
-        // double-counting calories/HR samples already processed.
         stopLocationUpdates()
 
         workoutSession?.pause()
@@ -365,9 +355,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startMotionUpdates()
             startPedometerUpdates()
         }
-        // Heart rate and calorie queries are kept running continuously — do not restart them
-        // here. Restarting an HKAnchoredObjectQuery replays all samples since the stored
-        // anchor in the initial results handler, causing double-counting on every resume.
         startLocationUpdates()
         logger.info("Workout resumed")
     }
@@ -378,8 +365,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopDisplayTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
-        stopHeartRateQuery()
-        stopCaloriesQuery()
         stopLocationUpdates()
 
         workoutSession?.end()
@@ -417,8 +402,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
-        heartRateAnchor = nil
-        caloriesAnchor = nil
         lastLiveUpdateTime = nil
         routePoints = []
         accumulatedPauseTime = 0
@@ -463,6 +446,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             workoutSession?.delegate = self
             let builder = session.associatedWorkoutBuilder()
             workoutBuilder = builder
+            builder.delegate = self
             builder.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
             workoutSession?.startActivity(with: Date())
             builder.beginCollection(withStart: Date()) { [weak self] success, error in
@@ -542,9 +526,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         lastLiveUpdateTime = now
 
-        guard WCSession.default.activationState == .activated,
-              WCSession.default.isReachable else { return }
-
+        // Snapshot state on MainActor before dispatching — the sendMessage call itself
+        // can briefly block the caller, so we run it on a background queue to keep the
+        // MainActor free for SwiftUI rendering and timer ticks.
         var payload: [String: Any] = [
             "action": "liveMetrics",
             "elapsedTime": elapsedTime,
@@ -557,17 +541,19 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             "pace": currentPace ?? 0,
             "timestamp": now.timeIntervalSince1970
         ]
-
-        // Include latest route point for live map on iOS
+        if let startTime = workoutStartTime {
+            payload["startTime"] = startTime.timeIntervalSince1970
+        }
         if let lastPoint = routePoints.last {
             payload["latitude"] = lastPoint.latitude
             payload["longitude"] = lastPoint.longitude
         }
 
-        WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
-            Task { @MainActor [weak self] in
-                self?.logger.debug("Live metrics send failed: \(error.localizedDescription)")
-            }
+        let frozenPayload = payload
+        DispatchQueue.global(qos: .utility).async {
+            guard WCSession.default.activationState == .activated,
+                  WCSession.default.isReachable else { return }
+            WCSession.default.sendMessage(frozenPayload, replyHandler: nil, errorHandler: nil)
         }
     }
 
@@ -740,155 +726,64 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         pedometer.stopUpdates()
     }
 
-    // MARK: - Heart Rate Query
+    // MARK: - Builder-Driven Metric Collection
+    //
+    // Heart rate and active calories are read from `HKLiveWorkoutBuilder`'s aggregated
+    // statistics via the delegate callback below. The builder is already tied to the
+    // workout session, so samples are automatically gated by pause/resume state and
+    // we avoid the HKAnchoredObjectQuery replay race that previously dropped the first
+    // few seconds of samples and double-counted on resume.
 
-    private func startHeartRateQuery() {
-        guard healthKitAuthorized else {
-            logger.warning("startHeartRateQuery skipped — HealthKit not authorized")
-            return
+    #if os(watchOS)
+    nonisolated fileprivate func updateMetrics(from builder: HKLiveWorkoutBuilder,
+                                               changedTypes collected: Set<HKSampleType>) {
+        guard let quantityTypes = collected as? Set<HKQuantityType> else { return }
+
+        struct Snapshot {
+            var latestHR: Double?
+            var avgHR: Double?
+            var maxHR: Double?
+            var totalCalories: Double?
         }
-        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate),
-              let startDate = workoutStartTime else { return }
+        var snapshot = Snapshot()
 
-        stopHeartRateQuery()
-
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
-
-        let query = HKAnchoredObjectQuery(
-            type: heartRateType,
-            predicate: predicate,
-            anchor: heartRateAnchor,
-            limit: HKObjectQueryNoLimit
-        ) { [weak self] _, samples, _, newAnchor, error in
-            if let error = error {
-                Task { @MainActor in
-                    self?.logger.error("Heart rate query error: \(error.localizedDescription)")
-                }
-                return
-            }
-            Task { @MainActor in
-                self?.heartRateAnchor = newAnchor
-            }
-            self?.processHeartRateSamples(samples)
+        if let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate),
+           quantityTypes.contains(hrType),
+           let stats = builder.statistics(for: hrType) {
+            let unit = HKUnit.count().unitDivided(by: .minute())
+            snapshot.latestHR = stats.mostRecentQuantity()?.doubleValue(for: unit)
+            snapshot.avgHR = stats.averageQuantity()?.doubleValue(for: unit)
+            snapshot.maxHR = stats.maximumQuantity()?.doubleValue(for: unit)
         }
 
-        query.updateHandler = { [weak self] _, samples, _, newAnchor, error in
-            if let error = error {
-                Task { @MainActor in
-                    self?.logger.error("Heart rate update error: \(error.localizedDescription)")
-                }
-                return
-            }
-            Task { @MainActor in
-                self?.heartRateAnchor = newAnchor
-            }
-            self?.processHeartRateSamples(samples)
+        if let kcalType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
+           quantityTypes.contains(kcalType),
+           let stats = builder.statistics(for: kcalType),
+           let total = stats.sumQuantity()?.doubleValue(for: .kilocalorie()) {
+            snapshot.totalCalories = total
         }
-
-        heartRateQuery = query
-        healthStore.execute(query)
-        logger.info("Heart rate query started")
-    }
-
-    nonisolated private func processHeartRateSamples(_ samples: [HKSample]?) {
-        guard let quantitySamples = samples as? [HKQuantitySample], !quantitySamples.isEmpty else { return }
-
-        let bpmUnit = HKUnit.count().unitDivided(by: .minute())
-        let bpmValues = quantitySamples.map { $0.quantity.doubleValue(for: bpmUnit) }
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
-            // Only include samples taken while workout is not paused
-            if !self.isPaused {
-                self.heartRateSampleSum += bpmValues.reduce(0, +)
-                self.heartRateSampleCount += bpmValues.count
+            if let bpm = snapshot.latestHR {
+                self.heartRate = Int(bpm.rounded())
             }
-            if let latestBPM = bpmValues.last {
-                self.heartRate = Int(latestBPM.rounded())
-            }
-            if let maxBPM = bpmValues.max(), maxBPM > self.maxHeartRateValue {
+            if let maxBPM = snapshot.maxHR, maxBPM > self.maxHeartRateValue {
                 self.maxHeartRateValue = maxBPM
             }
-        }
-    }
-
-    private func stopHeartRateQuery() {
-        if let query = heartRateQuery {
-            healthStore.stop(query)
-            heartRateQuery = nil
-        }
-    }
-
-    // MARK: - Calories Query
-
-    private func startCaloriesQuery() {
-        guard healthKitAuthorized else {
-            logger.warning("startCaloriesQuery skipped — HealthKit not authorized")
-            return
-        }
-        guard let caloriesType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
-              let startDate = workoutStartTime else { return }
-
-        stopCaloriesQuery()
-
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
-
-        let query = HKAnchoredObjectQuery(
-            type: caloriesType,
-            predicate: predicate,
-            anchor: caloriesAnchor,
-            limit: HKObjectQueryNoLimit
-        ) { [weak self] _, samples, _, newAnchor, error in
-            if let error = error {
-                Task { @MainActor in
-                    self?.logger.error("Calories query error: \(error.localizedDescription)")
-                }
-                return
+            // `averageHeartRate` computed property expects sum/count. Store the
+            // builder's authoritative pause-aware average by setting sum=avg*1.
+            if let avgBPM = snapshot.avgHR, avgBPM > 0 {
+                self.heartRateSampleSum = avgBPM
+                self.heartRateSampleCount = 1
             }
-            Task { @MainActor in
-                self?.caloriesAnchor = newAnchor
+            if let total = snapshot.totalCalories {
+                self.totalCaloriesAccumulated = total
+                self.calories = Int(total)
             }
-            self?.processCaloriesSamples(samples)
-        }
-
-        query.updateHandler = { [weak self] _, samples, _, newAnchor, error in
-            if let error = error {
-                Task { @MainActor in
-                    self?.logger.error("Calories update error: \(error.localizedDescription)")
-                }
-                return
-            }
-            Task { @MainActor in
-                self?.caloriesAnchor = newAnchor
-            }
-            self?.processCaloriesSamples(samples)
-        }
-
-        caloriesQuery = query
-        healthStore.execute(query)
-        logger.info("Calories query started")
-    }
-
-    nonisolated private func processCaloriesSamples(_ samples: [HKSample]?) {
-        guard let quantitySamples = samples as? [HKQuantitySample], !quantitySamples.isEmpty else { return }
-
-        let kcalUnit = HKUnit.kilocalorie()
-        let kcalValues = quantitySamples.map { $0.quantity.doubleValue(for: kcalUnit) }
-        let batchTotal = kcalValues.reduce(0, +)
-
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.totalCaloriesAccumulated += batchTotal
-            self.calories = Int(self.totalCaloriesAccumulated)
         }
     }
-
-    private func stopCaloriesQuery() {
-        if let query = caloriesQuery {
-            healthStore.stop(query)
-            caloriesQuery = nil
-        }
-    }
+    #endif
 
     // MARK: - Persistence
 
@@ -1093,8 +988,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 }
 
-// MARK: - HKWorkoutSessionDelegate
+// MARK: - HKLiveWorkoutBuilderDelegate
 #if os(watchOS)
+extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
+    nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder,
+                                    didCollectDataOf collectedTypes: Set<HKSampleType>) {
+        updateMetrics(from: workoutBuilder, changedTypes: collectedTypes)
+    }
+
+    nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {
+        // Events (pause/resume markers) are handled via HKWorkoutSessionDelegate;
+        // no additional work needed here.
+    }
+}
+
+// MARK: - HKWorkoutSessionDelegate
 extension WatchWorkoutManager: HKWorkoutSessionDelegate {
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {
         Task { @MainActor in

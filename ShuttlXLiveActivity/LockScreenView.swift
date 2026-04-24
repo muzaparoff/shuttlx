@@ -21,9 +21,9 @@ struct LockScreenView: View {
                     .foregroundStyle(activityColor(context.state.currentActivity))
             }
 
-            Text(formatTimer(context.state.elapsedTime))
+            timerText
                 .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
-                .contentTransition(.numericText())
+                .monospacedDigit()
 
             HStack(spacing: 16) {
                 if context.state.heartRate > 0 {
@@ -42,6 +42,22 @@ struct LockScreenView: View {
         }
         .padding()
         .activityBackgroundTint(.black.opacity(0.75))
+    }
+
+    // MARK: - Timer (self-ticking via Text(timerInterval:))
+
+    @ViewBuilder
+    private var timerText: some View {
+        if context.state.isPaused {
+            // Frozen snapshot while paused
+            Text(formatTimer(context.state.elapsedTime))
+        } else {
+            // Self-ticking — works even if WC updates pause
+            Text(timerInterval: context.state.startDate...Date.distantFuture,
+                 pauseTime: nil,
+                 countsDown: false,
+                 showsHours: true)
+        }
     }
 
     // MARK: - Formatting Helpers

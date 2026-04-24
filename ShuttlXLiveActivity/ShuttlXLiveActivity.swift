@@ -12,9 +12,9 @@ struct ShuttlXLiveActivity: Widget {
                     HStack(spacing: 6) {
                         Image(systemName: activityIcon(context.state.currentActivity))
                             .foregroundStyle(activityColor(context.state.currentActivity))
-                        Text(formatTimer(context.state.elapsedTime))
+                        timerView(context: context)
                             .font(.system(.title2, design: .monospaced).weight(.semibold))
-                            .contentTransition(.numericText())
+                            .monospacedDigit()
                     }
                 }
                 DynamicIslandExpandedRegion(.trailing) {
@@ -50,14 +50,28 @@ struct ShuttlXLiveActivity: Widget {
                 Image(systemName: activityIcon(context.state.currentActivity))
                     .foregroundStyle(context.state.isPaused ? .secondary : activityColor(context.state.currentActivity))
             } compactTrailing: {
-                Text(formatTimer(context.state.elapsedTime))
+                timerView(context: context)
                     .font(.system(.body, design: .monospaced))
+                    .monospacedDigit()
                     .foregroundStyle(context.state.isPaused ? .secondary : .primary)
-                    .contentTransition(.numericText())
             } minimal: {
                 Image(systemName: activityIcon(context.state.currentActivity))
                     .foregroundStyle(.green)
             }
+        }
+    }
+
+    // MARK: - Timer (self-ticking via Text(timerInterval:))
+
+    @ViewBuilder
+    private func timerView(context: ActivityViewContext<WorkoutActivityAttributes>) -> some View {
+        if context.state.isPaused {
+            Text(formatTimer(context.state.elapsedTime))
+        } else {
+            Text(timerInterval: context.state.startDate...Date.distantFuture,
+                 pauseTime: nil,
+                 countsDown: false,
+                 showsHours: true)
         }
     }
 

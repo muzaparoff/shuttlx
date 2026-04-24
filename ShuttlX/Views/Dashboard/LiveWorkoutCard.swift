@@ -20,6 +20,18 @@ struct LiveWorkoutCard: View {
         }
     }
 
+    @ViewBuilder
+    private var timerView: some View {
+        if let start = sharedData.liveWorkoutStartDate, !sharedData.liveIsPaused {
+            Text(timerInterval: start...Date.distantFuture,
+                 pauseTime: nil,
+                 countsDown: false,
+                 showsHours: true)
+        } else {
+            Text(FormattingUtils.formatTimer(sharedData.liveElapsedTime))
+        }
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             // Header
@@ -41,10 +53,12 @@ struct LiveWorkoutCard: View {
                     .foregroundStyle(activityColor)
             }
 
-            // Timer
-            Text(FormattingUtils.formatTimer(sharedData.liveElapsedTime))
+            // Timer — self-ticking when running, frozen snapshot when paused.
+            // Anchoring to `liveWorkoutStartDate` avoids jitter from 3s WC cadence
+            // and keeps the display smooth even when the Watch message is delayed.
+            timerView
                 .font(ShuttlXFont.timerDisplay)
-                .contentTransition(.numericText())
+                .monospacedDigit()
                 .frame(maxWidth: .infinity, alignment: .center)
 
             // Metrics row
