@@ -67,6 +67,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var maxHeartRateValue: Double = 0
     private var totalCaloriesAccumulated: Double = 0
 
+    // Display-only HR fallback: on some watch models the builder delegate may not
+    // deliver `.heartRate` in `collectedTypes`. An anchored query runs in parallel
+    // and updates only the live `heartRate` display. It intentionally does NOT
+    // touch the sum/count/max — those remain authoritative from the builder's
+    // pause-aware statistics, so no double-counting on resume.
+    private var heartRateQuery: HKAnchoredObjectQuery?
+    private var heartRateAnchor: HKQueryAnchor?
+
     // Pace & split tracking
     private var timeAtLastKm: TimeInterval = 0
 
@@ -108,10 +116,25 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - HealthKit Permissions
 
+    /// UserDefaults key (App Group) persisting successful HealthKit authorization
+    /// across launches. Bump the suffix if `buildHealthKitTypes()` gains a new
+    /// required type so the user is re-prompted.
+    private static let authCacheKey = "hk_authorized_v1"
+    private var authDefaults: UserDefaults {
+        UserDefaults(suiteName: "group.com.shuttlx.shared") ?? .standard
+    }
+
     /// Fire-and-forget pre-warm: called from onAppear to prompt the user early.
     /// Does NOT await result — use requestHealthAuthorizationAsync() when a result is needed.
     func requestHealthKitPermissionsIfNeeded() {
         guard !healthKitAuthorized else { return }
+        if authDefaults.bool(forKey: Self.authCacheKey) {
+            // Previously granted — assume still granted. If a live HealthKit call
+            // later fails with an authorization error, we'll clear the flag and
+            // re-prompt on the next Start.
+            healthKitAuthorized = true
+            return
+        }
         Task { [weak self] in
             await self?.requestHealthAuthorizationAsync()
         }
@@ -119,12 +142,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// Async, awaitable authorization request.
     /// Returns `true` if all critical types are authorized, `false` otherwise.
-    /// Uses the fast-path `authorizationStatus` check to avoid showing the sheet on repeat launches.
+    /// Short-circuits on the cached flag so the second-and-later workout starts
+    /// skip the 500ms–3s HealthKit XPC round-trip entirely.
     @discardableResult
     private func requestHealthAuthorizationAsync() async -> Bool {
-        // Fast path: check current status without presenting the sheet again.
-        // On watchOS, HKAuthorizationStatus is not queryable per-type the same way as iOS,
-        // so we always call requestAuthorization — it is a no-op if already granted.
+        if healthKitAuthorized || authDefaults.bool(forKey: Self.authCacheKey) {
+            healthKitAuthorized = true
+            authorizationDenied = false
+            return true
+        }
+
         let (readTypes, writeTypes) = buildHealthKitTypes()
 
         // Include date of birth for age-based HR zone calculation (Tanaka formula)
@@ -145,12 +172,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             logger.info("HealthKit authorization granted")
             healthKitAuthorized = true
             authorizationDenied = false
+            authDefaults.set(true, forKey: Self.authCacheKey)
             updateMaxHRFromHealthKit()
             return true
         } catch {
             logger.error("HealthKit authorization error: \(error.localizedDescription)")
             healthKitAuthorized = false
             authorizationDenied = true
+            authDefaults.set(false, forKey: Self.authCacheKey)
             return false
         }
     }
@@ -271,6 +300,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
+        heartRateAnchor = nil
         accumulatedPauseTime = 0
         pauseStartDate = nil
         routePoints = []
@@ -285,9 +315,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startMotionUpdates()
             startPedometerUpdates()
         }
-        // Heart rate and calories are delivered via HKLiveWorkoutBuilderDelegate
-        // (see workoutBuilder(_:didCollectDataOf:)) — no separate HKAnchoredObjectQuery
-        // is needed. The builder automatically handles pause/resume sample gating.
+        // Heart rate and calories flow from HKLiveWorkoutBuilderDelegate. A
+        // display-only anchored HR query runs alongside as a fallback for
+        // watch models/OS versions where the builder delegate is flaky.
+        startHeartRateQuery()
         requestLocationAndStartUpdates()
 
         logger.info("Workout started (sport: \(sport.displayName))")
@@ -365,6 +396,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopDisplayTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
+        stopHeartRateQuery()
         stopLocationUpdates()
 
         workoutSession?.end()
@@ -402,6 +434,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
+        heartRateAnchor = nil
         lastLiveUpdateTime = nil
         routePoints = []
         accumulatedPauseTime = 0
@@ -447,7 +480,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             let builder = session.associatedWorkoutBuilder()
             workoutBuilder = builder
             builder.delegate = self
-            builder.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
+            let dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
+            // Explicitly enable HR and active-energy collection. `HKLiveWorkoutDataSource`'s
+            // implicit "default types" list is watchOS/model-dependent — without these calls,
+            // `workoutBuilder(_:didCollectDataOf:)` may never fire for HR, which is the
+            // regression the previous fix ran into.
+            if let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate) {
+                dataSource.enableCollection(for: hrType, predicate: nil)
+            }
+            if let kcalType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned) {
+                dataSource.enableCollection(for: kcalType, predicate: nil)
+            }
+            builder.dataSource = dataSource
             workoutSession?.startActivity(with: Date())
             builder.beginCollection(withStart: Date()) { [weak self] success, error in
                 Task { @MainActor [weak self] in
@@ -784,6 +828,58 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
     #endif
+
+    // MARK: - Heart Rate Fallback Query (display-only)
+
+    /// Runs an `HKAnchoredObjectQuery` alongside the builder delegate to guarantee
+    /// the live BPM display is populated even when `HKLiveWorkoutDataSource`
+    /// doesn't emit `.heartRate` in its collected-types set (observed on some
+    /// watch models/OS versions). Samples here ONLY update `self.heartRate`
+    /// for the UI — they do not feed the sum/count/max, which remain owned by
+    /// the builder's authoritative `statistics(for:)`.
+    private func startHeartRateQuery() {
+        guard healthKitAuthorized else { return }
+        guard let heartRateType = HKQuantityType.quantityType(forIdentifier: .heartRate),
+              let startDate = workoutStartTime else { return }
+
+        stopHeartRateQuery()
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
+        let query = HKAnchoredObjectQuery(
+            type: heartRateType,
+            predicate: predicate,
+            anchor: heartRateAnchor,
+            limit: HKObjectQueryNoLimit
+        ) { [weak self] _, samples, _, newAnchor, _ in
+            self?.handleHeartRateSamples(samples, newAnchor: newAnchor)
+        }
+        query.updateHandler = { [weak self] _, samples, _, newAnchor, _ in
+            self?.handleHeartRateSamples(samples, newAnchor: newAnchor)
+        }
+        heartRateQuery = query
+        healthStore.execute(query)
+        logger.info("HR fallback query started")
+    }
+
+    private func stopHeartRateQuery() {
+        if let query = heartRateQuery {
+            healthStore.stop(query)
+            heartRateQuery = nil
+        }
+    }
+
+    nonisolated private func handleHeartRateSamples(_ samples: [HKSample]?, newAnchor: HKQueryAnchor?) {
+        guard let quantitySamples = samples as? [HKQuantitySample], !quantitySamples.isEmpty else { return }
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        let latest = quantitySamples.last?.quantity.doubleValue(for: unit)
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            self.heartRateAnchor = newAnchor
+            if let bpm = latest {
+                self.heartRate = Int(bpm.rounded())
+            }
+        }
+    }
 
     // MARK: - Persistence
 

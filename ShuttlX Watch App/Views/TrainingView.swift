@@ -49,6 +49,11 @@ struct TrainingView: View {
         .navigationBarHidden(true)
         .tabViewStyle(PageTabViewStyle())
         .themedScreenBackground()
+        .overlay {
+            if workoutManager.isStarting && !workoutManager.isWorkoutActive {
+                startingOverlay
+            }
+        }
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
                 let summary = WorkoutSummary(
@@ -343,6 +348,29 @@ struct TrainingView: View {
 
             Spacer()
         }
+    }
+
+    // MARK: - Starting Overlay
+
+    /// Shown briefly between the button tap and HKWorkoutSession activation.
+    /// Dismisses automatically when `workoutManager.isWorkoutActive` flips true.
+    private var startingOverlay: some View {
+        ZStack {
+            Color.black.opacity(0.65)
+                .ignoresSafeArea()
+            VStack(spacing: ShuttlXSpacing.md) {
+                ProgressView()
+                    .scaleEffect(1.2)
+                    .tint(ShuttlXColor.textPrimary)
+                Text("Starting…")
+                    .font(ShuttlXFont.cardTitle)
+                    .foregroundColor(ShuttlXColor.textPrimary)
+                    .monospacedDigit()
+            }
+        }
+        .transition(.opacity)
+        .accessibilityLabel("Starting workout")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     // MARK: - Computed Properties
