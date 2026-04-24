@@ -277,10 +277,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
+        // --- Phase 1: Flip UI state FIRST so ContentView can transition to
+        // TrainingView and render the "Starting…" overlay in the next frame.
+        // Everything here is pure @Published property writes — nanoseconds.
         let now = Date()
         workoutStartTime = now
         currentSegmentStartTime = now
-        isWorkoutActive = true
         isPaused = false
         elapsedTime = 0
         currentSegmentTime = 0
@@ -304,33 +306,50 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         accumulatedPauseTime = 0
         pauseStartDate = nil
         routePoints = []
-
-        // Start first segment as unknown
         segments.append(ActivitySegment(activityType: .unknown, startDate: now))
 
+        isWorkoutActive = true
+
+        // Give SwiftUI one guaranteed render frame before we start synchronous
+        // HealthKit / CoreMotion / CoreLocation setup. Without this yield the
+        // MainActor is held continuously through sensor startup (~300–1500ms)
+        // and the user perceives a freeze.
+        await Task.yield()
+
+        // --- Phase 2: Sensor setup. Each call can briefly block MainActor;
+        // a Task.yield() between them gives SwiftUI a render window so the
+        // timer can start ticking and the "Starting…" overlay can animate out.
         startWorkoutSession()
+        await Task.yield()
         startDisplayTimer()
+
         let sport = activeTemplate?.sportType ?? .running
         if sport.supportsAutoDetection {
             startMotionUpdates()
+            await Task.yield()
             startPedometerUpdates()
+            await Task.yield()
         }
         // Heart rate and calories flow from HKLiveWorkoutBuilderDelegate. A
         // display-only anchored HR query runs alongside as a fallback for
         // watch models/OS versions where the builder delegate is flaky.
         startHeartRateQuery()
+        await Task.yield()
         requestLocationAndStartUpdates()
 
         logger.info("Workout started (sport: \(sport.displayName))")
 
-        // Notify iPhone that workout started — transferUserInfo wakes iOS in background
+        // Notify iPhone that workout started — transferUserInfo wakes iOS in background.
+        // Dispatched to a utility queue so the brief WC call cannot block MainActor.
         if WCSession.default.activationState == .activated {
             let startPayload: [String: Any] = [
                 "action": "workoutStarted",
                 "activityType": sport.rawValue,
                 "startTime": Date().timeIntervalSince1970
             ]
-            WCSession.default.transferUserInfo(startPayload)
+            DispatchQueue.global(qos: .utility).async {
+                WCSession.default.transferUserInfo(startPayload)
+            }
         }
     }
 
@@ -810,7 +829,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         Task { @MainActor [weak self] in
             guard let self = self else { return }
             if let bpm = snapshot.latestHR {
-                self.heartRate = Int(bpm.rounded())
+                // No-op guard: avoid publishing identical values, which would
+                // trigger SwiftUI invalidations and cause perceptible jitter
+                // when both this delegate and the anchored fallback query
+                // write the same BPM in quick succession.
+                let newHR = Int(bpm.rounded())
+                if self.heartRate != newHR {
+                    self.heartRate = newHR
+                }
             }
             if let maxBPM = snapshot.maxHR, maxBPM > self.maxHeartRateValue {
                 self.maxHeartRateValue = maxBPM
@@ -876,7 +902,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             guard let self = self else { return }
             self.heartRateAnchor = newAnchor
             if let bpm = latest {
-                self.heartRate = Int(bpm.rounded())
+                // No-op guard: same reasoning as updateMetrics — both writers
+                // converge on the same value; publishing duplicates causes
+                // unnecessary SwiftUI invalidations and visible flicker.
+                let newHR = Int(bpm.rounded())
+                if self.heartRate != newHR {
+                    self.heartRate = newHR
+                }
             }
         }
     }
