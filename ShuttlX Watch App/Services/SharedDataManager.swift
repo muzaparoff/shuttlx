@@ -3,6 +3,11 @@ import WatchConnectivity
 import WidgetKit
 import os.log
 
+/// File-private cached encoder/decoder. Reused across all sync paths to
+/// avoid repeated per-call allocation.
+private let sharedJSONEncoder = JSONEncoder()
+private let sharedJSONDecoder = JSONDecoder()
+
 @MainActor
 class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = SharedDataManager()
@@ -16,6 +21,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
     private let appGroupIdentifier = "group.com.shuttlx.shared"
+
+    /// Cached App Group container URL. The underlying `containerURL(...)` call
+    /// is an XPC; caching it avoids repeated daemon round-trips per save.
+    private lazy var cachedWorkingContainer: URL? = {
+        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
+            return container
+        }
+        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
+        let fallback = docsURL.appendingPathComponent("SharedData")
+        try? FileManager.default.createDirectory(at: fallback, withIntermediateDirectories: true)
+        return fallback
+    }()
 
     private var pendingSessions: [TrainingSession] = []
     private var consecutiveFailures = 0
@@ -105,7 +122,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         saveSessionToAppGroup(session)
 
         do {
-            let sessionData = try JSONEncoder().encode(session)
+            let sessionData = try sharedJSONEncoder.encode(session)
             let base64 = sessionData.base64EncodedString()
             let payloadSize = base64.utf8.count
             logger.info("Session payload: \(payloadSize) bytes (\(session.route?.count ?? 0) route points)")
@@ -220,7 +237,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             if pendingSessions.isEmpty {
                 try? FileManager.default.removeItem(at: url)
             } else {
-                let data = try JSONEncoder().encode(pendingSessions)
+                let data = try sharedJSONEncoder.encode(pendingSessions)
                 try data.write(to: url, options: [.atomic, .completeFileProtection])
             }
         } catch {
@@ -237,7 +254,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
         do {
             let data = try Data(contentsOf: url)
-            let loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
+            let loaded = try sharedJSONDecoder.decode([TrainingSession].self, from: data)
             if !loaded.isEmpty {
                 pendingSessions = loaded
                 logger.info("Loaded \(loaded.count) pending session(s) from disk")
@@ -267,7 +284,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             if FileManager.default.fileExists(atPath: writeURL.path) {
                 do {
                     let data = try Data(contentsOf: writeURL)
-                    sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
+                    sessions = try sharedJSONDecoder.decode([TrainingSession].self, from: data)
                 } catch {
                     self.logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
                     // Preserve corrupt file — don't overwrite workout history
@@ -283,7 +300,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             sessions.append(session)
 
             do {
-                let data = try JSONEncoder().encode(sessions)
+                let data = try sharedJSONEncoder.encode(sessions)
                 try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
                 self.logger.info("Session saved to App Group")
                 WidgetCenter.shared.reloadAllTimelines()
@@ -379,14 +396,14 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                         var inlineSessions: [TrainingSession] = []
                         var oversizedCount = 0
                         for s in sessions {
-                            if let data = try? JSONEncoder().encode(s), data.count > 200_000 {
+                            if let data = try? sharedJSONEncoder.encode(s), data.count > 200_000 {
                                 self.sendSessionToiOS(s)
                                 oversizedCount += 1
                             } else {
                                 inlineSessions.append(s)
                             }
                         }
-                        if let encoded = try? JSONEncoder().encode(inlineSessions) {
+                        if let encoded = try? sharedJSONEncoder.encode(inlineSessions) {
                             replyHandler([
                                 "status": "ok",
                                 "count": sessions.count,
@@ -548,7 +565,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
             do {
                 let data = try Data(contentsOf: readURL)
-                result = try JSONDecoder().decode([TrainingSession].self, from: data)
+                result = try sharedJSONDecoder.decode([TrainingSession].self, from: data)
             } catch {
                 self.logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
                 // Preserve corrupt file for potential recovery
@@ -596,7 +613,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         if let base64 = payload["templatesData"] as? String,
            let data = Data(base64Encoded: base64) {
             do {
-                let templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+                let templates = try sharedJSONDecoder.decode([WorkoutTemplate].self, from: data)
                 workoutTemplates = templates
                 saveTemplatesToDisk(templates)
                 logger.info("Received \(templates.count) template(s) from iPhone")
@@ -611,7 +628,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         guard let containerURL = getWorkingContainer() else { return }
         let url = containerURL.appendingPathComponent("workout_templates.json")
         do {
-            let data = try JSONEncoder().encode(templates)
+            let data = try sharedJSONEncoder.encode(templates)
             try data.write(to: url, options: [.atomic, .completeFileProtection])
         } catch {
             logger.error("Failed to save templates to disk: \(error.localizedDescription)")
@@ -630,7 +647,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         }
         do {
             let data = try Data(contentsOf: url)
-            workoutTemplates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+            workoutTemplates = try sharedJSONDecoder.decode([WorkoutTemplate].self, from: data)
             logger.info("Loaded \(self.workoutTemplates.count) template(s) from disk")
         } catch {
             logger.error("Failed to load templates from disk: \(error.localizedDescription)")
@@ -659,14 +676,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Helpers
 
     private func getWorkingContainer() -> URL? {
-        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
-            return container
-        }
-        // Fallback for simulator or missing entitlement
-        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
-        let fallback = docsURL.appendingPathComponent("SharedData")
-        try? FileManager.default.createDirectory(at: fallback, withIntermediateDirectories: true)
-        return fallback
+        cachedWorkingContainer
     }
 
     private func updateSyncStatus(_ status: String) {

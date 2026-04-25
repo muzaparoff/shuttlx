@@ -8,6 +8,11 @@ import WatchKit
 #endif
 import os.log
 
+/// File-private cached encoder/decoder. Reused across all backup/recovery
+/// paths to avoid repeated per-call allocation.
+private let sharedJSONEncoder = JSONEncoder()
+private let sharedJSONDecoder = JSONDecoder()
+
 struct KmSplit: Identifiable {
     let id = UUID()
     let kmNumber: Int
@@ -40,6 +45,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     var averageHeartRate: Int {
         guard heartRateSampleCount > 0 else { return 0 }
         return Int((heartRateSampleSum / Double(heartRateSampleCount)).rounded())
+    }
+
+    /// Anchor + optional pause moment for a self-ticking `Text(timerInterval:)`
+    /// display. `start` is the workout start shifted forward by the time
+    /// already accumulated in pauses, so SwiftUI's `Text(timerInterval:)`
+    /// shows the same value as `elapsedTime` without depending on the 1 Hz
+    /// `@Published` republish. Returns nil before a workout starts.
+    var liveTimerAnchor: (start: Date, pause: Date?)? {
+        guard let start = workoutStartTime else { return nil }
+        let effectiveStart = start.addingTimeInterval(accumulatedPauseTime)
+        return (effectiveStart, isPaused ? pauseStartDate : nil)
     }
 
     // MARK: - Interval Mode
@@ -120,15 +136,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// across launches. Bump the suffix if `buildHealthKitTypes()` gains a new
     /// required type so the user is re-prompted.
     private static let authCacheKey = "hk_authorized_v1"
-    private var authDefaults: UserDefaults {
+    /// Cached App Group UserDefaults instance. Allocating per-access is cheap
+    /// individually but adds up under load — cache it once.
+    private let appGroupDefaults: UserDefaults =
         UserDefaults(suiteName: "group.com.shuttlx.shared") ?? .standard
-    }
+
+    /// Cached App Group container URL. Each `containerURL(...)` call is a
+    /// daemon XPC; cache it to avoid repeated round-trips during save/recover.
+    private static let sharedContainerURL: URL? =
+        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
 
     /// Fire-and-forget pre-warm: called from onAppear to prompt the user early.
     /// Does NOT await result — use requestHealthAuthorizationAsync() when a result is needed.
     func requestHealthKitPermissionsIfNeeded() {
         guard !healthKitAuthorized else { return }
-        if authDefaults.bool(forKey: Self.authCacheKey) {
+        if appGroupDefaults.bool(forKey: Self.authCacheKey) {
             // Previously granted — assume still granted. If a live HealthKit call
             // later fails with an authorization error, we'll clear the flag and
             // re-prompt on the next Start.
@@ -146,7 +168,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// skip the 500ms–3s HealthKit XPC round-trip entirely.
     @discardableResult
     private func requestHealthAuthorizationAsync() async -> Bool {
-        if healthKitAuthorized || authDefaults.bool(forKey: Self.authCacheKey) {
+        if healthKitAuthorized || appGroupDefaults.bool(forKey: Self.authCacheKey) {
             healthKitAuthorized = true
             authorizationDenied = false
             return true
@@ -172,14 +194,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             logger.info("HealthKit authorization granted")
             healthKitAuthorized = true
             authorizationDenied = false
-            authDefaults.set(true, forKey: Self.authCacheKey)
+            appGroupDefaults.set(true, forKey: Self.authCacheKey)
             updateMaxHRFromHealthKit()
             return true
         } catch {
             logger.error("HealthKit authorization error: \(error.localizedDescription)")
             healthKitAuthorized = false
             authorizationDenied = true
-            authDefaults.set(false, forKey: Self.authCacheKey)
+            appGroupDefaults.set(false, forKey: Self.authCacheKey)
             return false
         }
     }
@@ -945,7 +967,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         )
 
         do {
-            let data = try JSONEncoder().encode(session)
+            let data = try sharedJSONEncoder.encode(session)
             guard let backupURL = workoutBackupURL() else {
                 logger.error("Could not resolve backup URL for workout backup")
                 return
@@ -965,7 +987,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         do {
             let data = try Data(contentsOf: backupURL)
-            let session = try JSONDecoder().decode(TrainingSession.self, from: data)
+            let session = try sharedJSONDecoder.decode(TrainingSession.self, from: data)
             logger.info("Recovered crashed workout backup: \(Int(session.duration))s")
             return session
         } catch {
@@ -978,11 +1000,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// Save a recovered session if not already saved, and clear the backup
     func saveRecoveredSession(_ session: TrainingSession) {
         // Prevent duplicate: check if this session ID already exists in stored sessions
-        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
+        if let containerURL = Self.sharedContainerURL {
             let url = containerURL.appendingPathComponent("sessions.json")
             if FileManager.default.fileExists(atPath: url.path),
                let data = try? Data(contentsOf: url),
-               let existing = try? JSONDecoder().decode([TrainingSession].self, from: data),
+               let existing = try? sharedJSONDecoder.decode([TrainingSession].self, from: data),
                existing.contains(where: { $0.id == session.id }) {
                 logger.info("Recovered session \(session.id) already exists — skipping duplicate save")
                 clearWorkoutBackup()
@@ -1001,7 +1023,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// Returns backup URL in App Group container (preferred) or Documents dir (fallback)
     private func workoutBackupURL() -> URL? {
-        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
+        if let container = Self.sharedContainerURL {
             return container.appendingPathComponent("active_workout_backup.json")
         }
         guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }

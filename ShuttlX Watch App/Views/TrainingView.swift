@@ -115,7 +115,7 @@ struct TrainingView: View {
     private var aodMinimalView: some View {
         VStack(spacing: 12) {
             Spacer()
-            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
+            aodTimerText
                 .font(.system(size: 36, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(.white.opacity(0.7))
@@ -229,10 +229,48 @@ struct TrainingView: View {
     private func timerRow(valueSize: CGFloat, labelSize: CGFloat, labelWidth: CGFloat) -> some View {
         if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
             intervalTimerLine(engine: engine)
+        } else if let anchor = workoutManager.liveTimerAnchor {
+            // Self-ticking timer anchored to (start + accumulatedPauseTime).
+            // SwiftUI ticks the digits locally — no per-second @Published
+            // republish — so the timer stays smooth even if MainActor blips.
+            HStack {
+                Text("TIME")
+                    .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                    .foregroundColor(ShuttlXColor.textSecondary)
+                    .frame(width: labelWidth, alignment: .leading)
+                Spacer()
+                Text(timerInterval: anchor.start...Date.distantFuture,
+                     pauseTime: anchor.pause,
+                     countsDown: false,
+                     showsHours: true)
+                    .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(ShuttlXColor.textPrimary)
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+            .accessibilityAddTraits(.updatesFrequently)
         } else {
-            metricRow("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
+            metricRow("TIME", "00:00",
                       ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                      accessibilityText: "Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+                      accessibilityText: "Elapsed time zero")
+        }
+    }
+
+    /// AOD timer text: same self-ticking anchor as the active display, falls
+    /// back to a plain "00:00" before workoutStartTime is set.
+    @ViewBuilder
+    private var aodTimerText: some View {
+        if let anchor = workoutManager.liveTimerAnchor {
+            Text(timerInterval: anchor.start...Date.distantFuture,
+                 pauseTime: anchor.pause,
+                 countsDown: false,
+                 showsHours: true)
+        } else {
+            Text("00:00")
         }
     }
 

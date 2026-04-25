@@ -5,6 +5,12 @@ import WidgetKit
 import AppIntents
 import os.log
 
+/// File-private cached encoder/decoder. JSONEncoder/Decoder are thread-safe
+/// once configured and don't need per-call allocation; reusing them avoids
+/// repeated initialization overhead during sync.
+private let sharedJSONEncoder = JSONEncoder()
+private let sharedJSONDecoder = JSONDecoder()
+
 @MainActor
 class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     static let shared = SharedDataManager()
@@ -35,16 +41,17 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private let sessionsKey = "sessions.json"
     private let appGroupIdentifier = "group.com.shuttlx.shared"
-    private var sharedContainer: URL? {
+    /// Cached App Group container URL. Each `containerURL(...)` call is an XPC
+    /// into cfprefsd; caching saves ~5–20 ms × dozens of calls per save.
+    private lazy var sharedContainer: URL? =
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
-    }
 
-    private var fallbackContainer: URL? {
+    private lazy var fallbackContainer: URL? = {
         guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
             return nil
         }
         return docsURL.appendingPathComponent("SharedData")
-    }
+    }()
 
     private var lastPingTime: Date?
     private var backgroundSyncTimer: Timer?
@@ -292,7 +299,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         var coordinatorError: NSError?
         coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
             do {
-                let data = try JSONEncoder().encode(sessions)
+                let data = try sharedJSONEncoder.encode(sessions)
                 try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
             } catch {
                 self.log("Failed to save sessions: \(error.localizedDescription)")
@@ -322,7 +329,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
             do {
                 let data = try Data(contentsOf: readURL)
-                result = try JSONDecoder().decode([TrainingSession].self, from: data)
+                result = try sharedJSONDecoder.decode([TrainingSession].self, from: data)
             } catch {
                 self.log("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
                 // Preserve corrupt file for potential recovery — never silently drop history
@@ -349,7 +356,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             var coordinatorError: NSError?
             coordinator.coordinate(writingItemAt: sessionsURL, options: .forReplacing, error: &coordinatorError) { writeURL in
                 do {
-                    let data = try JSONEncoder().encode([TrainingSession]())
+                    let data = try sharedJSONEncoder.encode([TrainingSession]())
                     try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
                 } catch {
                     self.logger.error("Failed to purge sessions: \(error.localizedDescription)")
@@ -427,7 +434,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         if let sessionsDataString = reply["sessionsData"] as? String,
            let sessionsData = Data(base64Encoded: sessionsDataString) {
             do {
-                let sessions = try JSONDecoder().decode([TrainingSession].self, from: sessionsData)
+                let sessions = try sharedJSONDecoder.decode([TrainingSession].self, from: sessionsData)
                 var newCount = 0
                 for session in sessions {
                     if !syncedSessions.contains(where: { $0.id == session.id }) {
@@ -503,7 +510,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         guard WCSession.isSupported() else { return }
 
         do {
-            let data = try JSONEncoder().encode(templates)
+            let data = try sharedJSONEncoder.encode(templates)
 
             // Update combined applicationContext (preserves theme + templates together)
             updateCombinedApplicationContext(merging: [
@@ -692,7 +699,7 @@ extension SharedDataManager {
                     if let sessionDataString = userInfo["sessionData"] as? String,
                        let sessionData = Data(base64Encoded: sessionDataString) {
                         do {
-                            let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
+                            let trainingSession = try sharedJSONDecoder.decode(TrainingSession.self, from: sessionData)
                             self.handleReceivedSession(trainingSession)
                             self.log("Session received from watch via userInfo")
                         } catch {
@@ -741,7 +748,7 @@ extension SharedDataManager {
                     if let sessionDataString = message["sessionData"] as? String,
                        let sessionData = Data(base64Encoded: sessionDataString) {
                         do {
-                            let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
+                            let trainingSession = try sharedJSONDecoder.decode(TrainingSession.self, from: sessionData)
                             self.handleReceivedSession(trainingSession)
                             self.consecutiveFailures = 0
                         } catch {
@@ -774,7 +781,7 @@ extension SharedDataManager {
                     if let sessionDataString = message["sessionData"] as? String,
                        let sessionData = Data(base64Encoded: sessionDataString) {
                         do {
-                            let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
+                            let trainingSession = try sharedJSONDecoder.decode(TrainingSession.self, from: sessionData)
                             self.handleReceivedSession(trainingSession)
                             self.consecutiveFailures = 0
                             replyHandler(["status": "saved", "timestamp": Date().timeIntervalSince1970])
@@ -842,7 +849,7 @@ extension SharedDataManager {
                 return
             }
             do {
-                let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: data)
+                let trainingSession = try sharedJSONDecoder.decode(TrainingSession.self, from: data)
                 self.handleReceivedSession(trainingSession)
                 self.log("Session received via file transfer (\(data.count) bytes)")
             } catch {
