@@ -42,8 +42,11 @@ struct ShuttlXWatchApp: App {
                 }
                 .onAppear {
                     logger.info("ContentView appeared")
-                    // Request HealthKit permissions early (must be after window exists)
+                    // Request HealthKit + CoreLocation permissions early (must be after
+                    // window exists) so the prompts surface BEFORE the user taps Start.
+                    // Both are idempotent and free when already authorized/denied.
                     workoutManager.requestHealthKitPermissionsIfNeeded()
+                    workoutManager.prewarmLocationAuthorizationIfNeeded()
                     // Crash recovery: deferred off first render to avoid blocking the UI
                     Task {
                         if !workoutManager.isWorkoutActive, let recovered = workoutManager.recoverCrashedWorkout() {

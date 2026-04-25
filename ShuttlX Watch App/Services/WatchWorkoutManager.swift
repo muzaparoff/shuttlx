@@ -72,6 +72,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     #endif
     private var healthStore = HKHealthStore()
     private var displayTimer: DispatchSourceTimer?
+    /// Dedicated 3-second timer for WC live-metrics broadcast. Lives on a
+    /// background utility queue so the broadcast cadence is independent of
+    /// SwiftUI rendering and the 1 Hz display timer.
+    private var broadcastTimer: DispatchSourceTimer?
     private var workoutStartTime: Date?
     private var currentSegmentStartTime: Date?
     private var segments: [ActivitySegment] = []
@@ -102,6 +106,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var routePoints: [RoutePoint] = []
     private var routeBuilder: HKWorkoutRouteBuilder?
     private let maxRoutePoints = 2000
+    /// Pending location batch for `routeBuilder.insertRouteData`. Each insert
+    /// is an XPC; batching cuts HealthKit IPC ~10× during runs/walks.
+    private var pendingRouteBatch: [CLLocation] = []
+    private let routeBatchSize = 10
 
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
@@ -128,6 +136,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     func setSharedDataManager(_ dataManager: SharedDataManager) {
         self.sharedDataManager = dataManager
         logger.info("SharedDataManager dependency set")
+    }
+
+    /// Pre-warm CoreLocation authorization. Called from `onAppear` so the
+    /// permission prompt (when needed) surfaces *before* the user taps Start
+    /// — that way the `requestLocationAndStartUpdates()` call inside
+    /// `startWorkoutAfterAuth()` doesn't introduce an additional sheet stall
+    /// on first launch. Idempotent and free when permission is already
+    /// granted or denied.
+    func prewarmLocationAuthorizationIfNeeded() {
+        if locationManager.delegate == nil {
+            locationManager.delegate = self
+        }
+        if locationManager.authorizationStatus == .notDetermined {
+            locationManager.requestWhenInUseAuthorization()
+            logger.info("Pre-warming CoreLocation authorization request")
+        }
     }
 
     // MARK: - HealthKit Permissions
@@ -344,6 +368,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutSession()
         await Task.yield()
         startDisplayTimer()
+        startBroadcastTimer()
+        await Task.yield()
 
         let sport = activeTemplate?.sportType ?? .running
         if sport.supportsAutoDetection {
@@ -395,6 +421,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         pauseStartDate = Date()
 
         stopDisplayTimer()
+        // Broadcast timer keeps running through pause so iOS Live Activity
+        // gets the `isPaused: true` payload promptly and renders the paused
+        // state without waiting for resume.
         stopMotionUpdates()
         stopPedometerUpdates()
         stopLocationUpdates()
@@ -435,6 +464,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         guard isWorkoutActive else { return }
 
         stopDisplayTimer()
+        stopBroadcastTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
         stopHeartRateQuery()
@@ -478,6 +508,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateAnchor = nil
         lastLiveUpdateTime = nil
         routePoints = []
+        pendingRouteBatch.removeAll(keepingCapacity: true)
         accumulatedPauseTime = 0
         pauseStartDate = nil
 
@@ -597,12 +628,33 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 return
             }
         }
-
-        // Broadcast live metrics to iOS every 3 seconds
-        broadcastLiveMetricsIfNeeded()
+        // NOTE: live-metrics broadcast is no longer driven from this 1 Hz UI
+        // tick. A dedicated 3 s `broadcastTimer` runs on a utility queue so
+        // the WC payload assembly + sendMessage cost can never compete with
+        // the UI tick or SwiftUI rendering. See startBroadcastTimer().
     }
 
-    // MARK: - Live Metrics Broadcast
+    // MARK: - Live Metrics Broadcast (independent 3 s timer)
+
+    /// 3-second broadcast timer on a utility queue. Decoupled from the 1 Hz
+    /// UI tick so WC payload assembly + sendMessage never blocks the UI.
+    private func startBroadcastTimer() {
+        stopBroadcastTimer()
+        let timer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        timer.schedule(deadline: .now() + 3.0, repeating: 3.0, leeway: .milliseconds(250))
+        timer.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.broadcastLiveMetricsIfNeeded()
+            }
+        }
+        broadcastTimer = timer
+        timer.resume()
+    }
+
+    private func stopBroadcastTimer() {
+        broadcastTimer?.cancel()
+        broadcastTimer = nil
+    }
 
     private func broadcastLiveMetricsIfNeeded() {
         let now = Date()
@@ -1070,6 +1122,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Set sport type from template
         session.sportType = activeTemplate?.sportType
 
+        // Flush any pending route points so the final partial batch makes it
+        // into HealthKit before we finishWorkout() / finishRoute() below.
+        flushPendingRouteBatch()
+
         // Capture mutable copies for use in the async Task below
         let sessionToSend = session
         let routeBuilderToFinish = routeBuilder
@@ -1213,12 +1269,26 @@ extension WatchWorkoutManager: CLLocationManagerDelegate {
             }
             self.routePoints.append(contentsOf: points)
 
-            // Feed HKWorkoutRouteBuilder for official HealthKit route
-            self.routeBuilder?.insertRouteData(filtered) { success, error in
-                if let error = error {
-                    Task { @MainActor in
-                        self.logger.debug("RouteBuilder insert error: \(error.localizedDescription)")
-                    }
+            // Feed HKWorkoutRouteBuilder, batched: each insertRouteData is an
+            // XPC, so we accumulate ~10 points and flush in one call. The
+            // remainder is flushed in saveWorkoutData() before finishWorkout().
+            self.pendingRouteBatch.append(contentsOf: filtered)
+            if self.pendingRouteBatch.count >= self.routeBatchSize {
+                self.flushPendingRouteBatch()
+            }
+        }
+    }
+
+    /// Drains `pendingRouteBatch` into the HK route builder in one IPC call.
+    /// Safe to call from MainActor at any time; no-op when empty.
+    private func flushPendingRouteBatch() {
+        guard !pendingRouteBatch.isEmpty, let builder = routeBuilder else { return }
+        let batch = pendingRouteBatch
+        pendingRouteBatch.removeAll(keepingCapacity: true)
+        builder.insertRouteData(batch) { [weak self] _, error in
+            if let error = error {
+                Task { @MainActor [weak self] in
+                    self?.logger.debug("RouteBuilder batch insert error: \(error.localizedDescription)")
                 }
             }
         }
