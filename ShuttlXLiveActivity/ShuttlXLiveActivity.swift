@@ -29,6 +29,7 @@ struct ShuttlXLiveActivity: Widget {
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     HStack(spacing: 16) {
+                        Spacer(minLength: 0)
                         if context.state.distance > 0 {
                             Label(formatDistance(context.state.distance), systemImage: "location.fill")
                                 .font(.caption)
@@ -44,7 +45,9 @@ struct ShuttlXLiveActivity: Widget {
                                 .font(.caption)
                                 .foregroundStyle(.purple)
                         }
+                        Spacer(minLength: 0)
                     }
+                    .frame(maxWidth: .infinity)
                 }
             } compactLeading: {
                 Image(systemName: activityIcon(context.state.currentActivity))

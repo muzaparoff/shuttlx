@@ -6,7 +6,7 @@ struct LockScreenView: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(alignment: .center, spacing: 8) {
             HStack {
                 HStack(spacing: 6) {
                     Circle()
@@ -21,11 +21,20 @@ struct LockScreenView: View {
                     .foregroundStyle(activityColor(context.state.currentActivity))
             }
 
+            // Timer: explicitly fills width with center alignment.
+            // Text(timerInterval:) gets an implicit leading frame in widget
+            // contexts to fit growing digits; override it so the timer sits
+            // in the middle of both the Lock Screen and StandBy banner.
             timerText
                 .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
                 .monospacedDigit()
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity, alignment: .center)
 
+            // Metric pills, centered as a group via flanking Spacers so the
+            // row is balanced regardless of how many pills are visible.
             HStack(spacing: 16) {
+                Spacer(minLength: 0)
                 if context.state.heartRate > 0 {
                     MetricPill(icon: "heart.fill", value: "\(context.state.heartRate)", color: .red)
                 }
@@ -38,7 +47,9 @@ struct LockScreenView: View {
                 if context.state.pace > 0 && context.state.pace < 3600 {
                     MetricPill(icon: "gauge.with.dots.needle.33percent", value: formatPace(context.state.pace), color: .purple)
                 }
+                Spacer(minLength: 0)
             }
+            .frame(maxWidth: .infinity)
         }
         .padding()
         .activityBackgroundTint(.black.opacity(0.75))
