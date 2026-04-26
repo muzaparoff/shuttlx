@@ -34,7 +34,7 @@ enum RecoveryStatus: String {
     case fresh = "Fresh"
     case normal = "Normal"
     case fatigued = "Fatigued"
-    case overreaching = "Overreaching"
+    case overreaching = "Needs rest"
 }
 
 struct PaceZoneDistribution: Identifiable {

@@ -25,7 +25,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Initialization
 
-    override init() {
+    private override init() {
         super.init()
 
         if WCSession.isSupported() {
@@ -275,6 +275,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                         .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
                     try? FileManager.default.copyItem(at: writeURL, to: backupURL)
                     self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                    self.purgeOldCorruptBackups(in: writeURL.deletingLastPathComponent())
                     // Continue with empty array — better to have one session than lose all
                 }
             }
@@ -556,6 +557,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
                 try? FileManager.default.copyItem(at: readURL, to: backupURL)
                 self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                self.purgeOldCorruptBackups(in: url.deletingLastPathComponent())
             }
         }
         if let coordinatorError {
@@ -657,6 +659,18 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     // MARK: - Helpers
+
+    private func purgeOldCorruptBackups(in directory: URL) {
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else { return }
+        for file in files where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
+            let created = (try? file.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantFuture
+            if created < cutoff {
+                try? FileManager.default.removeItem(at: file)
+                logger.info("Removed stale corrupt backup: \(file.lastPathComponent)")
+            }
+        }
+    }
 
     private func getWorkingContainer() -> URL? {
         if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {

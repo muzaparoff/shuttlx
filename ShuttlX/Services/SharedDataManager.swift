@@ -311,12 +311,25 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                     .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
                 try? FileManager.default.copyItem(at: readURL, to: backupURL)
                 self.log("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                self.purgeOldCorruptBackups(in: url.deletingLastPathComponent())
             }
         }
         if let coordinatorError {
             log("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
         }
         return result
+    }
+
+    private func purgeOldCorruptBackups(in directory: URL) {
+        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else { return }
+        for file in files where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
+            let created = (try? file.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantFuture
+            if created < cutoff {
+                try? FileManager.default.removeItem(at: file)
+                log("Removed stale corrupt backup: \(file.lastPathComponent)")
+            }
+        }
     }
 
     // MARK: - Public Debug

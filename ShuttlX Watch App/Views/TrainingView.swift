@@ -123,7 +123,7 @@ struct TrainingView: View {
             if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine, let step = engine.currentStep {
                 Text(step.type.displayName.uppercased())
                     .font(.system(size: 14, weight: .bold, design: .monospaced))
-                    .foregroundColor(ShuttlXColor.forStepType(step.type).opacity(0.6))
+                    .foregroundColor(ShuttlXColor.forStepType(step.type))
             }
             Spacer()
         }
@@ -135,7 +135,7 @@ struct TrainingView: View {
 
     private var fullWorkoutDisplayTab: some View {
         let h = screenHeight
-        let valueSize = max(20, h * 0.19)
+        let valueSize = max(40, h * 0.19)
         let labelSize = max(10, h * 0.08)
         let labelWidth = h * 0.20
         let rowSpacing = h * 0.025
@@ -366,7 +366,7 @@ struct TrainingView: View {
     private func highIntensityWarningView(labelSize: CGFloat) -> some View {
         HStack {
             Spacer()
-            Text("HIGH INTENSITY")
+            Text("Heart rate high — ease off")
                 .font(.system(size: max(9, labelSize * 0.85), weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.ctaDestructive)
                 .padding(.horizontal, 6)
@@ -378,7 +378,7 @@ struct TrainingView: View {
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
         .animation(.easeInOut(duration: 0.4), value: isHighIntensityWarning)
-        .accessibilityLabel("High intensity warning: heart rate above 85 percent of maximum")
+        .accessibilityLabel("Heart rate high — ease off. Heart rate above 70 percent of maximum.")
         .accessibilityAddTraits(.updatesFrequently)
     }
 

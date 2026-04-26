@@ -752,7 +752,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         stopHeartRateQuery()
 
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
+        // Restrict to samples from this Apple Watch only — filters out chest straps and
+        // third-party sensors so HR averages and HRR calculations are not contaminated.
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate),
+            HKQuery.predicateForObjects(from: [HKDevice.local()])
+        ])
 
         let query = HKAnchoredObjectQuery(
             type: heartRateType,
@@ -831,7 +836,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         stopCaloriesQuery()
 
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
+        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
+            HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate),
+            HKQuery.predicateForObjects(from: [HKDevice.local()])
+        ])
 
         let query = HKAnchoredObjectQuery(
             type: caloriesType,
@@ -1031,6 +1039,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         #if os(watchOS)
         let builderToFinish = workoutBuilder
+        // Capture HKWorkout metadata values before entering the async context
+        let capturedWorkoutName = workoutName
+        let capturedIsIndoor = (activeTemplate?.sportType?.hkLocationType ?? .unknown) == .indoor
+        let capturedIntervalCount = activeTemplate?.intervals.count ?? 0
         // Nil out builder/route references before async work so no other call reuses them
         workoutBuilder = nil
         #endif
@@ -1041,6 +1053,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             #if os(watchOS)
             if let builder = builderToFinish {
                 do {
+                    // Attach metadata before closing the builder so it appears in Health.app
+                    var hkMetadata: [String: Any] = [
+                        HKMetadataKeyIndoorWorkout: NSNumber(value: capturedIsIndoor)
+                    ]
+                    if !capturedWorkoutName.isEmpty {
+                        hkMetadata["templateName"] = capturedWorkoutName
+                    }
+                    if capturedIntervalCount > 0 {
+                        hkMetadata["intervalCount"] = NSNumber(value: capturedIntervalCount)
+                    }
+                    try await builder.addMetadata(hkMetadata)
                     let endDate = Date()
                     try await builder.endCollection(at: endDate)
                     let workout = try await builder.finishWorkout()
@@ -1101,8 +1124,6 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
             logger.info("Workout session state: \(fromState.rawValue) -> \(toState.rawValue)")
 
             switch toState {
-            case .paused:
-                saveWorkoutDataToLocalStorage()
             default:
                 break
             }

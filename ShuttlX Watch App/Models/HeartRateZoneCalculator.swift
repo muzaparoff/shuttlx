@@ -24,8 +24,9 @@ struct HeartRateZoneCalculator: Codable {
     /// 190 BPM errs on the safe side for most adult users.
     static let fallbackMaxHR: Double = 190
 
-    /// Warning threshold as a fraction of max HR (85%).
-    static let highIntensityThreshold: Double = 0.85
+    /// Warning threshold as a fraction of max HR (70%) — conservative default suitable for
+    /// cardiac-rehab and general-population users. Can be raised to 0.85 for performance-athlete mode.
+    static let highIntensityThreshold: Double = 0.70
 
     // MARK: - Stored Properties
 

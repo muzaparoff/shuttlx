@@ -44,6 +44,7 @@ final class SubscriptionManager {
         #endif
         Purchases.configure(
             with: .builder(withAPIKey: Self.apiKey)
+                // TODO: switch to .enforced once RevenueCat SDK ships it (marked "future release" in 5.x)
                 .with(entitlementVerificationMode: .informational)
                 .build()
         )

@@ -28,15 +28,19 @@ struct LockScreenView: View {
             HStack(spacing: 16) {
                 if context.state.heartRate > 0 {
                     MetricPill(icon: "heart.fill", value: "\(context.state.heartRate)", color: .red)
+                        .accessibilityLabel("Heart rate \(context.state.heartRate) beats per minute")
                 }
                 if context.state.distance > 0 {
                     MetricPill(icon: "location.fill", value: formatDistance(context.state.distance), color: .green)
+                        .accessibilityLabel("Distance \(formatDistance(context.state.distance))")
                 }
                 if context.state.calories > 0 {
                     MetricPill(icon: "flame.fill", value: "\(context.state.calories)", color: .orange)
+                        .accessibilityLabel("Calories \(context.state.calories) kilocalories")
                 }
                 if context.state.pace > 0 && context.state.pace < 3600 {
                     MetricPill(icon: "gauge.with.dots.needle.33percent", value: formatPace(context.state.pace), color: .purple)
+                        .accessibilityLabel("Pace \(formatPace(context.state.pace)) per kilometre")
                 }
             }
         }

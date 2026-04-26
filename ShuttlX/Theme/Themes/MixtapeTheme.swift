@@ -23,7 +23,7 @@ extension AppTheme {
             ctaPrimary: Color(red: 0.29, green: 0.54, blue: 0.79),       // #4A8ACA blue
             ctaDestructive: Color(red: 1.0, green: 0.20, blue: 0.20),    // LED red
             ctaWarning: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue
-            ctaPause: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue
+            ctaPause: Color(red: 0.95, green: 0.65, blue: 0.10),         // #F2A61A cassette-amber (distinguishable from ctaPrimary blue)
             iconOnCTA: Color(red: 0.05, green: 0.08, blue: 0.13),        // dark blue
             hrZone1: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
             hrZone2: Color(red: 0.22, green: 1.0, blue: 0.08),           // green

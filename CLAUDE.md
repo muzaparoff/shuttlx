@@ -1,6 +1,13 @@
 # ShuttlX
 
-Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI. Zero external dependencies.
+Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI.
+
+**External dependencies (SPM):**
+- **RevenueCat** (`purchases-ios-spm`) — in-app subscriptions (iOS only)
+- **TelemetryDeck** (`SwiftSDK`) — anonymous analytics (iOS only, no biometrics)
+
+These are declared in `PrivacyInfo.xcprivacy` (ProductInteraction, DeviceID, PurchaseHistory).  
+The watchOS target remains Apple-frameworks-only.
 
 - **Bundle**: `com.shuttlx.ShuttlX` / `com.shuttlx.ShuttlX.watchkitapp`
 - **Team**: `83HPSY452Y`
@@ -77,7 +84,7 @@ Theme sync:
 ## Development Rules
 
 - **Build both platforms after every change**: `bash tests/build_and_test_both_platforms.sh --clean --build`
-- **Zero external dependencies** — Apple frameworks only
+- **Minimal external dependencies** — iOS target uses RevenueCat + TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
 - **Dynamic multi-theme UI**: 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, Neovim) — selectable in Settings
