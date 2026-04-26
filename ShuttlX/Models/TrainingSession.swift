@@ -1,5 +1,60 @@
 import Foundation
 
+// MARK: - Session Mode
+
+enum SessionMode: String, Codable {
+    case standard = "standard"
+    case gymRecovery = "gymRecovery"
+}
+
+// MARK: - Heart-Rate Recovery Capture (one rest period in a gym recovery session)
+
+struct HRRCapture: Identifiable, Codable, Hashable {
+    let id: UUID
+    var setNumber: Int
+    var peakHR: Int            // highest HR recorded during the preceding work set
+    var hrAt60s: Int?          // HR at +60s after rest entry (used to compute HRR-1)
+    var hrAt120s: Int?         // HR at +120s after rest entry (used to compute HRR-2)
+    var restDuration: TimeInterval
+    var restEntryTime: Date
+
+    /// HRR-1: drop from peak to HR at 1 minute into rest. Higher = better fitness.
+    var hrr1: Int? { hrAt60s.map { max(0, peakHR - $0) } }
+    /// HRR-2: drop from peak to HR at 2 minutes into rest.
+    var hrr2: Int? { hrAt120s.map { max(0, peakHR - $0) } }
+
+    init(setNumber: Int, peakHR: Int, restEntryTime: Date) {
+        self.id = UUID()
+        self.setNumber = setNumber
+        self.peakHR = peakHR
+        self.restEntryTime = restEntryTime
+        self.restDuration = 0
+    }
+}
+
+// MARK: - Recovery Report (attached to a completed gym recovery session)
+
+struct RecoveryReport: Codable, Hashable {
+    var sets: Int
+    var captures: [HRRCapture]
+    var avgWorkHR: Double?
+    var avgRestHR: Double?
+
+    var averageHRR1: Double? {
+        let values = captures.compactMap { $0.hrr1 }
+        guard !values.isEmpty else { return nil }
+        return Double(values.reduce(0, +)) / Double(values.count)
+    }
+
+    var averageHRR2: Double? {
+        let values = captures.compactMap { $0.hrr2 }
+        guard !values.isEmpty else { return nil }
+        return Double(values.reduce(0, +)) / Double(values.count)
+    }
+}
+
+// MARK: - Training Session
+
 struct TrainingSession: Identifiable, Codable, Hashable {
     let id: UUID
     var startDate: Date
@@ -30,6 +85,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var deviceID: UUID?
     var deviceName: String?
     var estimatedCalories: Double?
+
+    // Gym heart-recovery monitoring
+    var sessionMode: SessionMode?
+    var recoveryReport: RecoveryReport?
 
     // Legacy fields for backward compatibility with old data
     var programID: UUID?

@@ -119,6 +119,12 @@ struct PlanDetailView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .italic()
+            } else if day.isRecoveryDay {
+                Text("Free-form gym session — heart-recovery monitoring")
+                    .font(.subheadline)
+                    .foregroundStyle(ShuttlXColor.ctaPrimary)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
             } else {
                 Text(day.templateName ?? "Workout")
                     .font(.subheadline)

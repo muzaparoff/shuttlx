@@ -42,12 +42,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         return Int((heartRateSampleSum / Double(heartRateSampleCount)).rounded())
     }
 
-    // MARK: - Interval Mode
-    enum WorkoutMode { case freeRun, interval }
+    // MARK: - Workout Mode
+    enum WorkoutMode { case freeRun, interval, gymRecovery }
     @Published var workoutMode: WorkoutMode = .freeRun
     @Published var workoutName: String = "Free Run"
     var intervalEngine: IntervalEngine?
     private var activeTemplate: WorkoutTemplate?
+
+    // MARK: - Gym Recovery Mode State
+    @Published var recoveryState: SegmentState = .idle
+    @Published var restElapsedTime: TimeInterval = 0
+    @Published var recoverySetNumber: Int = 0
+    @Published var currentCapturePeakHR: Int = 0
+    @Published var latestHRR1: Int? = nil
+    @Published var latestHRR2: Int? = nil
+    @Published var completedCaptures: [HRRCapture] = []
+    private var recoverySegmenter: RecoverySegmenter?
 
     // MARK: - Private State
     private var workoutSession: HKWorkoutSession?
@@ -288,7 +298,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkoutSession()
         startDisplayTimer()
         let sport = activeTemplate?.sportType ?? .running
-        if sport.supportsAutoDetection {
+        if sport.supportsAutoDetection || workoutMode == .gymRecovery {
             startMotionUpdates()
             startPedometerUpdates()
         }
@@ -320,6 +330,25 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         activeTemplate = template
         intervalEngine = IntervalEngine()
         intervalEngine?.configure(template: template)
+        startWorkout()
+    }
+
+    func startGymRecoveryWorkout() {
+        guard !isWorkoutActive, !isStarting else {
+            logger.warning("Workout already active or starting")
+            return
+        }
+        logger.info("Starting gym recovery workout")
+        workoutMode = .gymRecovery
+        workoutName = "Gym Recovery"
+        recoverySegmenter = RecoverySegmenter()
+        recoveryState = .idle
+        restElapsedTime = 0
+        recoverySetNumber = 0
+        currentCapturePeakHR = 0
+        latestHRR1 = nil
+        latestHRR2 = nil
+        completedCaptures = []
         startWorkout()
     }
 
@@ -361,7 +390,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutSession?.resume()
         startDisplayTimer()
         let sport = activeTemplate?.sportType ?? .running
-        if sport.supportsAutoDetection {
+        if sport.supportsAutoDetection || workoutMode == .gymRecovery {
             startMotionUpdates()
             startPedometerUpdates()
         }
@@ -436,6 +465,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         intervalEngine = nil
         activeTemplate = nil
 
+        // Reset gym recovery mode
+        recoverySegmenter = nil
+        recoveryState = .idle
+        restElapsedTime = 0
+        recoverySetNumber = 0
+        currentCapturePeakHR = 0
+        latestHRR1 = nil
+        latestHRR2 = nil
+        completedCaptures = []
+
         // Backup is cleared by saveWorkoutData() after confirmed save — not here
     }
 
@@ -454,8 +493,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         #if os(watchOS)
         let configuration = HKWorkoutConfiguration()
         let sport = activeTemplate?.sportType ?? .running
-        configuration.activityType = sport.hkActivityType
-        configuration.locationType = sport.hkLocationType
+        // Gym recovery sessions use functionalStrengthTraining so Health.app classifies them correctly
+        if workoutMode == .gymRecovery {
+            configuration.activityType = .functionalStrengthTraining
+            configuration.locationType = .indoor
+        } else {
+            configuration.activityType = sport.hkActivityType
+            configuration.locationType = sport.hkLocationType
+        }
 
         do {
             let session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
@@ -529,6 +574,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             }
         }
 
+        // Tick recovery segmenter if in gym recovery mode
+        if workoutMode == .gymRecovery, var segmenter = recoverySegmenter {
+            let maxHR = HeartRateZoneCalculator.fromSharedDefaults().estimatedMaxHR
+            let events = segmenter.tick(hr: heartRate, activity: currentActivity, maxHR: maxHR, now: Date())
+            recoverySegmenter = segmenter
+            processRecoveryEvents(events)
+            // Update rest elapsed time
+            if let restStart = segmenter.restStartTime {
+                restElapsedTime = Date().timeIntervalSince(restStart)
+            } else {
+                restElapsedTime = 0
+            }
+            recoveryState = segmenter.state
+            recoverySetNumber = segmenter.setNumber
+        }
+
         // Broadcast live metrics to iOS every 3 seconds
         broadcastLiveMetricsIfNeeded()
     }
@@ -567,6 +628,52 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
             Task { @MainActor [weak self] in
                 self?.logger.debug("Live metrics send failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    // MARK: - Recovery Mode Event Processing
+
+    private func processRecoveryEvents(_ events: [SegmenterEvent]) {
+        for event in events {
+            switch event {
+            case .enteredWork:
+                // Clear previous rest's HRR display on new set start
+                latestHRR1 = nil
+                latestHRR2 = nil
+                currentCapturePeakHR = 0
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.start)
+                #endif
+
+            case .enteredRest(let peakHR, let setNumber, let restEntryTime):
+                currentCapturePeakHR = peakHR
+                let capture = HRRCapture(setNumber: setNumber, peakHR: peakHR, restEntryTime: restEntryTime)
+                completedCaptures.append(capture)
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.stop)
+                #endif
+
+            case .hrrCapture(let minuteMark, let hrDrop):
+                guard !completedCaptures.isEmpty else { break }
+                let idx = completedCaptures.count - 1
+                if minuteMark == 1 {
+                    let hrAtCapture = max(0, completedCaptures[idx].peakHR - hrDrop)
+                    completedCaptures[idx].hrAt60s = hrAtCapture
+                    latestHRR1 = hrDrop
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.success)
+                    #endif
+                } else if minuteMark == 2 {
+                    let hrAtCapture = max(0, completedCaptures[idx].peakHR - hrDrop)
+                    completedCaptures[idx].hrAt120s = hrAtCapture
+                    latestHRR2 = hrDrop
+                }
+
+            case .restExited(let duration):
+                if !completedCaptures.isEmpty {
+                    completedCaptures[completedCaptures.count - 1].restDuration = duration
+                }
             }
         }
     }
@@ -1030,6 +1137,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             session.completedIntervalResults = result.results
         }
 
+        // Attach recovery results if this was a gym recovery session
+        if workoutMode == .gymRecovery {
+            session.sessionMode = .gymRecovery
+            let finishedCaptures = completedCaptures
+            if !finishedCaptures.isEmpty {
+                session.recoveryReport = RecoveryReport(
+                    sets: finishedCaptures.count,
+                    captures: finishedCaptures
+                )
+            }
+        }
+
         // Set sport type from template
         session.sportType = activeTemplate?.sportType
 
@@ -1041,7 +1160,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let builderToFinish = workoutBuilder
         // Capture HKWorkout metadata values before entering the async context
         let capturedWorkoutName = workoutName
-        let capturedIsIndoor = (activeTemplate?.sportType?.hkLocationType ?? .unknown) == .indoor
+        let capturedIsIndoor = workoutMode == .gymRecovery || (activeTemplate?.sportType?.hkLocationType ?? .unknown) == .indoor
         let capturedIntervalCount = activeTemplate?.intervals.count ?? 0
         // Nil out builder/route references before async work so no other call reuses them
         workoutBuilder = nil

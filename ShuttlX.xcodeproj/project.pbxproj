@@ -8,58 +8,23 @@
 
 /* Begin PBXBuildFile section */
 		A56D91122E0940EF00E19F06 /* ShuttlX Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000001 /* ShuttlXLiveActivityBundle.swift */; };
-		LA000011 /* ShuttlXLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000002 /* ShuttlXLiveActivity.swift */; };
-		LA000012 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000003 /* LockScreenView.swift */; };
-		LA000013 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
-		LA000014 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
-		LA000015 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000005 /* LiveActivityManager.swift */; };
-		LA000016 /* ShuttlXLiveActivity.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = LA000006 /* ShuttlXLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
 		A5923505 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
-		A5923530 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		A5923507B /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507F /* DataManager.swift */; };
 		A5923508B /* SharedDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508F /* SharedDataManager.swift */; };
-		A5923531 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923531F /* SessionDetailView.swift */; };
 		A5923510B /* TrainingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923510F /* TrainingHistoryView.swift */; };
 		A5923511B /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923511F /* SessionRowView.swift */; };
 		A5923512B /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923512F /* ProgramListView.swift */; };
 		A5923514B /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923514F /* DebugView.swift */; };
 		A5923515B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A5923515F /* PrivacyInfo.xcprivacy */; };
-		A5923521B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5923521F /* Assets.xcassets */; };
 		A5923516B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923516F /* OnboardingView.swift */; };
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
+		A5923521B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5923521F /* Assets.xcassets */; };
+		A5923530 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
+		A5923531 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923531F /* SessionDetailView.swift */; };
 		A5923B01 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
-		TH000011 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
-		TH000012 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
-		TH000013 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
-		TH000014 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000004 /* AppTheme.swift */; };
-		TH000015 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
-		TH000016 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
-		TH000017 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
-		TH000018 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
-		TH000019 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
-		TH000020 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
-		TH000023 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
-		TH000024 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
-		TH000025 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
-		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
-		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
-		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
-		TH000033 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
-		TH000034 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000004 /* AppTheme.swift */; };
-		TH000035 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
-		TH000036 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
-		TH000037 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
-		TH000038 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
-		TH000039 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
-		TH000040 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
-		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
-		TH000044 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
-		TH000045 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
-		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
 		A5923B04 /* StreakBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A04 /* StreakBadge.swift */; };
@@ -76,6 +41,7 @@
 		B5923014 /* HRZoneChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923004 /* HRZoneChart.swift */; };
 		B5923015 /* WeekStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923005 /* WeekStripView.swift */; };
 		C5923011 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
+		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
 		D5923001 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
 		D5923002 /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923002F /* TemplateManager.swift */; };
 		D5923003 /* TemplateListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923003F /* TemplateListView.swift */; };
@@ -83,11 +49,30 @@
 		D5923005 /* IntervalResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923005F /* IntervalResultsView.swift */; };
 		E5923001 /* AnalyticsEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5923001F /* AnalyticsEngine.swift */; };
 		E5923002 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5923002F /* AnalyticsView.swift */; };
-		H5923001 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
-		H5923002 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		ED000011 /* ExerciseDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000001 /* ExerciseDevice.swift */; };
+		ED000012 /* CalorieEstimationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000002 /* CalorieEstimationEngine.swift */; };
+		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
+		ED000014 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000004 /* DeviceListView.swift */; };
+		ED000015 /* DevicePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000005 /* DevicePickerView.swift */; };
+		F5923011 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923001 /* AuthenticationManager.swift */; };
+		F5923012 /* CloudKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923002 /* CloudKitSyncManager.swift */; };
+		F5923013 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923003 /* SignInView.swift */; };
 		G5923001 /* TrainingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923001F /* TrainingPlan.swift */; };
 		G5923002 /* BuiltInPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923002F /* BuiltInPlans.swift */; };
 		G5923003 /* PlanManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923003F /* PlanManager.swift */; };
+		H5923001 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		H5923002 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		HR000011 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000001 /* HeartRateZoneCalculator.swift */; };
+		HR000012 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000001 /* HeartRateZoneCalculator.swift */; };
+		HR000013 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000002 /* HeartRateZoneCalculator.swift */; };
+		LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000001 /* ShuttlXLiveActivityBundle.swift */; };
+		LA000011 /* ShuttlXLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000002 /* ShuttlXLiveActivity.swift */; };
+		LA000012 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000003 /* LockScreenView.swift */; };
+		LA000013 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
+		LA000014 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
+		LA000015 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000005 /* LiveActivityManager.swift */; };
+		LA000016 /* ShuttlXLiveActivity.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = LA000006 /* ShuttlXLiveActivity.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		LA000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LA000008 /* PrivacyInfo.xcprivacy */; };
 		P5923001 /* ProgramsTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923001F /* ProgramsTabView.swift */; };
 		P5923002 /* PlanListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923002F /* PlanListView.swift */; };
 		P5923003 /* PlanDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923003F /* PlanDetailView.swift */; };
@@ -95,7 +80,39 @@
 		P5923005 /* PlanProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923005F /* PlanProgressCard.swift */; };
 		R5923001 /* ElevationProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923001F /* ElevationProfileView.swift */; };
 		R5923002 /* LiveRouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923002F /* LiveRouteView.swift */; };
-		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
+		RC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = RC100001 /* RevenueCat */; };
+		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
+		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
+		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
+		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
+		TH000011 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
+		TH000012 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
+		TH000013 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
+		TH000014 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000004 /* AppTheme.swift */; };
+		TH000015 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
+		TH000016 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
+		TH000017 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
+		TH000018 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
+		TH000019 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
+		TH000020 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
+		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
+		TH000023 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
+		TH000024 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
+		TH000025 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
+		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
+		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
+		TH000033 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
+		TH000034 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000004 /* AppTheme.swift */; };
+		TH000035 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
+		TH000036 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
+		TH000037 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
+		TH000038 /* SynthwaveTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000008 /* SynthwaveTheme.swift */; };
+		TH000039 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
+		TH000040 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
+		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
+		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
+		TH000044 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
+		TH000045 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
 		WG000010 /* ShuttlXWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000001 /* ShuttlXWidgetsBundle.swift */; };
 		WG000011 /* SmallWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000002 /* SmallWidget.swift */; };
 		WG000012 /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000003 /* MediumWidget.swift */; };
@@ -106,15 +123,8 @@
 		WG000017 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000007 /* WidgetDataProvider.swift */; };
 		WG000018 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000007 /* WidgetDataProvider.swift */; };
 		WG000019 /* ShuttlXWidgets.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = WG000006 /* ShuttlXWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		F5923011 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923001 /* AuthenticationManager.swift */; };
-		F5923012 /* CloudKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923002 /* CloudKitSyncManager.swift */; };
-		F5923013 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923003 /* SignInView.swift */; };
-		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
-		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
-		RC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = RC100001 /* RevenueCat */; };
-		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
-		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
 		WG000020B /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
+		WG000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WG000008 /* PrivacyInfo.xcprivacy */; };
 		WW100001 /* ShuttlXWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000001 /* ShuttlXWatchWidgets.swift */; };
 		WW100002 /* LastWorkoutComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000002 /* LastWorkoutComplication.swift */; };
 		WW100003 /* WeeklyProgressComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000003 /* WeeklyProgressComplication.swift */; };
@@ -142,16 +152,6 @@
 		WW100032 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00013 /* ClassicRadioTheme.swift */; };
 		WW100033 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00014 /* VUMeterTheme.swift */; };
 		WW100034 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00015 /* NeovimTheme.swift */; };
-		ED000011 /* ExerciseDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000001 /* ExerciseDevice.swift */; };
-		ED000012 /* CalorieEstimationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000002 /* CalorieEstimationEngine.swift */; };
-		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
-		ED000014 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000004 /* DeviceListView.swift */; };
-		ED000015 /* DevicePickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000005 /* DevicePickerView.swift */; };
-		HR000011 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000001 /* HeartRateZoneCalculator.swift */; };
-		HR000012 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000001 /* HeartRateZoneCalculator.swift */; };
-		HR000013 /* HeartRateZoneCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = HR000002 /* HeartRateZoneCalculator.swift */; };
-		LA000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = LA000008 /* PrivacyInfo.xcprivacy */; };
-		WG000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WG000008 /* PrivacyInfo.xcprivacy */; };
 		WW200099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WW000010 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -227,31 +227,11 @@
 		A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlX Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
-		D5923001F /* WorkoutTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplate.swift; sourceTree = "<group>"; };
-		D5923002F /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
-		D5923003F /* TemplateListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateListView.swift; sourceTree = "<group>"; };
-		D5923004F /* TemplateEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateEditorView.swift; sourceTree = "<group>"; };
-		D5923005F /* IntervalResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalResultsView.swift; sourceTree = "<group>"; };
-		E5923001F /* AnalyticsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsEngine.swift; sourceTree = "<group>"; };
-		E5923002F /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
-		G5923001F /* TrainingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlan.swift; sourceTree = "<group>"; };
-		G5923002F /* BuiltInPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltInPlans.swift; sourceTree = "<group>"; };
-		G5923003F /* PlanManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanManager.swift; sourceTree = "<group>"; };
-		P5923001F /* ProgramsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsTabView.swift; sourceTree = "<group>"; };
-		P5923002F /* PlanListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanListView.swift; sourceTree = "<group>"; };
-		P5923003F /* PlanDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDetailView.swift; sourceTree = "<group>"; };
-		P5923004F /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
-		P5923005F /* PlanProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressCard.swift; sourceTree = "<group>"; };
-		R5923001F /* ElevationProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevationProfileView.swift; sourceTree = "<group>"; };
-		R5923002F /* LiveRouteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteView.swift; sourceTree = "<group>"; };
-		H5923001F /* WorkoutSport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSport.swift; sourceTree = "<group>"; };
-		A5923530F /* ActivitySegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySegment.swift; sourceTree = "<group>"; };
 		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
 		A5923507F /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
 		A5923508 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A5923508F /* SharedDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDataManager.swift; sourceTree = "<group>"; };
 		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		A5923531F /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A592350A /* ShuttlX.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlX.entitlements; sourceTree = "<group>"; };
 		A5923510F /* TrainingHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHistoryView.swift; sourceTree = "<group>"; };
 		A5923511F /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
@@ -262,26 +242,14 @@
 		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A5923530F /* ActivitySegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySegment.swift; sourceTree = "<group>"; };
+		A5923531F /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A5923A01 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXTheme.swift; sourceTree = "<group>"; };
-		TH000001 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
-		TH000002 /* ThemeFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeFonts.swift; sourceTree = "<group>"; };
-		TH000003 /* ThemeEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEffects.swift; sourceTree = "<group>"; };
-		TH000004 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
-		TH000005 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
-		TH000006 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeModifiers.swift; sourceTree = "<group>"; };
-		TH000007 /* CleanTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanTheme.swift; sourceTree = "<group>"; };
-		TH000008 /* SynthwaveTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTheme.swift; sourceTree = "<group>"; };
-		TH000009 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTheme.swift; sourceTree = "<group>"; };
-		TH000010 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTheme.swift; sourceTree = "<group>"; };
-		TH000050 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTheme.swift; sourceTree = "<group>"; };
-		TH000051 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterTheme.swift; sourceTree = "<group>"; };
-		TH000052 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTheme.swift; sourceTree = "<group>"; };
-		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
 		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
 		A5923A04 /* StreakBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadge.swift; sourceTree = "<group>"; };
-		A5923A06 /* PressScaleButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressScaleButtonStyle.swift; sourceTree = "<group>"; };
 		A5923A05 /* FormattingUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FormattingUtils.swift; sourceTree = "<group>"; };
+		A5923A06 /* PressScaleButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressScaleButtonStyle.swift; sourceTree = "<group>"; };
 		A5923D01 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		A5923D02 /* LiveWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkoutCard.swift; sourceTree = "<group>"; };
 		A5923D03 /* StartOnWatchCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartOnWatchCard.swift; sourceTree = "<group>"; };
@@ -294,6 +262,27 @@
 		B5923005 /* WeekStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStripView.swift; sourceTree = "<group>"; };
 		C5923001 /* RoutePoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePoint.swift; sourceTree = "<group>"; };
 		C5923002 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
+		D5923001F /* WorkoutTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplate.swift; sourceTree = "<group>"; };
+		D5923002F /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
+		D5923003F /* TemplateListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateListView.swift; sourceTree = "<group>"; };
+		D5923004F /* TemplateEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateEditorView.swift; sourceTree = "<group>"; };
+		D5923005F /* IntervalResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalResultsView.swift; sourceTree = "<group>"; };
+		E5923001F /* AnalyticsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsEngine.swift; sourceTree = "<group>"; };
+		E5923002F /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
+		ED000001 /* ExerciseDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDevice.swift; sourceTree = "<group>"; };
+		ED000002 /* CalorieEstimationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieEstimationEngine.swift; sourceTree = "<group>"; };
+		ED000003 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
+		ED000004 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
+		ED000005 /* DevicePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePickerView.swift; sourceTree = "<group>"; };
+		F5923001 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
+		F5923002 /* CloudKitSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSyncManager.swift; sourceTree = "<group>"; };
+		F5923003 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		G5923001F /* TrainingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlan.swift; sourceTree = "<group>"; };
+		G5923002F /* BuiltInPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltInPlans.swift; sourceTree = "<group>"; };
+		G5923003F /* PlanManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanManager.swift; sourceTree = "<group>"; };
+		H5923001F /* WorkoutSport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSport.swift; sourceTree = "<group>"; };
+		HR000001 /* HeartRateZoneCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZoneCalculator.swift; sourceTree = "<group>"; };
+		HR000002 /* HeartRateZoneCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeartRateZoneCalculator.swift; path = "ShuttlX Watch App/Models/HeartRateZoneCalculator.swift"; sourceTree = SOURCE_ROOT; };
 		LA000001 /* ShuttlXLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivityBundle.swift; sourceTree = "<group>"; };
 		LA000002 /* ShuttlXLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivity.swift; sourceTree = "<group>"; };
 		LA000003 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
@@ -301,6 +290,30 @@
 		LA000005 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		LA000006 /* ShuttlXLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		LA000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		LA000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		P5923001F /* ProgramsTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramsTabView.swift; sourceTree = "<group>"; };
+		P5923002F /* PlanListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanListView.swift; sourceTree = "<group>"; };
+		P5923003F /* PlanDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDetailView.swift; sourceTree = "<group>"; };
+		P5923004F /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
+		P5923005F /* PlanProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressCard.swift; sourceTree = "<group>"; };
+		R5923001F /* ElevationProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevationProfileView.swift; sourceTree = "<group>"; };
+		R5923002F /* LiveRouteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteView.swift; sourceTree = "<group>"; };
+		SM000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
+		SM000002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		TH000001 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
+		TH000002 /* ThemeFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeFonts.swift; sourceTree = "<group>"; };
+		TH000003 /* ThemeEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEffects.swift; sourceTree = "<group>"; };
+		TH000004 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
+		TH000005 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		TH000006 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeModifiers.swift; sourceTree = "<group>"; };
+		TH000007 /* CleanTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanTheme.swift; sourceTree = "<group>"; };
+		TH000008 /* SynthwaveTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTheme.swift; sourceTree = "<group>"; };
+		TH000009 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTheme.swift; sourceTree = "<group>"; };
+		TH000010 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTheme.swift; sourceTree = "<group>"; };
+		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
+		TH000050 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTheme.swift; sourceTree = "<group>"; };
+		TH000051 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterTheme.swift; sourceTree = "<group>"; };
+		TH000052 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTheme.swift; sourceTree = "<group>"; };
 		WG000001 /* ShuttlXWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWidgetsBundle.swift; sourceTree = "<group>"; };
 		WG000002 /* SmallWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallWidget.swift; sourceTree = "<group>"; };
 		WG000003 /* MediumWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediumWidget.swift; sourceTree = "<group>"; };
@@ -308,12 +321,17 @@
 		WG000005 /* ShuttlXWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlXWidgets.entitlements; sourceTree = "<group>"; };
 		WG000006 /* ShuttlXWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		WG000007 /* WidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataProvider.swift; sourceTree = "<group>"; };
-		F5923001 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
-		F5923002 /* CloudKitSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSyncManager.swift; sourceTree = "<group>"; };
-		F5923003 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
-		SM000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
-		SM000002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
+		WG000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		WW000001 /* ShuttlXWatchWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWatchWidgets.swift; sourceTree = "<group>"; };
+		WW000002 /* LastWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutComplication.swift; sourceTree = "<group>"; };
+		WW000003 /* WeeklyProgressComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressComplication.swift; sourceTree = "<group>"; };
+		WW000004 /* QuickStartComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartComplication.swift; sourceTree = "<group>"; };
+		WW000005 /* TodayWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWorkoutComplication.swift; sourceTree = "<group>"; };
+		WW000006 /* ShuttlXWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		WW000007 /* WatchWidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetDataProvider.swift; sourceTree = "<group>"; };
+		WW000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		WW000009 /* ShuttlXWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlXWatchWidgets.entitlements; sourceTree = "<group>"; };
+		WW000010 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		WWT00001 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ShuttlXTheme.swift; path = "ShuttlX Watch App/Theme/ShuttlXTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00002 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeColors.swift; path = "ShuttlX Watch App/Theme/ThemeColors.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00003 /* ThemeFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeFonts.swift; path = "ShuttlX Watch App/Theme/ThemeFonts.swift"; sourceTree = SOURCE_ROOT; };
@@ -329,24 +347,6 @@
 		WWT00013 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClassicRadioTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ClassicRadioTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00014 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VUMeterTheme.swift; path = "ShuttlX Watch App/Theme/Themes/VUMeterTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00015 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NeovimTheme.swift; path = "ShuttlX Watch App/Theme/Themes/NeovimTheme.swift"; sourceTree = SOURCE_ROOT; };
-		WW000002 /* LastWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutComplication.swift; sourceTree = "<group>"; };
-		WW000003 /* WeeklyProgressComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressComplication.swift; sourceTree = "<group>"; };
-		WW000004 /* QuickStartComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartComplication.swift; sourceTree = "<group>"; };
-		WW000005 /* TodayWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayWorkoutComplication.swift; sourceTree = "<group>"; };
-		WW000006 /* ShuttlXWatchWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXWatchWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		WW000007 /* WatchWidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchWidgetDataProvider.swift; sourceTree = "<group>"; };
-		WW000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		WW000009 /* ShuttlXWatchWidgets.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlXWatchWidgets.entitlements; sourceTree = "<group>"; };
-		ED000001 /* ExerciseDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDevice.swift; sourceTree = "<group>"; };
-		HR000001 /* HeartRateZoneCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZoneCalculator.swift; sourceTree = "<group>"; };
-		HR000002 /* HeartRateZoneCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = HeartRateZoneCalculator.swift; path = "ShuttlX Watch App/Models/HeartRateZoneCalculator.swift"; sourceTree = SOURCE_ROOT; };
-		ED000002 /* CalorieEstimationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieEstimationEngine.swift; sourceTree = "<group>"; };
-		ED000003 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
-		ED000004 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
-		ED000005 /* DevicePickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicePickerView.swift; sourceTree = "<group>"; };
-		LA000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		WG000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		WW000010 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -421,6 +421,7 @@
 				WG000020 /* ShuttlXWidgets */,
 				WW200005 /* ShuttlXWatchWidgets */,
 				A59234DF /* Products */,
+				D39E30B42F9CE31B00FE8D49 /* Recovered References */,
 			);
 			sourceTree = "<group>";
 		};
@@ -526,29 +527,6 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		B5923020 /* Charts */ = {
-			isa = PBXGroup;
-			children = (
-				B5923002 /* WeeklyDistanceChart.swift */,
-				B5923003 /* PaceTrendChart.swift */,
-				B5923004 /* HRZoneChart.swift */,
-				B5923005 /* WeekStripView.swift */,
-			);
-			path = Charts;
-			sourceTree = "<group>";
-		};
-		A5923D10 /* Dashboard */ = {
-			isa = PBXGroup;
-			children = (
-				A5923D02 /* LiveWorkoutCard.swift */,
-				A5923D03 /* StartOnWatchCard.swift */,
-				A5923D04 /* LastWorkoutCard.swift */,
-				A5923D05 /* WeekSummaryCard.swift */,
-				P5923005F /* PlanProgressCard.swift */,
-			);
-			path = Dashboard;
-			sourceTree = "<group>";
-		};
 		A5923900 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
@@ -572,20 +550,6 @@
 			path = Theme;
 			sourceTree = "<group>";
 		};
-		TH000030 /* Themes */ = {
-			isa = PBXGroup;
-			children = (
-				TH000007 /* CleanTheme.swift */,
-				TH000008 /* SynthwaveTheme.swift */,
-				TH000009 /* MixtapeTheme.swift */,
-				TH000010 /* ArcadeTheme.swift */,
-				TH000050 /* ClassicRadioTheme.swift */,
-				TH000051 /* VUMeterTheme.swift */,
-				TH000052 /* NeovimTheme.swift */,
-			);
-			path = Themes;
-			sourceTree = "<group>";
-		};
 		A5923C02 /* Components */ = {
 			isa = PBXGroup;
 			children = (
@@ -605,6 +569,52 @@
 			path = Utilities;
 			sourceTree = "<group>";
 		};
+		A5923D10 /* Dashboard */ = {
+			isa = PBXGroup;
+			children = (
+				A5923D02 /* LiveWorkoutCard.swift */,
+				A5923D03 /* StartOnWatchCard.swift */,
+				A5923D04 /* LastWorkoutCard.swift */,
+				A5923D05 /* WeekSummaryCard.swift */,
+				P5923005F /* PlanProgressCard.swift */,
+			);
+			path = Dashboard;
+			sourceTree = "<group>";
+		};
+		B5923020 /* Charts */ = {
+			isa = PBXGroup;
+			children = (
+				B5923002 /* WeeklyDistanceChart.swift */,
+				B5923003 /* PaceTrendChart.swift */,
+				B5923004 /* HRZoneChart.swift */,
+				B5923005 /* WeekStripView.swift */,
+			);
+			path = Charts;
+			sourceTree = "<group>";
+		};
+		D39E30B42F9CE31B00FE8D49 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				WWT00001 /* ShuttlXTheme.swift */,
+				HR000002 /* HeartRateZoneCalculator.swift */,
+				WWT00002 /* ThemeColors.swift */,
+				WWT00003 /* ThemeFonts.swift */,
+				WWT00004 /* ThemeEffects.swift */,
+				WWT00005 /* AppTheme.swift */,
+				WWT00006 /* ThemeManager.swift */,
+				WWT00007 /* ThemeModifiers.swift */,
+				WWT00008 /* ThemeAssets.swift */,
+				WWT00009 /* CleanTheme.swift */,
+				WWT00010 /* SynthwaveTheme.swift */,
+				WWT00011 /* MixtapeTheme.swift */,
+				WWT00012 /* ArcadeTheme.swift */,
+				WWT00013 /* ClassicRadioTheme.swift */,
+				WWT00014 /* VUMeterTheme.swift */,
+				WWT00015 /* NeovimTheme.swift */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		LA000020 /* ShuttlXLiveActivity */ = {
 			isa = PBXGroup;
 			children = (
@@ -615,6 +625,20 @@
 				LA000003 /* LockScreenView.swift */,
 			);
 			path = ShuttlXLiveActivity;
+			sourceTree = "<group>";
+		};
+		TH000030 /* Themes */ = {
+			isa = PBXGroup;
+			children = (
+				TH000007 /* CleanTheme.swift */,
+				TH000008 /* SynthwaveTheme.swift */,
+				TH000009 /* MixtapeTheme.swift */,
+				TH000010 /* ArcadeTheme.swift */,
+				TH000050 /* ClassicRadioTheme.swift */,
+				TH000051 /* VUMeterTheme.swift */,
+				TH000052 /* NeovimTheme.swift */,
+			);
+			path = Themes;
 			sourceTree = "<group>";
 		};
 		WG000020 /* ShuttlXWidgets */ = {
@@ -1050,12 +1074,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1069,9 +1089,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1087,12 +1108,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = "ShuttlX Watch App/ShuttlX Watch App.entitlements";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1106,9 +1123,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1243,12 +1261,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1264,9 +1278,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -1283,12 +1298,8 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_ENTITLEMENTS = ShuttlX/ShuttlX.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1304,9 +1315,10 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -1321,7 +1333,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXLiveActivity/Info.plist;
@@ -1331,13 +1343,10 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1353,7 +1362,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXLiveActivity/Info.plist;
@@ -1363,13 +1372,10 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1385,12 +1391,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShuttlXWidgets/ShuttlXWidgets.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWidgets/Info.plist;
@@ -1400,9 +1402,10 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1418,12 +1421,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShuttlXWidgets/ShuttlXWidgets.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
-				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWidgets/Info.plist;
@@ -1433,9 +1432,10 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -1451,12 +1451,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWatchWidgets/Info.plist;
@@ -1465,9 +1461,10 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = ShuttlXWatchWidget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1481,12 +1478,8 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = ShuttlXWatchWidgets/ShuttlXWatchWidgets.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
-				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 154;
+				CURRENT_PROJECT_VERSION = 153;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWatchWidgets/Info.plist;
@@ -1495,9 +1488,10 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.0.3;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = ShuttlXWatchWidget;
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

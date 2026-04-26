@@ -51,6 +51,12 @@ struct TrainingView: View {
         .themedScreenBackground()
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
+                let captures = workoutManager.completedCaptures
+                let avgHRR1: Double? = {
+                    let vals = captures.compactMap { $0.hrr1 }
+                    guard !vals.isEmpty else { return nil }
+                    return Double(vals.reduce(0, +)) / Double(vals.count)
+                }()
                 let summary = WorkoutSummary(
                     duration: workoutManager.elapsedTime,
                     distance: workoutManager.totalDistance,
@@ -58,7 +64,9 @@ struct TrainingView: View {
                     calories: workoutManager.calories,
                     steps: workoutManager.totalSteps,
                     avgPace: workoutManager.currentPace,
-                    splitsCount: workoutManager.lastCompletedKm
+                    splitsCount: workoutManager.lastCompletedKm,
+                    completedSets: workoutManager.workoutMode == .gymRecovery ? captures.count : nil,
+                    averageHRR1: avgHRR1
                 )
                 workoutManager.saveWorkoutData()
                 workoutManager.stopWorkout()
@@ -100,6 +108,9 @@ struct TrainingView: View {
     private var workoutDisplayTab: some View {
         if isLuminanceReduced {
             aodMinimalView
+        } else if workoutManager.workoutMode == .gymRecovery {
+            RecoveryWorkoutView()
+                .environmentObject(workoutManager)
         } else {
             fullWorkoutDisplayTab
         }
@@ -448,6 +459,8 @@ struct WorkoutSummary {
     let steps: Int
     let avgPace: TimeInterval?
     let splitsCount: Int
+    var completedSets: Int? = nil
+    var averageHRR1: Double? = nil
 }
 
 // MARK: - Post-Workout Summary Screen
@@ -504,6 +517,18 @@ struct WorkoutSummaryView: View {
                     if summary.splitsCount > 0 {
                         summaryRow(icon: "flag.fill", color: ShuttlXColor.running,
                                    label: "Km Splits", value: "\(summary.splitsCount)")
+                    }
+
+                    if let sets = summary.completedSets {
+                        summaryRow(icon: "figure.strengthtraining.traditional",
+                                   color: ShuttlXColor.ctaPrimary,
+                                   label: "Sets monitored", value: "\(sets)")
+                    }
+
+                    if let hrr1 = summary.averageHRR1 {
+                        summaryRow(icon: "arrow.down.heart.fill",
+                                   color: ShuttlXColor.heartRate,
+                                   label: "Avg HRR (1min)", value: "\(Int(hrr1.rounded())) BPM")
                     }
                 }
                 .padding(.horizontal)

@@ -1,5 +1,58 @@
 import Foundation
 
+// MARK: - Session Mode
+
+enum SessionMode: String, Codable {
+    case standard = "standard"
+    case gymRecovery = "gymRecovery"
+}
+
+// MARK: - Heart-Rate Recovery Capture (one rest period in a gym recovery session)
+
+struct HRRCapture: Identifiable, Codable, Hashable {
+    let id: UUID
+    var setNumber: Int
+    var peakHR: Int
+    var hrAt60s: Int?
+    var hrAt120s: Int?
+    var restDuration: TimeInterval
+    var restEntryTime: Date
+
+    var hrr1: Int? { hrAt60s.map { max(0, peakHR - $0) } }
+    var hrr2: Int? { hrAt120s.map { max(0, peakHR - $0) } }
+
+    init(setNumber: Int, peakHR: Int, restEntryTime: Date) {
+        self.id = UUID()
+        self.setNumber = setNumber
+        self.peakHR = peakHR
+        self.restEntryTime = restEntryTime
+        self.restDuration = 0
+    }
+}
+
+// MARK: - Recovery Report (attached to a completed gym recovery session)
+
+struct RecoveryReport: Codable, Hashable {
+    var sets: Int
+    var captures: [HRRCapture]
+    var avgWorkHR: Double?
+    var avgRestHR: Double?
+
+    var averageHRR1: Double? {
+        let values = captures.compactMap { $0.hrr1 }
+        guard !values.isEmpty else { return nil }
+        return Double(values.reduce(0, +)) / Double(values.count)
+    }
+
+    var averageHRR2: Double? {
+        let values = captures.compactMap { $0.hrr2 }
+        guard !values.isEmpty else { return nil }
+        return Double(values.reduce(0, +)) / Double(values.count)
+    }
+}
+
+// MARK: - Training Session
+
 struct TrainingSession: Identifiable, Codable, Hashable {
     let id: UUID
     var startDate: Date
@@ -30,6 +83,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var deviceID: UUID?
     var deviceName: String?
     var estimatedCalories: Double?
+
+    // Gym heart-recovery monitoring
+    var sessionMode: SessionMode?
+    var recoveryReport: RecoveryReport?
 
     // Legacy fields for backward compatibility with old data
     var programID: UUID?

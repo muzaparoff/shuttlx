@@ -5,8 +5,9 @@ enum BuiltInPlans {
     private static let couchTo5KID = UUID(uuidString: "B1000001-0000-0000-0000-000000000001") ?? UUID()
     private static let hiitStarterID = UUID(uuidString: "B1000001-0000-0000-0000-000000000002") ?? UUID()
     private static let fiveKImprovementID = UUID(uuidString: "B1000001-0000-0000-0000-000000000003") ?? UUID()
+    private static let gymHeartRecoveryID = UUID(uuidString: "B1000001-0000-0000-0000-000000000004") ?? UUID()
 
-    static let all: [TrainingPlan] = [couchTo5K, hiitStarter, fiveKImprovement]
+    static let all: [TrainingPlan] = [couchTo5K, hiitStarter, fiveKImprovement, gymHeartRecovery]
 
     // MARK: - Couch to 5K (8 weeks)
 
@@ -106,6 +107,32 @@ enum BuiltInPlans {
                 week(5, label: "Sharpening", workouts: [(1, "Easy Run 25min"), (3, "Tempo Run 20min"), (5, "Intervals: 5\u{00D7}800m"), (7, "Long Run 35min")]),
                 week(6, label: "Race Week", workouts: [(1, "Easy Run 20min"), (3, "Short Tempo 15min"), (5, "Easy Jog 15min"), (7, "5K Race Day!")]),
             ],
+            isBuiltIn: true
+        )
+    }()
+
+    // MARK: - Gym Heart Recovery (open-ended, 8 weeks, 2 sessions per week)
+
+    static let gymHeartRecovery: TrainingPlan = {
+        let weeks: [PlanWeek] = (1...8).map { weekNum in
+            var days: [PlanDay] = []
+            for d in 1...7 {
+                if d == 2 || d == 5 {
+                    days.append(PlanDay(dayNumber: d, sessionMode: .gymRecovery))
+                } else {
+                    days.append(PlanDay(dayNumber: d))
+                }
+            }
+            let labels = ["Foundation", "Building Rhythm", "Consistency", "Deepening Recovery",
+                          "Progressive Load", "Strength Phase", "Peak Adaptation", "Retest Week"]
+            return PlanWeek(weekNumber: weekNum, days: days, label: labels[weekNum - 1])
+        }
+        return TrainingPlan(
+            id: gymHeartRecoveryID,
+            name: "Gym Heart Recovery",
+            planDescription: "Two gym sessions per week. Your watch automatically monitors HR recovery between sets — no scripted exercises.",
+            sportType: .crossTraining,
+            weeks: weeks,
             isBuiltIn: true
         )
     }()

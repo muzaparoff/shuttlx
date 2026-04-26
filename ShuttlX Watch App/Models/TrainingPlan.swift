@@ -8,15 +8,18 @@ struct PlanDay: Identifiable, Codable, Hashable {
     var templateID: UUID?
     var templateName: String?
     var notes: String?
+    var sessionMode: SessionMode?
 
-    var isRestDay: Bool { templateID == nil && templateName == nil }
+    var isRestDay: Bool { templateID == nil && templateName == nil && sessionMode == nil }
+    var isRecoveryDay: Bool { sessionMode == .gymRecovery }
 
-    init(id: UUID = UUID(), dayNumber: Int, templateID: UUID? = nil, templateName: String? = nil, notes: String? = nil) {
+    init(id: UUID = UUID(), dayNumber: Int, templateID: UUID? = nil, templateName: String? = nil, notes: String? = nil, sessionMode: SessionMode? = nil) {
         self.id = id
         self.dayNumber = dayNumber
         self.templateID = templateID
         self.templateName = templateName
         self.notes = notes
+        self.sessionMode = sessionMode
     }
 }
 
