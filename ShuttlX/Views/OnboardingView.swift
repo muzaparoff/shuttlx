@@ -27,9 +27,9 @@ struct OnboardingView: View {
         VStack(spacing: 24) {
             Spacer()
 
-            Image(systemName: "figure.run")
+            Image(systemName: "figure.walk")
                 .font(ShuttlXFont.onboardingIcon)
-                .foregroundStyle(ShuttlXColor.running)
+                .foregroundStyle(ShuttlXColor.walking)
                 .symbolEffect(.bounce, value: currentPage == 0)
                 .accessibilityHidden(true)
 
@@ -37,7 +37,7 @@ struct OnboardingView: View {
                 .font(.largeTitle.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Auto-detect running and walking\nwith your Apple Watch")
+            Text("Move at your own pace,\nguided by your heart rate")
                 .font(.title3)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -123,27 +123,31 @@ struct OnboardingView: View {
                 .symbolEffect(.bounce, value: currentPage == 2)
                 .accessibilityHidden(true)
 
-            Text("Pair Your Watch")
+            Text("Apple Watch")
                 .font(.largeTitle.bold())
                 .accessibilityAddTraits(.isHeader)
 
-            Text("Start workouts on your Apple Watch.\nShuttlX syncs everything automatically.")
-                .font(.title3)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+            if watchPaired && watchAppInstalled {
+                Text("Your watch is paired and ready.\nWorkouts start on your wrist and sync automatically.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
 
-            // Connectivity status
-            HStack(spacing: 16) {
-                WatchStatusRow(
-                    icon: watchPaired ? "checkmark.circle.fill" : "xmark.circle",
-                    label: watchPaired ? "Watch Paired" : "No Watch Paired",
-                    isGood: watchPaired
-                )
-                WatchStatusRow(
-                    icon: watchAppInstalled ? "checkmark.circle.fill" : "arrow.down.circle",
-                    label: watchAppInstalled ? "App Installed" : "Install on Watch",
-                    isGood: watchAppInstalled
-                )
+                HStack(spacing: 16) {
+                    WatchStatusRow(icon: "checkmark.circle.fill", label: "Watch Paired", isGood: true)
+                    WatchStatusRow(icon: "checkmark.circle.fill", label: "App Installed", isGood: true)
+                }
+            } else {
+                Text("No Apple Watch paired — that's fine.\nYou can review your sessions and settings on iPhone.")
+                    .font(.title3)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+
+                Text("To start workouts, open ShuttlX on your Apple Watch.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
             }
 
             Spacer()
@@ -151,7 +155,7 @@ struct OnboardingView: View {
             Button {
                 isFirstLaunch = false
             } label: {
-                Text("Start Training")
+                Text("Begin")
             }
             .buttonStyle(ShuttlXPrimaryCTAStyle())
             .accessibilityHint("Completes onboarding and opens the app")

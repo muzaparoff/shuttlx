@@ -41,8 +41,11 @@ struct HRZoneChart: View {
         }
         .padding(16)
         .themedCard(accent: ShuttlXColor.heartRate, headerLabel: "HR ZONES")
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Heart rate zone distribution")
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel({
+            let summary = zones.map { "\($0.zone): \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", ")
+            return "Heart rate zone distribution. \(summary)"
+        }())
     }
 }
 

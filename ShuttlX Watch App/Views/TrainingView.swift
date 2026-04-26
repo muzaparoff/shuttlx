@@ -164,9 +164,36 @@ struct TrainingView: View {
                 metricRow("DIST", distanceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
                           accessibilityText: "Distance \(accessibleDistance)")
 
-                metricRow("HR", heartRateText, ShuttlXColor.forHRZone(workoutManager.heartRate), valueSize, labelSize, labelWidth,
-                          accessibilityText: workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute" : "Heart rate no data")
-                    .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
+                HStack {
+                    Text("HR")
+                        .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                        .frame(width: labelWidth, alignment: .leading)
+                    Spacer()
+                    HStack(spacing: 4) {
+                        Text(heartRateText)
+                            .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
+                            .contentTransition(.numericText())
+                            .minimumScaleFactor(0.6)
+                            .lineLimit(1)
+                        if heartRateZoneNumber > 0 {
+                            Text("Z\(heartRateZoneNumber)")
+                                .font(.system(size: max(10, labelSize), weight: .bold, design: .monospaced))
+                                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.8))
+                                .padding(.horizontal, 3)
+                                .padding(.vertical, 1)
+                                .overlay(RoundedRectangle(cornerRadius: 3).stroke(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.5), lineWidth: 1))
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
+                .accessibilityValue(heartRateZoneNumber > 0 ? "Zone \(heartRateZoneNumber)" : "")
+                .accessibilityAddTraits(.updatesFrequently)
+                .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
                     .onChange(of: workoutManager.heartRate) { _, newHR in
                         let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
                         if isHigh && !highIntensityHapticFired {
@@ -356,6 +383,10 @@ struct TrainingView: View {
         let hr = workoutManager.heartRate
         guard hr > 0 else { return "" }
         return hrCalculator.zoneName(for: Double(hr))
+    }
+
+    private var heartRateZoneNumber: Int {
+        hrCalculator.zone(for: Double(workoutManager.heartRate))
     }
 
     private var isHighIntensityWarning: Bool {
