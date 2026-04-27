@@ -34,7 +34,7 @@ struct RecoveryWorkoutView: View {
             Text("Ready")
                 .font(.system(size: 22, weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textPrimary)
-            Text("Start your first set")
+            Text("Start your first station")
                 .font(.system(size: 13, weight: .regular, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
                 .multilineTextAlignment(.center)
@@ -47,20 +47,19 @@ struct RecoveryWorkoutView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Heart recovery monitoring ready. Start your first exercise set.")
+        .accessibilityLabel("Heart recovery monitoring ready. Sit on your first machine to begin.")
     }
 
     // MARK: - Work
 
     private var workView: some View {
         let h = screenHeight
-        let hrSize = max(40, h * 0.22)
+        let hrSize = max(44, h * 0.26)
         let labelSize = max(10, h * 0.08)
+        let stationTimeSize = max(12, h * 0.09)
 
-        return VStack(spacing: h * 0.025) {
-            Spacer()
-
-            Text("Set \(workoutManager.recoverySetNumber)")
+        return VStack(spacing: h * 0.018) {
+            Text("Station \(workoutManager.recoverySetNumber)")
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.ctaPrimary)
 
@@ -74,17 +73,30 @@ struct RecoveryWorkoutView: View {
                 .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
 
-            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                .font(.system(size: labelSize * 1.3, weight: .semibold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(ShuttlXColor.textSecondary)
-                .padding(.top, 2)
+            HStack(spacing: 6) {
+                Text("Station")
+                    .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                    .foregroundColor(ShuttlXColor.textSecondary)
+                Text(FormattingUtils.formatTimer(workoutManager.stationElapsedTime))
+                    .font(.system(size: stationTimeSize, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(ShuttlXColor.textPrimary)
+            }
+            .padding(.top, 4)
 
-            Spacer()
+            HStack(spacing: 6) {
+                Text("Total")
+                    .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                    .foregroundColor(ShuttlXColor.textSecondary)
+                Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
+                    .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(ShuttlXColor.textSecondary)
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Set \(workoutManager.recoverySetNumber) in progress. Heart rate \(workoutManager.heartRate) beats per minute.")
+        .accessibilityLabel("Station \(workoutManager.recoverySetNumber) in progress. Heart rate \(workoutManager.heartRate) BPM. Station time \(FormattingUtils.formatTimeAccessible(workoutManager.stationElapsedTime)).")
         .accessibilityAddTraits(.updatesFrequently)
     }
 

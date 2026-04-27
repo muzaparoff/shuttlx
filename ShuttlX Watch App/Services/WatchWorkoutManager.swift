@@ -52,6 +52,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Gym Recovery Mode State
     @Published var recoveryState: SegmentState = .idle
     @Published var restElapsedTime: TimeInterval = 0
+    @Published var stationElapsedTime: TimeInterval = 0
     @Published var recoverySetNumber: Int = 0
     @Published var currentCapturePeakHR: Int = 0
     @Published var latestHRR1: Int? = nil
@@ -341,9 +342,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         logger.info("Starting gym recovery workout")
         workoutMode = .gymRecovery
         workoutName = "Gym Recovery"
-        recoverySegmenter = RecoverySegmenter()
+        recoverySegmenter = RecoverySegmenter(config: SegmenterConfig(profile: .cardiacRehab))
         recoveryState = .idle
         restElapsedTime = 0
+        stationElapsedTime = 0
         recoverySetNumber = 0
         currentCapturePeakHR = 0
         latestHRR1 = nil
@@ -469,6 +471,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         recoverySegmenter = nil
         recoveryState = .idle
         restElapsedTime = 0
+        stationElapsedTime = 0
         recoverySetNumber = 0
         currentCapturePeakHR = 0
         latestHRR1 = nil
@@ -580,11 +583,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             let events = segmenter.tick(hr: heartRate, activity: currentActivity, maxHR: maxHR, now: Date())
             recoverySegmenter = segmenter
             processRecoveryEvents(events)
-            // Update rest elapsed time
+            let now = Date()
             if let restStart = segmenter.restStartTime {
-                restElapsedTime = Date().timeIntervalSince(restStart)
+                restElapsedTime = now.timeIntervalSince(restStart)
             } else {
                 restElapsedTime = 0
+            }
+            if let workStart = segmenter.workStartTime {
+                stationElapsedTime = now.timeIntervalSince(workStart)
+            } else {
+                stationElapsedTime = 0
             }
             recoveryState = segmenter.state
             recoverySetNumber = segmenter.setNumber
