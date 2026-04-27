@@ -9,7 +9,14 @@ struct TemplateListView: View {
     /// Most recent session with no templateID (i.e. a free run)
     private var lastFreeRunSession: TrainingSession? {
         dataManager.sessions
-            .filter { $0.templateID == nil }
+            .filter { $0.templateID == nil && $0.sessionMode != .gymRecovery }
+            .max(by: { $0.startDate < $1.startDate })
+    }
+
+    /// Most recent gym recovery session
+    private var lastGymRecoverySession: TrainingSession? {
+        dataManager.sessions
+            .filter { $0.sessionMode == .gymRecovery }
             .max(by: { $0.startDate < $1.startDate })
     }
 
@@ -37,6 +44,40 @@ struct TemplateListView: View {
             }
             .themedScreenBackground()
         }
+    }
+
+    // MARK: - Gym Recovery Card
+
+    private var gymRecoveryCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Image(systemName: "heart.circle.fill")
+                    .foregroundStyle(ShuttlXColor.heartRate)
+                    .frame(width: 20)
+                Text("Gym Recovery")
+                    .font(.headline)
+            }
+
+            Text("HR recovery monitoring between sets")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+
+            if let last = lastGymRecoverySession {
+                let minutes = Int(last.duration / 60)
+                let sets = last.recoveryReport?.sets ?? 0
+                Text("Last: \(minutes)m · \(sets) sets · \(relativeDate(last.startDate))")
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            } else {
+                Text("Start on your Apple Watch")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Gym Recovery, heart rate recovery monitoring between sets")
     }
 
     // MARK: - Free Run Card
@@ -85,7 +126,18 @@ struct TemplateListView: View {
                 }
             }
 
-            // Section 2: User-created interval templates (deletable)
+            // Section 2: Gym Recovery (non-deletable)
+            Section {
+                if let session = lastGymRecoverySession {
+                    NavigationLink(destination: SessionDetailView(session: session)) {
+                        gymRecoveryCard
+                    }
+                } else {
+                    gymRecoveryCard
+                }
+            }
+
+            // Section 3: User-created interval templates (deletable)
             Section {
                 ForEach(templateManager.templates) { template in
                     templateRow(template)
