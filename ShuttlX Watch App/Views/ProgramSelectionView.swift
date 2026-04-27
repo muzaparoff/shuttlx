@@ -102,6 +102,43 @@ struct StartTrainingView: View {
                 .accessibilityLabel("Start Free Run")
                 .accessibilityHint("Begins a free-form workout that auto-detects running and walking")
 
+                // Gym Heart Recovery card
+                Button(action: {
+                    logger.info("Start Gym Recovery tapped")
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.start)
+                    #endif
+                    workoutManager.startGymRecoveryWorkout()
+                }) {
+                    HStack(spacing: ShuttlXSpacing.md) {
+                        if workoutManager.isStarting && workoutManager.workoutMode == .gymRecovery {
+                            ProgressView()
+                                .frame(width: 28)
+                        } else {
+                            Image(systemName: "heart.circle.fill")
+                                .font(ShuttlXFont.watchTemplateTitle)
+                                .foregroundStyle(ShuttlXColor.heartRate)
+                                .frame(width: 28)
+                        }
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Gym Recovery")
+                                .font(ShuttlXFont.watchTemplateTitle)
+                                .foregroundStyle(ShuttlXColor.textPrimary)
+                            Text("HR recovery between sets")
+                                .font(ShuttlXFont.cardCaption)
+                                .foregroundStyle(ShuttlXColor.textSecondary)
+                        }
+                        Spacer()
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, ShuttlXSpacing.lg)
+                    .padding(.vertical, ShuttlXSpacing.md)
+                }
+                .buttonStyle(ShuttlXCardButtonStyle())
+                .padding(.horizontal, ShuttlXSpacing.xl)
+                .accessibilityLabel("Start Gym Recovery session")
+                .accessibilityHint("Monitors heart rate recovery between your gym sets automatically")
+
                 // Templates
                 ForEach(sharedDataManager.workoutTemplates) { template in
                     Button(action: {
