@@ -21,6 +21,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var liveCalories: Int = 0
     @Published var liveSteps: Int = 0
     @Published var liveCurrentActivity: String = "unknown"
+    @Published var liveWorkoutName: String = ""
     @Published var liveIsPaused: Bool = false
     @Published var livePace: TimeInterval = 0
     @Published var liveRoutePoints: [RoutePoint] = []
@@ -197,6 +198,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveCalories = message["calories"] as? Int ?? 0
         liveSteps = message["steps"] as? Int ?? 0
         liveCurrentActivity = message["currentActivity"] as? String ?? "unknown"
+        liveWorkoutName = message["workoutName"] as? String ?? liveCurrentActivity
         liveIsPaused = message["isPaused"] as? Bool ?? false
         livePace = message["pace"] as? TimeInterval ?? 0
 
@@ -221,7 +223,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         // will cause updateActivity() to retry on subsequent metric updates.
         if !wasActive {
             log("Workout started on Watch — starting Live Activity")
-            LiveActivityManager.shared.startActivity(activityType: liveCurrentActivity)
+            LiveActivityManager.shared.startActivity(activityType: liveWorkoutName)
         }
 
         LiveActivityManager.shared.updateActivity(
@@ -253,6 +255,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
         liveCalories = 0
         liveSteps = 0
         liveCurrentActivity = "unknown"
+        liveWorkoutName = ""
         liveIsPaused = false
         livePace = 0
         liveRoutePoints = []

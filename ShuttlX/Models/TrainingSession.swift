@@ -97,6 +97,7 @@ struct TrainingSession: Identifiable, Codable, Hashable {
 
     var displayName: String {
         if let name = programName { return name }
+        if sessionMode == .gymRecovery { return "Gym Recovery" }
         return sportType?.displayName ?? "Run+Walk"
     }
 

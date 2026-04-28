@@ -616,6 +616,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         var payload: [String: Any] = [
             "action": "liveMetrics",
+            "workoutName": workoutName,
             "elapsedTime": elapsedTime,
             "heartRate": heartRate,
             "distance": totalDistance,
@@ -1148,6 +1149,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Attach recovery results if this was a gym recovery session
         if workoutMode == .gymRecovery {
             session.sessionMode = .gymRecovery
+            session.programName = "Gym Recovery"
             let finishedCaptures = completedCaptures
             if !finishedCaptures.isEmpty {
                 session.recoveryReport = RecoveryReport(
