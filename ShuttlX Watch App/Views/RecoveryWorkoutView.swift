@@ -26,28 +26,57 @@ struct RecoveryWorkoutView: View {
     // MARK: - Idle
 
     private var idleView: some View {
-        VStack(spacing: 10) {
+        let h = screenHeight
+        let hrSize = max(34, h * 0.21)
+        let labelSize = max(10, h * 0.075)
+        let ringSize = h * 0.40
+        let progress = workoutManager.stationCandidateProgress
+
+        return VStack(spacing: h * 0.02) {
             Spacer()
-            Image(systemName: "heart.circle")
-                .font(.system(size: 34))
-                .foregroundColor(ShuttlXColor.heartRate.opacity(0.7))
-            Text("Ready")
-                .font(.system(size: 22, weight: .bold, design: .monospaced))
-                .foregroundColor(ShuttlXColor.textPrimary)
-            Text("Start your first station")
-                .font(.system(size: 13, weight: .regular, design: .monospaced))
-                .foregroundColor(ShuttlXColor.textSecondary)
-                .multilineTextAlignment(.center)
+            ZStack {
+                Circle()
+                    .stroke(Color.gray.opacity(0.2), lineWidth: 3)
+                    .frame(width: ringSize, height: ringSize)
+                Circle()
+                    .trim(from: 0, to: progress)
+                    .stroke(Color.green.opacity(0.75), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .frame(width: ringSize, height: ringSize)
+                    .rotationEffect(.degrees(-90))
+                    .animation(.linear(duration: 1), value: progress)
+                VStack(spacing: 2) {
+                    Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "—")
+                        .font(.system(size: hrSize, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundColor(
+                            workoutManager.heartRate > 0
+                                ? ShuttlXColor.forHRZone(workoutManager.heartRate)
+                                : ShuttlXColor.textSecondary
+                        )
+                        .contentTransition(.numericText())
+                    Text("BPM")
+                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                }
+            }
+            Text(progress > 0 ? "Detecting..." : "Sit on machine")
+                .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                .foregroundColor(progress > 0 ? ShuttlXColor.ctaPrimary : ShuttlXColor.textSecondary)
+                .animation(.easeInOut, value: progress > 0)
             Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                .font(.system(size: 17, weight: .semibold, design: .monospaced))
+                .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(ShuttlXColor.textSecondary)
-                .padding(.top, 6)
+                .padding(.top, 4)
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Heart recovery monitoring ready. Sit on your first machine to begin.")
+        .accessibilityLabel(
+            progress > 0
+                ? "Detecting station. Heart rate \(workoutManager.heartRate) BPM."
+                : "Heart recovery monitoring ready. Sit on machine to begin."
+        )
     }
 
     // MARK: - Work
@@ -73,6 +102,16 @@ struct RecoveryWorkoutView: View {
                 .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
 
+            Text(hrZoneLabel(workoutManager.heartRate))
+                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
+                .padding(.horizontal, 6).padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.15))
+                )
+                .opacity(workoutManager.heartRate > 0 ? 1 : 0)
+
             HStack(spacing: 6) {
                 Text("Station")
                     .font(.system(size: labelSize, weight: .regular, design: .monospaced))
@@ -83,6 +122,19 @@ struct RecoveryWorkoutView: View {
                     .foregroundColor(ShuttlXColor.textPrimary)
             }
             .padding(.top, 4)
+
+            if workoutManager.currentCadence > 0 {
+                HStack(spacing: 6) {
+                    Text("RPM")
+                        .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                    Text("\(workoutManager.currentCadence)")
+                        .font(.system(size: stationTimeSize, weight: .semibold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundColor(ShuttlXColor.textPrimary)
+                        .contentTransition(.numericText())
+                }
+            }
 
             HStack(spacing: 6) {
                 Text("Total")
@@ -137,7 +189,11 @@ struct RecoveryWorkoutView: View {
                     .contentTransition(.numericText())
                 Image(systemName: "arrow.down")
                     .font(.system(size: hrSize * 0.6))
-                    .foregroundColor(ShuttlXColor.heartRate.opacity(0.7))
+                    .foregroundColor(
+                        isHRSafe(workoutManager.heartRate)
+                            ? ShuttlXColor.ctaPrimary.opacity(0.7)
+                            : ShuttlXColor.heartRate.opacity(0.7)
+                    )
             }
             .accessibilityElement(children: .combine)
             .accessibilityLabel("\(workoutManager.heartRate) beats per minute, recovering")
@@ -150,6 +206,23 @@ struct RecoveryWorkoutView: View {
     }
 
     // MARK: - Helpers
+
+    private func hrZoneLabel(_ bpm: Int) -> String {
+        guard bpm > 0 else { return "" }
+        let pct = Double(bpm) / 185.0
+        switch pct {
+        case ..<0.60: return "Z1"
+        case 0.60..<0.70: return "Z2"
+        case 0.70..<0.80: return "Z3"
+        case 0.80..<0.90: return "Z4"
+        default: return "Z5"
+        }
+    }
+
+    private func isHRSafe(_ bpm: Int) -> Bool {
+        guard bpm > 0 else { return false }
+        return Double(bpm) / 185.0 < 0.70
+    }
 
     private func restTimerColor(restSecs: TimeInterval) -> Color {
         if restSecs >= 120 { return ShuttlXColor.ctaPrimary }

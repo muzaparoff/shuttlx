@@ -58,7 +58,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var latestHRR1: Int? = nil
     @Published var latestHRR2: Int? = nil
     @Published var completedCaptures: [HRRCapture] = []
+    @Published var currentCadence: Int = 0
     private var recoverySegmenter: RecoverySegmenter?
+
+    var stationCandidateProgress: Double { recoverySegmenter?.candidateProgress ?? 0 }
 
     // MARK: - Private State
     private var workoutSession: HKWorkoutSession?
@@ -351,6 +354,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         latestHRR1 = nil
         latestHRR2 = nil
         completedCaptures = []
+        currentCadence = 0
         startWorkout()
     }
 
@@ -477,6 +481,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         latestHRR1 = nil
         latestHRR2 = nil
         completedCaptures = []
+        currentCadence = 0
 
         // Backup is cleared by saveWorkoutData() after confirmed save — not here
     }
@@ -652,7 +657,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 latestHRR2 = nil
                 currentCapturePeakHR = 0
                 #if os(watchOS)
-                WKInterfaceDevice.current().play(.start)
+                WKInterfaceDevice.current().play(.click)
                 #endif
 
             case .enteredRest(let peakHR, let setNumber, let restEntryTime):
@@ -817,6 +822,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     let distanceKm = dist.doubleValue / 1000.0
                     self.totalDistance = distanceKm
                     self.updatePaceAndSplits(distanceKm: distanceKm)
+                }
+                if let cadence = data.currentCadence {
+                    self.currentCadence = Int(cadence.doubleValue * 60)
                 }
             }
         }

@@ -48,8 +48,12 @@ struct SegmenterConfig {
     var hrrTolerance: TimeInterval = 3
     /// Which detection model to use.
     var profile: SegmenterProfile = .gymStrength
-    /// (cardiacRehab) Seconds stationary/unknown before confirming station start.
-    var stationaryConfirmDuration: TimeInterval = 30
+    /// (cardiacRehab) Seconds stationary/unknown before checking HR-rise condition. Default 15s.
+    var stationaryConfirmDuration: TimeInterval = 15
+    /// (cardiacRehab) BPM rise above seated baseline required to confirm station start.
+    var hrRiseForWork: Int = 6
+    /// (cardiacRehab) Fallback: confirm station after this many seconds regardless of HR (beta-blocker patients).
+    var workFallbackDuration: TimeInterval = 45
     /// (cardiacRehab) Seconds of non-walking after walk stops before confirming next station start.
     var walkStopConfirmDuration: TimeInterval = 15
 }
@@ -74,11 +78,21 @@ struct RecoverySegmenter {
     private var hrr1Captured: Bool = false
     private var hrr2Captured: Bool = false
 
+    // cardiacRehab: HR baseline captured when stationary candidate begins
+    private var hrAtCandidateStart: Int = 0
     // cardiacRehab: debounce for rest→work transition
     private var notWalkingCandidateStart: Date?
 
     init(config: SegmenterConfig = SegmenterConfig()) {
         self.config = config
+    }
+
+    /// 0.0–1.0: stationary confirmation progress while in cardiacRehab idle state (for UI arc).
+    var candidateProgress: Double {
+        guard config.profile == .cardiacRehab,
+              state == .idle,
+              let start = workCandidateStart else { return 0 }
+        return min(1.0, Date().timeIntervalSince(start) / config.stationaryConfirmDuration)
     }
 
     /// Called once per second. Returns 0…N events describing state transitions and captures.
@@ -174,15 +188,20 @@ struct RecoverySegmenter {
 
         switch state {
         case .idle:
-            // Stationary/unknown sustained for stationaryConfirmDuration → station starts
+            // Dual condition: stationary ≥ 15s AND HR rises ≥ hrRiseForWork above seated baseline.
+            // Fallback: stationary ≥ workFallbackDuration regardless of HR (beta-blocker patients).
             if isOnMachine {
                 if workCandidateStart == nil {
                     workCandidateStart = now
+                    hrAtCandidateStart = hr
                     peakHRDuringWork = hr
                 } else {
                     if hr > peakHRDuringWork { peakHRDuringWork = hr }
                     let elapsed = now.timeIntervalSince(workCandidateStart!)
-                    if elapsed >= config.stationaryConfirmDuration {
+                    let hrRise = hr - hrAtCandidateStart
+                    let dualCondition = elapsed >= config.stationaryConfirmDuration && hrRise >= config.hrRiseForWork
+                    let fallback = elapsed >= config.workFallbackDuration
+                    if dualCondition || fallback {
                         state = .work
                         workStartTime = now
                         setNumber += 1
@@ -190,8 +209,8 @@ struct RecoverySegmenter {
                     }
                 }
             } else {
-                // Walking or running — not seated, reset candidate
                 workCandidateStart = nil
+                hrAtCandidateStart = 0
             }
 
         case .work:
