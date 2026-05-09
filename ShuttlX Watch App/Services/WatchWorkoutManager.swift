@@ -609,6 +609,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Live Metrics Broadcast
 
+    // Dual-channel live metrics broadcast:
+    //  • sendMessage — real-time when iPhone is reachable (foregrounded / unlocked)
+    //  • updateApplicationContext — OS-queued, delivered when iPhone next wakes
+    //    (handles locked phone in pocket, suspended app, brief BT hiccups)
+    // Do NOT add an isReachable guard — it silently drops metrics during runs when
+    // the iPhone is locked. applicationContext only stores the latest snapshot,
+    // which is exactly what we want for live metrics.
     private func broadcastLiveMetricsIfNeeded() {
         let now = Date()
         if let lastUpdate = lastLiveUpdateTime, now.timeIntervalSince(lastUpdate) < 3.0 {
@@ -616,8 +623,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         lastLiveUpdateTime = now
 
-        guard WCSession.default.activationState == .activated,
-              WCSession.default.isReachable else { return }
+        guard WCSession.default.activationState == .activated else { return }
 
         var payload: [String: Any] = [
             "action": "liveMetrics",
@@ -639,10 +645,20 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             payload["longitude"] = lastPoint.longitude
         }
 
-        WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
-            Task { @MainActor [weak self] in
-                self?.logger.debug("Live metrics send failed: \(error.localizedDescription)")
+        // Channel 1: real-time when reachable
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
+                Task { @MainActor [weak self] in
+                    self?.logger.debug("Live metrics sendMessage failed: \(error.localizedDescription)")
+                }
             }
+        }
+
+        // Channel 2: applicationContext — always delivered when iPhone next wakes
+        do {
+            try WCSession.default.updateApplicationContext(payload)
+        } catch {
+            logger.debug("Live metrics applicationContext failed: \(error.localizedDescription)")
         }
     }
 

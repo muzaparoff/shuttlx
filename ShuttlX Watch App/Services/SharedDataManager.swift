@@ -111,19 +111,48 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             logger.info("Session payload: \(payloadSize) bytes (\(session.route?.count ?? 0) route points)")
 
             if payloadSize > 200_000 {
-                // Large session — use file transfer (unlimited size)
+                // Large session — use file transfer (unlimited size). Already queues internally.
                 sendSessionViaFileTransfer(session, sessionData: sessionData)
             } else if payloadSize > 50_000 {
-                // Medium session — transferUserInfo only (sendMessage would fail at ~65 KB)
+                // Medium session — transferUserInfo only (sendMessage would fail at ~65 KB).
+                // Queue as pending so the retry burst + 15s polling cover deferred delivery.
+                queuePendingSession(session)
                 sendSessionViaUserInfo(session, sessionData: sessionData)
             } else {
-                // Small session — transferUserInfo + sendMessage for immediate delivery
+                // Small session — transferUserInfo + sendMessage for immediate delivery.
+                // sendMessage error handler queues to pending if it fails.
                 sendSessionViaUserInfo(session, sessionData: sessionData)
                 sendSessionViaMessage(session, base64: base64)
             }
+
+            // Tap-on-shoulder: tell iPhone "a new session ID exists" via applicationContext.
+            // This wakes iOS regardless of reachability and lets it pull the session if it
+            // hasn't arrived via userInfo yet.
+            do {
+                try WCSession.default.updateApplicationContext([
+                    "action": "lastSessionID",
+                    "sessionID": session.id.uuidString,
+                    "timestamp": Date().timeIntervalSince1970
+                ])
+            } catch {
+                logger.debug("lastSessionID applicationContext failed: \(error.localizedDescription)")
+            }
+
+            // Aggressive retry burst — covers cases where transferUserInfo is deferred
+            // by iOS (suspended/locked phone). Steady-state polling is every 15s.
+            scheduleFinishRetryBurst()
         } catch {
             logger.error("Failed to encode session: \(error.localizedDescription)")
             queuePendingSession(session)
+        }
+    }
+
+    private func scheduleFinishRetryBurst() {
+        let delays: [TimeInterval] = [1, 3, 8]
+        for delay in delays {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.retryPendingSessions()
+            }
         }
     }
 

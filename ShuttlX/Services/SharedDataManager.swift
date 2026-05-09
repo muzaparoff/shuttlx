@@ -751,6 +751,30 @@ extension SharedDataManager {
         }
     }
 
+    // applicationContext is the resilient channel for "latest snapshot" data:
+    // it's OS-queued and delivered when the iPhone next wakes, even if we were
+    // suspended/locked. The watch mirrors live metrics here (and a "lastSessionID"
+    // tap-on-shoulder after Finish) so we recover from sendMessage drops.
+    nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
+        Task { @MainActor in
+            guard let action = applicationContext["action"] as? String else { return }
+            switch action {
+            case "liveMetrics":
+                self.handleLiveMetrics(applicationContext)
+            case "lastSessionID":
+                if let idString = applicationContext["sessionID"] as? String,
+                   let id = UUID(uuidString: idString),
+                   !self.syncedSessions.contains(where: { $0.id == id }) {
+                    self.log("lastSessionID \(idString) not in synced list — requesting from watch")
+                    self.requestSessionsFromWatch { _ in }
+                }
+            default:
+                break
+            }
+            self.updateConnectivityHealth()
+        }
+    }
+
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
         Task { @MainActor in
             if let action = message["action"] as? String {
