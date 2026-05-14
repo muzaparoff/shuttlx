@@ -113,15 +113,23 @@ Additional rules load automatically based on the files being edited:
 
 | Agent | Purpose | Model |
 |-------|---------|-------|
-| `senior-ios-developer` | Review + implement iOS/watchOS tasks with Apple platform best practices | sonnet |
-| `senior-architect` | Architecture, data structures, monitoring, production tooling review + implementation | opus |
+| `senior-ios-developer` | Review + implement iOS tasks (and watchOS when solo) | sonnet |
+| `swiftui-watchos-specialist` | Review + implement watchOS tasks; team-mode owner of `ShuttlX Watch App/**` | opus |
+| `senior-architect` | Architecture, data structures, monitoring, production tooling | opus |
+| `product-designer` | Proactive UI/UX research + mockup generation; owns `design/proposals/**` | opus |
+| `qa-engineer` | Functional QA — walks real workout flows, reports bugs by severity with dev routing | sonnet |
+| `test-author` | Writes XCTest / Swift Testing tests; owns `**Tests/**` | sonnet |
+| `release-shepherd` | CI + TestFlight + payment-config monitor after push | haiku |
+| `docs-keeper` | Keeps CLAUDE.md, `.claude/rules/`, memory in sync after feature work | haiku |
 | `app-auditor` | Pre-release readiness audit (crash risks, metadata, features) | sonnet |
-| `design-reviewer` | UI/UX + Apple HIG compliance review | sonnet |
+| `design-reviewer` | UI/UX + Apple HIG compliance **review** of existing code | sonnet |
+| `ux-ui-designer` | Cardiac-rehab UX **audit** | sonnet |
 | `growth-strategist` | ASO, marketing, solo-dev launch strategy | opus |
 | `accessibility-auditor` | VoiceOver, Dynamic Type, contrast, a11y | sonnet |
 | `performance-auditor` | Memory, battery, render efficiency, watchOS limits | sonnet |
 | `security-reviewer` | Entitlements, data protection, secrets, privacy | sonnet |
 | `watch-debugger` | watchOS workout/sync/HealthKit/timer debugging | sonnet |
+| `healthkit-domain-expert` | HealthKit correctness for cardiac rehab — clinical-grade review | opus |
 
 ### Agent Routing Rules
 
@@ -140,6 +148,50 @@ Additional rules load automatically based on the files being edited:
 - `senior-ios-developer` + any other writing agent (writes to Swift files)
 - `senior-architect` (implement mode) + `senior-ios-developer` (overlapping scope)
 - Any two agents that write to the same Swift files
+
+## Agent Teams (experimental — CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1)
+
+Teams coordinate via a **shared task list** + **mailbox** between teammates. Use teams when work genuinely parallelizes by file scope (each teammate owns a distinct path). For sequential tasks, prefer single-session or subagents — teams are expensive (tokens scale per teammate).
+
+**Best practice from Anthropic docs**: 3–5 teammates, 5–6 tasks per teammate, no two teammates editing the same file. Each writing agent has a `File ownership (team mode)` clause in its definition.
+
+### Playbook A — Cross-platform feature
+
+Phase 1 (sequential): `product-designer` → `design/proposals/<slug>/{ios.md, watch.md}`.
+Phase 2 (parallel team of 3): `senior-ios-developer` (iOS only) + `swiftui-watchos-specialist` (watch only) + `test-author` (tests only). Each reads the relevant spec.
+Phase 3: `qa-engineer` walks the flow, routes any P0/P1 back to the responsible dev as new tasks.
+Phase 4: `docs-keeper` updates CLAUDE.md / rules / memory.
+
+> Prompt: *Create an agent team to ship <feature>. Phase 1: spawn product-designer to write design/proposals/<slug>/. Phase 2: spawn 3 teammates (senior-ios-developer, swiftui-watchos-specialist, test-author) — each owns their scope, no file overlap. Phase 3: qa-engineer. Phase 4: docs-keeper.*
+
+### Playbook B — Pre-release readiness (parallel review)
+
+Team of 4 read-only reviewers. They never edit code; the lead synthesizes a Go/No-Go.
+
+> Prompt: *Create a 4-teammate read-only review team for the current branch: app-auditor, accessibility-auditor, performance-auditor, security-reviewer. Run in parallel. Synthesize findings into a Go/No-Go list grouped by P0/P1/P2.*
+
+### Playbook C — Bug investigation with competing hypotheses
+
+> Prompt: *Users report <symptom>. Spawn 3 teammates with competing hypotheses: watch-debugger (watch-side cause), senior-architect (architectural cause), healthkit-domain-expert (HealthKit/data cause). Have them debate to disprove each other's theories. Update findings doc with the consensus root cause.*
+
+### Playbook D — New theme
+
+> Prompt: *Spawn 3 teammates to add the "<name>" theme. product-designer (owns design/proposals/, defines palette + visual language). senior-ios-developer (owns ShuttlX/Theme/Themes/<Name>.swift). swiftui-watchos-specialist (owns ShuttlX Watch App/Theme/Themes/<Name>.swift). After all 3 finish, docs-keeper updates the theme table in CLAUDE.md.*
+
+### Playbook E — HealthKit correctness review
+
+> Prompt: *Create a read-only team: healthkit-domain-expert, recovery-feature-architect, performance-engineer. Coordinate on a single clinical-grade audit doc.*
+
+### Playbook F — Visual refresh
+
+> Prompt: *2-teammate team to refresh <screen>: product-designer (mockups + research, owns design/proposals/) and ux-ui-designer (audits cardiac-rehab UX). They message each other to reconcile aesthetic with patient-safety constraints, then produce a unified proposal.*
+
+### Team rules
+
+- **Always clean up**: tell the lead `clean up the team` when done — only the lead can run cleanup
+- **One team at a time**: a lead can manage only one team
+- **No nested teams**: teammates cannot spawn their own teammates
+- **`/resume` does not restore in-process teammates** — if you resume, ask the lead to respawn
 
 ## Frameworks Used
 
