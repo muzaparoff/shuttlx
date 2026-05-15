@@ -132,6 +132,32 @@ struct SessionDetailView: View {
                 )
             }
 
+            if let cad = session.averageCadence, cad > 0 {
+                MetricCard(
+                    icon: "figure.run.motion",
+                    value: "\(Int(cad.rounded())) spm",
+                    label: "Avg Cadence",
+                    color: ShuttlXColor.steps
+                )
+                // Show max only when it materially differs from average — keeps the grid clean.
+                if let maxCad = session.maxCadence, maxCad > 0, abs(Double(maxCad) - cad) >= 2 {
+                    MetricCard(
+                        icon: "figure.run.motion",
+                        value: "\(maxCad) spm",
+                        label: "Max Cadence",
+                        color: ShuttlXColor.steps
+                    )
+                }
+            } else if let maxCad = session.maxCadence, maxCad > 0 {
+                // Edge case: very short session with a max but no average.
+                MetricCard(
+                    icon: "figure.run.motion",
+                    value: "\(maxCad) spm",
+                    label: "Max Cadence",
+                    color: ShuttlXColor.steps
+                )
+            }
+
             if let distance = session.distance, distance > 0 {
                 MetricCard(
                     icon: "gauge.with.dots.needle.bottom.50percent",

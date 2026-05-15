@@ -85,6 +85,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var heartRateSampleCount: Int = 0
     private var maxHeartRateValue: Double = 0
     private var totalCaloriesAccumulated: Double = 0
+    // Cadence accumulators — paused samples and zero-cadence ticks excluded
+    private var cadenceSampleSum: Double = 0
+    private var cadenceSampleCount: Int = 0
+    private var maxCadenceValue: Int = 0
 
     // Pace & split tracking
     private var timeAtLastKm: TimeInterval = 0
@@ -290,6 +294,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleCount = 0
         maxHeartRateValue = 0
         totalCaloriesAccumulated = 0
+        cadenceSampleSum = 0
+        cadenceSampleCount = 0
+        maxCadenceValue = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
         accumulatedPauseTime = 0
@@ -451,6 +458,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
+        cadenceSampleSum = 0
+        cadenceSampleCount = 0
+        maxCadenceValue = 0
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
@@ -638,6 +648,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             "currentActivity": currentActivity.rawValue,
             "isPaused": isPaused,
             "pace": currentPace ?? 0,
+            "cadence": currentCadence,
             "timestamp": now.timeIntervalSince1970
         ]
 
@@ -842,7 +853,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     self.updatePaceAndSplits(distanceKm: distanceKm)
                 }
                 if let cadence = data.currentCadence {
-                    self.currentCadence = Int(cadence.doubleValue * 60)
+                    let spm = Int(cadence.doubleValue * 60)
+                    self.currentCadence = spm
+                    // Only average when actually moving (spm > 0) and not paused.
+                    // Zero ticks happen during walks against treadmill rails or rest periods —
+                    // including them would skew the average toward zero.
+                    if !self.isPaused && spm > 0 {
+                        self.cadenceSampleSum += Double(spm)
+                        self.cadenceSampleCount += 1
+                        if spm > self.maxCadenceValue {
+                            self.maxCadenceValue = spm
+                        }
+                    }
                 }
             }
         }
@@ -1068,7 +1090,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
             route: routePoints.isEmpty ? nil : routePoints,
-            kmSplits: backupSplits
+            kmSplits: backupSplits,
+            averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
+            maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
         )
 
         do {
@@ -1161,7 +1185,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
             route: routePoints.isEmpty ? nil : routePoints,
-            kmSplits: splits
+            kmSplits: splits,
+            averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
+            maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
         )
 
         // Attach interval results if this was an interval workout

@@ -146,14 +146,35 @@ struct TrainingView: View {
 
     private var fullWorkoutDisplayTab: some View {
         let h = screenHeight
-        let valueSize = max(40, h * 0.19)
+        let heroSize = max(44, h * 0.26)              // countdown hero — only used in interval mode
+        let valueSize = max(40, h * 0.19)             // HR (still large, second-tier)
+        let tertiarySize = max(16, h * 0.10)          // DIST / PACE / TIME / CAD — compact row
         let labelSize = max(10, h * 0.08)
         let labelWidth = h * 0.20
         let rowSpacing = h * 0.025
 
-        return VStack(spacing: rowSpacing) {
-                // Top row: workout name
-                HStack {
+        let isInterval = workoutManager.workoutMode == .interval
+        let stepWashColor: Color? = {
+            guard isInterval,
+                  let step = workoutManager.intervalEngine?.currentStep else { return nil }
+            return ShuttlXColor.forStepType(step.type)
+        }()
+
+        return ZStack {
+            // Subtle step-type wash so the user can read state pre-attentively.
+            // 8% is the maximum that doesn't crush text contrast in Classic Radio / Neovim.
+            if let wash = stepWashColor {
+                wash
+                    .opacity(0.08)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4),
+                               value: workoutManager.intervalEngine?.currentStep?.type)
+            }
+
+            VStack(spacing: rowSpacing) {
+                // Workout name + step pill (interval only)
+                HStack(spacing: 6) {
                     Text(workoutManager.workoutName.uppercased())
                         .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                         .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
@@ -165,16 +186,28 @@ struct TrainingView: View {
                             value: pausePulse
                         )
                     Spacer()
+                    if isInterval, let engine = workoutManager.intervalEngine, let step = engine.currentStep {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(ShuttlXColor.forStepType(step.type))
+                                .frame(width: 6, height: 6)
+                            Text(step.type.displayName.uppercased())
+                                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                                .foregroundColor(ShuttlXColor.forStepType(step.type))
+                        }
+                        Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
+                            .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                            .foregroundColor(ShuttlXColor.textSecondary)
+                            .monospacedDigit()
+                    }
                 }
                 .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
 
-                // Timer row
-                timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth)
+                // Hero: interval countdown (interval) or elapsed time (free run)
+                timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth,
+                         heroSize: heroSize)
 
-                // Metric rows — all same size as timer
-                metricRow("DIST", distanceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                          accessibilityText: "Distance \(accessibleDistance)")
-
+                // HR row — second tier
                 HStack {
                     Text("HR")
                         .font(.system(size: labelSize, weight: .bold, design: .monospaced))
@@ -205,30 +238,75 @@ struct TrainingView: View {
                 .accessibilityValue(heartRateZoneNumber > 0 ? "Zone \(heartRateZoneNumber)" : "")
                 .accessibilityAddTraits(.updatesFrequently)
                 .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
-                    .onChange(of: workoutManager.heartRate) { _, newHR in
-                        let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
-                        if isHigh && !highIntensityHapticFired {
-                            highIntensityHapticFired = true
-                            #if os(watchOS)
-                            WKInterfaceDevice.current().play(.notification)
-                            #endif
-                        } else if !isHigh {
-                            highIntensityHapticFired = false
-                        }
+                .onChange(of: workoutManager.heartRate) { _, newHR in
+                    let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
+                    if isHigh && !highIntensityHapticFired {
+                        highIntensityHapticFired = true
+                        #if os(watchOS)
+                        WKInterfaceDevice.current().play(.notification)
+                        #endif
+                    } else if !isHigh {
+                        highIntensityHapticFired = false
                     }
+                }
 
-                // HIGH INTENSITY warning — shown when HR > 85% of estimated max HR
                 if isHighIntensityWarning {
                     highIntensityWarningView(labelSize: labelSize)
                 }
 
-                metricRow("PACE", paceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                          accessibilityText: accessiblePace)
+                // Tertiary two-up rows: DIST / PACE then TIME / CAD
+                if isInterval {
+                    HStack(spacing: 8) {
+                        compactMetric("DIST", distanceText, tertiarySize, labelSize)
+                        compactMetric("PACE", paceText, tertiarySize, labelSize)
+                    }
+                    HStack(spacing: 8) {
+                        compactMetric("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
+                                      tertiarySize, labelSize)
+                        if workoutManager.currentCadence > 0 {
+                            compactMetric("CAD", "\(workoutManager.currentCadence)",
+                                          tertiarySize, labelSize)
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity)
+                        }
+                    }
+                } else {
+                    // Free-run keeps DIST + PACE in the legacy single-row format
+                    metricRow("DIST", distanceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                              accessibilityText: "Distance \(accessibleDistance)")
+                    metricRow("PACE", paceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                              accessibilityText: accessiblePace)
+                    if workoutManager.currentCadence > 0 {
+                        metricRow("CAD", "\(workoutManager.currentCadence)",
+                                  ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                                  accessibilityText: "Cadence \(workoutManager.currentCadence) steps per minute")
+                    }
+                }
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    // Compact two-up metric (used in interval mode's tertiary rows).
+    private func compactMetric(_ label: String, _ value: String,
+                               _ valueSize: CGFloat, _ labelSize: CGFloat) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                .foregroundColor(ShuttlXColor.textSecondary)
+            Text(value)
+                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(ShuttlXColor.textPrimary)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value)")
     }
 
     // MARK: - Metric Row (unified for all metrics including timer)
@@ -259,9 +337,9 @@ struct TrainingView: View {
     // MARK: - Timer Line
 
     @ViewBuilder
-    private func timerRow(valueSize: CGFloat, labelSize: CGFloat, labelWidth: CGFloat) -> some View {
+    private func timerRow(valueSize: CGFloat, labelSize: CGFloat, labelWidth: CGFloat, heroSize: CGFloat) -> some View {
         if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
-            intervalTimerLine(engine: engine)
+            intervalCountdownHero(engine: engine, heroSize: heroSize, labelSize: labelSize)
         } else {
             metricRow("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
                       ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
@@ -269,59 +347,48 @@ struct TrainingView: View {
         }
     }
 
-    // MARK: - Interval Timer with Progress Ring
-
-    private func intervalTimerLine(engine: IntervalEngine) -> some View {
+    // MARK: - Interval Countdown Hero (replaces the old 56pt progress ring)
+    //
+    // The countdown to the next interval transition is the most decision-critical
+    // number on the screen during interval work. It must be the largest element so
+    // a sweaty mid-treadmill glance reads it immediately. A thin capsule progress
+    // bar beneath conveys remaining time pre-attentively without the battery cost
+    // of a continuously redrawn radial ring.
+    private func intervalCountdownHero(engine: IntervalEngine, heroSize: CGFloat, labelSize: CGFloat) -> some View {
         let stepColor = engine.currentStep.map { ShuttlXColor.forStepType($0.type) } ?? ShuttlXColor.textPrimary
         let stepProgress: Double = {
             guard let step = engine.currentStep, step.duration > 0 else { return 0 }
             return 1.0 - (engine.currentStepTimeRemaining / step.duration)
         }()
 
-        return VStack(spacing: 2) {
-            // Progress ring around countdown
-            ZStack {
-                // Track
-                Circle()
-                    .stroke(stepColor.opacity(0.15), lineWidth: 4)
-                    .frame(width: 56, height: 56)
+        return VStack(spacing: 4) {
+            Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(stepColor)
+                .contentTransition(.numericText())
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
 
-                // Progress
-                Circle()
-                    .trim(from: 0, to: stepProgress)
-                    .stroke(stepColor, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .frame(width: 56, height: 56)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1), value: stepProgress)
-
-                // Countdown text inside ring
-                Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
-                    .font(ShuttlXFont.watchMetricSecondary)
-                    .monospacedDigit()
-                    .foregroundColor(stepColor)
-                    .contentTransition(.numericText())
-            }
-
-            // Step indicator: dot + label + counter
-            HStack(spacing: ShuttlXSpacing.xs) {
-                if let step = engine.currentStep {
-                    Circle()
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(stepColor.opacity(0.15))
+                    Capsule()
                         .fill(stepColor)
-                        .frame(width: 10, height: 10)
-                        .accessibilityLabel(step.type.displayName)
+                        .frame(width: max(0, proxy.size.width * stepProgress))
+                        .animation(.linear(duration: 1), value: stepProgress)
                 }
-
-                Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
-                    .font(ShuttlXFont.watchStepLabel)
-                    .foregroundColor(ShuttlXColor.textSecondary)
             }
+            .frame(height: 3)
+            .frame(maxWidth: heroSize * 2.4)   // arc never wider than the digits
         }
         .frame(maxWidth: .infinity)
         .id(engine.currentStepIndex)
-        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.9)))
+        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: engine.currentStepIndex)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Time remaining \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), step \(engine.currentStepIndex + 1) of \(engine.totalStepsCount)")
+        .accessibilityLabel("Time remaining in \(engine.currentStep?.type.displayName ?? "step"), \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), step \(engine.currentStepIndex + 1) of \(engine.totalStepsCount)")
         .accessibilityAddTraits(.updatesFrequently)
     }
 

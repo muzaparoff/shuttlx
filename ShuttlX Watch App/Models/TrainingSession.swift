@@ -84,6 +84,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var deviceName: String?
     var estimatedCalories: Double?
 
+    // Cadence (steps per minute); paused time excluded from average. Nil for legacy sessions.
+    var averageCadence: Double?
+    var maxCadence: Int?
+
     // Gym heart-recovery monitoring
     var sessionMode: SessionMode?
     var recoveryReport: RecoveryReport?
@@ -119,7 +123,9 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         totalSteps: Int? = nil,
         segments: [ActivitySegment] = [],
         route: [RoutePoint]? = nil,
-        kmSplits: [KmSplitData]? = nil
+        kmSplits: [KmSplitData]? = nil,
+        averageCadence: Double? = nil,
+        maxCadence: Int? = nil
     ) {
         self.id = id
         self.startDate = startDate
@@ -133,6 +139,8 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         self.segments = segments
         self.route = route
         self.kmSplits = kmSplits
+        self.averageCadence = averageCadence
+        self.maxCadence = maxCadence
         self.templateID = nil
         self.completedIntervalResults = nil
         self.programID = nil
