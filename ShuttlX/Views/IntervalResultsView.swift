@@ -6,7 +6,7 @@ struct IntervalResultsView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Interval Results")
-                .font(.headline)
+                .font(ShuttlXFont.cardTitle)
                 .padding(.top, 4)
 
             // Timeline bar
@@ -53,9 +53,9 @@ struct IntervalResultsView: View {
             // Label / type
             VStack(alignment: .leading, spacing: 1) {
                 Text(interval.label ?? interval.intervalType.displayName)
-                    .font(.subheadline.weight(.medium))
+                    .font(ShuttlXFont.cardSubtitle.weight(.medium))
                 Text("#\(index)")
-                    .font(.caption2)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.secondary)
             }
             .frame(minWidth: 60, alignment: .leading)
@@ -69,7 +69,7 @@ struct IntervalResultsView: View {
                 if interval.actualDuration != interval.targetDuration {
                     let diff = interval.actualDuration - interval.targetDuration
                     Text(diff >= 0 ? "+\(Int(diff))s" : "\(Int(diff))s")
-                        .font(.caption2)
+                        .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(diff > 3 ? ShuttlXColor.negative : .secondary)
                 }
             }
@@ -121,10 +121,12 @@ struct IntervalResultsView: View {
                 .font(ShuttlXFont.prValue)
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption2)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label): \(value)")
     }
 
     private func avgHR(_ intervals: [CompletedInterval]) -> String {

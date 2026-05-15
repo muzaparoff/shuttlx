@@ -35,17 +35,17 @@ struct PlanDetailView: View {
         VStack(spacing: 8) {
             if let sport = plan.sportType {
                 Image(systemName: sport.systemImage)
-                    .font(.title)
+                    .font(ShuttlXFont.heroIcon)
                     .foregroundStyle(sport.themeColor)
             }
 
             Text(plan.summaryText)
-                .font(.subheadline)
+                .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(.secondary)
 
             if let desc = plan.planDescription {
                 Text(desc)
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -57,7 +57,7 @@ struct PlanDetailView: View {
                     ProgressView(value: pct)
                         .tint(ShuttlXColor.ctaPrimary)
                     Text("\(Int(pct * 100))% complete")
-                        .font(.caption)
+                        .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, 32)
@@ -85,10 +85,10 @@ struct PlanDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text("Week \(week.weekNumber)")
-                    .font(.headline)
+                    .font(ShuttlXFont.cardTitle)
                 if let label = week.label {
                     Text("· \(label)")
-                        .font(.subheadline)
+                        .font(ShuttlXFont.cardSubtitle)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
@@ -110,24 +110,24 @@ struct PlanDetailView: View {
         return HStack(spacing: 10) {
             // Day label
             Text(dayOfWeekLabel(day.dayNumber))
-                .font(.caption.weight(.semibold))
+                .font(ShuttlXFont.cardCaption.weight(.semibold))
                 .frame(width: 30)
                 .foregroundStyle(.secondary)
 
             if day.isRestDay {
                 Text("Rest Day")
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
                     .italic()
             } else if day.isRecoveryDay {
                 Text("Free-form gym session — heart-recovery monitoring")
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
             } else {
                 Text(day.templateName ?? "Workout")
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .lineLimit(1)
             }
 

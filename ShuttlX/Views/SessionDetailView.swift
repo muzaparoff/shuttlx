@@ -231,12 +231,13 @@ struct ActivitySegmentsView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text(showAllSegments ? "Hide segments" : "Show all \(segments.count) segments")
-                            .font(.caption)
+                            .font(ShuttlXFont.cardCaption)
                         Image(systemName: showAllSegments ? "chevron.up" : "chevron.down")
-                            .font(.caption2)
+                            .font(ShuttlXFont.cardCaption)
                     }
                     .foregroundStyle(.secondary)
                 }
+                .accessibilityHint(showAllSegments ? "Hides detailed segment breakdown" : "Shows all \(segments.count) activity segments")
 
                 if showAllSegments {
                     segmentDetailRows

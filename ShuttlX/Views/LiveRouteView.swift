@@ -41,6 +41,7 @@ struct LiveRouteView: View {
                         }
                     }
                 }
+                .accessibilityLabel("Live route map showing \(routePoints.count) points tracked so far")
                 .mapStyle(.standard(elevation: .flat))
                 .frame(height: compact ? 120 : 200)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -55,10 +56,12 @@ struct LiveRouteView: View {
                         Image(systemName: "location.fill")
                             .foregroundStyle(ShuttlXColor.running)
                         Text("Acquiring route...")
-                            .font(.caption)
+                            .font(ShuttlXFont.cardCaption)
                             .foregroundStyle(.secondary)
                     }
                 }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Acquiring GPS signal for live route")
             }
         }
     }

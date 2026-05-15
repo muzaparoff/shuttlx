@@ -19,7 +19,7 @@ struct MetricCard: View {
                 .contentTransition(.numericText())
 
             Text(label)
-                .font(.caption2)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)

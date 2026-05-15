@@ -8,17 +8,16 @@ struct WatchPromptView: View {
 
                 Image(systemName: "applewatch")
                     .font(ShuttlXFont.heroIcon)
-                    .foregroundColor(.accentColor)
+                    .foregroundStyle(.tint)
                     .accessibilityHidden(true)
 
                 Text("Start Training on your Apple Watch")
-                    .font(.title2)
-                    .fontWeight(.semibold)
+                    .font(ShuttlXFont.cardTitle)
                     .multilineTextAlignment(.center)
 
                 Text("ShuttlX auto-detects running and walking.\nJust press Start on your Watch.")
-                    .font(.body)
-                    .foregroundColor(.secondary)
+                    .font(ShuttlXFont.cardSubtitle)
+                    .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
 
@@ -30,8 +29,8 @@ struct WatchPromptView: View {
                             .font(.title2)
                             .foregroundColor(ShuttlXColor.running)
                         Text("Running")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Auto-detects running")
@@ -41,8 +40,8 @@ struct WatchPromptView: View {
                             .font(.title2)
                             .foregroundColor(ShuttlXColor.walking)
                         Text("Walking")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
                     .accessibilityLabel("Auto-detects walking")

@@ -24,9 +24,9 @@ struct ProgramsTabView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Training Plans")
-                                    .font(.headline)
+                                    .font(ShuttlXFont.cardTitle)
                                 Text("\(planManager.plans.count) plan\(planManager.plans.count == 1 ? "" : "s")")
-                                    .font(.caption)
+                                    .font(ShuttlXFont.cardCaption)
                                     .foregroundStyle(.secondary)
                             }
                         } icon: {
@@ -46,9 +46,9 @@ struct ProgramsTabView: View {
                         Label {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text("Interval Workouts")
-                                    .font(.headline)
+                                    .font(ShuttlXFont.cardTitle)
                                 Text("\(templateManager.templates.count) workout\(templateManager.templates.count == 1 ? "" : "s")")
-                                    .font(.caption)
+                                    .font(ShuttlXFont.cardCaption)
                                     .foregroundStyle(.secondary)
                             }
                         } icon: {
@@ -77,7 +77,7 @@ struct ProgramsTabView: View {
                             .foregroundStyle(sport.themeColor)
                     }
                     Text(plan.name)
-                        .font(.headline)
+                        .font(ShuttlXFont.cardTitle)
                 }
 
                 // Progress bar
@@ -87,14 +87,14 @@ struct ProgramsTabView: View {
 
                 HStack {
                     Text("\(Int(pct * 100))% complete")
-                        .font(.caption)
+                        .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(.secondary)
 
                     Spacer()
 
                     if let next = planManager.nextWorkout(for: progress) {
                         Text("Week \(next.week), Day \(next.day)")
-                            .font(.caption)
+                            .font(ShuttlXFont.cardCaption)
                             .foregroundStyle(ShuttlXColor.ctaPrimary)
                     }
                 }

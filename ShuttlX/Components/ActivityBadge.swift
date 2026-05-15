@@ -7,9 +7,9 @@ struct ActivityBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: activity.systemImage)
-                .font(.caption2)
+                .font(ShuttlXFont.cardCaption)
             Text(FormattingUtils.formatDuration(duration))
-                .font(.caption.monospacedDigit())
+                .font(ShuttlXFont.cardCaption.monospacedDigit())
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)

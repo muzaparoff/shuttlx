@@ -22,6 +22,7 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(ShuttlXSpacing.sm)
+        .themedCard(accent: color)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value)")
     }

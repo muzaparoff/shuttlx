@@ -96,7 +96,7 @@ struct ElevationProfileView: View {
                 }
             } else {
                 Text("Not enough elevation data")
-                    .font(.footnote)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -105,14 +105,16 @@ struct ElevationProfileView: View {
     private func elevationStat(title: String, value: String, icon: String) -> some View {
         VStack(spacing: 2) {
             Image(systemName: icon)
-                .font(.caption2)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.secondary)
             Text(value)
-                .font(.subheadline.monospacedDigit().bold())
+                .font(ShuttlXFont.cardSubtitle.monospacedDigit().bold())
             Text(title)
-                .font(.caption2)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.secondary)
         }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(title): \(value)")
     }
 
     /// Haversine distance in km between two GPS points

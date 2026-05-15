@@ -104,7 +104,7 @@ struct AnalyticsView: View {
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("Form")
-                        .font(.caption)
+                        .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(.secondary)
                     Text(formScore >= 0 ? "+\(String(format: "%.0f", formScore))" : String(format: "%.0f", formScore))
                         .font(ShuttlXFont.metricMedium)
@@ -113,11 +113,7 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .background(ShuttlXColor.forRecovery(recovery).opacity(0.1), in: RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(ShuttlXColor.forRecovery(recovery).opacity(0.3), lineWidth: 1)
-        )
+        .themedCard(accent: ShuttlXColor.forRecovery(recovery), headerLabel: "RECOVERY")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Recovery status: \(recovery.rawValue). Form score: \(String(format: "%.0f", formScore))")
     }
@@ -535,13 +531,13 @@ private struct PRCard: View {
 
             if let date = date {
                 Text(FormattingUtils.formatShortDate(date))
-                    .font(.caption2)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.tertiary)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .background(color.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+        .themedCard(accent: color)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title): \(value)")
     }

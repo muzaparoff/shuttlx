@@ -56,6 +56,7 @@ struct WeekStripView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("\(dayFullName(day.date)), \(day.sessionCount) sessions\(day.isToday ? ", today" : "")")
+                    .accessibilityHint("Shows workouts for this day")
                 }
             }
             .padding(.horizontal)
