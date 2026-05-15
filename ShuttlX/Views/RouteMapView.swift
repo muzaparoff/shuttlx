@@ -50,7 +50,7 @@ struct RouteMapView: View {
                             .font(.caption)
                             .foregroundStyle(ShuttlXColor.ctaDestructive)
                             .padding(4)
-                            .background(.white, in: Circle())
+                            .background(ShuttlXColor.background, in: Circle())
                     }
                 }
             }

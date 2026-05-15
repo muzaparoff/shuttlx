@@ -79,7 +79,7 @@ class DataManager: ObservableObject {
         TelemetryDeck.signal("workoutCompleted", parameters: [
             "sport": session.sportType?.rawValue ?? "unknown",
             "durationMinutes": String(Int(session.duration / 60)),
-            "isInterval": String(session.completedIntervals != nil && !(session.completedIntervals!.isEmpty))
+            "isInterval": String(session.completedIntervals?.isEmpty == false)
         ])
     }
 

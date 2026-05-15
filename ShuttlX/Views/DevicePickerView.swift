@@ -64,7 +64,9 @@ struct DevicePickerView: View {
                 }
             }
         }
+        .scrollContentBackground(.hidden)
         .listStyle(.insetGrouped)
+        .themedScreenBackground()
         .navigationTitle("Select Device")
         .navigationBarTitleDisplayMode(.inline)
     }

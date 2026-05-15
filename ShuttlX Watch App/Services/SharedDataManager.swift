@@ -363,7 +363,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
                 // Throttle full resend to once per 60 seconds to prevent burst transfers
                 // during Bluetooth reconnect flicker in active workouts
                 let now = Date()
-                if self.lastFullResendTime == nil || now.timeIntervalSince(self.lastFullResendTime!) > 60 {
+                if self.lastFullResendTime.map({ now.timeIntervalSince($0) > 60 }) ?? true {
                     self.sendAllStoredSessions()
                     self.lastFullResendTime = now
                 }

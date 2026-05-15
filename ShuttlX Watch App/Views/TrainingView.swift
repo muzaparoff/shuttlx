@@ -124,12 +124,12 @@ struct TrainingView: View {
             Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
                 .font(.system(size: 36, weight: .bold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundColor(.white.opacity(0.7))
+                .foregroundColor(ShuttlXColor.textPrimary.opacity(0.7))
             if workoutManager.heartRate > 0 {
                 Text("\(workoutManager.heartRate) BPM")
                     .font(.system(size: 22, weight: .semibold, design: .monospaced))
                     .monospacedDigit()
-                    .foregroundColor(.red.opacity(0.7))
+                    .foregroundColor(ShuttlXColor.heartRate.opacity(0.7))
             }
             if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine, let step = engine.currentStep {
                 Text(step.type.displayName.uppercased())

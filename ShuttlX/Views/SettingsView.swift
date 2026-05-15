@@ -630,6 +630,7 @@ struct HealthPermissionsInfoView: View {
                 }
                 .padding()
             }
+            .themedScreenBackground()
             .navigationTitle("Health Permissions")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

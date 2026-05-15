@@ -245,9 +245,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
 
         Task { [weak self] in
+            defer { self?.isStarting = false }
             guard let self = self else { return }
             await self.startWorkoutAfterAuth()
-            self.isStarting = false
         }
     }
 
@@ -483,7 +483,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         completedCaptures = []
         currentCadence = 0
 
-        // Backup is cleared by saveWorkoutData() after confirmed save — not here
+        // Clear backup so a Discard path doesn't trigger a false crash-recovery prompt
+        // on next launch. (Save path also clears it on confirmed save — idempotent.)
+        clearWorkoutBackup()
     }
 
     // MARK: - HKWorkoutSession

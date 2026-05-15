@@ -36,11 +36,11 @@ struct RecoveryWorkoutView: View {
             Spacer()
             ZStack {
                 Circle()
-                    .stroke(Color.gray.opacity(0.2), lineWidth: 3)
+                    .stroke(ShuttlXColor.surfaceBorder, lineWidth: 3)
                     .frame(width: ringSize, height: ringSize)
                 Circle()
                     .trim(from: 0, to: progress)
-                    .stroke(Color.green.opacity(0.75), style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                    .stroke(ShuttlXColor.positive.opacity(0.75), style: StrokeStyle(lineWidth: 3, lineCap: .round))
                     .frame(width: ringSize, height: ringSize)
                     .rotationEffect(.degrees(-90))
                     .animation(.linear(duration: 1), value: progress)
@@ -166,7 +166,7 @@ struct RecoveryWorkoutView: View {
         return VStack(spacing: h * 0.02) {
             Text("REST")
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                .foregroundColor(.orange)
+                .foregroundColor(ShuttlXColor.ctaWarning)
 
             Text(FormattingUtils.formatTimer(restSecs))
                 .font(.system(size: timerSize, weight: .bold, design: .monospaced))
@@ -226,7 +226,7 @@ struct RecoveryWorkoutView: View {
 
     private func restTimerColor(restSecs: TimeInterval) -> Color {
         if restSecs >= 120 { return ShuttlXColor.ctaPrimary }
-        if restSecs >= 60  { return .orange }
+        if restSecs >= 60  { return ShuttlXColor.ctaWarning }
         return ShuttlXColor.textPrimary
     }
 
@@ -240,16 +240,16 @@ struct RecoveryWorkoutView: View {
                     .foregroundColor(ShuttlXColor.ctaPrimary)
             }
         }
-        .foregroundColor(reached ? .white : .gray)
+        .foregroundColor(reached ? ShuttlXColor.textPrimary : ShuttlXColor.textSecondary)
         .padding(.horizontal, 5)
         .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: 4)
-                .fill(reached ? Color.green.opacity(0.25) : Color.gray.opacity(0.15))
+                .fill(reached ? ShuttlXColor.positive.opacity(0.25) : ShuttlXColor.surface)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 4)
-                .stroke(reached ? Color.green.opacity(0.6) : Color.gray.opacity(0.3), lineWidth: 1)
+                .stroke(reached ? ShuttlXColor.positive.opacity(0.6) : ShuttlXColor.surfaceBorder, lineWidth: 1)
         )
         .accessibilityLabel(
             reached
