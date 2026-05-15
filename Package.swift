@@ -26,7 +26,11 @@ let package = Package(
         .testTarget(
             name: "ShuttlXTests",
             dependencies: ["ShuttlXShared"],
-            path: "Tests"
+            // The existing `tests/` directory holds shell + Python build helpers
+            // (e.g., build_and_test_both_platforms.sh) — we nest the SPM tests
+            // under `tests/ShuttlXTests/` so they coexist. Using the existing
+            // casing keeps the path stable across case-sensitive filesystems.
+            path: "tests/ShuttlXTests"
         ),
     ]
 )
