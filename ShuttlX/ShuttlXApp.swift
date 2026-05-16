@@ -12,6 +12,7 @@ struct ShuttlXApp: App {
     @StateObject private var planManager = PlanManager()
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var cloudKitSync = CloudKitSyncManager.shared
+    @StateObject private var workoutController = iPhoneWorkoutController()
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
     @State private var deepLinkSessionID: UUID?
 
@@ -40,6 +41,24 @@ struct ShuttlXApp: App {
             .environmentObject(planManager)
             .environmentObject(authManager)
             .environmentObject(cloudKitSync)
+            .environmentObject(workoutController)
+            // Present the iPhone workout timer over whatever's on screen when
+            // any entry-point view calls `controller.presentFreeRun()` /
+            // `presentInterval(template:)` / `presentGymRecovery()`. The
+            // controller's tearDown() flips this back to false on Finish /
+            // Cancel, dismissing the cover.
+            .fullScreenCover(isPresented: $workoutController.isPresentingTimer) {
+                iPhoneWorkoutTimerView(controller: workoutController)
+                    .environment(themeManager)
+                    .environmentObject(dataManager)
+            }
+            .task {
+                // Wire the controller's DataManager dependency once at startup.
+                // The controller saves finished sessions via
+                // DataManager.handleReceivedSessions(_:) — same store the
+                // watch writes to.
+                workoutController.dataManager = dataManager
+            }
             .onOpenURL { url in
                 guard url.scheme == "shuttlx" else { return }
                 if url.host == "session",

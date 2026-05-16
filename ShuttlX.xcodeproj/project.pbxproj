@@ -84,6 +84,10 @@
 		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
 		SS000001 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		SS000002 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
+		IW000001 /* iPhoneHapticPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000001F /* iPhoneHapticPlayer.swift */; };
+		IW000002 /* iOSHeartRateMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000002F /* iOSHeartRateMonitor.swift */; };
+		IW000003 /* iPhoneWorkoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000003F /* iPhoneWorkoutController.swift */; };
+		IW000004 /* iPhoneWorkoutTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000004F /* iPhoneWorkoutTimerView.swift */; };
 		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
 		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
 		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
@@ -231,6 +235,10 @@
 		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
 		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
 		A5923507F /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
+		IW000001F /* iPhoneHapticPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneHapticPlayer.swift; sourceTree = "<group>"; };
+		IW000002F /* iOSHeartRateMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSHeartRateMonitor.swift; sourceTree = "<group>"; };
+		IW000003F /* iPhoneWorkoutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneWorkoutController.swift; sourceTree = "<group>"; };
+		IW000004F /* iPhoneWorkoutTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workout/iPhoneWorkoutTimerView.swift"; sourceTree = "<group>"; };
 		A5923508 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		A5923508F /* SharedDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDataManager.swift; sourceTree = "<group>"; };
 		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -476,6 +484,9 @@
 				ED000002 /* CalorieEstimationEngine.swift */,
 				ED000003 /* DeviceManager.swift */,
 				SM000001 /* SubscriptionManager.swift */,
+				IW000001F /* iPhoneHapticPlayer.swift */,
+				IW000002F /* iOSHeartRateMonitor.swift */,
+				IW000003F /* iPhoneWorkoutController.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -525,6 +536,7 @@
 				ED000004 /* DeviceListView.swift */,
 				ED000005 /* DevicePickerView.swift */,
 				SM000002 /* PaywallView.swift */,
+				IW000004F /* iPhoneWorkoutTimerView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
 			);
@@ -891,6 +903,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				IW000001 /* iPhoneHapticPlayer.swift in Sources */,
+				IW000002 /* iOSHeartRateMonitor.swift in Sources */,
+				IW000003 /* iPhoneWorkoutController.swift in Sources */,
+				IW000004 /* iPhoneWorkoutTimerView.swift in Sources */,
 				A5923502 /* ContentView.swift in Sources */,
 				A5923503 /* ShuttlXApp.swift in Sources */,
 				A5923505 /* TrainingSession.swift in Sources */,

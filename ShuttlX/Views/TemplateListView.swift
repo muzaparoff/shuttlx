@@ -3,6 +3,7 @@ import SwiftUI
 struct TemplateListView: View {
     @EnvironmentObject var templateManager: TemplateManager
     @EnvironmentObject var dataManager: DataManager
+    @EnvironmentObject var workoutController: iPhoneWorkoutController
     @State private var showingEditor = false
     @State private var editingTemplate: WorkoutTemplate?
 
@@ -143,7 +144,24 @@ struct TemplateListView: View {
                     templateRow(template)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            editingTemplate = template
+                            // Tap = start the workout on iPhone. Edit moved to the
+                            // long-press context menu so the most-common action
+                            // (start) is one tap.
+                            workoutController.presentInterval(template: template)
+                        }
+                        .contextMenu {
+                            Button {
+                                editingTemplate = template
+                            } label: {
+                                Label("Edit", systemImage: "pencil")
+                            }
+                            Button(role: .destructive) {
+                                if let idx = templateManager.templates.firstIndex(where: { $0.id == template.id }) {
+                                    templateManager.deleteAt(offsets: IndexSet(integer: idx))
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
                         }
                 }
                 .onDelete { offsets in

@@ -36,6 +36,14 @@ final class iPhoneWorkoutController: ObservableObject {
     @Published private(set) var isActive: Bool = false
     @Published private(set) var isPaused: Bool = false
 
+    /// Writable presentation flag — entry points (Dashboard, TemplateList,
+    /// PlanDetail) call a `present*` convenience method which both starts the
+    /// workout AND flips this to true. The root view binds a
+    /// `.fullScreenCover(isPresented:)` to it. Finish/Cancel flip it back to
+    /// false (in `tearDown`) so the cover auto-dismisses without callers
+    /// needing to track presentation state themselves.
+    @Published var isPresentingTimer: Bool = false
+
     // MARK: - Common metrics
 
     @Published private(set) var elapsedTime: TimeInterval = 0
@@ -64,7 +72,10 @@ final class iPhoneWorkoutController: ObservableObject {
     @Published private(set) var latestHRR2: Int?
     @Published private(set) var completedCaptures: [HRRCapture] = []
     private var recoverySegmenter: RecoverySegmenter?
-    private var lastDetectedActivity: DetectedActivity = .unknown
+    // Fully qualified — the iOS app target also defines a `DetectedActivity`
+    // (in ShuttlX/Models/ActivitySegment.swift) which would shadow the Shared
+    // one. The segmenter expects the Shared version, so we pin it explicitly.
+    private var lastDetectedActivity: ShuttlXShared.DetectedActivity = .unknown
 
     // MARK: - Private state
 
@@ -83,6 +94,28 @@ final class iPhoneWorkoutController: ObservableObject {
     private var locationDelegate: LocationProxy?
 
     weak var dataManager: DataManager?
+
+    // MARK: - Convenience start-and-present helpers (used by entry-point views)
+
+    /// Start a free-run workout AND present the timer view. Use from buttons
+    /// in DashboardView / etc. so the caller doesn't have to manage cover state.
+    func presentFreeRun() {
+        guard !isActive else { isPresentingTimer = true; return }
+        startFreeRun()
+        isPresentingTimer = true
+    }
+
+    func presentInterval(template: WorkoutTemplate) {
+        guard !isActive else { isPresentingTimer = true; return }
+        startInterval(template: template)
+        isPresentingTimer = true
+    }
+
+    func presentGymRecovery() {
+        guard !isActive else { isPresentingTimer = true; return }
+        startGymRecovery()
+        isPresentingTimer = true
+    }
 
     // MARK: - Lifecycle
 
@@ -264,6 +297,8 @@ final class iPhoneWorkoutController: ObservableObject {
         activeTemplate = nil
         isActive = false
         isPaused = false
+        // Dismiss the timer cover that present*() raised.
+        isPresentingTimer = false
         elapsedTime = 0
         totalDistance = 0
         totalSteps = 0
