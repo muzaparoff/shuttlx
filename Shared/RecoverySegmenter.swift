@@ -56,6 +56,14 @@ public struct SegmenterConfig: Sendable {
     public var workFallbackDuration: TimeInterval = 45
     /// (cardiacRehab) Seconds of non-walking after walk stops before confirming next station start.
     public var walkStopConfirmDuration: TimeInterval = 15
+    /// (cardiacRehab) When true (default), the patient drives state transitions via
+    /// explicit `manualStartStation()` / `manualEndStation()` calls. The motion-
+    /// based auto-detection path (dual-condition stationary + HR rise) still
+    /// compiles and is reachable by flipping this to `false` — it's preserved
+    /// so a future Settings toggle can let users opt into hands-free detection.
+    /// Even in manual mode, `tick()` still fires HRR captures at +60s/+120s
+    /// and still advances the rest-elapsed clock.
+    public var manualStationsOnly: Bool = true
 
     public init() {}
 }
@@ -90,11 +98,65 @@ public struct RecoverySegmenter {
     }
 
     /// 0.0–1.0: stationary confirmation progress while in cardiacRehab idle state (for UI arc).
+    /// Returns 0 when `manualStationsOnly` is on — there's no auto-detect candidate building.
     public var candidateProgress: Double {
         guard config.profile == .cardiacRehab,
+              !config.manualStationsOnly,
               state == .idle,
               let start = workCandidateStart else { return 0 }
         return min(1.0, Date().timeIntervalSince(start) / config.stationaryConfirmDuration)
+    }
+
+    // MARK: - Manual control API (cardiacRehab)
+
+    /// Patient tapped **Start Station**. Transitions:
+    ///   - `.idle`  → `.work`  (begins station 1, or the next station after a rest exit)
+    ///   - `.rest`  → `.work`  (records the rest duration into the last HRRCapture-equivalent first)
+    ///   - `.work`  → no-op (already on a station)
+    public mutating func manualStartStation(hr: Int, now: Date) -> [SegmenterEvent] {
+        var events: [SegmenterEvent] = []
+        switch state {
+        case .idle:
+            state = .work
+            workStartTime = now
+            setNumber += 1
+            peakHRDuringWork = max(hr, 0)
+            events.append(.enteredWork(setNumber: setNumber))
+        case .rest:
+            // Exit rest first so the caller sees the duration before the new station begins.
+            if let restStart = restStartTime {
+                let duration = now.timeIntervalSince(restStart)
+                events.append(.restExited(duration: duration))
+            }
+            restStartTime = nil
+            notWalkingCandidateStart = nil
+            state = .work
+            workStartTime = now
+            setNumber += 1
+            peakHRDuringWork = max(hr, 0)
+            events.append(.enteredWork(setNumber: setNumber))
+        case .work:
+            break
+        }
+        return events
+    }
+
+    /// Patient tapped **End Station**. Transitions `.work` → `.rest`, capturing peak HR
+    /// just like the walking-trigger path does in auto mode. No-op from `.idle` / `.rest`.
+    public mutating func manualEndStation(hr: Int, now: Date) -> [SegmenterEvent] {
+        guard state == .work else { return [] }
+        if hr > peakHRDuringWork { peakHRDuringWork = hr }
+        let peak = peakHRDuringWork
+        restStartTime = now
+        peakHRAtRestEntry = peak
+        hrr1Captured = false
+        hrr2Captured = false
+        notWalkingCandidateStart = nil
+        state = .rest
+        workStartTime = nil
+        workCandidateStart = nil
+        peakHRDuringWork = 0
+        return [.enteredRest(peakHR: peak, setNumber: setNumber, restEntryTime: now)]
     }
 
     /// Called once per second. Returns 0…N events describing state transitions and captures.
@@ -187,6 +249,30 @@ public struct RecoverySegmenter {
         var events: [SegmenterEvent] = []
         let isWalking = activity == .walking
         let isOnMachine = activity == .stationary || activity == .unknown
+
+        // Manual mode: keep HRR captures + rest elapsed running, but skip every
+        // motion-driven state transition. State only flips via the public
+        // manualStartStation / manualEndStation methods. Track peak HR during
+        // work so manualEndStation has an accurate `peakHR` to record.
+        if config.manualStationsOnly {
+            switch state {
+            case .work:
+                if hr > peakHRDuringWork { peakHRDuringWork = hr }
+            case .rest:
+                guard let restStart = restStartTime else { state = .idle; break }
+                let restElapsed = now.timeIntervalSince(restStart)
+                if restElapsed > config.restTimeoutDuration {
+                    state = .idle
+                    restStartTime = nil
+                    events.append(.restExited(duration: restElapsed))
+                    break
+                }
+                events += captureHRR(hr: hr, restElapsed: restElapsed)
+            case .idle:
+                break
+            }
+            return events
+        }
 
         switch state {
         case .idle:

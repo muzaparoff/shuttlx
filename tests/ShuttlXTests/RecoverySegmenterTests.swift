@@ -8,6 +8,10 @@ private let baseDate = Date(timeIntervalSinceReferenceDate: 0)
 private func cardiacConfig() -> SegmenterConfig {
     var c = SegmenterConfig()
     c.profile = .cardiacRehab
+    // Existing cardiac-rehab tests exercise the auto-detect path. After
+    // Sprint 7, manualStationsOnly defaults to true; opt out explicitly here
+    // so the auto path is still under test.
+    c.manualStationsOnly = false
     return c
 }
 
@@ -195,6 +199,100 @@ final class GymStrengthSegmenterTests: XCTestCase {
     }
 }
 
+// MARK: - Manual stations (cardiacRehab)
+//
+// New API for the explicit Start/End Station UX. In manual mode the segmenter
+// only flips state via the public manualStartStation / manualEndStation calls;
+// motion classification is ignored, but HRR captures + the rest-elapsed clock
+// continue to fire from tick().
+
+private func cardiacManualConfig() -> SegmenterConfig {
+    var c = SegmenterConfig()
+    c.profile = .cardiacRehab
+    c.manualStationsOnly = true   // explicit (matches the post-Sprint-7 default)
+    return c
+}
+
+final class ManualStationsSegmenterTests: XCTestCase {
+
+    func testManualStartStation_FromIdle_EntersWork() {
+        var segmenter = RecoverySegmenter(config: cardiacManualConfig())
+        let events = segmenter.manualStartStation(hr: 120, now: baseDate)
+        XCTAssertEqual(segmenter.state, .work)
+        XCTAssertEqual(segmenter.setNumber, 1)
+        XCTAssertTrue(events.contains { if case .enteredWork(setNumber: 1) = $0 { return true } else { return false } })
+    }
+
+    func testManualEndStation_FromWork_EntersRest_WithPeakHR() {
+        var segmenter = RecoverySegmenter(config: cardiacManualConfig())
+        var cursor = 0
+        _ = segmenter.manualStartStation(hr: 110, now: baseDate)
+        // 10 ticks of climbing HR — segmenter should track peak through tick().
+        _ = tickFor(10, hr: 0, activity: .unknown, segmenter: &segmenter, cursor: &cursor,
+                    hrRamp: { i in 110 + i })   // 110 → 119
+        // Tap End Station. Peak HR seen = 119.
+        let events = segmenter.manualEndStation(hr: 118, now: baseDate.addingTimeInterval(10))
+        XCTAssertEqual(segmenter.state, .rest)
+        // The .enteredRest event carries peakHR — confirm it matches what we ramped to.
+        let peakInEvent: Int? = events.compactMap { e -> Int? in
+            if case let .enteredRest(peakHR, _, _) = e { return peakHR } else { return nil }
+        }.first
+        XCTAssertEqual(peakInEvent, 119, "Peak HR should reflect ramped max during the manual station")
+    }
+
+    func testManualStartStation_DuringRest_RestExitedFiresWithDuration() {
+        var segmenter = RecoverySegmenter(config: cardiacManualConfig())
+        _ = segmenter.manualStartStation(hr: 120, now: baseDate)
+        _ = segmenter.manualEndStation(hr: 140, now: baseDate.addingTimeInterval(60))
+        // 30s into rest, patient taps Start Station for station 2.
+        let events = segmenter.manualStartStation(hr: 105, now: baseDate.addingTimeInterval(90))
+        XCTAssertEqual(segmenter.state, .work)
+        XCTAssertEqual(segmenter.setNumber, 2)
+        let restDuration: TimeInterval? = events.compactMap { e -> TimeInterval? in
+            if case let .restExited(duration) = e { return duration } else { return nil }
+        }.first
+        XCTAssertEqual(restDuration ?? -1, 30, accuracy: 0.5,
+                       "rest duration recorded should match the wall-clock gap")
+    }
+
+    func testManualMode_DoesNotAutoTransition_OnMotionClassification() {
+        var segmenter = RecoverySegmenter(config: cardiacManualConfig())
+        var cursor = 0
+        // Even with the dual-condition signal that would trigger auto mode
+        // (stationary 16s + HR rising past +6 BPM), manual mode should not
+        // advance to .work.
+        _ = tickFor(16, hr: 0, activity: .stationary, segmenter: &segmenter, cursor: &cursor,
+                    hrRamp: { i in 80 + i })
+        XCTAssertEqual(segmenter.state, .idle,
+                       "Manual mode must not transition on motion classification")
+    }
+
+    func testHRRCaptures_StillFire_DuringManualRest() {
+        var segmenter = RecoverySegmenter(config: cardiacManualConfig())
+        var cursor = 0
+        _ = segmenter.manualStartStation(hr: 150, now: baseDate)
+        // tickFor doesn't advance state in manual mode but still tracks peak in .work.
+        _ = tickFor(10, hr: 150, activity: .unknown, segmenter: &segmenter, cursor: &cursor)
+        // End Station at cursor=10 with peak HR = 155.
+        _ = segmenter.manualEndStation(hr: 155, now: baseDate.addingTimeInterval(10))
+        // Drive rest forward via tick() — drop HR before each HRR window so the
+        // captured drop is large.
+        cursor = 10
+        let events = tickFor(125, hr: 0, activity: .unknown, segmenter: &segmenter, cursor: &cursor,
+                             hrRamp: { i in
+                                 if i < 30  { return 150 }
+                                 if i < 90  { return 130 }
+                                 return 110
+                             })
+        let hrr1 = events.compactMap { if case let .hrrCapture(mark, drop) = $0, mark == 1 { return drop } else { return nil } }
+        let hrr2 = events.compactMap { if case let .hrrCapture(mark, drop) = $0, mark == 2 { return drop } else { return nil } }
+        XCTAssertEqual(hrr1.count, 1, "HRR-1 must fire during manual rest")
+        XCTAssertEqual(hrr2.count, 1, "HRR-2 must fire during manual rest")
+        XCTAssertGreaterThanOrEqual(hrr1.first ?? -1, 20, "drop should reflect 155→130")
+        XCTAssertGreaterThanOrEqual(hrr2.first ?? -1, 40, "drop should reflect 155→110")
+    }
+}
+
 // MARK: - Config defaults
 
 final class SegmenterConfigTests: XCTestCase {
@@ -211,5 +309,11 @@ final class SegmenterConfigTests: XCTestCase {
         XCTAssertEqual(c.hrRiseForWork, 6)
         XCTAssertEqual(c.workFallbackDuration, 45)
         XCTAssertEqual(c.walkStopConfirmDuration, 15)
+    }
+
+    func testManualStationsOnly_DefaultsTrue() {
+        // Sprint-7 default flipped manual-on. Locking it down so future refactors
+        // don't silently regress the cardiac-rehab UX back to auto-only.
+        XCTAssertTrue(SegmenterConfig().manualStationsOnly)
     }
 }
