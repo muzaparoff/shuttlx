@@ -82,6 +82,7 @@
 		R5923002 /* LiveRouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923002F /* LiveRouteView.swift */; };
 		RC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = RC100001 /* RevenueCat */; };
 		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
+		SS000001 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
 		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
 		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
@@ -375,6 +376,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				SS000001 /* ShuttlXShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -692,6 +694,7 @@
 			);
 			name = "ShuttlX Watch App";
 			packageProductDependencies = (
+				SS100001 /* ShuttlXShared */,
 			);
 			productName = "ShuttlX Watch App";
 			productReference = A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */;
@@ -814,6 +817,7 @@
 			packageReferences = (
 				RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				TD200001 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
+				SS200001 /* XCLocalSwiftPackageReference "." */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A59234DF /* Products */;
@@ -1709,11 +1713,23 @@
 		};
 /* End XCRemoteSwiftPackageReference section */
 
+/* Begin XCLocalSwiftPackageReference section */
+		SS200001 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = ".";
+		};
+/* End XCLocalSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		RC100001 /* RevenueCat */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
 			productName = RevenueCat;
+		};
+		SS100001 /* ShuttlXShared */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = SS200001 /* XCLocalSwiftPackageReference "." */;
+			productName = ShuttlXShared;
 		};
 		RC100002 /* RevenueCatUI */ = {
 			isa = XCSwiftPackageProductDependency;

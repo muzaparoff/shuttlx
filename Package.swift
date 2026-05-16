@@ -7,7 +7,10 @@ let package = Package(
     name: "ShuttlX",
     platforms: [
         .iOS(.v16),
-        .watchOS(.v9)
+        .watchOS(.v9),
+        // macOS is declared so `swift test` can run on the developer Mac host.
+        // Production code targets iOS/watchOS — macOS support is test-only.
+        .macOS(.v12)
     ],
     products: [
         .library(
