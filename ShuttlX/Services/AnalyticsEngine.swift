@@ -67,16 +67,22 @@ enum AnalyticsEngine {
         let weeklyLoads = weeklyTrainingLoads(sessions: sessions, weeks: 6)
         guard !weeklyLoads.isEmpty else { return 0 }
 
-        // Exponential weighting: most recent week has highest weight
+        // Exponential weighting: most recent week has highest weight.
+        // We weight at most the last 6 weeks. If the caller passes more, we
+        // take the tail so the heaviest weight (0.35) always lands on the
+        // most recent week — the previous form silently fell back to a
+        // uniform 0.1 weight for any overflow, which broke the intended
+        // exponential decay for power users with 6+ weeks of history.
         let weights: [Double] = [0.05, 0.08, 0.12, 0.15, 0.25, 0.35]
-        let count = weeklyLoads.count
+        let recent = Array(weeklyLoads.suffix(weights.count))
+        let count = recent.count
         var weightedSum = 0.0
         var totalWeight = 0.0
 
         for i in 0..<count {
-            let weightIndex = (6 - count) + i
-            let weight = weightIndex >= 0 && weightIndex < weights.count ? weights[weightIndex] : 0.1
-            weightedSum += weeklyLoads[i] * weight
+            let weightIndex = (weights.count - count) + i
+            let weight = weights[weightIndex]
+            weightedSum += recent[i] * weight
             totalWeight += weight
         }
 

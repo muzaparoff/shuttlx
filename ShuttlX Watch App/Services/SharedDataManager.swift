@@ -22,6 +22,11 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     private var backgroundSyncTimer: Timer?
     private let pendingSessionsFileName = "pending_sync_sessions.json"
     private var lastFullResendTime: Date?
+    // Gates scheduleFinishRetryBurst — without this, each pending session in a
+    // retry cycle would schedule another 3 retries (1s/3s/8s), creating an
+    // O(3^k × N) closure explosion that can kill the watch extension under
+    // memory pressure.
+    private var isBurstScheduled = false
 
     // MARK: - Initialization
 
@@ -148,10 +153,17 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func scheduleFinishRetryBurst() {
+        // Single-flight: if a burst is already in flight, don't queue another.
+        // Otherwise a chain of sendSessionToiOS calls from retryPendingSessions
+        // would compound bursts exponentially.
+        guard !isBurstScheduled else { return }
+        isBurstScheduled = true
         let delays: [TimeInterval] = [1, 3, 8]
-        for delay in delays {
+        for (index, delay) in delays.enumerated() {
+            let isLast = index == delays.count - 1
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 self?.retryPendingSessions()
+                if isLast { self?.isBurstScheduled = false }
             }
         }
     }
@@ -393,10 +405,26 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     nonisolated func session(_ session: WCSession, didReceiveMessage message: [String: Any], replyHandler: @escaping ([String: Any]) -> Void) {
+        // Reply to lightweight pings synchronously — WC times out replies that
+        // come back too late (~5s undocumented), and if the main actor is busy
+        // (heavy JSON decode of 50+ sessions, etc.) the deferred Task could miss
+        // the window. Heavier branches stay inside the Task because they need
+        // main-actor state.
+        if let action = message["action"] as? String, action == "ping" {
+            replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
+            Task { @MainActor [weak self] in
+                self?.updateSyncStatus("Connection verified")
+                self?.consecutiveFailures = 0
+                self?.updateConnectivityHealth()
+            }
+            return
+        }
+
         Task { @MainActor in
             if let action = message["action"] as? String {
                 switch action {
                 case "ping":
+                    // Already handled above; unreachable but keeps the switch exhaustive.
                     replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
                     self.updateSyncStatus("Connection verified")
                     self.consecutiveFailures = 0

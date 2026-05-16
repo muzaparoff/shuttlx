@@ -55,7 +55,12 @@ class CloudKitSyncManager: ObservableObject {
         isSyncing = true
         syncError = nil
 
-        Task {
+        // Pin to @MainActor explicitly. After multiple `await` suspension points
+        // (pullSessions, pushSessions, handleReceivedSessions) the resumption
+        // executor is not guaranteed to be the main actor in Swift 5.9+, so a
+        // bare `Task {}` could deliver completion?() off-main and cause UI updates
+        // in callers (SettingsView, etc.) to mutate state from a background thread.
+        Task { @MainActor in
             do {
                 let remoteSessions = try await pullSessions()
                 let localSessions = dataManager.sessions

@@ -222,8 +222,17 @@ class DataManager: ObservableObject {
             return
         }
 
-        // Merge: add sessions from disk that aren't already in memory
+        // Fast path: first load (empty in-memory list) — skip the per-session
+        // merge loop and just replace wholesale. For users with 500+ sessions
+        // this saved a noticeable startup pause from O(n) insert + duplicate-build.
         let existingIds = Set(sessions.map { $0.id })
+        if existingIds.isEmpty {
+            sessions = loaded
+            processedSessionIds = Set(loaded.map { $0.id })
+            return
+        }
+
+        // Subsequent loads: merge new sessions only.
         var hasNew = false
         for session in loaded {
             processedSessionIds.insert(session.id)
@@ -232,12 +241,7 @@ class DataManager: ObservableObject {
                 hasNew = true
             }
         }
-
-        // If first load (empty), just replace
-        if existingIds.isEmpty {
-            sessions = loaded
-            processedSessionIds = Set(loaded.map { $0.id })
-        } else if hasNew {
+        if hasNew {
             logger.info("Loaded \(self.sessions.count - existingIds.count) new session(s) from disk")
         }
     }
