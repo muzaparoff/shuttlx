@@ -83,6 +83,7 @@
 		RC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = RC100001 /* RevenueCat */; };
 		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
 		SS000001 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
+		SS000002 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
 		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
 		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
@@ -387,6 +388,7 @@
 				RC000001 /* RevenueCat in Frameworks */,
 				RC000002 /* RevenueCatUI in Frameworks */,
 				TD000001 /* TelemetryDeck in Frameworks */,
+				SS000002 /* ShuttlXShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -722,6 +724,7 @@
 				RC100001 /* RevenueCat */,
 				RC100002 /* RevenueCatUI */,
 				TD100001 /* TelemetryDeck */,
+				SS100001 /* ShuttlXShared */,
 			);
 			productName = ShuttlX;
 			productReference = A59234DE /* ShuttlX.app */;
