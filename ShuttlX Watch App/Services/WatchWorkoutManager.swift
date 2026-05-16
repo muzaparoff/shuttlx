@@ -390,6 +390,38 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         startWorkout()
     }
 
+    // MARK: - Manual station control (cardiacRehab)
+
+    /// Patient tapped **Start Station** on the watch.
+    func manualStartStation() {
+        guard workoutMode == .gymRecovery, var segmenter = recoverySegmenter else { return }
+        let events = segmenter.manualStartStation(hr: heartRate, now: Date())
+        recoverySegmenter = segmenter
+        processRecoveryEvents(events)
+        publishRecoveryState()
+    }
+
+    /// Patient tapped **End Station** on the watch.
+    func manualEndStation() {
+        guard workoutMode == .gymRecovery, var segmenter = recoverySegmenter else { return }
+        let events = segmenter.manualEndStation(hr: heartRate, now: Date())
+        recoverySegmenter = segmenter
+        processRecoveryEvents(events)
+        publishRecoveryState()
+    }
+
+    /// Mirror segmenter state into the @Published surface views observe.
+    /// Same shape as the inline block in `updateElapsedTime`, factored out
+    /// so the manual paths can reuse it.
+    private func publishRecoveryState() {
+        guard let segmenter = recoverySegmenter else { return }
+        let now = Date()
+        restElapsedTime = segmenter.restStartTime.map { now.timeIntervalSince($0) } ?? 0
+        stationElapsedTime = segmenter.workStartTime.map { now.timeIntervalSince($0) } ?? 0
+        recoveryState = segmenter.state
+        recoverySetNumber = segmenter.setNumber
+    }
+
     func pauseWorkout() {
         guard isWorkoutActive, !isPaused else { return }
         isPaused = true

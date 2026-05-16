@@ -159,6 +159,10 @@ final class iPhoneWorkoutController: ObservableObject {
         workoutName = "Gym Recovery"
         var config = SegmenterConfig()
         config.profile = .cardiacRehab
+        // Sprint-7 default — manualStationsOnly is already true, but make it
+        // explicit at the call site so a future SegmenterConfig flip never
+        // silently regresses the iOS gym-recovery UX.
+        config.manualStationsOnly = true
         recoverySegmenter = RecoverySegmenter(config: config)
         recoveryState = .idle
         stationElapsedTime = 0
@@ -272,6 +276,37 @@ final class iPhoneWorkoutController: ObservableObject {
     func cancel() {
         guard isActive else { return }
         tearDown()
+    }
+
+    // MARK: - Manual station control (gymRecovery)
+
+    /// Patient tapped **Start Station** in the timer view.
+    func manualStartStation() {
+        guard mode == .gymRecovery, var seg = recoverySegmenter else { return }
+        let events = seg.manualStartStation(hr: heartRateMonitor.current, now: Date())
+        recoverySegmenter = seg
+        processRecoveryEvents(events)
+        publishRecoveryState()
+        haptics.play(.workStart)
+    }
+
+    /// Patient tapped **End Station** in the timer view.
+    func manualEndStation() {
+        guard mode == .gymRecovery, var seg = recoverySegmenter else { return }
+        let events = seg.manualEndStation(hr: heartRateMonitor.current, now: Date())
+        recoverySegmenter = seg
+        processRecoveryEvents(events)
+        publishRecoveryState()
+        haptics.play(.restStart)
+    }
+
+    private func publishRecoveryState() {
+        guard let seg = recoverySegmenter else { return }
+        let now = Date()
+        restElapsedTime = seg.restStartTime.map { now.timeIntervalSince($0) } ?? 0
+        stationElapsedTime = seg.workStartTime.map { now.timeIntervalSince($0) } ?? 0
+        recoveryState = seg.state
+        recoverySetNumber = seg.setNumber
     }
 
     func skipStep() {

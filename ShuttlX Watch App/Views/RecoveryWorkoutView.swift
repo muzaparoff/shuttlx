@@ -3,8 +3,18 @@ import SwiftUI
 import WatchKit
 #endif
 
+/// Single-layout gym-recovery view: BPM is always the hero, a state pill
+/// communicates `READY` / `STATION N · station-elapsed` / `REST · rest-elapsed`,
+/// and one big contextual button drives the manual flow:
+///
+///   - `.idle` / `.rest` → "Start Station" (green ctaPrimary)
+///   - `.work`           → "End Station"   (red ctaDestructive)
+///
+/// Designed for 40 mm screens — BPM keeps its 56pt+ size in every state by
+/// avoiding side-by-side buttons.
 struct RecoveryWorkoutView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     #if os(watchOS)
     private let screenHeight = WKInterfaceDevice.current().screenBounds.height
@@ -13,196 +23,166 @@ struct RecoveryWorkoutView: View {
     #endif
 
     var body: some View {
-        switch workoutManager.recoveryState {
-        case .idle:
-            idleView
-        case .work:
-            workView
-        case .rest:
-            restView
-        }
-    }
-
-    // MARK: - Idle
-
-    private var idleView: some View {
         let h = screenHeight
-        let hrSize = max(34, h * 0.21)
-        let labelSize = max(10, h * 0.075)
-        let ringSize = h * 0.40
-        let progress = workoutManager.stationCandidateProgress
-
-        return VStack(spacing: h * 0.02) {
-            Spacer()
-            ZStack {
-                Circle()
-                    .stroke(ShuttlXColor.surfaceBorder, lineWidth: 3)
-                    .frame(width: ringSize, height: ringSize)
-                Circle()
-                    .trim(from: 0, to: progress)
-                    .stroke(ShuttlXColor.positive.opacity(0.75), style: StrokeStyle(lineWidth: 3, lineCap: .round))
-                    .frame(width: ringSize, height: ringSize)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.linear(duration: 1), value: progress)
-                VStack(spacing: 2) {
-                    Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "—")
-                        .font(.system(size: hrSize, weight: .bold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundColor(
-                            workoutManager.heartRate > 0
-                                ? ShuttlXColor.forHRZone(workoutManager.heartRate)
-                                : ShuttlXColor.textSecondary
-                        )
-                        .contentTransition(.numericText())
-                    Text("BPM")
-                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
-                        .foregroundColor(ShuttlXColor.textSecondary)
-                }
-            }
-            Text(progress > 0 ? "Detecting..." : "Sit on machine")
-                .font(.system(size: labelSize, weight: .regular, design: .monospaced))
-                .foregroundColor(progress > 0 ? ShuttlXColor.ctaPrimary : ShuttlXColor.textSecondary)
-                .animation(.easeInOut, value: progress > 0)
-            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(ShuttlXColor.textSecondary)
-                .padding(.top, 4)
-            Spacer()
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(
-            progress > 0
-                ? "Detecting station. Heart rate \(workoutManager.heartRate) BPM."
-                : "Heart recovery monitoring ready. Sit on machine to begin."
-        )
-    }
-
-    // MARK: - Work
-
-    private var workView: some View {
-        let h = screenHeight
-        let hrSize = max(44, h * 0.26)
-        let labelSize = max(10, h * 0.08)
-        let stationTimeSize = max(12, h * 0.09)
+        let hrSize       = max(48, h * 0.30)   // hero — BIG in every state
+        let labelSize    = max(10, h * 0.075)
+        let pillSize     = max(11, h * 0.085)
+        let buttonHeight = max(36, h * 0.21)
 
         return VStack(spacing: h * 0.018) {
-            Text("Station \(workoutManager.recoverySetNumber)")
-                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                .foregroundColor(ShuttlXColor.ctaPrimary)
-
-            Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "---")
-                .font(.system(size: hrSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                .contentTransition(.numericText())
-
-            Text("BPM")
-                .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
-                .foregroundColor(ShuttlXColor.textSecondary)
-
-            Text(hrZoneLabel(workoutManager.heartRate))
-                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                .padding(.horizontal, 6).padding(.vertical, 2)
-                .background(
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.15))
-                )
-                .opacity(workoutManager.heartRate > 0 ? 1 : 0)
-
+            // Top row — total elapsed left, state pill right
             HStack(spacing: 6) {
-                Text("Station")
-                    .font(.system(size: labelSize, weight: .regular, design: .monospaced))
-                    .foregroundColor(ShuttlXColor.textSecondary)
-                Text(FormattingUtils.formatTimer(workoutManager.stationElapsedTime))
-                    .font(.system(size: stationTimeSize, weight: .semibold, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundColor(ShuttlXColor.textPrimary)
-            }
-            .padding(.top, 4)
-
-            if workoutManager.currentCadence > 0 {
-                HStack(spacing: 6) {
-                    Text("RPM")
-                        .font(.system(size: labelSize, weight: .regular, design: .monospaced))
-                        .foregroundColor(ShuttlXColor.textSecondary)
-                    Text("\(workoutManager.currentCadence)")
-                        .font(.system(size: stationTimeSize, weight: .semibold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundColor(ShuttlXColor.textPrimary)
-                        .contentTransition(.numericText())
-                }
-            }
-
-            HStack(spacing: 6) {
-                Text("Total")
-                    .font(.system(size: labelSize, weight: .regular, design: .monospaced))
-                    .foregroundColor(ShuttlXColor.textSecondary)
                 Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
                     .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                     .monospacedDigit()
                     .foregroundColor(ShuttlXColor.textSecondary)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Station \(workoutManager.recoverySetNumber) in progress. Heart rate \(workoutManager.heartRate) BPM. Station time \(FormattingUtils.formatTimeAccessible(workoutManager.stationElapsedTime)).")
-        .accessibilityAddTraits(.updatesFrequently)
-    }
-
-    // MARK: - Rest
-
-    private var restView: some View {
-        let h = screenHeight
-        let timerSize = max(36, h * 0.20)
-        let labelSize = max(10, h * 0.075)
-        let hrSize = max(20, h * 0.115)
-        let restSecs = workoutManager.restElapsedTime
-        let passed1min = restSecs >= 60
-        let passed2min = restSecs >= 120
-
-        return VStack(spacing: h * 0.02) {
-            Text("REST")
-                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                .foregroundColor(ShuttlXColor.ctaWarning)
-
-            Text(FormattingUtils.formatTimer(restSecs))
-                .font(.system(size: timerSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(restTimerColor(restSecs: restSecs))
-                .contentTransition(.numericText())
-                .accessibilityLabel("Rest time \(FormattingUtils.formatTimeAccessible(restSecs))")
-                .accessibilityAddTraits(.updatesFrequently)
-
-            HStack(spacing: 8) {
-                milestoneBadge(label: "1:00", reached: passed1min, value: workoutManager.latestHRR1)
-                milestoneBadge(label: "2:00", reached: passed2min, value: workoutManager.latestHRR2)
+                Spacer(minLength: 0)
+                statePill(pillSize: pillSize)
             }
 
-            HStack(spacing: 4) {
-                Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "---")
+            // HR hero — always centered, always the largest element.
+            VStack(spacing: 2) {
+                Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "—")
                     .font(.system(size: hrSize, weight: .bold, design: .monospaced))
                     .monospacedDigit()
-                    .foregroundColor(ShuttlXColor.heartRate)
-                    .contentTransition(.numericText())
-                Image(systemName: "arrow.down")
-                    .font(.system(size: hrSize * 0.6))
                     .foregroundColor(
-                        isHRSafe(workoutManager.heartRate)
-                            ? ShuttlXColor.ctaPrimary.opacity(0.7)
-                            : ShuttlXColor.heartRate.opacity(0.7)
+                        workoutManager.heartRate > 0
+                            ? ShuttlXColor.forHRZone(workoutManager.heartRate)
+                            : ShuttlXColor.textSecondary
                     )
+                    .contentTransition(.numericText())
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                HStack(spacing: 6) {
+                    Text("BPM")
+                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                    if workoutManager.heartRate > 0 {
+                        Text(hrZoneLabel(workoutManager.heartRate))
+                            .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                            .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
+                            .padding(.horizontal, 4).padding(.vertical, 1)
+                            .background(RoundedRectangle(cornerRadius: 3)
+                                .stroke(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.5), lineWidth: 1))
+                    }
+                }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(workoutManager.heartRate) beats per minute, recovering")
+            .accessibilityLabel(workoutManager.heartRate > 0
+                                ? "Heart rate \(workoutManager.heartRate) beats per minute"
+                                : "Heart rate no data")
             .accessibilityAddTraits(.updatesFrequently)
 
+            // Rest state inserts the HRR milestone pills directly under HR.
+            if workoutManager.recoveryState == .rest {
+                HStack(spacing: 6) {
+                    milestoneBadge(label: "1:00",
+                                   reached: workoutManager.restElapsedTime >= 60,
+                                   value: workoutManager.latestHRR1)
+                    milestoneBadge(label: "2:00",
+                                   reached: workoutManager.restElapsedTime >= 120,
+                                   value: workoutManager.latestHRR2)
+                }
+            }
+
             Spacer(minLength: 0)
+
+            // Single contextual button — label + color flip on state.
+            stationButton(height: buttonHeight, labelSize: labelSize)
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, ShuttlXSpacing.xs)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    // MARK: - State pill (READY / STATION N · 02:14 / REST · 00:48)
+
+    @ViewBuilder
+    private func statePill(pillSize: CGFloat) -> some View {
+        switch workoutManager.recoveryState {
+        case .idle:
+            pillContent(text: "READY", color: ShuttlXColor.textSecondary, pillSize: pillSize)
+        case .work:
+            pillContent(
+                text: "STATION \(workoutManager.recoverySetNumber) · \(FormattingUtils.formatTimer(workoutManager.stationElapsedTime))",
+                color: ShuttlXColor.ctaPrimary,
+                pillSize: pillSize
+            )
+        case .rest:
+            pillContent(
+                text: "REST · \(FormattingUtils.formatTimer(workoutManager.restElapsedTime))",
+                color: ShuttlXColor.ctaWarning,
+                pillSize: pillSize
+            )
+        }
+    }
+
+    private func pillContent(text: String, color: Color, pillSize: CGFloat) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 6, height: 6)
+            Text(text)
+                .font(.system(size: pillSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .padding(.horizontal, 5)
+        .padding(.vertical, 2)
+        .background(RoundedRectangle(cornerRadius: 4).fill(color.opacity(0.12)))
+    }
+
+    // MARK: - Contextual station button
+
+    @ViewBuilder
+    private func stationButton(height: CGFloat, labelSize: CGFloat) -> some View {
+        switch workoutManager.recoveryState {
+        case .idle, .rest:
+            Button {
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.start)
+                #endif
+                workoutManager.manualStartStation()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "play.fill")
+                    Text("Start Station")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .font(.system(size: labelSize + 2, weight: .bold, design: .monospaced))
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .background(Capsule().fill(ShuttlXColor.ctaPrimary))
+                .foregroundColor(ShuttlXColor.iconOnCTA)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Start Station")
+            .accessibilityHint(workoutManager.recoveryState == .rest
+                               ? "Begins the next station and records this rest period"
+                               : "Begins station 1 of your gym recovery workout")
+        case .work:
+            Button {
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.stop)
+                #endif
+                workoutManager.manualEndStation()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "stop.fill")
+                    Text("End Station")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .font(.system(size: labelSize + 2, weight: .bold, design: .monospaced))
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .background(Capsule().fill(ShuttlXColor.ctaDestructive))
+                .foregroundColor(ShuttlXColor.iconOnCTA)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("End Station")
+            .accessibilityHint("Ends station \(workoutManager.recoverySetNumber) and starts a rest period")
+        }
     }
 
     // MARK: - Helpers
@@ -219,17 +199,6 @@ struct RecoveryWorkoutView: View {
         }
     }
 
-    private func isHRSafe(_ bpm: Int) -> Bool {
-        guard bpm > 0 else { return false }
-        return Double(bpm) / 185.0 < 0.70
-    }
-
-    private func restTimerColor(restSecs: TimeInterval) -> Color {
-        if restSecs >= 120 { return ShuttlXColor.ctaPrimary }
-        if restSecs >= 60  { return ShuttlXColor.ctaWarning }
-        return ShuttlXColor.textPrimary
-    }
-
     private func milestoneBadge(label: String, reached: Bool, value: Int?) -> some View {
         HStack(spacing: 2) {
             Text(label)
@@ -243,18 +212,12 @@ struct RecoveryWorkoutView: View {
         .foregroundColor(reached ? ShuttlXColor.textPrimary : ShuttlXColor.textSecondary)
         .padding(.horizontal, 5)
         .padding(.vertical, 2)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(reached ? ShuttlXColor.positive.opacity(0.25) : ShuttlXColor.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 4)
-                .stroke(reached ? ShuttlXColor.positive.opacity(0.6) : ShuttlXColor.surfaceBorder, lineWidth: 1)
-        )
-        .accessibilityLabel(
-            reached
-                ? (value != nil ? "\(label) mark: \(value!) BPM drop" : "\(label) reached")
-                : "\(label) mark not yet reached"
-        )
+        .background(RoundedRectangle(cornerRadius: 4)
+            .fill(reached ? ShuttlXColor.positive.opacity(0.25) : ShuttlXColor.surface))
+        .overlay(RoundedRectangle(cornerRadius: 4)
+            .stroke(reached ? ShuttlXColor.positive.opacity(0.6) : ShuttlXColor.surfaceBorder, lineWidth: 1))
+        .accessibilityLabel(reached
+                            ? (value != nil ? "\(label) mark: \(value!) BPM drop" : "\(label) reached")
+                            : "\(label) mark not yet reached")
     }
 }

@@ -178,99 +178,103 @@ struct iPhoneWorkoutTimerView: View {
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// Gym-recovery hero — branches on the segmenter state. Mirrors the watch's
-    /// `RecoveryWorkoutView` design with three sub-states.
-    @ViewBuilder
+    /// Gym-recovery hero — single unified layout in every state (Sprint 7
+    /// redesign). HR is permanently the largest number on screen; the state
+    /// pill above + station/rest clock under it communicate "where in the
+    /// flow am I", and the two stacked buttons (rendered separately, in the
+    /// controls bar) drive the manual transitions.
     private var recoveryHero: some View {
-        switch controller.recoveryState {
-        case .idle:
-            recoveryIdleHero
-        case .work:
-            recoveryWorkHero
-        case .rest:
-            recoveryRestHero
-        }
-    }
+        let bpm = controller.heartRateMonitor.current
+        let isRest = controller.recoveryState == .rest
 
-    private var recoveryIdleHero: some View {
-        VStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .stroke(ShuttlXColor.surfaceBorder, lineWidth: 4)
-                    .frame(width: 200, height: 200)
-                VStack(spacing: 4) {
-                    Text(controller.heartRateMonitor.current > 0 ? "\(controller.heartRateMonitor.current)" : "—")
-                        .font(.system(size: 64, weight: .bold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundStyle(
-                            controller.heartRateMonitor.current > 0
-                                ? ShuttlXColor.forHRZone(controller.heartRateMonitor.current)
-                                : ShuttlXColor.textSecondary
-                        )
-                    Text("BPM")
-                        .font(ShuttlXFont.cardCaption.weight(.bold))
-                        .foregroundStyle(ShuttlXColor.textSecondary)
-                }
-            }
-            Text("Sit on machine to begin")
-                .font(ShuttlXFont.cardSubtitle)
-                .foregroundStyle(ShuttlXColor.textSecondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
+        return VStack(spacing: 10) {
+            // State pill — READY / STATION N · station-elapsed / REST · rest-elapsed
+            recoveryStatePill
 
-    private var recoveryWorkHero: some View {
-        VStack(spacing: 6) {
-            Text("Station \(controller.recoverySetNumber)")
-                .font(ShuttlXFont.cardTitle)
-                .foregroundStyle(ShuttlXColor.ctaPrimary)
-            Text(controller.heartRateMonitor.current > 0 ? "\(controller.heartRateMonitor.current)" : "—")
+            // HR hero — 104pt in every state (the audit's #1 ask)
+            Text(bpm > 0 ? "\(bpm)" : "—")
                 .font(.system(size: 104, weight: .bold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(ShuttlXColor.forHRZone(controller.heartRateMonitor.current))
+                .foregroundStyle(bpm > 0 ? ShuttlXColor.forHRZone(bpm) : ShuttlXColor.textSecondary)
                 .contentTransition(.numericText())
-            Text("BPM")
-                .font(ShuttlXFont.cardCaption.weight(.bold))
-                .foregroundStyle(ShuttlXColor.textSecondary)
-            Text("STATION  \(FormattingUtils.formatTimer(controller.stationElapsedTime))")
-                .font(ShuttlXFont.cardCaption.monospacedDigit())
-                .foregroundStyle(ShuttlXColor.textSecondary)
-                .padding(.top, 4)
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+
+            HStack(spacing: 6) {
+                Text("BPM")
+                    .font(ShuttlXFont.cardCaption.weight(.bold))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                if bpm > 0 {
+                    Text(hrZoneLabel(bpm))
+                        .font(ShuttlXFont.cardCaption.weight(.bold))
+                        .foregroundStyle(ShuttlXColor.forHRZone(bpm))
+                        .padding(.horizontal, 5).padding(.vertical, 1)
+                        .background(RoundedRectangle(cornerRadius: 4)
+                            .stroke(ShuttlXColor.forHRZone(bpm).opacity(0.5), lineWidth: 1))
+                }
+                // Recovering arrow during rest (green when HR safely back in Z1/Z2)
+                if isRest && bpm > 0 {
+                    Image(systemName: "arrow.down")
+                        .foregroundStyle(isHRSafe(bpm)
+                                         ? ShuttlXColor.ctaPrimary.opacity(0.7)
+                                         : ShuttlXColor.heartRate.opacity(0.7))
+                }
+            }
+
+            // HRR milestone pills — only during rest
+            if isRest {
+                HStack(spacing: 12) {
+                    milestoneBadge(label: "1:00",
+                                   reached: controller.restElapsedTime >= 60,
+                                   value: controller.latestHRR1)
+                    milestoneBadge(label: "2:00",
+                                   reached: controller.restElapsedTime >= 120,
+                                   value: controller.latestHRR2)
+                }
+            }
         }
         .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(bpm > 0
+                            ? "Heart rate \(bpm) beats per minute, \(recoveryStateA11yLabel)"
+                            : "Heart rate no data, \(recoveryStateA11yLabel)")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
-    private var recoveryRestHero: some View {
-        let restSecs = controller.restElapsedTime
-        let passed1min = restSecs >= 60
-        let passed2min = restSecs >= 120
-        return VStack(spacing: 10) {
-            Text("REST")
-                .font(ShuttlXFont.cardTitle)
-                .foregroundStyle(ShuttlXColor.ctaWarning)
-            Text(FormattingUtils.formatTimer(restSecs))
-                .font(.system(size: 88, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(restColor(for: restSecs))
-                .contentTransition(.numericText())
-            HStack(spacing: 12) {
-                milestoneBadge(label: "1:00", reached: passed1min, value: controller.latestHRR1)
-                milestoneBadge(label: "2:00", reached: passed2min, value: controller.latestHRR2)
+    private var recoveryStatePill: some View {
+        let (text, color): (String, Color) = {
+            switch controller.recoveryState {
+            case .idle:
+                return ("READY", ShuttlXColor.textSecondary)
+            case .work:
+                return (
+                    "STATION \(controller.recoverySetNumber) · \(FormattingUtils.formatTimer(controller.stationElapsedTime))",
+                    ShuttlXColor.ctaPrimary
+                )
+            case .rest:
+                return (
+                    "REST · \(FormattingUtils.formatTimer(controller.restElapsedTime))",
+                    ShuttlXColor.ctaWarning
+                )
             }
-            HStack(spacing: 6) {
-                Text(controller.heartRateMonitor.current > 0 ? "\(controller.heartRateMonitor.current)" : "—")
-                    .font(ShuttlXFont.metricMedium)
-                    .monospacedDigit()
-                    .foregroundStyle(ShuttlXColor.heartRate)
-                Image(systemName: "arrow.down")
-                    .foregroundStyle(
-                        isHRSafe(controller.heartRateMonitor.current)
-                            ? ShuttlXColor.ctaPrimary.opacity(0.7)
-                            : ShuttlXColor.heartRate.opacity(0.7)
-                    )
-            }
+        }()
+        return HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 8, height: 8)
+            Text(text)
+                .font(ShuttlXFont.cardTitle.monospacedDigit())
+                .foregroundStyle(color)
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(color.opacity(0.12)))
+    }
+
+    private var recoveryStateA11yLabel: String {
+        switch controller.recoveryState {
+        case .idle: return "ready to start a station"
+        case .work: return "on station \(controller.recoverySetNumber)"
+        case .rest: return "resting between stations"
+        }
     }
 
     // MARK: - Metrics section (mode-branched)
@@ -432,57 +436,106 @@ struct iPhoneWorkoutTimerView: View {
     // MARK: - Controls bar (sticky bottom)
 
     private var controlsBar: some View {
-        HStack(spacing: 12) {
-            Button {
-                showingCancelConfirmation = true
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.title3.weight(.bold))
-                    .frame(width: 56, height: 56)
-                    .background(Circle().fill(ShuttlXColor.surface))
-                    .overlay(Circle().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-            }
-            .accessibilityLabel("Cancel workout")
-            .accessibilityHint("Ends without saving")
+        VStack(spacing: 12) {
+            // Gym Recovery only — two stacked station buttons (Start/End) above the
+            // global Pause/Finish/Cancel row. Mutually exclusive: only one enabled
+            // at a time based on the segmenter state.
+            if controller.mode == .gymRecovery {
+                let canStartStation = controller.recoveryState != .work
+                let canEndStation = controller.recoveryState == .work
 
-            if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
                 Button {
-                    controller.skipStep()
+                    controller.manualStartStation()
                 } label: {
-                    Image(systemName: "forward.end.fill")
+                    HStack(spacing: 8) {
+                        Image(systemName: "play.fill")
+                        Text("Start Station")
+                            .font(ShuttlXFont.cardTitle)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Capsule().fill(canStartStation ? ShuttlXColor.ctaPrimary : ShuttlXColor.surface))
+                    .foregroundStyle(canStartStation ? .white : ShuttlXColor.textSecondary)
+                    .overlay(canStartStation ? nil : Capsule().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
+                }
+                .disabled(!canStartStation)
+                .accessibilityLabel("Start Station")
+                .accessibilityHint(controller.recoveryState == .rest
+                                   ? "Begins the next station and records this rest period"
+                                   : "Begins station 1 of your gym recovery workout")
+
+                Button {
+                    controller.manualEndStation()
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "stop.fill")
+                        Text("End Station")
+                            .font(ShuttlXFont.cardTitle)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(Capsule().fill(canEndStation ? ShuttlXColor.ctaDestructive : ShuttlXColor.surface))
+                    .foregroundStyle(canEndStation ? .white : ShuttlXColor.textSecondary)
+                    .overlay(canEndStation ? nil : Capsule().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
+                }
+                .disabled(!canEndStation)
+                .accessibilityLabel("End Station")
+                .accessibilityHint("Ends the current station and starts a rest period with HRR captures")
+            }
+
+            // Global controls — Cancel / Skip Step (interval only) / Pause / Finish
+            HStack(spacing: 12) {
+                Button {
+                    showingCancelConfirmation = true
+                } label: {
+                    Image(systemName: "xmark")
                         .font(.title3.weight(.bold))
                         .frame(width: 56, height: 56)
                         .background(Circle().fill(ShuttlXColor.surface))
                         .overlay(Circle().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
-                        .foregroundStyle(ShuttlXColor.textPrimary)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
                 }
-                .accessibilityLabel("Skip step")
-            }
+                .accessibilityLabel("Cancel workout")
+                .accessibilityHint("Ends without saving")
 
-            Button {
-                if controller.isPaused { controller.resume() } else { controller.pause() }
-            } label: {
-                Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
-                    .font(.title.weight(.bold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 56)
-                    .background(Capsule().fill(ShuttlXColor.ctaPrimary))
-                    .foregroundStyle(.white)
-            }
-            .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
+                if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
+                    Button {
+                        controller.skipStep()
+                    } label: {
+                        Image(systemName: "forward.end.fill")
+                            .font(.title3.weight(.bold))
+                            .frame(width: 56, height: 56)
+                            .background(Circle().fill(ShuttlXColor.surface))
+                            .overlay(Circle().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
+                            .foregroundStyle(ShuttlXColor.textPrimary)
+                    }
+                    .accessibilityLabel("Skip step")
+                }
 
-            Button {
-                showingFinishConfirmation = true
-            } label: {
-                Image(systemName: "checkmark")
-                    .font(.title3.weight(.bold))
-                    .frame(width: 56, height: 56)
-                    .background(Circle().fill(ShuttlXColor.ctaDestructive))
-                    .foregroundStyle(.white)
+                Button {
+                    if controller.isPaused { controller.resume() } else { controller.pause() }
+                } label: {
+                    Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
+                        .font(.title.weight(.bold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 56)
+                        .background(Capsule().fill(ShuttlXColor.ctaPrimary))
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
+
+                Button {
+                    showingFinishConfirmation = true
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.title3.weight(.bold))
+                        .frame(width: 56, height: 56)
+                        .background(Circle().fill(ShuttlXColor.ctaDestructive))
+                        .foregroundStyle(.white)
+                }
+                .accessibilityLabel("Finish workout")
+                .accessibilityHint("Saves and ends")
             }
-            .accessibilityLabel("Finish workout")
-            .accessibilityHint("Saves and ends")
         }
     }
 

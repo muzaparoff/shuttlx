@@ -56,6 +56,11 @@ struct SegmenterConfig {
     var workFallbackDuration: TimeInterval = 45
     /// (cardiacRehab) Seconds of non-walking after walk stops before confirming next station start.
     var walkStopConfirmDuration: TimeInterval = 15
+    /// (cardiacRehab) When true (default after Sprint 7), the patient drives state
+    /// transitions via explicit `manualStartStation` / `manualEndStation` calls.
+    /// When false, the existing motion-driven auto-detection runs. tick() still
+    /// fires HRR captures + rest clock in both modes.
+    var manualStationsOnly: Bool = true
 }
 
 // MARK: - Recovery Segmenter (pure value-type state machine)
@@ -88,11 +93,60 @@ struct RecoverySegmenter {
     }
 
     /// 0.0–1.0: stationary confirmation progress while in cardiacRehab idle state (for UI arc).
+    /// Returns 0 in manual mode (no auto-detect candidate is building).
     var candidateProgress: Double {
         guard config.profile == .cardiacRehab,
+              !config.manualStationsOnly,
               state == .idle,
               let start = workCandidateStart else { return 0 }
         return min(1.0, Date().timeIntervalSince(start) / config.stationaryConfirmDuration)
+    }
+
+    // MARK: - Manual control API (cardiacRehab)
+
+    /// Patient tapped **Start Station**. idle/rest → work. From rest the
+    /// rest duration is recorded into `restExited(duration:)` first.
+    mutating func manualStartStation(hr: Int, now: Date) -> [SegmenterEvent] {
+        var events: [SegmenterEvent] = []
+        switch state {
+        case .idle:
+            state = .work
+            workStartTime = now
+            setNumber += 1
+            peakHRDuringWork = max(hr, 0)
+            events.append(.enteredWork(setNumber: setNumber))
+        case .rest:
+            if let restStart = restStartTime {
+                events.append(.restExited(duration: now.timeIntervalSince(restStart)))
+            }
+            restStartTime = nil
+            notWalkingCandidateStart = nil
+            state = .work
+            workStartTime = now
+            setNumber += 1
+            peakHRDuringWork = max(hr, 0)
+            events.append(.enteredWork(setNumber: setNumber))
+        case .work:
+            break
+        }
+        return events
+    }
+
+    /// Patient tapped **End Station**. work → rest with peak-HR captured.
+    mutating func manualEndStation(hr: Int, now: Date) -> [SegmenterEvent] {
+        guard state == .work else { return [] }
+        if hr > peakHRDuringWork { peakHRDuringWork = hr }
+        let peak = peakHRDuringWork
+        restStartTime = now
+        peakHRAtRestEntry = peak
+        hrr1Captured = false
+        hrr2Captured = false
+        notWalkingCandidateStart = nil
+        state = .rest
+        workStartTime = nil
+        workCandidateStart = nil
+        peakHRDuringWork = 0
+        return [.enteredRest(peakHR: peak, setNumber: setNumber, restEntryTime: now)]
     }
 
     /// Called once per second. Returns 0…N events describing state transitions and captures.
@@ -185,6 +239,27 @@ struct RecoverySegmenter {
         var events: [SegmenterEvent] = []
         let isWalking = activity == .walking
         let isOnMachine = activity == .stationary || activity == .unknown
+
+        // Manual mode: skip motion-driven transitions but keep HRR captures + rest clock running.
+        if config.manualStationsOnly {
+            switch state {
+            case .work:
+                if hr > peakHRDuringWork { peakHRDuringWork = hr }
+            case .rest:
+                guard let restStart = restStartTime else { state = .idle; break }
+                let restElapsed = now.timeIntervalSince(restStart)
+                if restElapsed > config.restTimeoutDuration {
+                    state = .idle
+                    restStartTime = nil
+                    events.append(.restExited(duration: restElapsed))
+                    break
+                }
+                events += captureHRR(hr: hr, restElapsed: restElapsed)
+            case .idle:
+                break
+            }
+            return events
+        }
 
         switch state {
         case .idle:
