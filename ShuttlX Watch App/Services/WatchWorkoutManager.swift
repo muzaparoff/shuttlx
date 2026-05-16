@@ -3,6 +3,7 @@ import HealthKit
 import CoreMotion
 import CoreLocation
 import WatchConnectivity
+import Combine
 #if os(watchOS)
 import WatchKit
 #endif
@@ -46,7 +47,19 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     enum WorkoutMode { case freeRun, interval, gymRecovery }
     @Published var workoutMode: WorkoutMode = .freeRun
     @Published var workoutName: String = "Free Run"
-    var intervalEngine: IntervalEngine?
+
+    // `intervalEngine` MUST be @Published — without it, swapping in a new engine
+    // wouldn't trigger view re-renders. But @Published on a reference only fires
+    // on reassignment; for the engine's internal state (`currentStepTimeRemaining`,
+    // `currentStep`, `currentStepIndex`) to drive view updates we ALSO forward
+    // the engine's objectWillChange through `intervalEngineCancellables` below.
+    // This pair is the canonical fix for the nested-ObservableObject "frozen
+    // countdown" bug — without the subscription, TrainingView only re-renders
+    // incidentally when manager's `elapsedTime` ticks, and SwiftUI can legally
+    // skip the inner countdown Text because there's no dependency edge to the
+    // engine.
+    @Published var intervalEngine: IntervalEngine?
+    private var intervalEngineCancellables: Set<AnyCancellable> = []
     private var activeTemplate: WorkoutTemplate?
 
     // MARK: - Gym Recovery Mode State
@@ -339,8 +352,20 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutMode = .interval
         workoutName = template.name
         activeTemplate = template
-        intervalEngine = IntervalEngine()
-        intervalEngine?.configure(template: template)
+        let engine = IntervalEngine()
+        engine.configure(template: template)
+        intervalEngine = engine
+
+        // Forward engine's objectWillChange so TrainingView (observing the
+        // manager) re-renders when the engine ticks. Without this the countdown
+        // visibly freezes between manager-side @Published changes.
+        intervalEngineCancellables.removeAll()
+        engine.objectWillChange
+            .sink { [weak self] _ in
+                self?.objectWillChange.send()
+            }
+            .store(in: &intervalEngineCancellables)
+
         startWorkout()
     }
 
@@ -476,7 +501,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         WCSession.default.transferUserInfo(stopPayload)
 
-        // Reset interval mode
+        // Reset interval mode (clear engine subscription before dropping the engine)
+        intervalEngineCancellables.removeAll()
         workoutMode = .freeRun
         intervalEngine = nil
         activeTemplate = nil
@@ -576,15 +602,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     private func updateElapsedTime() {
         guard let startTime = workoutStartTime else { return }
-        elapsedTime = Date().timeIntervalSince(startTime) - accumulatedPauseTime
-
         guard let segStart = currentSegmentStartTime else { return }
-        currentSegmentTime = Date().timeIntervalSince(segStart)
 
-        // Check debounce for pending activity transitions
-        checkPendingActivityTransition()
-
-        // Tick interval engine if in interval mode
+        // Order matters: tick the engine FIRST so its @Published state is up to
+        // date BEFORE we write to elapsedTime. The elapsedTime write fires the
+        // manager's objectWillChange; SwiftUI re-evaluates the body next runloop
+        // pass and reads engine.currentStepTimeRemaining (already decremented).
+        // The engine's own objectWillChange is also forwarded through
+        // intervalEngineCancellables — together these guarantee the countdown
+        // never appears frozen.
         if workoutMode == .interval, let engine = intervalEngine {
             engine.tick(heartRate: heartRate, distance: totalDistance)
             if engine.isComplete {
@@ -593,6 +619,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 return
             }
         }
+
+        elapsedTime = Date().timeIntervalSince(startTime) - accumulatedPauseTime
+        currentSegmentTime = Date().timeIntervalSince(segStart)
+
+        // Check debounce for pending activity transitions
+        checkPendingActivityTransition()
 
         // Tick recovery segmenter if in gym recovery mode
         if workoutMode == .gymRecovery, var segmenter = recoverySegmenter {
