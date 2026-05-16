@@ -1117,8 +1117,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1132,7 +1133,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.watchkitapp;
@@ -1171,8 +1172,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -1186,7 +1188,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.watchkitapp;
@@ -1344,8 +1346,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1361,7 +1364,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX;
@@ -1401,8 +1404,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -1418,7 +1422,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX;
@@ -1436,7 +1440,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXLiveActivity/Info.plist;
@@ -1446,8 +1450,9 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
@@ -1485,7 +1490,7 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXLiveActivity/Info.plist;
@@ -1495,8 +1500,9 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
@@ -1554,8 +1560,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWidgets/Info.plist;
@@ -1565,7 +1572,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
@@ -1604,8 +1611,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWidgets/Info.plist;
@@ -1615,7 +1623,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
@@ -1654,8 +1662,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWatchWidgets/Info.plist;
@@ -1664,7 +1673,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = ShuttlXWatchWidget;
@@ -1701,8 +1710,9 @@
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				CODE_SIGN_STYLE = Manual;
-				CURRENT_PROJECT_VERSION = 180;
+				CURRENT_PROJECT_VERSION = 181;
 				DEVELOPMENT_TEAM = 83HPSY452Y;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = ShuttlXWatchWidgets/Info.plist;
@@ -1711,7 +1721,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.1.21;
+				MARKETING_VERSION = 1.1.22;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = ShuttlXWatchWidget;
