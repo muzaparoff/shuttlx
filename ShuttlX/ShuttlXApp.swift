@@ -61,10 +61,25 @@ struct ShuttlXApp: App {
             }
             .onOpenURL { url in
                 guard url.scheme == "shuttlx" else { return }
-                if url.host == "session",
-                   let idString = url.pathComponents.last,
-                   let uuid = UUID(uuidString: idString) {
-                    deepLinkSessionID = uuid
+                switch url.host {
+                case "session":
+                    // shuttlx://session/{UUID} — opens session detail
+                    if let idString = url.pathComponents.last,
+                       let uuid = UUID(uuidString: idString) {
+                        deepLinkSessionID = uuid
+                    }
+                case "workout":
+                    // shuttlx://workout/active — Live Activity tap. If an
+                    // iPhone-driven workout is running, raise the timer cover.
+                    // If the watch is driving the workout, the app just comes
+                    // to the foreground (the user can read the LiveWorkoutCard
+                    // on the dashboard). In neither case do we start a new
+                    // workout — the deep link is observational only.
+                    if workoutController.isActive {
+                        workoutController.isPresentingTimer = true
+                    }
+                default:
+                    break
                 }
             }
         }

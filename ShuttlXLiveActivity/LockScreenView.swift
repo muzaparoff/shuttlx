@@ -46,6 +46,12 @@ struct LockScreenView: View {
         }
         .padding()
         .activityBackgroundTint(.black.opacity(0.75))
+        // Tapping the Lock Screen / Notification Center Live Activity deep-links
+        // back into ShuttlX. The host app's onOpenURL routes the user to the
+        // running iPhone workout (if the controller is active) or just brings
+        // the app to the foreground for a watch-driven workout. See
+        // ShuttlX/ShuttlXApp.swift for the URL handler.
+        .widgetURL(URL(string: "shuttlx://workout/active"))
     }
 
     // MARK: - Formatting Helpers

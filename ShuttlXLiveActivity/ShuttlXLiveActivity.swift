@@ -16,6 +16,7 @@ struct ShuttlXLiveActivity: Widget {
                             .font(.system(.title2, design: .monospaced).weight(.semibold))
                             .contentTransition(.numericText())
                     }
+                    .widgetURL(URL(string: "shuttlx://workout/active"))
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     if context.state.heartRate > 0 {
@@ -25,6 +26,7 @@ struct ShuttlXLiveActivity: Widget {
                             Text("\(context.state.heartRate)")
                                 .font(.system(.title3, design: .rounded).weight(.medium))
                         }
+                        .widgetURL(URL(string: "shuttlx://workout/active"))
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
@@ -45,6 +47,7 @@ struct ShuttlXLiveActivity: Widget {
                                 .foregroundStyle(.purple)
                         }
                     }
+                    .widgetURL(URL(string: "shuttlx://workout/active"))
                 }
             } compactLeading: {
                 Image(systemName: activityIcon(context.state.currentActivity))
