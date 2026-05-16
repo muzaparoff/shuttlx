@@ -71,29 +71,13 @@ struct DashboardView: View {
                         }
                     }
 
-                    // 2. Start workout on iPhone — two CTAs (Free Run + Gym
-                    // Recovery). Interval templates have their own start path
-                    // from the Programs tab. These cards are gated on no-watch-
-                    // workout-active so iPhone and Watch can't run in parallel.
+                    // 2. Start on Watch card (when idle). Start-workout CTAs
+                    // for iPhone-driven workouts (Free Run, Gym Recovery,
+                    // every interval template) live in the Programs tab —
+                    // the Dashboard stays focused on "what's happening now"
+                    // (active workout widget + last session + week summary +
+                    // streak), not "what could you start".
                     if !sharedData.isWorkoutActiveOnWatch {
-                        VStack(spacing: 10) {
-                            startCard(
-                                title: "Free Run",
-                                subtitle: "Open-ended workout · HR · GPS",
-                                systemImage: "figure.run.circle.fill",
-                                color: ShuttlXColor.running
-                            ) {
-                                workoutController.presentFreeRun()
-                            }
-                            startCard(
-                                title: "Gym Recovery",
-                                subtitle: "HR recovery between sets · cardiac rehab",
-                                systemImage: "heart.circle.fill",
-                                color: ShuttlXColor.heartRate
-                            ) {
-                                workoutController.presentGymRecovery()
-                            }
-                        }
                         StartOnWatchCard()
                     }
 
@@ -146,34 +130,6 @@ struct DashboardView: View {
         }
     }
 
-    private func startCard(title: String, subtitle: String, systemImage: String, color: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: systemImage)
-                    .font(ShuttlXFont.heroIcon)
-                    .foregroundStyle(color)
-                    .frame(width: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(ShuttlXFont.cardTitle)
-                        .foregroundStyle(ShuttlXColor.textPrimary)
-                    Text(subtitle)
-                        .font(ShuttlXFont.cardCaption)
-                        .foregroundStyle(ShuttlXColor.textSecondary)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "play.circle.fill")
-                    .font(.title2)
-                    .foregroundStyle(color)
-            }
-            .padding(14)
-            .themedCard(accent: color)
-        }
-        .buttonStyle(PressScaleButtonStyle())
-        .accessibilityLabel("\(title). \(subtitle)")
-        .accessibilityHint("Starts the workout on your iPhone")
-    }
 }
 
 #Preview {

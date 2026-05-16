@@ -341,45 +341,72 @@ struct iPhoneWorkoutTimerView: View {
     /// AirPods Pro 3 / etc.). This is the surface the user sees confirming
     /// which device is feeding HR data to the workout.
     private var heartRateCard: some View {
-        HStack {
-            Image(systemName: "heart.fill")
-                .foregroundStyle(ShuttlXColor.heartRate)
+        let monitor = controller.heartRateMonitor
+        let bpm = monitor.current
+        let noSource = monitor.noSourceDetected
+        return HStack(alignment: .top, spacing: 12) {
+            Image(systemName: noSource ? "heart.slash.fill" : "heart.fill")
+                .foregroundStyle(noSource ? ShuttlXColor.textSecondary : ShuttlXColor.heartRate)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(controller.heartRateMonitor.current > 0 ? "\(controller.heartRateMonitor.current)" : "—")
+                    Text(bpm > 0 ? "\(bpm)" : "—")
                         .font(ShuttlXFont.metricMedium)
                         .monospacedDigit()
-                        .foregroundStyle(ShuttlXColor.forHRZone(controller.heartRateMonitor.current))
+                        .foregroundStyle(bpm > 0
+                                         ? ShuttlXColor.forHRZone(bpm)
+                                         : ShuttlXColor.textSecondary)
                     Text("BPM")
                         .font(ShuttlXFont.cardCaption.weight(.semibold))
                         .foregroundStyle(ShuttlXColor.textSecondary)
-                    if controller.heartRateMonitor.current > 0 {
-                        Text(hrZoneLabel(controller.heartRateMonitor.current))
+                    if bpm > 0 {
+                        Text(hrZoneLabel(bpm))
                             .font(ShuttlXFont.cardCaption.weight(.bold))
-                            .foregroundStyle(ShuttlXColor.forHRZone(controller.heartRateMonitor.current))
+                            .foregroundStyle(ShuttlXColor.forHRZone(bpm))
                             .padding(.horizontal, 6)
                             .padding(.vertical, 1)
                             .background(
                                 RoundedRectangle(cornerRadius: 4)
-                                    .stroke(ShuttlXColor.forHRZone(controller.heartRateMonitor.current).opacity(0.5), lineWidth: 1)
+                                    .stroke(ShuttlXColor.forHRZone(bpm).opacity(0.5), lineWidth: 1)
                             )
                     }
                 }
-                if let source = controller.heartRateMonitor.sourceName {
+                // Three source states:
+                //   1. Got a sample → show device name (Apple Watch / Powerbeats Pro 2 / AirPods Pro 3 / strap)
+                //   2. No sample yet, < 10s in → "Searching for HR source…"
+                //   3. No sample after 10s → actionable: "No HR source detected — pair Apple Watch, AirPods Pro, or Powerbeats Pro 2"
+                if let source = monitor.sourceName {
                     Text(source)
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(ShuttlXColor.textSecondary)
                         .lineLimit(1)
+                } else if noSource {
+                    Text("No HR source detected")
+                        .font(ShuttlXFont.cardCaption.weight(.semibold))
+                        .foregroundStyle(ShuttlXColor.ctaWarning)
+                    Text("Pair Apple Watch, AirPods Pro, or Powerbeats Pro 2 to record heart rate.")
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else {
+                    Text("Searching for HR source…")
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
                 }
             }
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(14)
-        .themedCard(accent: ShuttlXColor.heartRate)
+        .themedCard(accent: noSource ? ShuttlXColor.textSecondary : ShuttlXColor.heartRate)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(controller.heartRateMonitor.current > 0
-                            ? "Heart rate \(controller.heartRateMonitor.current) beats per minute\(controller.heartRateMonitor.sourceName.map { " from \($0)" } ?? "")"
-                            : "Heart rate no data")
+        .accessibilityLabel({
+            if bpm > 0 {
+                return "Heart rate \(bpm) beats per minute\(monitor.sourceName.map { " from \($0)" } ?? "")"
+            }
+            if noSource {
+                return "No heart rate source detected. Pair Apple Watch, AirPods Pro, or Powerbeats Pro 2 to record heart rate."
+            }
+            return "Searching for heart rate source"
+        }())
     }
 
     private func metricCard(label: String, value: String, color: Color, compact: Bool = false) -> some View {

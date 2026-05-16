@@ -3,10 +3,49 @@ import SwiftUI
 struct ProgramsTabView: View {
     @EnvironmentObject var planManager: PlanManager
     @EnvironmentObject var templateManager: TemplateManager
+    @EnvironmentObject var workoutController: iPhoneWorkoutController
+    @ObservedObject var sharedData = SharedDataManager.shared
 
     var body: some View {
         NavigationStack {
             List {
+                // Quick Start — all iPhone-launchable workout modes in one place.
+                // Hidden while a watch workout is active so users can't double-
+                // launch a session on both devices.
+                if !sharedData.isWorkoutActiveOnWatch {
+                    Section {
+                        startRow(
+                            title: "Free Run",
+                            subtitle: "Open-ended · HR · GPS",
+                            systemImage: "figure.run.circle.fill",
+                            color: ShuttlXColor.running,
+                            action: { workoutController.presentFreeRun() }
+                        )
+                        startRow(
+                            title: "Gym Recovery",
+                            subtitle: "HR recovery between sets · cardiac rehab",
+                            systemImage: "heart.circle.fill",
+                            color: ShuttlXColor.heartRate,
+                            action: { workoutController.presentGymRecovery() }
+                        )
+                    } header: {
+                        Text("Quick Start")
+                    }
+                }
+
+                // All interval templates as one-tap-to-start rows. Long-press
+                // gives Edit / Delete via context menu; "Manage Workouts" link
+                // below opens the full editor list.
+                if !templateManager.templates.isEmpty && !sharedData.isWorkoutActiveOnWatch {
+                    Section {
+                        ForEach(templateManager.templates) { template in
+                            templateStartRow(template)
+                        }
+                    } header: {
+                        Text("Interval Programs")
+                    }
+                }
+
                 // Active plan
                 if let active = planManager.activePlan() {
                     Section {
@@ -64,6 +103,60 @@ struct ProgramsTabView: View {
             .themedScreenBackground()
             .navigationTitle("Programs")
         }
+    }
+
+    private func startRow(title: String, subtitle: String, systemImage: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.title2)
+                    .foregroundStyle(color)
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(ShuttlXFont.cardTitle)
+                        .foregroundStyle(ShuttlXColor.textPrimary)
+                    Text(subtitle)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "play.circle.fill")
+                    .foregroundStyle(color)
+            }
+            .padding(.vertical, 4)
+        }
+        .accessibilityLabel("\(title). \(subtitle)")
+        .accessibilityHint("Starts the workout on your iPhone")
+    }
+
+    private func templateStartRow(_ template: WorkoutTemplate) -> some View {
+        Button {
+            workoutController.presentInterval(template: template)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "flame.fill")
+                    .font(.title2)
+                    .foregroundStyle(ShuttlXColor.calories)
+                    .frame(width: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(template.name)
+                        .font(ShuttlXFont.cardTitle)
+                        .foregroundStyle(ShuttlXColor.textPrimary)
+                    Text(template.summaryText)
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "play.circle.fill")
+                    .foregroundStyle(ShuttlXColor.calories)
+            }
+            .padding(.vertical, 4)
+        }
+        .accessibilityLabel("Start \(template.name)")
+        .accessibilityHint(template.summaryText)
     }
 
     private func activePlanRow(plan: TrainingPlan, progress: PlanProgress) -> some View {

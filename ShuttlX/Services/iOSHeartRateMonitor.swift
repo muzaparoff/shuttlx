@@ -15,6 +15,17 @@ import os.log
 final class iOSHeartRateMonitor: ObservableObject {
     @Published private(set) var current: Int = 0
     @Published private(set) var sourceName: String?
+    /// True after at least one HR sample has arrived from any source.
+    @Published private(set) var hasReceivedSample: Bool = false
+    /// True if `noSourceDetectedAfter` seconds have elapsed since `start(from:)`
+    /// without a single HR sample. UI uses this to surface a "pair an HR
+    /// device" affordance instead of silently showing `—`.
+    @Published private(set) var noSourceDetected: Bool = false
+
+    /// Grace period before we declare "no HR source". 10s is enough for the
+    /// first Apple Watch sample to arrive while not so long the user thinks
+    /// the workout is broken.
+    var noSourceDetectedAfter: TimeInterval = 10
 
     /// Sum/count for an O(1) average across the active workout, excluding
     /// paused intervals (caller is responsible for stopping the query during
@@ -29,6 +40,7 @@ final class iOSHeartRateMonitor: ObservableObject {
     private let store = HKHealthStore()
     private var query: HKAnchoredObjectQuery?
     private var anchor: HKQueryAnchor?
+    private var noSourceTimer: DispatchSourceTimer?
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "iOSHeartRateMonitor")
 
     /// Begin streaming HR samples from `startDate`. Idempotent — calling twice
@@ -77,11 +89,17 @@ final class iOSHeartRateMonitor: ObservableObject {
         query = q
         store.execute(q)
         logger.info("HR query started")
+
+        // Arm the no-source watchdog. If no sample arrives within the grace
+        // period the UI flips to the "pair an HR device" affordance.
+        scheduleNoSourceWatchdog()
     }
 
     func stop() {
         if let q = query { store.stop(q) }
         query = nil
+        noSourceTimer?.cancel()
+        noSourceTimer = nil
     }
 
     /// Reset accumulators between workouts. Does NOT stop an in-flight query.
@@ -91,7 +109,24 @@ final class iOSHeartRateMonitor: ObservableObject {
         maxBPM = 0
         current = 0
         sourceName = nil
+        hasReceivedSample = false
+        noSourceDetected = false
         anchor = nil
+    }
+
+    private func scheduleNoSourceWatchdog() {
+        noSourceTimer?.cancel()
+        let t = DispatchSource.makeTimerSource(queue: .main)
+        t.schedule(deadline: .now() + noSourceDetectedAfter)
+        t.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            if !self.hasReceivedSample {
+                self.noSourceDetected = true
+                self.logger.info("No HR source detected after \(self.noSourceDetectedAfter)s")
+            }
+        }
+        noSourceTimer = t
+        t.resume()
     }
 
     // MARK: - Private
@@ -113,6 +148,12 @@ final class iOSHeartRateMonitor: ObservableObject {
                 if bpm > self.maxBPM { self.maxBPM = bpm }
                 self.current = bpm
                 self.sourceName = source
+                if !self.hasReceivedSample {
+                    self.hasReceivedSample = true
+                    self.noSourceDetected = false
+                    self.noSourceTimer?.cancel()
+                    self.noSourceTimer = nil
+                }
             }
         }
     }
