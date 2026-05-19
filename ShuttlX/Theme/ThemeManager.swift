@@ -17,6 +17,14 @@ final class ThemeManager {
     var fonts: ThemeFonts { current.fonts }
     var effects: ThemeEffects { current.effects }
 
+    // MARK: - FM Tuner chrome state
+    // These properties drive the VU column, header signal dots, and footer info box.
+    // Other themes ignore them — their background modifiers never read these values.
+    var vuMeterValue: Double = 0.0
+    var signalStrength: Int = 3
+    var footerStatusLines: [String] = ["READY", "NO SIGNAL", "TUNE STATION"]
+    var chromeVisible: Bool = true
+
     func selectTheme(_ id: String) {
         guard id != selectedThemeID else { return }
         selectedThemeID = id

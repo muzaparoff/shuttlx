@@ -1,0 +1,349 @@
+# FM Tuner — ASCII Mockups
+
+All mockups use the following conventions:
+
+- `█` = bright cyan `#7CD8FF` (lit LCD segment, primary text, hero digits)
+- `▓` = dim cyan `#0E6580` (unlit LCD segment, secondary text, dim chrome)
+- `░` = navy background `#021018`
+- `▣` = filled VU bar segment (cyan, lit)
+- `▢` = empty VU bar segment (dim outline, unlit)
+- `◢◤` = red `#FF6B6B` destructive accent (stop only)
+- `▶ ◀` = chrome arrows in header pill
+
+The VU column at the left edge is drawn by the screen background modifier (Canvas), not the screen itself. Mockups show its visible position but assume it is rendered behind content.
+
+---
+
+## iOS — 1. Interval Workout (Work step)
+
+```
+┌────────────────────────────────────────────────┐
+│ ▣ ░░  📡 antenna.radiowaves      ▓ ▓ ▓ ▓     │  ← header: cyan signal icon + 4 dim dots
+│ ▣ ░░ ┌──────────────┐                          │
+│ ▣ ░░ │ DATA SYNC ◀3▶│  88.5 MHz  ┌──┐ ┌──┐    │  ← decorative pill + freq + L/R stereo
+│ ▣ ░░ └──────────────┘            └──┘ └──┘    │
+│ ▣ ░░                                           │
+│ ▣ ░░  ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒  │  ← progress (cyan fill on dim track)
+│ ▣ ░░                                           │
+│ ▣ ░░       ╔══════════════════╗                │
+│ ▣ ░░       ║   W O R K        ║                │  ← step pill, cyan border, monospaced
+│ ▣ ░░       ╚══════════════════╝                │
+│ ▣ ░░                                           │
+│ ▣ ░░                                           │
+│ ▣ ░░          ████  ████   ████  ████          │  ← TIMER 56pt mono heavy
+│ ▣ ░░          ████  ████   ████  ████          │
+│ ▣ ░░          █  █  █  █ : █  █  █  █          │     0 1 : 4 7
+│ ▢ ░░          ████  ████   ████  ████          │
+│ ▢ ░░                                           │
+│ ▢ ░░                                           │
+│ ▢ ░░    ┌──────────┐   ┌──────────┐            │
+│ ▢ ░░    │   148    │   │   8/12   │            │  ← HR + step count, 44pt mono heavy
+│ ▢ ░░    │   BPM    │   │  STEPS   │            │
+│ ▢ ░░    └──────────┘   └──────────┘            │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ TUNED  88.5 MHz   ZONE 3   STEREO  │  │  ← footer info box (decorative status)
+│ ▢ ░░  │ STEP 8 / 12        ELAPSED 14:22   │  │     real metrics in monospaced cyan
+│ ▢ ░░  │ NEXT REST  00:30                   │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░    ┌────┐  ┌──────────┐  ┌────┐          │
+│ ▢ ░░    │ ⏸  │  │  PAUSE   │  │ ◢◤ │          │  ← pause (cyan) + STOP (red, only red)
+│ ▢ ░░    └────┘  └──────────┘  └────┘          │
+└────────────────────────────────────────────────┘
+   ↑
+   VU column (4px bars, 6px tall, 2px gap; fill = bpm/200)
+```
+
+---
+
+## iOS — 2. Interval Workout (Rest step)
+
+Identical chrome and layout. Differences:
+
+- Step pill: `║   R E S T        ║` rendered in `walking` color `#3A8FA8` (dimmer cyan)
+- Progress bar: dim cyan `#0E6580` fill instead of bright
+- Timer digits stay bright cyan — the user still needs to read them at a glance
+- Footer info box label: `TUNED 88.5 MHz   REST   STEREO` and `NEXT WORK  00:08`
+- HR card label color shifts to `walking` (dimmer) but value stays bright
+
+```
+│       ╔══════════════════╗                     │
+│       ║   R E S T        ║   ← dim cyan border │
+│       ╚══════════════════╝                     │
+│                                                │
+│          ████  ████   ████  ████               │  ← timer still bright (cyan)
+│          ████  ████   ████  ████               │
+│          █  █  █  █ : █  █  █  █               │     0 0 : 1 8
+│          ████  ████   ████  ████               │
+```
+
+---
+
+## iOS — 3. Gym Recovery Timer
+
+```
+┌────────────────────────────────────────────────┐
+│ ▣ ░░  📡                          ▓ ▓ ▓ ▓     │
+│ ▣ ░░ ┌──────────────┐                          │
+│ ▣ ░░ │ DATA SYNC ◀3▶│  RX  REC   ┌──┐ ┌──┐    │  ← "REC" pill instead of MHz
+│ ▣ ░░ └──────────────┘            └──┘ └──┘    │
+│ ▣ ░░                                           │
+│ ▣ ░░       ╔══════════════════╗                │
+│ ▣ ░░       ║   STATION  3     ║                │  ← state pill: STATION N or REST
+│ ▣ ░░       ╚══════════════════╝                │
+│ ▣ ░░                                           │
+│ ▣ ░░                                           │
+│ ▣ ░░          ████  ████  ████                 │  ← BPM HERO 56pt mono heavy
+│ ▣ ░░          █  █  ████  ████                 │
+│ ▣ ░░          █  █  █  █  █  █                 │     1  4  2
+│ ▢ ░░          ████  ████  ████                 │
+│ ▢ ░░                                           │
+│ ▢ ░░                BPM                        │  ← label, 14pt dim cyan
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ TUNED  HR.142    ZONE 4    LOCKED  │  │  ← footer info box
+│ ▢ ░░  │ STATION 3 / 5     STN 01:48        │  │     decorative + real metrics
+│ ▢ ░░  │ TOTAL ELAPSED     12:34            │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌──────────────┐  ┌──────────────┐      │
+│ ▢ ░░  │ END STATION  │  │  START NEXT  │      │  ← two CTAs, both cyan
+│ ▢ ░░  └──────────────┘  └──────────────┘      │
+│ ▢ ░░                                           │
+│ ▢ ░░             ┌──────┐                      │
+│ ▢ ░░             │ ◢◤◢◤ │ END WORKOUT          │  ← red destructive
+│ ▢ ░░             └──────┘                      │
+└────────────────────────────────────────────────┘
+```
+
+**Resting state variant:** state pill reads `║   R E S T   ║` in dim cyan. BPM hero stays bright (we want patients to see HR even at rest — this is cardiac rehab).
+
+---
+
+## iOS — 4. Free Run Timer
+
+```
+┌────────────────────────────────────────────────┐
+│ ▣ ░░  📡                          ▓ ▓ ▓ ▓     │
+│ ▣ ░░ ┌──────────────┐                          │
+│ ▣ ░░ │ DATA SYNC ◀3▶│ GPS LOCK  ┌──┐ ┌──┐    │  ← GPS LOCK pill if location active
+│ ▣ ░░ └──────────────┘           └──┘ └──┘     │
+│ ▣ ░░                                           │
+│ ▣ ░░       ╔══════════════════╗                │
+│ ▣ ░░       ║   F R E E   R U N║                │
+│ ▣ ░░       ╚══════════════════╝                │
+│ ▣ ░░                                           │
+│ ▣ ░░     ████  ████   ████  ████   ████  ████  │  ← ELAPSED 56pt mono heavy
+│ ▣ ░░     ████  ████   ████  ████   ████  ████  │
+│ ▣ ░░     █  █  █  █ : █  █  █  █ : █  █  █  █  │     0 0 : 1 8 : 4 2
+│ ▢ ░░     ████  ████   ████  ████   ████  ████  │
+│ ▢ ░░                                           │
+│ ▢ ░░    ┌──────────┐ ┌──────────┐ ┌──────────┐ │
+│ ▢ ░░    │   148    │ │  05:42   │ │  3.47    │ │  ← HR / pace / distance
+│ ▢ ░░    │   BPM    │ │  /KM     │ │   KM     │ │     each 44pt mono heavy
+│ ▢ ░░    └──────────┘ └──────────┘ └──────────┘ │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ TUNED  RUN.MODE    GPS ACQ  STEREO │  │  ← footer
+│ ▢ ░░  │ SATS 9/12          ACC 4.2m        │  │
+│ ▢ ░░  │ AVG PACE  05:38                    │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░    ┌────┐  ┌──────────┐  ┌────┐          │
+│ ▢ ░░    │ ⏸  │  │  PAUSE   │  │ ◢◤ │          │
+│ ▢ ░░    └────┘  └──────────┘  └────┘          │
+└────────────────────────────────────────────────┘
+```
+
+---
+
+## iOS — 5. Programs Tab (Template List)
+
+```
+┌────────────────────────────────────────────────┐
+│ ▣ ░░  📡 PROGRAMS                ▓ ▓ ▓ ▓      │  ← title sits in chrome header
+│ ▣ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ ┌─88.5─┐  CARDIAC REHAB STAGE 2   │  │  ← each card has a freq tag
+│ ▢ ░░  │ └──────┘  25 min · 8 intervals    │  │
+│ ▢ ░░  │           ZONE 2-3 · WALK/JOG     │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ ┌─92.1─┐  CLASSIC TABATA          │  │
+│ ▢ ░░  │ └──────┘  16 min · 8 intervals    │  │
+│ ▢ ░░  │           ZONE 4-5 · HIIT         │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ ┌─103.5┐  COUCH TO 5K · WEEK 3   │  │
+│ ▢ ░░  │ └──────┘  30 min · 14 intervals  │  │
+│ ▢ ░░  │           ZONE 2-3 · WALK/RUN    │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░       ┌─────────────────────────┐        │
+│ ▢ ░░       │ + CREATE NEW PROGRAM    │        │  ← cyan-outlined CTA
+│ ▢ ░░       └─────────────────────────┘        │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ TUNED  STN BANK · 3 PROGRAMS      │  │
+│ ▢ ░░  │ LAST PLAYED  CARDIAC REHAB STG 2  │  │
+│ ▢ ░░  │ TOTAL TIME   1H 11M               │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+└────────────────────────────────────────────────┘
+```
+
+The frequency tag is a small bordered rectangle (16pt mono heavy) — purely chrome, derived deterministically from the template UUID (so each template "owns" a station). Implementation: `Int(template.id.uuidString.hashValue & 0xFF) % 200 + 880` then format as `%.1f / 10`.
+
+---
+
+## iOS — 6. Settings → Theme Picker (FM Tuner selected)
+
+```
+┌────────────────────────────────────────────────┐
+│ ▣ ░░  📡 SETTINGS                ▓ ▓ ▓ ▓      │
+│ ▣ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ THEME                              │  │  ← section header, mono heavy
+│ ▢ ░░  │ ────────────────                   │  │
+│ ▢ ░░  │                                    │  │
+│ ▢ ░░  │  ○  Clean                          │  │  ← unselected: dim cyan ring
+│ ▢ ░░  │  ○  Synthwave                      │  │
+│ ▢ ░░  │  ○  Mixtape                        │  │
+│ ▢ ░░  │  ○  Arcade                         │  │
+│ ▢ ░░  │  ○  Classic Radio                  │  │
+│ ▢ ░░  │  ○  VU Meter                       │  │
+│ ▢ ░░  │  ○  Neovim                         │  │
+│ ▢ ░░  │  ●  FM TUNER          ✓            │  │  ← selected: filled bright cyan
+│ ▢ ░░  │                                    │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ PREVIEW                            │  │
+│ ▢ ░░  │                                    │  │
+│ ▢ ░░  │         ████  ████                 │  │  ← mini timer preview
+│ ▢ ░░  │         ████  ████  : ██  ██       │  │
+│ ▢ ░░  │         █  █  █  █    █  █  █  █   │  │
+│ ▢ ░░  │         ████  ████    ████  ████   │  │
+│ ▢ ░░  │                                    │  │
+│ ▢ ░░  │            142  BPM                │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+│ ▢ ░░                                           │
+│ ▢ ░░  ┌────────────────────────────────────┐  │
+│ ▢ ░░  │ TUNED  THEME · FM_TUNER            │  │
+│ ▢ ░░  │ SYNC OK · WATCH PAIRED             │  │
+│ ▢ ░░  └────────────────────────────────────┘  │
+└────────────────────────────────────────────────┘
+```
+
+---
+
+## watchOS — 7. Interval Workout (Work step)
+
+41mm framing. VU column is narrower (3px bars, 1px gap). No header chrome (too noisy at 41mm) — just footer info box.
+
+```
+┌───────────────────────────┐
+│ ▣░  ╔═══════════════╗     │
+│ ▣░  ║   W O R K     ║     │  ← step pill, 13pt mono heavy
+│ ▣░  ╚═══════════════╝     │
+│ ▣░                         │
+│ ▣░    ████  ████           │  ← TIMER 40pt mono heavy
+│ ▣░    ████  ████           │
+│ ▣░    █  █  █  █ : ████    │     0 1 : 4 7
+│ ▢░    ████  ████           │
+│ ▢░                         │
+│ ▢░       ┌──────┐          │
+│ ▢░       │ 148  │          │  ← HR 36pt mono heavy, single hero metric
+│ ▢░       │ BPM  │          │
+│ ▢░       └──────┘          │
+│ ▢░                         │
+│ ▢░  ┌─────────────────────┐│
+│ ▢░  │ STEP 8/12  Z3  STEREO││  ← footer info box (single line on watch)
+│ ▢░  └─────────────────────┘│
+│ ▢░                         │
+│ ▢░      ┌─────────────┐    │
+│ ▢░      │   PAUSE     │    │  ← contextual button (green when running)
+│ ▢░      └─────────────┘    │     swipe-left reveals red STOP
+└───────────────────────────┘
+```
+
+**Rest variant:** step pill reads `║  R E S T  ║` in `walking` dim cyan. Timer stays bright. HR card label dims, value stays bright.
+
+---
+
+## watchOS — 8. Gym Recovery
+
+```
+┌───────────────────────────┐
+│ ▣░  ╔═══════════════╗     │
+│ ▣░  ║  STATION  3   ║     │  ← state pill: STATION N or REST
+│ ▣░  ╚═══════════════╝     │
+│ ▣░                         │
+│ ▣░    ████  ████  ████     │  ← BPM HERO 40pt mono heavy
+│ ▣░    █  █  ████  ████     │     1  4  2
+│ ▣░    █  █  █  █  █  █     │
+│ ▢░    ████  ████  ████     │
+│ ▢░                         │
+│ ▢░          BPM            │  ← 11pt dim cyan
+│ ▢░                         │
+│ ▢░  ┌─────────────────────┐│
+│ ▢░  │ STN 01:48 · TOT 12:34││  ← footer info box (single line)
+│ ▢░  └─────────────────────┘│
+│ ▢░                         │
+│ ▢░    ┌──────────────────┐ │
+│ ▢░    │   END STATION    │ │  ← single contextual CTA
+│ ▢░    └──────────────────┘ │     (becomes START NEXT during rest)
+└───────────────────────────┘
+```
+
+**Resting state:** pill reads `║   R E S T   ║` in dim cyan. BPM hero stays bright (cardiac safety). Button label switches to `START NEXT` in bright cyan.
+
+---
+
+## watchOS — 9. Home Screen (Mode Selector)
+
+```
+┌───────────────────────────┐
+│  📡 ░░  ▓ ▓ ▓             │  ← single-line chrome (compact)
+│                            │
+│  ┌──────────────────────┐ │
+│  │ ┌─88.5─┐ INTERVAL    │ │  ← three mode cards, each with a frequency tag
+│  │ └──────┘ TRAINING    │ │
+│  │           ▶          │ │
+│  └──────────────────────┘ │
+│                            │
+│  ┌──────────────────────┐ │
+│  │ ┌─92.1─┐ GYM RECOVERY│ │
+│  │ └──────┘ STATIONS    │ │
+│  │           ▶          │ │
+│  └──────────────────────┘ │
+│                            │
+│  ┌──────────────────────┐ │
+│  │ ┌─103.5┐ FREE RUN    │ │
+│  │ └──────┘             │ │
+│  │           ▶          │ │
+│  └──────────────────────┘ │
+│                            │
+└───────────────────────────┘
+```
+
+No VU column on home (it would imply an active session). VU column appears only on workout / recovery / free-run screens.
+
+---
+
+## State variants — required for every dynamic screen
+
+For each timer screen, the implementer must handle:
+
+| State | Timer | VU bar | Step pill | Footer info | Buttons |
+|-------|-------|--------|-----------|-------------|---------|
+| **Idle** (pre-start) | `--:--` dim cyan | breathing pulse 0.3-0.5 | hidden | `READY · NO SIGNAL · TUNE STATION` | Single START (cyan) |
+| **Loading** (HK auth, sensor warmup) | `--:--` dim cyan, blinking colon | static at 0.5 | hidden | `SEARCHING · NO LOCK` | Disabled START |
+| **Running** | bright cyan, live | `bpm / 200` live | bright cyan | live metrics | Pause + Stop |
+| **Paused** | bright cyan, blinking colon | static at last value | dim cyan | `PAUSED · SIGNAL HOLD` | Resume + Stop |
+| **Error** (HK denied / no HR) | `--:--` dim cyan | absent | `║ NO SIGNAL ║` red `#FF6B6B` | `ERROR · CHECK PERMISSIONS · TAP SETTINGS` | Single SETTINGS button |
+| **Empty** (Programs with no templates) | n/a | absent | n/a | `NO STATIONS PROGRAMMED` | Single "CREATE PROGRAM" |
+
+The blinking colon during paused/loading: 1.0 Hz, `.opacity(value ? 1.0 : 0.3)` toggled by `Timer.publish(every: 0.5)`.

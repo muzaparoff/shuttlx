@@ -230,8 +230,22 @@ extension View {
         case "classicradio": self.classicRadioBackground()
         case "vumeter":      self.vuMeterBackground()
         case "neovim":       self.neovimBackground()
+        case "fmtuner":      self.fmTunerBackground()
         default:             self
         }
+    }
+
+    // MARK: - FM Tuner Background (deep navy LCD)
+    //
+    // On watchOS the background modifier renders ONLY the navy field — there is
+    // no room on 41mm for header chrome. Screens that want a header add
+    // `FMTunerCompactHeader()` explicitly at the top of their VStack.
+
+    func fmTunerBackground() -> some View {
+        self.background(
+            Color(red: 0.008, green: 0.063, blue: 0.094) // #021018
+                .ignoresSafeArea()
+        )
     }
 
     // MARK: - Clean Mesh Background (watchOS: simplified gradient fallback)
