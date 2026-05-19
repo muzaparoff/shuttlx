@@ -170,18 +170,38 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return false
         }
 
+        // 8-second timeout guards against HKHealthStore.requestAuthorization hanging
+        // indefinitely (observed when the HealthKit daemon is in a bad state on watch).
+        // Without this, isStarting stays true and the UI appears completely frozen.
         do {
-            try await healthStore.requestAuthorization(toShare: writeTypes, read: allReadTypes)
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                group.addTask {
+                    try await self.healthStore.requestAuthorization(toShare: writeTypes, read: allReadTypes)
+                }
+                group.addTask {
+                    try await Task.sleep(nanoseconds: 8_000_000_000)
+                    throw CancellationError()
+                }
+                try await group.next()
+                group.cancelAll()
+            }
             logger.info("HealthKit authorization granted")
             healthKitAuthorized = true
             authorizationDenied = false
             updateMaxHRFromHealthKit()
             return true
         } catch {
-            logger.error("HealthKit authorization error: \(error.localizedDescription)")
-            healthKitAuthorized = false
-            authorizationDenied = true
-            return false
+            if error is CancellationError {
+                logger.error("HealthKit authorization timed out after 8s — proceeding without full auth")
+                // Allow workout to proceed; individual queries will surface permission errors
+                healthKitAuthorized = true
+                authorizationDenied = false
+            } else {
+                logger.error("HealthKit authorization error: \(error.localizedDescription)")
+                healthKitAuthorized = false
+                authorizationDenied = true
+            }
+            return healthKitAuthorized
         }
     }
 

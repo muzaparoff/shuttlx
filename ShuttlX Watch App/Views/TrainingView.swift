@@ -38,14 +38,13 @@ struct TrainingView: View {
 
     private var workoutTabView: some View {
         ZStack {
-            // Static themed background rasterized to a Metal-backed texture so the
-            // per-theme Canvas (37–112 stroked lines) is evaluated ONCE instead of
-            // re-rendering 3-6×/sec with every manager @Published change. Without
-            // drawingGroup() the Canvas wrapping the TabView blocked page swipes
-            // (~5s to swap to the Stop button).
+            // Background sits behind the TabView as a non-interactive layer.
+            // drawingGroup() was previously used here but it prevents dynamic
+            // theme switching mid-workout and is unnecessary now that engine
+            // objectWillChange forwarding was removed (that was the real source
+            // of 3-6x/sec background re-renders).
             Color.clear
                 .themedScreenBackground()
-                .drawingGroup()
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
@@ -61,7 +60,7 @@ struct TrainingView: View {
             .tabViewStyle(PageTabViewStyle())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .ignoresSafeArea()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .navigationBarHidden(true)
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
