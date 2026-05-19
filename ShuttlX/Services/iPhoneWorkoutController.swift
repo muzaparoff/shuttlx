@@ -194,6 +194,7 @@ final class iPhoneWorkoutController: ObservableObject {
         startDisplayTimer()
         isActive = true
         isPaused = false
+        LiveActivityManager.shared.startActivity(activityType: workoutName)
         logger.info("Workout started — mode=\(String(describing: self.mode))")
     }
 
@@ -321,6 +322,7 @@ final class iPhoneWorkoutController: ObservableObject {
     // MARK: - Teardown
 
     private func tearDown() {
+        LiveActivityManager.shared.endActivity()
         stopDisplayTimer()
         heartRateMonitor.stop()
         pedometer.stopUpdates()
@@ -401,6 +403,16 @@ final class iPhoneWorkoutController: ObservableObject {
         }
 
         elapsedTime = Date().timeIntervalSince(start) - accumulatedPauseTime
+
+        LiveActivityManager.shared.updateActivity(
+            elapsedTime: elapsedTime,
+            heartRate: heartRateMonitor.current,
+            distance: totalDistance,
+            calories: 0,
+            currentActivity: workoutName,
+            isPaused: isPaused,
+            pace: currentPace ?? 0
+        )
     }
 
     private func processRecoveryEvents(_ events: [SegmenterEvent]) {

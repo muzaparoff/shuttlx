@@ -3,7 +3,6 @@ import HealthKit
 import CoreMotion
 import CoreLocation
 import WatchConnectivity
-import Combine
 #if os(watchOS)
 import WatchKit
 #endif
@@ -48,18 +47,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var workoutMode: WorkoutMode = .freeRun
     @Published var workoutName: String = "Free Run"
 
-    // `intervalEngine` MUST be @Published — without it, swapping in a new engine
-    // wouldn't trigger view re-renders. But @Published on a reference only fires
-    // on reassignment; for the engine's internal state (`currentStepTimeRemaining`,
-    // `currentStep`, `currentStepIndex`) to drive view updates we ALSO forward
-    // the engine's objectWillChange through `intervalEngineCancellables` below.
-    // This pair is the canonical fix for the nested-ObservableObject "frozen
-    // countdown" bug — without the subscription, TrainingView only re-renders
-    // incidentally when manager's `elapsedTime` ticks, and SwiftUI can legally
-    // skip the inner countdown Text because there's no dependency edge to the
-    // engine.
+    // `intervalEngine` is @Published so swapping in a new engine triggers a
+    // re-render. For per-tick UI updates, views observe the engine DIRECTLY
+    // via @ObservedObject (see IntervalStepWash in TrainingView). We do NOT
+    // forward `engine.objectWillChange` through this manager — that doubled
+    // the invalidation count per tick (manager + engine both firing) and
+    // caused noticeable UI sluggishness during workouts.
     @Published var intervalEngine: IntervalEngine?
-    private var intervalEngineCancellables: Set<AnyCancellable> = []
     private var activeTemplate: WorkoutTemplate?
 
     // MARK: - Gym Recovery Mode State
@@ -355,17 +349,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let engine = IntervalEngine()
         engine.configure(template: template)
         intervalEngine = engine
-
-        // Forward engine's objectWillChange so TrainingView (observing the
-        // manager) re-renders when the engine ticks. Without this the countdown
-        // visibly freezes between manager-side @Published changes.
-        intervalEngineCancellables.removeAll()
-        engine.objectWillChange
-            .sink { [weak self] _ in
-                self?.objectWillChange.send()
-            }
-            .store(in: &intervalEngineCancellables)
-
         startWorkout()
     }
 
@@ -533,8 +516,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         WCSession.default.transferUserInfo(stopPayload)
 
-        // Reset interval mode (clear engine subscription before dropping the engine)
-        intervalEngineCancellables.removeAll()
+        // Reset interval mode
         workoutMode = .freeRun
         intervalEngine = nil
         activeTemplate = nil
@@ -640,9 +622,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // date BEFORE we write to elapsedTime. The elapsedTime write fires the
         // manager's objectWillChange; SwiftUI re-evaluates the body next runloop
         // pass and reads engine.currentStepTimeRemaining (already decremented).
-        // The engine's own objectWillChange is also forwarded through
-        // intervalEngineCancellables — together these guarantee the countdown
-        // never appears frozen.
         if workoutMode == .interval, let engine = intervalEngine {
             engine.tick(heartRate: heartRate, distance: totalDistance)
             if engine.isComplete {

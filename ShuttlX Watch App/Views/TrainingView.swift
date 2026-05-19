@@ -37,18 +37,31 @@ struct TrainingView: View {
     }
 
     private var workoutTabView: some View {
-        TabView(selection: $selectedTab) {
-            // Tab 1: Full-screen stacked metrics
-            workoutDisplayTab
-                .tag(0)
+        ZStack {
+            // Static themed background rasterized to a Metal-backed texture so the
+            // per-theme Canvas (37–112 stroked lines) is evaluated ONCE instead of
+            // re-rendering 3-6×/sec with every manager @Published change. Without
+            // drawingGroup() the Canvas wrapping the TabView blocked page swipes
+            // (~5s to swap to the Stop button).
+            Color.clear
+                .themedScreenBackground()
+                .drawingGroup()
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
 
-            // Tab 2: Controls
-            controlsTab
-                .tag(1)
+            TabView(selection: $selectedTab) {
+                // Tab 1: Full-screen stacked metrics
+                workoutDisplayTab
+                    .tag(0)
+
+                // Tab 2: Controls
+                controlsTab
+                    .tag(1)
+            }
+            .tabViewStyle(PageTabViewStyle())
+            .background(Color.clear)
         }
         .navigationBarHidden(true)
-        .tabViewStyle(PageTabViewStyle())
-        .themedScreenBackground()
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
                 let captures = workoutManager.completedCaptures
@@ -154,22 +167,15 @@ struct TrainingView: View {
         let rowSpacing = h * 0.025
 
         let isInterval = workoutManager.workoutMode == .interval
-        let stepWashColor: Color? = {
-            guard isInterval,
-                  let step = workoutManager.intervalEngine?.currentStep else { return nil }
-            return ShuttlXColor.forStepType(step.type)
-        }()
 
         return ZStack {
             // Subtle step-type wash so the user can read state pre-attentively.
-            // 8% is the maximum that doesn't crush text contrast in Classic Radio / Neovim.
-            if let wash = stepWashColor {
-                wash
-                    .opacity(0.08)
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.4),
-                               value: workoutManager.intervalEngine?.currentStep?.type)
+            // Hosted in a dedicated subview that observes the engine directly so
+            // its body invalidation is independent of the manager's tick cadence.
+            // (Reading intervalEngine?.currentStep?.type in a view modifier on the
+            // main body forced re-evaluation on every manager @Published change.)
+            if isInterval, let engine = workoutManager.intervalEngine {
+                IntervalStepWash(engine: engine)
             }
 
             VStack(spacing: rowSpacing) {
@@ -219,8 +225,6 @@ struct TrainingView: View {
                             .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                             .monospacedDigit()
                             .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                            .contentTransition(.numericText())
-                            .minimumScaleFactor(0.6)
                             .lineLimit(1)
                         if heartRateZoneNumber > 0 {
                             Text("Z\(heartRateZoneNumber)")
@@ -237,7 +241,6 @@ struct TrainingView: View {
                 .accessibilityLabel(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
                 .accessibilityValue(heartRateZoneNumber > 0 ? "Zone \(heartRateZoneNumber)" : "")
                 .accessibilityAddTraits(.updatesFrequently)
-                .animation(.easeInOut(duration: 0.5), value: workoutManager.heartRate)
                 .onChange(of: workoutManager.heartRate) { _, newHR in
                     let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
                     if isHigh && !highIntensityHapticFired {
@@ -301,7 +304,6 @@ struct TrainingView: View {
                 .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(ShuttlXColor.textPrimary)
-                .minimumScaleFactor(0.6)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -324,8 +326,6 @@ struct TrainingView: View {
                 .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(color)
-                .contentTransition(.numericText())
-                .minimumScaleFactor(0.6)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
@@ -513,6 +513,28 @@ struct TrainingView: View {
         let minutes = Int(pace) / 60
         let seconds = Int(pace) % 60
         return "Average pace \(minutes) minutes \(seconds) seconds per kilometer"
+    }
+}
+
+// MARK: - Interval Step Wash
+//
+// Observes the IntervalEngine directly (not through WatchWorkoutManager) so its
+// body re-evaluation is decoupled from the manager's once-per-second elapsedTime
+// publish. The wash only redraws when the engine's `currentStep` actually changes,
+// not on every metric tick.
+private struct IntervalStepWash: View {
+    @ObservedObject var engine: IntervalEngine
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        if let step = engine.currentStep {
+            ShuttlXColor.forStepType(step.type)
+                .opacity(0.08)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.4),
+                           value: step.type)
+        }
     }
 }
 

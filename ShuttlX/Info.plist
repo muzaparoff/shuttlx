@@ -39,6 +39,8 @@
 	<false/>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
+	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
