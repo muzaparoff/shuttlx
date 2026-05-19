@@ -20,8 +20,8 @@ The watchOS target remains Apple-frameworks-only.
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 65 | SharedDataManager (605), AnalyticsView (514), DeviceManager, CalorieEstimationEngine, ThemeManager + 13 theme files |
-| watchOS | `ShuttlX Watch App` | 38 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 13 theme files |
+| iOS | `ShuttlX` | 65 | SharedDataManager (605), AnalyticsView (514), DeviceManager, CalorieEstimationEngine, ThemeManager + 16 theme files |
+| watchOS | `ShuttlX Watch App` | 38 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 16 theme files |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
 | Widgets | `ShuttlXWidgets` | 3 | SmallWidget, MediumWidget |
 
@@ -66,13 +66,14 @@ Theme sync:
 - `ThemeManager` (`@Observable` singleton) manages active theme, persists to App Group UserDefaults
 - **Switching**: call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
 - `current` is a **stored** property (not computed) — ensures `@Observable` generates proper tracking
+- **FM Tuner chrome state** (4 properties, FM Tuner theme only): `vuMeterValue` (0.0–1.0), `signalStrength` (0–5), `footerStatusLines` ([String]), `chromeVisible` (Bool) — other themes ignore these
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
 - Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
-- 7 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Mixtape (blue portable player, green LCD), Arcade (heavy weights, pixel borders), Classic Radio (warm brown, cream/amber), VU Meter (dark panel, amber gauges), Neovim (Gruvbox dark, all monospaced, gutter stripe)
-- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Mixtape: blue body + texture lines, Arcade: CRT scanlines+vignette, Classic Radio: warm brown grain + vignette, VU Meter: amber glow + panel lines, Neovim: #1D2021 solid + left gutter stripe (iOS) / solid (watchOS)
+- 8 themes: Clean (glass cards, system fonts), Synthwave (neon glow, monospaced), Mixtape (blue portable player, green LCD), Arcade (heavy weights, pixel borders), Classic Radio (warm brown, cream/amber), VU Meter (dark panel, amber gauges), Neovim (Gruvbox dark, all monospaced, gutter stripe), FM Tuner (deep navy LCD, cyan monospaced, 8th theme)
+- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Mixtape: blue body + texture lines, Arcade: CRT scanlines+vignette, Classic Radio: warm brown grain + vignette, VU Meter: amber glow + panel lines, Neovim: #1D2021 solid + left gutter stripe (iOS) / solid (watchOS), FM Tuner: #021018 solid + FMTunerHeader chrome overlay + FMTunerVUColumn overlay (Canvas, 18 segments)
 - View modifiers: `.themedCard()`, `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
-- `ThemeEffects.CardStyle` values: `.glass`, `.neon`, `.lcd`, `.pixel`, `.tape`, `.meter`, `.terminal` (Neovim)
-- Files: 13 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Mixtape, Themes/Arcade, Themes/ClassicRadio, Themes/VUMeter, Themes/Neovim)
+- `ThemeEffects.CardStyle` values: `.glass`, `.neon`, `.lcd`, `.pixel`, `.tape`, `.meter`, `.terminal` (Neovim), `.lcd` (shared by Mixtape and FM Tuner)
+- Files: 16 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Mixtape, Themes/Arcade, Themes/ClassicRadio, Themes/VUMeter, Themes/Neovim, Themes/FMTuner, Components/FMTunerHeader, Components/FMTunerVUColumn)
 
 ## Data Storage
 
@@ -87,7 +88,7 @@ Theme sync:
 - **Minimal external dependencies** — iOS target uses RevenueCat + TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
-- **Dynamic multi-theme UI**: 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, Neovim) — selectable in Settings
+- **Dynamic multi-theme UI**: 8 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, Neovim, FM Tuner) — selectable in Settings
 - **Models are duplicated** between iOS and watchOS — update BOTH copies when changing
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 - **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status

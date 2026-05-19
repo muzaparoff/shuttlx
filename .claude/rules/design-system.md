@@ -11,7 +11,7 @@ All new UI code must follow these conventions. Existing code should be migrated 
 
 ## Theme System
 
-- 6 selectable themes: **Clean** (default), **Synthwave**, **Mixtape**, **Arcade**, **Classic Radio**, **VU Meter**
+- 8 selectable themes: **Clean** (default), **Synthwave**, **Mixtape**, **Arcade**, **Classic Radio**, **VU Meter**, **Neovim**, **FM Tuner**
 - `ThemeManager.shared` is the `@Observable` singleton — injected via `.environment(ThemeManager.shared)` at app root
 - **Theme switching**: always call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
 - `current` is a stored `@Observable` property (not computed) — ensures SwiftUI re-renders on theme change
@@ -23,16 +23,17 @@ All new UI code must follow these conventions. Existing code should be migrated 
 ## Screen Backgrounds
 
 - Use `.themedScreenBackground()` on every major screen's outermost container (NavigationStack, ScrollView, List, TabView)
-- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), blue body texture (Mixtape), CRT scanlines (Arcade), warm brown grain (Classic Radio), amber glow panels (VU Meter)
-- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.mixtapeBackground()`, `.arcadeCRTBackground()`, `.classicRadioBackground()`, `.vuMeterBackground()`
+- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), blue body texture (Mixtape), CRT scanlines (Arcade), warm brown grain (Classic Radio), amber glow panels (VU Meter), Gruvbox solid + gutter stripe (Neovim), navy solid + chrome overlay (FM Tuner)
+- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.mixtapeBackground()`, `.arcadeCRTBackground()`, `.classicRadioBackground()`, `.vuMeterBackground()`, `.neovimBackground()`, `.fmTunerBackground()`
 - `MeshGradient` is iOS-only — watchOS Clean theme uses `LinearGradient` fallback
 - All background overlays use `.allowsHitTesting(false)` and `.ignoresSafeArea()`
 
 ## Cards & Containers
 
-- Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel/tape/meter)
+- Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel/tape/meter/terminal)
 - `.glassBackground(cornerRadius:)` still available as a fallback for Clean-only contexts
 - Theme-specific modifiers: `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
+- FM Tuner cards use `.lcd` CardStyle (shared with Mixtape)
 - Never use `Divider()` between list items — use vertical spacing (`LazyVStack(spacing: 12)`)
 - Standard card padding: `.padding(16)`
 
