@@ -476,12 +476,15 @@ extension View {
     // MARK: - FM Tuner Background (deep navy LCD + chrome overlays)
 
     func fmTunerBackground() -> some View {
-        let theme = ThemeManager.shared
+        // Plain navy background only — no header/footer/VU chrome here.
+        // Chrome components (FMTunerHeader, FMTunerVUColumn, FMTunerFooter)
+        // are added directly by workout timer screens that want them, not globally.
+        // This matches the watchOS pattern and prevents chrome bleeding onto
+        // Session Details, maps, settings, and other non-workout screens.
         return self
             .background(
                 ZStack {
                     Color(red: 0.008, green: 0.063, blue: 0.094)  // #021018 deep navy
-                    // Subtle horizontal LCD substrate lines (very faint)
                     Canvas { ctx, size in
                         let lineColor = Color(red: 0.486, green: 0.847, blue: 1.000).opacity(0.015)
                         for y in stride(from: CGFloat(0), to: size.height, by: 4) {
@@ -495,30 +498,6 @@ extension View {
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
             )
-            // VU column on the leading edge, vertically centered
-            .overlay(alignment: .leading) {
-                if theme.chromeVisible {
-                    FMTunerVUColumn(value: theme.vuMeterValue)
-                        .padding(.leading, 6)
-                        .allowsHitTesting(false)
-                }
-            }
-            // Header chrome pinned to the top
-            .overlay(alignment: .top) {
-                if theme.chromeVisible {
-                    FMTunerHeader()
-                        .allowsHitTesting(false)
-                }
-            }
-            // Footer info box above the tab bar
-            .overlay(alignment: .bottom) {
-                if theme.chromeVisible {
-                    FMTunerFooter(lines: theme.footerStatusLines)
-                        .padding(.horizontal, 16)
-                        .padding(.bottom, 70)
-                        .allowsHitTesting(false)
-                }
-            }
     }
 }
 
