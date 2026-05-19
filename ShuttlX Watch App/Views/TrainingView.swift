@@ -59,8 +59,9 @@ struct TrainingView: View {
                     .tag(1)
             }
             .tabViewStyle(PageTabViewStyle())
-            .background(Color.clear)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .ignoresSafeArea()
         .navigationBarHidden(true)
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
@@ -226,6 +227,7 @@ struct TrainingView: View {
                             .monospacedDigit()
                             .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
                             .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                         if heartRateZoneNumber > 0 {
                             Text("Z\(heartRateZoneNumber)")
                                 .font(.system(size: max(10, labelSize), weight: .bold, design: .monospaced))
@@ -327,6 +329,7 @@ struct TrainingView: View {
                 .monospacedDigit()
                 .foregroundColor(color)
                 .lineLimit(1)
+                .minimumScaleFactor(0.6)
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
