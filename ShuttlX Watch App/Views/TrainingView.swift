@@ -17,6 +17,7 @@ struct TrainingView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.isLuminanceReduced) private var isLuminanceReduced
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(ThemeManager.self) private var themeManager
 
     @State private var hrCalculator = HeartRateZoneCalculator.fromSharedDefaults()
     #if os(watchOS)
@@ -290,7 +291,32 @@ struct TrainingView: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
+            .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : 0)
+            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : 0)
+            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : 0)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // FM Tuner chrome — non-interactive overlays, only when active
+            if themeManager.current.id == "fmtuner" {
+                VStack(spacing: 0) {
+                    FMTunerCompactHeader()
+                    Spacer()
+                    FMTunerSingleLineFooter(text: watchFMFooterText)
+                        .padding(.horizontal, ShuttlXSpacing.xs)
+                        .padding(.bottom, 2)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+
+                HStack(alignment: .top, spacing: 0) {
+                    FMTunerWatchVUColumn(level: watchVULevel)
+                        .padding(.top, 20)
+                        .padding(.leading, 1)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .allowsHitTesting(false)
+            }
         }
     }
 
@@ -453,6 +479,20 @@ struct TrainingView: View {
     }
 
     // MARK: - Computed Properties
+
+    private var watchVULevel: Double {
+        guard workoutManager.heartRate > 0 else { return 0 }
+        return min(1.0, Double(workoutManager.heartRate) / 200.0)
+    }
+
+    private var watchFMFooterText: String {
+        let t = FormattingUtils.formatTimer(workoutManager.elapsedTime)
+        if workoutManager.workoutMode == .interval,
+           let step = workoutManager.intervalEngine?.currentStep {
+            return "\(step.type.displayName.uppercased()) · \(t)"
+        }
+        return "\(workoutManager.workoutName.uppercased()) · \(t)"
+    }
 
     private var heartRateText: String {
         guard workoutManager.heartRate > 0 else { return "\u{2014} BPM" }

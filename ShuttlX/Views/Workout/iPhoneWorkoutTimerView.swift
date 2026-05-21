@@ -23,6 +23,8 @@ struct iPhoneWorkoutTimerView: View {
     @State private var showingFinishConfirmation = false
     @State private var showingCancelConfirmation = false
 
+    @Environment(ThemeManager.self) private var themeManager
+
     var body: some View {
         ZStack {
             // Step-color wash (interval mode only). 8% opacity is the cap that
@@ -36,16 +38,20 @@ struct iPhoneWorkoutTimerView: View {
                                value: controller.intervalEngine?.currentStep?.label)
             }
 
-            VStack(spacing: 24) {
-                header
-                heroSection
-                metricsSection
-                Spacer(minLength: 0)
-                controlsBar
+            if themeManager.current.id == "fmtuner" {
+                fmTunerContent
+            } else {
+                VStack(spacing: 24) {
+                    header
+                    heroSection
+                    metricsSection
+                    Spacer(minLength: 0)
+                    controlsBar
+                }
+                .padding(.horizontal, 20)
+                .padding(.top, 12)
+                .padding(.bottom, 8)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 12)
-            .padding(.bottom, 8)
         }
         .themedScreenBackground()
         .alert("Finish Workout", isPresented: $showingFinishConfirmation) {
@@ -536,6 +542,95 @@ struct iPhoneWorkoutTimerView: View {
                 .accessibilityLabel("Finish workout")
                 .accessibilityHint("Saves and ends")
             }
+        }
+    }
+
+    // MARK: - FM Tuner Layout
+
+    private var fmTunerContent: some View {
+        VStack(spacing: 0) {
+            FMTunerHeader()
+
+            HStack(alignment: .top, spacing: 8) {
+                FMTunerVUColumn(value: vuLevel)
+                    .padding(.top, 8)
+
+                VStack(spacing: 16) {
+                    header
+                    heroSection
+                    fmTunerSubValues
+                    metricsSection
+                    Spacer(minLength: 0)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+
+            FMTunerFooter(lines: fmFooterLines)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+
+            controlsBar
+                .padding(.horizontal, 20)
+                .padding(.bottom, 8)
+        }
+    }
+
+    @ViewBuilder
+    private var fmTunerSubValues: some View {
+        if controller.mode == .interval, let engine = controller.intervalEngine {
+            HStack {
+                Text("◄ STEP \(engine.currentStepIndex + 1)")
+                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                Spacer()
+                Text("\(engine.totalStepsCount - engine.currentStepIndex - 1) LEFT ►")
+                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+            }
+            .frame(maxWidth: .infinity)
+        } else if controller.mode == .freeRun {
+            HStack {
+                Text("◄ \(FormattingUtils.formatDistance(controller.totalDistance))")
+                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                Spacer()
+                if let pace = controller.currentPace {
+                    Text("\(FormattingUtils.formatPace(pace)) /KM ►")
+                        .font(.system(size: 11, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    private var vuLevel: Double {
+        let bpm = controller.heartRateMonitor.current
+        guard bpm > 0 else { return 0 }
+        return min(1.0, Double(bpm) / 200.0)
+    }
+
+    private var fmFooterLines: [String] {
+        let elapsed = FormattingUtils.formatTimer(controller.elapsedTime)
+        switch controller.mode {
+        case .freeRun:
+            return ["\(controller.workoutName.uppercased()) · \(elapsed) · LIVE"]
+        case .interval:
+            let stepInfo = controller.intervalEngine.flatMap { e in
+                e.currentStep.map { s in
+                    "\(self.displayName(for: s.type).uppercased()) \(e.currentStepIndex + 1)/\(e.totalStepsCount)"
+                }
+            } ?? "—"
+            return ["\(controller.workoutName.uppercased()) · \(elapsed)", stepInfo]
+        case .gymRecovery:
+            let stateText: String
+            switch controller.recoveryState {
+            case .idle: stateText = "READY"
+            case .work: stateText = "STATION \(controller.recoverySetNumber)"
+            case .rest: stateText = "REST"
+            }
+            return ["\(controller.workoutName.uppercased()) · \(elapsed)", stateText]
         }
     }
 
