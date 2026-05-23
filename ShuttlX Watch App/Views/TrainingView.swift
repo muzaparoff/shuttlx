@@ -268,12 +268,9 @@ struct TrainingView: View {
                     HStack(spacing: 8) {
                         compactMetric("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
                                       tertiarySize, labelSize)
-                        if workoutManager.currentCadence > 0 {
-                            compactMetric("CAD", "\(workoutManager.currentCadence)",
-                                          tertiarySize, labelSize)
-                        } else {
-                            Color.clear.frame(maxWidth: .infinity)
-                        }
+                        compactMetric("CAD",
+                                      workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
+                                      tertiarySize, labelSize)
                     }
                 } else {
                     // Free-run keeps DIST + PACE in the legacy single-row format
@@ -281,11 +278,12 @@ struct TrainingView: View {
                               accessibilityText: "Distance \(accessibleDistance)")
                     metricRow("PACE", paceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
                               accessibilityText: accessiblePace)
-                    if workoutManager.currentCadence > 0 {
-                        metricRow("CAD", "\(workoutManager.currentCadence)",
-                                  ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                                  accessibilityText: "Cadence \(workoutManager.currentCadence) steps per minute")
-                    }
+                    metricRow("CAD",
+                              workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
+                              ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                              accessibilityText: workoutManager.currentCadence > 0
+                                ? "Cadence \(workoutManager.currentCadence) steps per minute"
+                                : "Cadence no data")
                 }
 
                 Spacer(minLength: 0)

@@ -83,6 +83,9 @@ final class iPhoneWorkoutController: ObservableObject {
     private var accumulatedPauseTime: TimeInterval = 0
     private var pauseStartDate: Date?
     private var displayTimer: DispatchSourceTimer?
+    // Cadence fallback (used when CMPedometer.currentCadence returns nil)
+    private var lastCadenceStepCount: Int = 0
+    private var lastCadenceTimestamp: Date?
     private let haptics = iPhoneHapticPlayer()
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "iPhoneWorkoutController")
 
@@ -186,6 +189,8 @@ final class iPhoneWorkoutController: ObservableObject {
         totalSteps = 0
         currentPace = nil
         currentCadence = 0
+        lastCadenceStepCount = 0
+        lastCadenceTimestamp = nil
         routePoints = []
         heartRateMonitor.reset()
         heartRateMonitor.start(from: now)
@@ -341,6 +346,8 @@ final class iPhoneWorkoutController: ObservableObject {
         totalSteps = 0
         currentPace = nil
         currentCadence = 0
+        lastCadenceStepCount = 0
+        lastCadenceTimestamp = nil
         routePoints = []
         workoutStartTime = nil
         accumulatedPauseTime = 0
@@ -461,7 +468,23 @@ final class iPhoneWorkoutController: ObservableObject {
                     }
                 }
                 if let cadence = data.currentCadence {
+                    // Preferred: Apple's instantaneous cadence (steps/sec → steps/min)
                     self.currentCadence = Int(cadence.doubleValue * 60)
+                } else if let lastTS = self.lastCadenceTimestamp {
+                    // Fallback: derive from step delta over a ≥3s window. Required
+                    // because CMPedometer.currentCadence is nil for the first
+                    // 30-60s of a workout + always nil in the simulator.
+                    let dt = Date().timeIntervalSince(lastTS)
+                    if dt >= 3.0 {
+                        let stepDelta = self.totalSteps - self.lastCadenceStepCount
+                        let derived = Int(Double(stepDelta) * 60.0 / dt)
+                        self.currentCadence = max(0, derived)
+                        self.lastCadenceStepCount = self.totalSteps
+                        self.lastCadenceTimestamp = Date()
+                    }
+                } else {
+                    self.lastCadenceStepCount = self.totalSteps
+                    self.lastCadenceTimestamp = Date()
                 }
             }
         }

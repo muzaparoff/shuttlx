@@ -309,11 +309,9 @@ struct iPhoneWorkoutTimerView: View {
             metricCard(label: "STEPS",
                        value: "\(controller.totalSteps)",
                        color: ShuttlXColor.steps)
-            if controller.currentCadence > 0 {
-                metricCard(label: "CAD",
-                           value: "\(controller.currentCadence)",
-                           color: ShuttlXColor.steps)
-            }
+            metricCard(label: "CAD",
+                       value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "—",
+                       color: ShuttlXColor.steps)
         }
     }
 
@@ -335,14 +333,10 @@ struct iPhoneWorkoutTimerView: View {
                            value: FormattingUtils.formatTimer(controller.elapsedTime),
                            color: ShuttlXColor.textPrimary,
                            compact: true)
-                if controller.currentCadence > 0 {
-                    metricCard(label: "CAD",
-                               value: "\(controller.currentCadence)",
-                               color: ShuttlXColor.steps,
-                               compact: true)
-                } else {
-                    Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
-                }
+                metricCard(label: "CAD",
+                           value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "—",
+                           color: ShuttlXColor.steps,
+                           compact: true)
             }
         }
     }

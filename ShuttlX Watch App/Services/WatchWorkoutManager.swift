@@ -96,6 +96,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var cadenceSampleSum: Double = 0
     private var cadenceSampleCount: Int = 0
     private var maxCadenceValue: Int = 0
+    // Fallback derivation when CMPedometer.currentCadence is nil (frequent during
+    // the first 30-60s of a workout + always nil in the simulator).
+    private var lastCadenceStepCount: Int = 0
+    private var lastCadenceTimestamp: Date?
 
     // Pace & split tracking
     private var timeAtLastKm: TimeInterval = 0
@@ -324,6 +328,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         cadenceSampleSum = 0
         cadenceSampleCount = 0
         maxCadenceValue = 0
+        lastCadenceStepCount = 0
+        lastCadenceTimestamp = nil
         heartRateAnchor = nil
         caloriesAnchor = nil
         accumulatedPauseTime = 0
@@ -521,6 +527,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         cadenceSampleSum = 0
         cadenceSampleCount = 0
         maxCadenceValue = 0
+        lastCadenceStepCount = 0
+        lastCadenceTimestamp = nil
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
@@ -915,8 +923,28 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     self.totalDistance = distanceKm
                     self.updatePaceAndSplits(distanceKm: distanceKm)
                 }
-                if let cadence = data.currentCadence {
-                    let spm = Int(cadence.doubleValue * 60)
+                let spm: Int? = {
+                    if let cadence = data.currentCadence {
+                        // Preferred: Apple's instantaneous cadence (steps/sec → steps/min)
+                        return Int(cadence.doubleValue * 60)
+                    }
+                    // Fallback: derive from step delta over a ≥3s window so brief
+                    // pauses between samples don't produce wild jitter. nil until
+                    // we accumulate the first window's worth of samples.
+                    guard let lastTS = self.lastCadenceTimestamp else {
+                        self.lastCadenceStepCount = self.totalSteps
+                        self.lastCadenceTimestamp = Date()
+                        return nil
+                    }
+                    let dt = Date().timeIntervalSince(lastTS)
+                    guard dt >= 3.0 else { return nil }
+                    let stepDelta = self.totalSteps - self.lastCadenceStepCount
+                    let derived = Int(Double(stepDelta) * 60.0 / dt)
+                    self.lastCadenceStepCount = self.totalSteps
+                    self.lastCadenceTimestamp = Date()
+                    return max(0, derived)
+                }()
+                if let spm = spm {
                     self.currentCadence = spm
                     // Only average when actually moving (spm > 0) and not paused.
                     // Zero ticks happen during walks against treadmill rails or rest periods —
