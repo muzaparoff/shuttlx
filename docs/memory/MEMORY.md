@@ -21,6 +21,7 @@
 - [Cadence (RPM/SPM) Derivation](./cadence-derivation.md) — why CAD card was hidden, CMPedometer warmup quirk, step-delta fallback
 - [Social Features & Supabase Plan](./social-backend-plan.md) — 7-phase plan for user registration, social, Supabase backend
 - [Per-Theme Timer Hero Pattern](./timer-hero-pattern.md) — how 6 themes render unique hero visualizations; watch chrome overlay pattern
+- [Open-Source Tooling Research](./tooling-research.md) — MCP/agent/skill landscape research (2026-06-06); curated picks in docs/proposals/tooling-additions.md
 
 ## User Preferences
 - Discuss each feature before implementing — never start without explicit approval
