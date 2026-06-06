@@ -294,9 +294,16 @@ struct TrainingView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : 0)
-            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : 0)
-            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : 0)
+            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : 0))
+            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : 0))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            // Synthwave chrome — non-interactive backdrop, only when active.
+            // Renders horizon grid + sun halo + timer bloom behind the metrics.
+            // No frame, no chevron, no needle gauges (cut from the iPhone variant).
+            if themeManager.current.id == "synthwave" {
+                SynthwaveTimerOverlay(workoutManager: workoutManager)
+            }
 
             // FM Tuner chrome — non-interactive overlays, only when active
             if themeManager.current.id == "fmtuner" {

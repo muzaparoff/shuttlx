@@ -78,7 +78,9 @@ struct iPhoneWorkoutTimerView: View {
         switch themeManager.current.id {
         case "fmtuner":
             fmTunerContent
-        case "synthwave", "mixtape", "arcade", "classicradio", "vumeter", "neovim":
+        case "synthwave":
+            SynthwaveTimerHero(controller: controller)
+        case "mixtape", "arcade", "classicradio", "vumeter", "neovim":
             // Phase 3: replace each id's case with a call into Theme/Themes/<Name>TimerHero.swift
             standardTimerBody
         default:
