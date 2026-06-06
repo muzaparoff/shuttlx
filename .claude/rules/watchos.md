@@ -18,6 +18,14 @@ globs:
 - Use `DispatchSourceTimer` (not `Timer`) — drift-proof, works when screen off
 - Must work during wrist-down (screen off) state
 - Test with long workouts (30+ minutes)
+- **Free-run walk/run layout**: Use `compactMetric` two-up rows for DIST/PACE/CADENCE (not full-size `metricRow`) — total budget is ~180pt on 41mm screen; 5 large rows overflow and push HR off-screen. See 2026-06-06 BPM visibility fix.
+
+## Pace (Rolling vs Cumulative)
+
+- Pace is computed from a **sliding 30-second window**, not cumulative average from workout start
+- Guards: must be ≥20s into workout AND ≥0.05km total distance AND window ≥5s AND ≥5m moved, else shows "—"
+- CMPedometer distance has ~30s warmup lag; first sample arrives skewed (e.g. 30s / 0.05km = 10'00). Sliding window avoids the warmup artifact entirely
+- Root cause doc: `docs/incidents/2026-06-06-pace-10min.md`
 
 ## Controls
 

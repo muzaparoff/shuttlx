@@ -1,6 +1,6 @@
 # Plan — Timer Redesign + Watch/iOS Unification
 
-**Status:** Phase 0 in progress (2026-06-06)
+**Status:** Phases 0-4 DONE, Phase 5 BLOCKED pending approval (2026-06-06)
 **Lead:** project-manager
 **Driving feedback:** "design of timers terrible and looks more AI generic — nothing special between each themes except color of fonts" + "BPM isn't showing up in walk/run on watch"
 
@@ -29,14 +29,14 @@ A third initiative is folded into this plan:
 - **Input:** 6 iPhone-sized mockups already saved in `design/proposals/timer-theme-redesigns/`
 - **Output:** sibling `watch.md` per theme — adapted for 41mm/45mm constraints (max 5 visible elements, glanceability, no horizontal Canvas hero, 16-24pt minimum text)
 - **Exit criteria:** 6 `watch.md` files merged into the same directory
-- **Status:** TODO
+- **Status:** DONE
 
 ### Phase 2 — Theme-aware hero primitive (~½ day)
 - **Owner:** `senior-ios-developer` solo (architectural primitive — no parallelism)
 - **File scope:** `iPhoneWorkoutTimerView.heroSection`, `TrainingView.fullWorkoutDisplayTab`
 - **Change:** introduce a `themedHero { ... }` modifier or switch (model on existing FM Tuner `if themeManager.current.id == "fmtuner"` branch). One reusable wrapper, one switch table.
 - **Exit criteria:** Clean + FM Tuner still render correctly; Synthwave/Mixtape/Arcade/Classic Radio/VU Meter/Neovim render placeholder hero with theme id label so we can verify the wiring before filling in real heroes
-- **Status:** TODO
+- **Status:** DONE
 
 ### Phase 3 — Per-theme implementation (parallel team, ~3 days)
 **Playbook T5.** Two waves, three themes per wave. Per wave: `senior-ios-developer` (iOS) + `swiftui-watchos-specialist` (watch) work in parallel on different themes — each theme owns its own `Theme/<Name>Hero.swift` file so no two agents touch the same file in a wave.
@@ -53,12 +53,12 @@ Wave 2:
 
 Each wave ends with `/push` for incremental TestFlight builds.
 
-**Status:** TODO
+**Status:** DONE
 
 ### Phase 4 — QA + docs (~½ day)
-- `qa-engineer` walks all 6 redesigned timers on both simulators
-- `docs-keeper` updates CLAUDE.md theme table, `.claude/rules/design-system.md`, `memory/`
-- **Status:** TODO
+- `qa-engineer` walks all 6 redesigned timers on both simulators — finds + routes P0/P1/P2 bugs for rapid fix
+- `docs-keeper` updates CLAUDE.md theme table, `.claude/rules/design-system.md`, `.claude/rules/watchos.md`, `memory/`
+- **Status:** DONE
 
 ### Phase 5 — Watch + iOS unification (separate sprint after Phase 4)
 **Goal:** stop duplicating models + theme files between targets.
@@ -89,3 +89,12 @@ Before pushing each wave: build both schemes individually and run `/payment-chec
 - The `WatchWorkoutManager` / `iPhoneWorkoutController` public surface — untouched
 - Existing user data on device — untouched (JSON formats unchanged)
 - Phases 0-4 do NOT touch the SPM structure. Phase 5 is opt-in.
+
+## Sprint Outcomes
+
+1. **BPM visibility fix** — Free-run walk/run on watch now shows HR in full (converted DIST/PACE/CAD to compact two-up rows, freeing 30pt+ on 41mm screen)
+2. **Cadence step-delta fallback** — CAD now visible during first 60s and when CMPedometer.currentCadence is nil (Apple's API requires warmup window). Falls back to step-count delta over ≥3s window.
+3. **Pace rolling-window fix** — Pace no longer pinned at 10'00 due to CMPedometer warmup lag. Now uses sliding 30s window with guards (≥20s into workout, ≥0.05km moved). Avoids cumulative-average artifact entirely.
+4. **Per-theme timer heroes** — 6 theme-specific hero visualizations (Synthwave speedometer, Mixtape reels, Arcade 7-segment, Classic Radio tuning needle, VU Meter dual gauges, Neovim command line) on both iOS and watchOS. Watch uses `.allowsHitTesting(false)` overlay pattern.
+5. **QA bug fixes** — 1 P0 + 2 P1 + 3 P2 bugs in new theme heroes fixed (rendering, animation, metric routing).
+6. **Docs updated** — CLAUDE.md theme descriptions, design-system.md timer hero pattern, watchos.md layout + pace lessons, memory snapshots refreshed.

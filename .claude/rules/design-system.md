@@ -85,6 +85,18 @@ All new UI code must follow these conventions. Existing code should be migrated 
   ```
 - Metric grid: `LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10)`
 
+## Per-theme Timer Hero
+
+Each theme renders a unique animated **hero** element during the active-workout timer display:
+
+- **iOS dispatch**: `iPhoneWorkoutTimerView.swift` calls `@ViewBuilder themedTimerBody(controller:)` — switch on `themeManager.current.id`
+- **Watch dispatch**: `TrainingView.fullWorkoutDisplayTab` conditionally renders theme-specific overlays via `if themeManager.current.id == "<id>"` blocks (pattern from FM Tuner chrome)
+- **File structure**: Each theme owns its own `Theme/Themes/<Name>Hero.swift` file (iOS: `ShuttlX/Theme/Themes/`, watch: `ShuttlX Watch App/Theme/Themes/`)
+- **Watch Chrome Pattern**: Overlays placed inside the ZStack of `fullWorkoutDisplayTab` (below metrics, above background) — all overlays use `.allowsHitTesting(false)` to avoid blocking tap controls
+- **Controller Reuse**: all heroes access the same `controller` / `workoutManager` data (HR, pace, distance, etc.) — no controller logic lives in theme files
+- **6 Themes with Heroes**: Synthwave (speedometer needle + grid), Mixtape (dual spinning reels + tape counter), Arcade (7-segment score + INSERT COIN blink), Classic Radio (tuning needle sweep), VU Meter (dual vertical needles + dB scale), Neovim (command-line status line with elapsed time register)
+- **Clean & FM Tuner**: Clean uses minimal hero (optional), FM Tuner uses existing `FMTunerHeader` + `FMTunerVUColumn` pattern
+
 ## iOS Timer Screen
 
 - 52pt monospaced timer, 28pt bold metrics, no emoji/icons
