@@ -273,17 +273,21 @@ struct TrainingView: View {
                                       tertiarySize, labelSize)
                     }
                 } else {
-                    // Free-run keeps DIST + PACE in the legacy single-row format
-                    metricRow("DIST", distanceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                              accessibilityText: "Distance \(accessibleDistance)")
-                    metricRow("PACE", paceText, ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                              accessibilityText: accessiblePace)
-                    metricRow("CAD",
-                              workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
-                              ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
-                              accessibilityText: workoutManager.currentCadence > 0
-                                ? "Cadence \(workoutManager.currentCadence) steps per minute"
-                                : "Cadence no data")
+                    // Free-run: compact two-up rows for tertiary metrics. Three
+                    // full-size metricRow calls (DIST/PACE/CAD at ~42pt each) +
+                    // TIME hero + HR row exceeded the 41mm watch's ~180pt usable
+                    // height and pushed the HR row off-screen — the cause of the
+                    // long-standing "BPM not showing in walk/run" complaint.
+                    HStack(spacing: 8) {
+                        compactMetric("DIST", distanceText, tertiarySize, labelSize)
+                        compactMetric("PACE", paceText, tertiarySize, labelSize)
+                    }
+                    HStack(spacing: 8) {
+                        compactMetric("CAD",
+                                      workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
+                                      tertiarySize, labelSize)
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
                 }
 
                 Spacer(minLength: 0)

@@ -114,6 +114,7 @@ Additional rules load automatically based on the files being edited:
 
 | Agent | Purpose | Model |
 |-------|---------|-------|
+| `project-manager` | Orchestrates multi-agent work — owns task board, assigns specialists, surfaces blockers. Spawn for any feature spanning ≥2 platforms or ≥2 domains. | opus |
 | `senior-ios-developer` | Review + implement iOS tasks (and watchOS when solo) | sonnet |
 | `swiftui-watchos-specialist` | Review + implement watchOS tasks; team-mode owner of `ShuttlX Watch App/**` | opus |
 | `senior-architect` | Architecture, data structures, monitoring, production tooling | opus |
@@ -193,6 +194,17 @@ Team of 4 read-only reviewers. They never edit code; the lead synthesizes a Go/N
 - **One team at a time**: a lead can manage only one team
 - **No nested teams**: teammates cannot spawn their own teammates
 - **`/resume` does not restore in-process teammates** — if you resume, ask the lead to respawn
+
+## Project Knowledge Persistence
+
+Two locations keep cross-session context for this codebase. Read both at session start when a task is not trivial.
+
+- `docs/memory/` — version-controlled snapshot of project knowledge (architecture, roadmap, tech debt, sync architecture, cadence derivation, social backend plan). Refreshed by the lead at the end of a feature sprint via the snippet in `docs/memory/README.md`.
+- `docs/plans/` — phased plans for in-flight work. `project-manager` writes these; specialists read them before starting their phase.
+- `docs/tasks/` — per-sprint shared task boards owned by `project-manager`. Each row: id, phase, owner, state, file scope, notes.
+- `docs/incidents/` — root-cause + fix summaries from Playbook T3 bug triage.
+
+Auto-memory at `~/.claude/projects/-Users-sergeymuzyukin-github-shuttlx/memory/` is still the live store within a session. `docs/memory/` is the shareable snapshot.
 
 ## Frameworks Used
 
