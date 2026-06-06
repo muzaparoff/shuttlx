@@ -82,7 +82,9 @@ struct iPhoneWorkoutTimerView: View {
             SynthwaveTimerHero(controller: controller)
         case "mixtape":
             MixtapeTimerHero(controller: controller)
-        case "arcade", "classicradio", "vumeter", "neovim":
+        case "arcade":
+            ArcadeTimerHero(controller: controller)
+        case "classicradio", "vumeter", "neovim":
             // Phase 3: replace each id's case with a call into Theme/Themes/<Name>TimerHero.swift
             standardTimerBody
         default:

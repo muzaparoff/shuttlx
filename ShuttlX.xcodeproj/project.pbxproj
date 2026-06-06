@@ -33,6 +33,7 @@
 		FM001B /* FMTunerTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM001F /* FMTunerTheme.swift */; };
 		SW001B /* SynthwaveTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = SW001F /* SynthwaveTimerHero.swift */; };
 		MX001B /* MixtapeTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX001F /* MixtapeTimerHero.swift */; };
+		AR001B /* ArcadeTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = AR001F /* ArcadeTimerHero.swift */; };
 		FM002B /* FMTunerHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM002F /* FMTunerHeader.swift */; };
 		FM003B /* FMTunerFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM003F /* FMTunerFooter.swift */; };
 		FM004B /* FMTunerVUColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM004F /* FMTunerVUColumn.swift */; };
@@ -343,6 +344,7 @@
 		FM001F /* FMTunerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerTheme.swift; sourceTree = "<group>"; };
 		SW001F /* SynthwaveTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTimerHero.swift; sourceTree = "<group>"; };
 		MX001F /* MixtapeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTimerHero.swift; sourceTree = "<group>"; };
+		AR001F /* ArcadeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTimerHero.swift; sourceTree = "<group>"; };
 		FM002F /* FMTunerHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerHeader.swift; sourceTree = "<group>"; };
 		FM003F /* FMTunerFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerFooter.swift; sourceTree = "<group>"; };
 		FM004F /* FMTunerVUColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerVUColumn.swift; sourceTree = "<group>"; };
@@ -689,6 +691,7 @@
 				FM001F /* FMTunerTheme.swift */,
 				SW001F /* SynthwaveTimerHero.swift */,
 				MX001F /* MixtapeTimerHero.swift */,
+				AR001F /* ArcadeTimerHero.swift */,
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -975,6 +978,7 @@
 				FM001B /* FMTunerTheme.swift in Sources */,
 				SW001B /* SynthwaveTimerHero.swift in Sources */,
 				MX001B /* MixtapeTimerHero.swift in Sources */,
+				AR001B /* ArcadeTimerHero.swift in Sources */,
 				FM002B /* FMTunerHeader.swift in Sources */,
 				FM003B /* FMTunerFooter.swift in Sources */,
 				FM004B /* FMTunerVUColumn.swift in Sources */,

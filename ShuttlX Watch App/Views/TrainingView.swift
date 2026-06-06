@@ -294,8 +294,8 @@ struct TrainingView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : (themeManager.current.id == "mixtape" ? 60 : 0))
-            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : 0))
-            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : 0))
+            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : (themeManager.current.id == "arcade" ? 6 : 0)))
+            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : (themeManager.current.id == "arcade" ? 6 : 0)))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Synthwave chrome — non-interactive backdrop, only when active.
@@ -313,6 +313,16 @@ struct TrainingView: View {
             // never sit under the reel.
             if themeManager.current.id == "mixtape" {
                 MixtapeTimerOverlay(workoutManager: workoutManager)
+            }
+
+            // Arcade chrome — non-interactive pixel-border bezel + faint
+            // scanline backdrop. The iPhone variant's 7-segment HI-SCORE
+            // digits, ★ HI-SCORE ★ banner, interval-dot row, and WORK power
+            // bar are all cut for the watch (see ArcadeTimerOverlay header).
+            // The metrics VStack above gets a 6pt top/bottom inset so the HR
+            // row and tertiary metrics clear the pixel border.
+            if themeManager.current.id == "arcade" {
+                ArcadeTimerOverlay(workoutManager: workoutManager)
             }
 
             // FM Tuner chrome — non-interactive overlays, only when active
