@@ -92,6 +92,25 @@ final class iPhoneWorkoutController: ObservableObject {
     // last 30 seconds reflects actual current speed.
     private var paceWindowSamples: [(time: TimeInterval, distance: Double)] = []
     private let paceWindowSec: TimeInterval = 30
+
+    // GPS/pedometer fusion — GPS distance is preferred when the fix quality is
+    // good; pedometer distance is the fallback (treadmill, indoor, poor signal).
+    //
+    // Tuning constants (named so they can be adjusted without hunting magic numbers):
+    /// Horizontal accuracy threshold above which a GPS sample is discarded (metres).
+    private let gpsAccuracyThresholdM: Double = 20
+    /// Maximum inter-sample displacement allowed before treating it as a teleport (metres).
+    private let gpsTeleportFilterM: Double = 100
+    /// Minimum inter-sample displacement required to count as real movement (metres).
+    private let gpsNoiseFloorM: Double = 1
+    /// Number of consecutive valid samples required before GPS is considered usable.
+    private let gpsWarmupSamples: Int = 3
+
+    private var gpsAccumulatedDistanceKm: Double = 0
+    private var lastGPSLocation: CLLocation?
+    private var gpsHasUsableFix: Bool = false
+    private var gpsValidSampleCount: Int = 0
+
     private let haptics = iPhoneHapticPlayer()
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "iPhoneWorkoutController")
 
@@ -198,6 +217,10 @@ final class iPhoneWorkoutController: ObservableObject {
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
         paceWindowSamples.removeAll(keepingCapacity: true)
+        gpsAccumulatedDistanceKm = 0
+        lastGPSLocation = nil
+        gpsHasUsableFix = false
+        gpsValidSampleCount = 0
         routePoints = []
         heartRateMonitor.reset()
         heartRateMonitor.start(from: now)
@@ -356,6 +379,10 @@ final class iPhoneWorkoutController: ObservableObject {
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
         paceWindowSamples.removeAll(keepingCapacity: true)
+        gpsAccumulatedDistanceKm = 0
+        lastGPSLocation = nil
+        gpsHasUsableFix = false
+        gpsValidSampleCount = 0
         routePoints = []
         workoutStartTime = nil
         accumulatedPauseTime = 0
@@ -470,7 +497,12 @@ final class iPhoneWorkoutController: ObservableObject {
                 guard let self = self, let data = data else { return }
                 self.totalSteps = data.numberOfSteps.intValue
                 if let dist = data.distance {
-                    self.totalDistance = dist.doubleValue / 1000.0
+                    let pedometerKm = dist.doubleValue / 1000.0
+                    // Prefer GPS distance when the fix quality is confirmed usable;
+                    // fall back to pedometer otherwise (treadmill, indoor, poor signal).
+                    self.totalDistance = self.gpsHasUsableFix
+                        ? self.gpsAccumulatedDistanceKm
+                        : pedometerKm
                     self.updateRollingPace()
                 }
                 if let cadence = data.currentCadence {
@@ -544,14 +576,52 @@ final class iPhoneWorkoutController: ObservableObject {
 
     private func startLocationUpdates() {
         let delegate = locationDelegate ?? LocationProxy { [weak self] location in
-            guard let self = self else { return }
-            self.routePoints.append(
-                RoutePoint(
-                    latitude: location.coordinate.latitude,
-                    longitude: location.coordinate.longitude,
-                    timestamp: location.timestamp
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+
+                // Always record the route point for the map.
+                self.routePoints.append(
+                    RoutePoint(
+                        latitude: location.coordinate.latitude,
+                        longitude: location.coordinate.longitude,
+                        timestamp: location.timestamp
+                    )
                 )
-            )
+
+                // GPS distance accumulation.
+                // Discard samples whose horizontal accuracy is worse than the threshold.
+                guard location.horizontalAccuracy >= 0,
+                      location.horizontalAccuracy <= self.gpsAccuracyThresholdM else {
+                    return
+                }
+
+                self.gpsValidSampleCount += 1
+
+                guard let last = self.lastGPSLocation else {
+                    // First valid sample — anchor the reference point, do not
+                    // accumulate distance yet.
+                    self.lastGPSLocation = location
+                    return
+                }
+
+                let deltaM = location.distance(from: last)
+
+                // Filter teleports (GPS jump > teleportFilterM) and stationary
+                // noise drift (delta < noiseFloorM).
+                if deltaM >= self.gpsNoiseFloorM && deltaM < self.gpsTeleportFilterM {
+                    self.gpsAccumulatedDistanceKm += deltaM / 1000.0
+                }
+                self.lastGPSLocation = location
+
+                // Mark the fix as usable once enough consecutive valid samples
+                // have arrived — prevents the pedometer→GPS handoff from
+                // triggering on a single lucky reading at workout start.
+                if !self.gpsHasUsableFix,
+                   self.gpsValidSampleCount >= self.gpsWarmupSamples {
+                    self.gpsHasUsableFix = true
+                    self.logger.info("GPS fix usable after \(self.gpsValidSampleCount) valid samples — switching totalDistance to GPS")
+                }
+            }
         }
         locationDelegate = delegate
         locationManager.delegate = delegate

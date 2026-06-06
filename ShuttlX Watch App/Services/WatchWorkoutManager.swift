@@ -109,6 +109,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Pace & split tracking
     private var timeAtLastKm: TimeInterval = 0
 
+    // T-METRICS.4: HKLiveWorkoutBuilder's distanceWalkingRunning statistic is
+    // Apple's canonical fused distance (pedometer + GPS + on-device motion).
+    // We prefer it over CMPedometer.distance when > 0, and fall back to the
+    // pedometer reading during the brief warmup before the builder reports.
+    private var hkDistanceKm: Double = 0
+
     // Live metrics broadcast
     private var lastLiveUpdateTime: Date?
 
@@ -318,6 +324,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         calories = 0
         totalSteps = 0
         totalDistance = 0
+        hkDistanceKm = 0
         currentPace = nil
         completedKmSplits = []
         lastCompletedKm = 0
@@ -518,6 +525,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         calories = 0
         totalSteps = 0
         totalDistance = 0
+        hkDistanceKm = 0
         currentPace = nil
         completedKmSplits = []
         lastCompletedKm = 0
@@ -604,6 +612,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             let builder = session.associatedWorkoutBuilder()
             workoutBuilder = builder
             builder.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
+            builder.delegate = self
             workoutSession?.startActivity(with: Date())
             builder.beginCollection(withStart: Date()) { [weak self] success, error in
                 Task { @MainActor [weak self] in
@@ -926,9 +935,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 guard let self = self, let data = data else { return }
                 self.totalSteps = data.numberOfSteps.intValue
                 if let dist = data.distance {
-                    let distanceKm = dist.doubleValue / 1000.0
-                    self.totalDistance = distanceKm
-                    self.updatePaceAndSplits(distanceKm: distanceKm)
+                    let pedometerKm = dist.doubleValue / 1000.0
+                    // T-METRICS.4: prefer HKLiveWorkoutBuilder's fused distance when
+                    // it has begun reporting; otherwise use the pedometer reading.
+                    let chosenKm = self.hkDistanceKm > 0 ? self.hkDistanceKm : pedometerKm
+                    self.totalDistance = chosenKm
+                    self.updatePaceAndSplits(distanceKm: chosenKm)
                 }
                 let spm: Int? = {
                     if let cadence = data.currentCadence {
@@ -1432,6 +1444,34 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
         Task { @MainActor in
             logger.error("Workout session failed: \(error.localizedDescription)")
             saveWorkoutDataToLocalStorage()
+        }
+    }
+}
+
+// MARK: - HKLiveWorkoutBuilderDelegate (T-METRICS.4)
+// We mirror HKLiveWorkoutBuilder's `distanceWalkingRunning` sum statistic into
+// `hkDistanceKm`. The pedometer callback then prefers this value over its own
+// CMPedometer reading, since the builder's value is Apple's canonical fused
+// distance (pedometer + GPS + on-device motion classification — same value
+// shown by Apple Fitness and persisted on the resulting HKWorkout).
+extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
+    nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {
+        // Events (pause/resume/lap/marker) — no-op for distance handling.
+    }
+
+    nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
+        guard let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
+              collectedTypes.contains(distanceType) else { return }
+
+        guard let stats = workoutBuilder.statistics(for: distanceType),
+              let sum = stats.sumQuantity() else { return }
+
+        let meters = sum.doubleValue(for: .meter())
+        let km = meters / 1000.0
+
+        Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            self.hkDistanceKm = km
         }
     }
 }
