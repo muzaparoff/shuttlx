@@ -294,8 +294,9 @@ struct TrainingView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : (themeManager.current.id == "mixtape" ? 60 : 0))
-            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : (themeManager.current.id == "arcade" ? 6 : (themeManager.current.id == "classicradio" ? 16 : 0))))
-            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : (themeManager.current.id == "arcade" ? 6 : 0)))
+            .padding(.trailing, themeManager.current.id == "vumeter" ? 18 : 0)
+            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : (themeManager.current.id == "arcade" ? 6 : (themeManager.current.id == "classicradio" ? 16 : (themeManager.current.id == "neovim" ? 16 : 0)))))
+            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : (themeManager.current.id == "arcade" ? 6 : (themeManager.current.id == "neovim" ? 16 : 0))))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Synthwave chrome — non-interactive backdrop, only when active.
@@ -337,6 +338,32 @@ struct TrainingView: View {
             // the dial strip.
             if themeManager.current.id == "classicradio" {
                 ClassicRadioTimerOverlay(workoutManager: workoutManager)
+            }
+
+            // VU Meter chrome — non-interactive vertical VU strip pinned to
+            // the right edge with an HR-driven needle and a peak-hold LED at
+            // the top. The iPhone variant's horizontal arc, secondary step-
+            // countdown needle, side strips, and "rec level" pace caption
+            // are all cut for the watch (see VUMeterTimerOverlay header).
+            // The metrics VStack above gets an 18pt trailing inset so the HR
+            // row and tertiary metrics clear the strip.
+            if themeManager.current.id == "vumeter" {
+                VUMeterTimerOverlay(workoutManager: workoutManager)
+            }
+
+            // Neovim chrome — non-interactive nvim buffer chrome: top tabline
+            // strip with `workout.log [+]` filename, left line-number gutter
+            // with a single bright CursorLineNr digit, and a bottom modal
+            // status line (`-- INSERT --` WORK / `-- NORMAL --` REST / `-- VISUAL --`
+            // PAUSED). The iPhone variant's 11-line buffer view, multi-line
+            // `step[3] = { ... }` block, `~` empty-line column, `:` command
+            // line, and ruler are all cut for the watch (see NeovimTimerOverlay
+            // header for the cut list). The metrics VStack above gets a 16pt
+            // top and bottom inset so the workout-name row + step pill clear
+            // the tabline, and the HR row + tertiary metrics clear the
+            // status line.
+            if themeManager.current.id == "neovim" {
+                NeovimTimerOverlay(workoutManager: workoutManager)
             }
 
             // FM Tuner chrome — non-interactive overlays, only when active

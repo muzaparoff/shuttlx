@@ -86,9 +86,10 @@ struct iPhoneWorkoutTimerView: View {
             ArcadeTimerHero(controller: controller)
         case "classicradio":
             ClassicRadioTimerHero(controller: controller)
-        case "vumeter", "neovim":
-            // Phase 3: replace each id's case with a call into Theme/Themes/<Name>TimerHero.swift
-            standardTimerBody
+        case "neovim":
+            NeovimTimerHero(controller: controller)
+        case "vumeter":
+            VUMeterTimerHero(controller: controller)
         default:
             standardTimerBody
         }

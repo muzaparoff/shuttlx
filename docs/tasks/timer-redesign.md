@@ -30,6 +30,9 @@ Last updated: 2026-06-06
 | T4.1 | 4 | QA walk all 6 timers on both sims | qa-engineer | TODO | — | Report P0/P1/P2 |
 | T4.2 | 4 | Update CLAUDE.md theme table + rules + memory | docs-keeper | TODO | CLAUDE.md, .claude/rules/design-system.md | |
 | T5.0 | 5 | (Awaiting approval) Watch/iOS unification — scope SPM package | swift-architect | BLOCKED | Package.swift | Phase 5 requires explicit kickoff |
+| T-METRICS.1 | 4.5 | Audit every metric in walk/run timer (TIME / HR / DIST / PACE / STEPS / CAD) | general-purpose | IN_PROGRESS | iPhoneWorkoutController.swift, WatchWorkoutManager.swift | Driven by user report: pace shows 10'00 even when running — likely fallback constant or unit error |
+| T-METRICS.2 | 4.5 | Fix pace 10'00 bug | TBD | BLOCKED | TBD | Blocked on T-METRICS.1 root-cause |
+| T-METRICS.3 | 4.5 | Fix any other P0/P1 metric correctness issues | TBD | BLOCKED | TBD | Blocked on T-METRICS.1 |
 
 ## Legend
 - `TODO` — not started
