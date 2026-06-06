@@ -264,7 +264,13 @@ struct NeovimTimerHero: View {
         .background(isCursorLine ? bg1 : Color.clear)
     }
 
-    /// The elapsed-time line is the hero — uses large monospaced text.
+    /// Line 2 hero — shows the most time-critical value at 60pt.
+    ///
+    /// - Interval mode: shows the current step countdown (`remaining`) so the
+    ///   athlete can see exactly how long until the next phase. Elapsed drops to
+    ///   a 14pt secondary on the same line (right-aligned).
+    /// - Free-run / gym-recovery: shows elapsed as the primary value (no
+    ///   step countdown is relevant in those modes).
     private func elapsedHeroLine(cursorVisible: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             // Gutter
@@ -274,32 +280,81 @@ struct NeovimTimerHero: View {
                 .frame(width: gutterWidth, alignment: .trailing)
                 .padding(.trailing, 6)
 
-            // Hero content: `elapsed = MM:SS`
-            HStack(alignment: .lastTextBaseline, spacing: 0) {
-                Text("elapsed")
-                    .font(.system(size: 18, weight: .medium, design: .monospaced))
-                    .foregroundStyle(orange)
-                Text(" = ")
-                    .font(.system(size: 18, weight: .regular, design: .monospaced))
-                    .foregroundStyle(fg)
-                Text(FormattingUtils.formatTimer(controller.elapsedTime))
-                    .font(.system(size: 60, weight: .bold, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundStyle(green)
-                    .contentTransition(.numericText())
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                if cursorVisible {
-                    Text("█")
-                        .font(.system(size: 60, weight: .regular, design: .monospaced))
-                        .foregroundStyle(fg.opacity(0.85))
-                } else {
-                    Text(" ")
-                        .font(.system(size: 60, weight: .regular, design: .monospaced))
+            if controller.mode == .interval,
+               let engine = controller.intervalEngine {
+                // ── Interval: step countdown is the hero ──────────────────
+                let remaining = max(0, engine.currentStepTimeRemaining)
+                let stepColor = engine.currentStep.map { sharedStepColor($0.type) } ?? green
+
+                HStack(alignment: .lastTextBaseline, spacing: 0) {
+                    Text("remaining")
+                        .font(.system(size: 18, weight: .medium, design: .monospaced))
+                        .foregroundStyle(orange)
+                    Text(" = ")
+                        .font(.system(size: 18, weight: .regular, design: .monospaced))
+                        .foregroundStyle(fg)
+                    Text(FormattingUtils.formatTimer(remaining))
+                        .font(.system(size: 60, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(stepColor)
+                        .contentTransition(.numericText())
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                    if cursorVisible {
+                        Text("█")
+                            .font(.system(size: 60, weight: .regular, design: .monospaced))
+                            .foregroundStyle(fg.opacity(0.85))
+                    } else {
+                        Text(" ")
+                            .font(.system(size: 60, weight: .regular, design: .monospaced))
+                    }
+
+                    Spacer(minLength: 4)
+
+                    // Secondary: elapsed in small text
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("elapsed")
+                            .font(.system(size: 9, weight: .regular, design: .monospaced))
+                            .foregroundStyle(fgDim)
+                        Text(FormattingUtils.formatTimer(controller.elapsedTime))
+                            .font(.system(size: 14, weight: .regular, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(fgDim)
+                            .contentTransition(.numericText())
+                    }
+                    .padding(.trailing, 4)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 12)
+
+            } else {
+                // ── Free-run / gym-recovery: elapsed is the hero ──────────
+                HStack(alignment: .lastTextBaseline, spacing: 0) {
+                    Text("elapsed")
+                        .font(.system(size: 18, weight: .medium, design: .monospaced))
+                        .foregroundStyle(orange)
+                    Text(" = ")
+                        .font(.system(size: 18, weight: .regular, design: .monospaced))
+                        .foregroundStyle(fg)
+                    Text(FormattingUtils.formatTimer(controller.elapsedTime))
+                        .font(.system(size: 60, weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundStyle(green)
+                        .contentTransition(.numericText())
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                    if cursorVisible {
+                        Text("█")
+                            .font(.system(size: 60, weight: .regular, design: .monospaced))
+                            .foregroundStyle(fg.opacity(0.85))
+                    } else {
+                        Text(" ")
+                            .font(.system(size: 60, weight: .regular, design: .monospaced))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.trailing, 12)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.trailing, 12)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 2)
@@ -406,7 +461,12 @@ struct NeovimTimerHero: View {
         }
     }
 
-    /// Step remaining line: cursor line highlight + optional blinking cursor block.
+    /// Line 9 inside the step block — secondary elapsed readout.
+    ///
+    /// In interval mode the hero (line 2) already displays `remaining` at 60pt,
+    /// so this line shows `elapsed` as a confirmatory detail at normal size.
+    /// The `remaining` and `color` parameters are retained for the accessibility
+    /// label but the visual display uses elapsed.
     private func stepRemainingLine(
         lineNumber: Int,
         remaining: TimeInterval,
@@ -416,30 +476,22 @@ struct NeovimTimerHero: View {
         HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text(String(format: "%4d", lineNumber))
                 .font(.system(size: 13, weight: .regular, design: .monospaced))
-                .foregroundStyle(fg)
+                .foregroundStyle(fgGutter)
                 .frame(width: gutterWidth, alignment: .trailing)
                 .padding(.trailing, 6)
 
             HStack(alignment: .lastTextBaseline, spacing: 0) {
-                Text("  remaining")
+                Text("  elapsed")
                     .font(.system(size: 14, weight: .regular, design: .monospaced))
                     .foregroundStyle(orange)
-                Text(" = ")
+                Text("  = ")
                     .font(.system(size: 14, weight: .regular, design: .monospaced))
                     .foregroundStyle(fg)
-                Text(FormattingUtils.formatTimer(max(0, remaining)))
-                    .font(.system(size: 22, weight: .bold, design: .monospaced))
+                Text(FormattingUtils.formatTimer(controller.elapsedTime))
+                    .font(.system(size: 14, weight: .regular, design: .monospaced))
                     .monospacedDigit()
-                    .foregroundStyle(color)
+                    .foregroundStyle(fgDim)
                     .contentTransition(.numericText())
-                if cursorVisible {
-                    Text("█")
-                        .font(.system(size: 16, weight: .regular, design: .monospaced))
-                        .foregroundStyle(fg.opacity(0.85))
-                } else {
-                    Text(" ")
-                        .font(.system(size: 16, weight: .regular, design: .monospaced))
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .minimumScaleFactor(0.7)
@@ -448,7 +500,7 @@ struct NeovimTimerHero: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 3)
-        .background(bg1)
+        .background(Color.clear)
     }
 
     // MARK: - AttributedString builders

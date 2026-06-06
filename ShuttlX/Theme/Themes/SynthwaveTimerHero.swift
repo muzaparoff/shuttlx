@@ -103,12 +103,12 @@ struct SynthwaveTimerHero: View {
     private func gridSpeed(at date: Date) -> Double {
         let base: Double = 20
         // currentPace is seconds/km — lower = faster. Scale to a bonus 0–30 pts/s.
-        let paceBonous: Double = {
+        let paceBonus: Double = {
             guard let pace = controller.currentPace, pace > 0 else { return 0 }
             let inverted = max(0, 600.0 - pace)    // 600 s/km ~ walking threshold
             return min(30, inverted * 0.05)
         }()
-        return base + paceBonous
+        return base + paceBonus
     }
 
     @ViewBuilder

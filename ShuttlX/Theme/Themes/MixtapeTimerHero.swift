@@ -280,10 +280,9 @@ struct MixtapeTimerHero: View {
         }()
         let angularVelocity = baseSpeed + paceBonus
 
-        // Supply reel rotates counterclockwise (tape unspools from it) on real tape
-        // but visually both look fine going the same direction. Spec says supply
-        // "shrinks" (visual size only) — the rotation direction is conventional.
-        let direction: Double = isSupply ? 1.0 : 1.0
+        // Supply reel spins opposite the take-up reel — matches real cassette
+        // mechanics (tape unspools from supply, winds onto take-up).
+        let direction: Double = isSupply ? -1.0 : 1.0
 
         // Accumulate angle using delta-time from the last frame
         let now = date.timeIntervalSinceReferenceDate

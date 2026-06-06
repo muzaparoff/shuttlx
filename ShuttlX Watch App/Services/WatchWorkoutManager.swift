@@ -969,7 +969,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func updatePaceAndSplits(distanceKm: Double) {
-        guard distanceKm >= 0.01 else {
+        // Match iPhone's guard threshold exactly (>= 0.05 km / 50 m). Using a
+        // smaller outer threshold (0.01) would let the pace window accumulate
+        // tiny-distance samples that compute a meaningless ratio.
+        guard distanceKm >= 0.05 else {
             currentPace = nil
             return
         }

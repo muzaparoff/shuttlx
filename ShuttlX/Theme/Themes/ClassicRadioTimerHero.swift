@@ -223,7 +223,8 @@ struct ClassicRadioTimerHero: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
         }
-        .accessibilityHidden(true)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(controller.workoutName), band \(bandLabel)\(controller.isPaused ? ", standby" : "")")
     }
 
     private var bandLabel: String {

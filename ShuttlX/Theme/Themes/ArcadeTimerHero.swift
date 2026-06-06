@@ -516,17 +516,17 @@ struct ArcadeTimerHero: View {
     ///   f = top-left vertical
     ///   g = middle horizontal
     private static let segmentMasks: [Character: UInt8] = [
-        "0": 0b0111111,
-        "1": 0b0000110,
-        "2": 0b1011011,
-        "3": 0b1001111,
-        "4": 0b1100110,
-        "5": 0b1101101,
-        "6": 0b1111101,
-        "7": 0b0000111,
-        "8": 0b1111111,
-        "9": 0b1101111,
-        "-": 0b1000000,
+        "0": 0b1111110,  // a b c d e f   (no g)
+        "1": 0b0110000,  // b c
+        "2": 0b1101101,  // a b d e g
+        "3": 0b1111001,  // a b c d g
+        "4": 0b0110011,  // b c f g
+        "5": 0b1011011,  // a c d f g
+        "6": 0b1011111,  // a c d e f g
+        "7": 0b1110000,  // a b c
+        "8": 0b1111111,  // a b c d e f g
+        "9": 0b1111011,  // a b c d f g
+        "-": 0b0000001,  // g (middle only)
         " ": 0b0000000,
     ]
 
