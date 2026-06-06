@@ -293,7 +293,7 @@ struct TrainingView: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
-            .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : 0)
+            .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : (themeManager.current.id == "mixtape" ? 60 : 0))
             .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : 0))
             .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : 0))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -303,6 +303,16 @@ struct TrainingView: View {
             // No frame, no chevron, no needle gauges (cut from the iPhone variant).
             if themeManager.current.id == "synthwave" {
                 SynthwaveTimerOverlay(workoutManager: workoutManager)
+            }
+
+            // Mixtape chrome — non-interactive single reel pinned to the
+            // upper-left, spinning with elapsed time. Cassette body shell,
+            // second reel, and transport row from the iPhone variant are cut
+            // (see MixtapeTimerOverlay header for rationale). The metrics
+            // VStack above gets a 60pt leading inset so HR / step / step-pill
+            // never sit under the reel.
+            if themeManager.current.id == "mixtape" {
+                MixtapeTimerOverlay(workoutManager: workoutManager)
             }
 
             // FM Tuner chrome — non-interactive overlays, only when active
