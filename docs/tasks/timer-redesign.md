@@ -30,9 +30,10 @@ Last updated: 2026-06-06
 | T4.1 | 4 | QA walk all 6 timers on both sims | qa-engineer | TODO | — | Report P0/P1/P2 |
 | T4.2 | 4 | Update CLAUDE.md theme table + rules + memory | docs-keeper | TODO | CLAUDE.md, .claude/rules/design-system.md | |
 | T5.0 | 5 | (Awaiting approval) Watch/iOS unification — scope SPM package | swift-architect | BLOCKED | Package.swift | Phase 5 requires explicit kickoff |
-| T-METRICS.1 | 4.5 | Audit every metric in walk/run timer (TIME / HR / DIST / PACE / STEPS / CAD) | general-purpose | IN_PROGRESS | iPhoneWorkoutController.swift, WatchWorkoutManager.swift | Driven by user report: pace shows 10'00 even when running — likely fallback constant or unit error |
-| T-METRICS.2 | 4.5 | Fix pace 10'00 bug | TBD | BLOCKED | TBD | Blocked on T-METRICS.1 root-cause |
-| T-METRICS.3 | 4.5 | Fix any other P0/P1 metric correctness issues | TBD | BLOCKED | TBD | Blocked on T-METRICS.1 |
+| T-METRICS.1 | 4.5 | Audit every metric in walk/run timer (TIME / HR / DIST / PACE / STEPS / CAD) | general-purpose | DONE | iPhoneWorkoutController.swift, WatchWorkoutManager.swift | Root cause: `currentPace = elapsedTime / totalDistance` is cumulative average. Pedometer warmup spike (30s / 0.05km = 600s) pinned at 10'00. See docs/incidents/2026-06-06-pace-10min.md |
+| T-METRICS.2 | 4.5 | Fix pace 10'00 bug (rolling 30s window + early-workout guard) | lead | DONE | iPhoneWorkoutController.swift, WatchWorkoutManager.swift | Both targets now use sliding 30s window; pace stays nil ("—") until ≥20s elapsed AND ≥50m moved |
+| T-METRICS.3 | 4.5 | P1: fuse GPS distance into totalDistance (treadmill / indoor accuracy) | TBD | TODO | iPhoneWorkoutController.swift | CLLocation distance currently captured for route only, discarded for totalDistance |
+| T-METRICS.4 | 4.5 | P1: prefer HKLiveWorkoutBuilder distance on watch | TBD | TODO | WatchWorkoutManager.swift | HKLiveWorkoutBuilder's .distanceWalkingRunning is the canonical value Apple Fitness uses |
 
 ## Legend
 - `TODO` — not started

@@ -100,6 +100,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // the first 30-60s of a workout + always nil in the simulator).
     private var lastCadenceStepCount: Int = 0
     private var lastCadenceTimestamp: Date?
+    // Rolling pace window — replaces cumulative-average `elapsedTime / distanceKm`
+    // which was pinned at ~10:00/km by the pedometer warmup spike (first sample
+    // arrived at ~30s elapsed with ~0.05km distance = exactly 600s/km = 10:00).
+    private var paceWindowSamples: [(time: TimeInterval, distance: Double)] = []
+    private let paceWindowSec: TimeInterval = 30
 
     // Pace & split tracking
     private var timeAtLastKm: TimeInterval = 0
@@ -330,6 +335,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         maxCadenceValue = 0
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
+        paceWindowSamples.removeAll(keepingCapacity: true)
         heartRateAnchor = nil
         caloriesAnchor = nil
         accumulatedPauseTime = 0
@@ -529,6 +535,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         maxCadenceValue = 0
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
+        paceWindowSamples.removeAll(keepingCapacity: true)
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
@@ -967,8 +974,24 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        // Average pace: seconds per km
-        currentPace = elapsedTime / distanceKm
+        // Rolling pace from a sliding 30s window of (elapsedTime, distance)
+        // samples. Guards: workout >= 20s old, distance >= 0.05km, window
+        // spans >= 5s and >= 5m. When guards fail before publishing, keep
+        // currentPace nil; when they fail after publishing, keep last value.
+        let now = elapsedTime
+        paceWindowSamples.append((time: now, distance: distanceKm))
+        let cutoff = now - paceWindowSec
+        paceWindowSamples.removeAll { $0.time < cutoff }
+        if now < 20 || distanceKm < 0.05 {
+            currentPace = nil
+        } else if let oldest = paceWindowSamples.first {
+            let dt = now - oldest.time
+            let dDist = distanceKm - oldest.distance
+            if dt >= 5, dDist >= 0.005 {
+                currentPace = dt / dDist
+            }
+            // else: keep previous currentPace value (don't flip mid-workout)
+        }
 
         // Km split detection
         let completedKm = Int(floor(distanceKm))

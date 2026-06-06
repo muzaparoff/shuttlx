@@ -86,6 +86,12 @@ final class iPhoneWorkoutController: ObservableObject {
     // Cadence fallback (used when CMPedometer.currentCadence returns nil)
     private var lastCadenceStepCount: Int = 0
     private var lastCadenceTimestamp: Date?
+    // Rolling pace window — previously `currentPace = elapsedTime / totalDistance`
+    // was cumulative-average from t=0, which got pinned at ~10:00/km due to the
+    // pedometer warmup ratio at the workout's first 30s. Rolling window over the
+    // last 30 seconds reflects actual current speed.
+    private var paceWindowSamples: [(time: TimeInterval, distance: Double)] = []
+    private let paceWindowSec: TimeInterval = 30
     private let haptics = iPhoneHapticPlayer()
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "iPhoneWorkoutController")
 
@@ -191,6 +197,7 @@ final class iPhoneWorkoutController: ObservableObject {
         currentCadence = 0
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
+        paceWindowSamples.removeAll(keepingCapacity: true)
         routePoints = []
         heartRateMonitor.reset()
         heartRateMonitor.start(from: now)
@@ -348,6 +355,7 @@ final class iPhoneWorkoutController: ObservableObject {
         currentCadence = 0
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
+        paceWindowSamples.removeAll(keepingCapacity: true)
         routePoints = []
         workoutStartTime = nil
         accumulatedPauseTime = 0
@@ -463,9 +471,7 @@ final class iPhoneWorkoutController: ObservableObject {
                 self.totalSteps = data.numberOfSteps.intValue
                 if let dist = data.distance {
                     self.totalDistance = dist.doubleValue / 1000.0
-                    if self.totalDistance > 0 {
-                        self.currentPace = self.elapsedTime / self.totalDistance
-                    }
+                    self.updateRollingPace()
                 }
                 if let cadence = data.currentCadence {
                     // Preferred: Apple's instantaneous cadence (steps/sec → steps/min)
@@ -488,6 +494,37 @@ final class iPhoneWorkoutController: ObservableObject {
                 }
             }
         }
+    }
+
+    /// Rolling pace from a sliding 30s window of (elapsedTime, totalDistance)
+    /// samples. Replaces the cumulative-average `elapsedTime / totalDistance`
+    /// that was pinned at ~10:00/km by the pedometer warmup spike.
+    ///
+    /// Guards:
+    /// - Workout must be >= 20s old (avoid pedometer-warmup ratio)
+    /// - Total distance must be >= 0.05 km
+    /// - Window must span >= 5s and >= 5 m
+    /// Falls back to `currentPace = nil` (renders as "—") when guards fail.
+    private func updateRollingPace() {
+        let now = elapsedTime
+        paceWindowSamples.append((time: now, distance: totalDistance))
+        let cutoff = now - paceWindowSec
+        paceWindowSamples.removeAll { $0.time < cutoff }
+
+        guard now >= 20,
+              totalDistance >= 0.05,
+              let oldest = paceWindowSamples.first else {
+            currentPace = nil
+            return
+        }
+        let dt = now - oldest.time
+        let dDist = totalDistance - oldest.distance
+        guard dt >= 5, dDist >= 0.005 else {
+            // Not enough movement in the window to compute a meaningful pace.
+            // Keep the last published value (don't flip to nil mid-workout).
+            return
+        }
+        currentPace = dt / dDist
     }
 
     // MARK: - Motion (gym-recovery activity classification)
