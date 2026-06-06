@@ -38,20 +38,7 @@ struct iPhoneWorkoutTimerView: View {
                                value: controller.intervalEngine?.currentStep?.label)
             }
 
-            if themeManager.current.id == "fmtuner" {
-                fmTunerContent
-            } else {
-                VStack(spacing: 24) {
-                    header
-                    heroSection
-                    metricsSection
-                    Spacer(minLength: 0)
-                    controlsBar
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 12)
-                .padding(.bottom, 8)
-            }
+            themedTimerBody
         }
         .themedScreenBackground()
         .alert("Finish Workout", isPresented: $showingFinishConfirmation) {
@@ -76,6 +63,40 @@ struct iPhoneWorkoutTimerView: View {
         } message: {
             Text("This will end the workout without saving.")
         }
+    }
+
+    // MARK: - Theme dispatch
+    //
+    // Each non-Clean theme gets the opportunity to fully restructure the timer
+    // body. The default case is the shared layout (header / hero / metrics /
+    // controls). Phase 3 of the timer redesign sprint replaces each themed
+    // case with a struct that owns the entire visible body for that theme —
+    // file-scoped per theme so multiple agents can implement different themes
+    // in parallel without conflicting on this dispatch.
+    @ViewBuilder
+    private var themedTimerBody: some View {
+        switch themeManager.current.id {
+        case "fmtuner":
+            fmTunerContent
+        case "synthwave", "mixtape", "arcade", "classicradio", "vumeter", "neovim":
+            // Phase 3: replace each id's case with a call into Theme/Themes/<Name>TimerHero.swift
+            standardTimerBody
+        default:
+            standardTimerBody
+        }
+    }
+
+    private var standardTimerBody: some View {
+        VStack(spacing: 24) {
+            header
+            heroSection
+            metricsSection
+            Spacer(minLength: 0)
+            controlsBar
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 12)
+        .padding(.bottom, 8)
     }
 
     // MARK: - Header (workout name + step pill)
