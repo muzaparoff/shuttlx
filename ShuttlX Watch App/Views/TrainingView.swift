@@ -294,7 +294,7 @@ struct TrainingView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : (themeManager.current.id == "mixtape" ? 60 : 0))
-            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : (themeManager.current.id == "arcade" ? 6 : 0)))
+            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : (themeManager.current.id == "arcade" ? 6 : (themeManager.current.id == "classicradio" ? 16 : 0))))
             .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : (themeManager.current.id == "arcade" ? 6 : 0)))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -323,6 +323,20 @@ struct TrainingView: View {
             // row and tertiary metrics clear the pixel border.
             if themeManager.current.id == "arcade" {
                 ArcadeTimerOverlay(workoutManager: workoutManager)
+            }
+
+            // Classic Radio chrome — non-interactive thin tuning-dial strip
+            // pinned to the top, plus a wood-grain backdrop band behind it.
+            // The iPhone variant's bakelite knobs (TONE / VOLUME / BAND),
+            // brand plate header, and station-name labels are all cut for
+            // the watch (see ClassicRadioTimerOverlay header). The dial is
+            // demoted from hero to a "you are here" progress strip — the
+            // amber backlit numeric the base TrainingView already paints in
+            // monospaced is the actual hero. The metrics VStack above gets
+            // a 16pt top inset so the workout-name row + step pill clear
+            // the dial strip.
+            if themeManager.current.id == "classicradio" {
+                ClassicRadioTimerOverlay(workoutManager: workoutManager)
             }
 
             // FM Tuner chrome — non-interactive overlays, only when active
