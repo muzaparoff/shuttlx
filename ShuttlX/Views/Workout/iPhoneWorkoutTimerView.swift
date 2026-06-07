@@ -118,25 +118,8 @@ struct iPhoneWorkoutTimerView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer()
-            if controller.mode == .interval,
-               let engine = controller.intervalEngine,
-               let step = engine.currentStep {
-                HStack(spacing: 6) {
-                    Circle()
-                        .fill(stepColor(for: step.type))
-                        .frame(width: 8, height: 8)
-                    Text(displayName(for: step.type).uppercased())
-                        .font(ShuttlXFont.cardCaption.weight(.bold))
-                        .foregroundStyle(stepColor(for: step.type))
-                    Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
-                        .font(ShuttlXFont.cardCaption)
-                        .foregroundStyle(ShuttlXColor.textSecondary)
-                        .monospacedDigit()
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(stepColor(for: step.type).opacity(0.12), in: Capsule())
-            }
+            // Step pill moved to the same row as the countdown hero below
+            // (intervalCountdownHero) so duration + phase read together.
         }
     }
 
@@ -187,13 +170,32 @@ struct iPhoneWorkoutTimerView: View {
         let remaining = engine?.currentStepTimeRemaining ?? 0
 
         return VStack(spacing: 8) {
-            Text(FormattingUtils.formatTimer(max(0, remaining)))
-                .font(.system(size: 104, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(stepColor)
-                .contentTransition(.numericText())
-                .minimumScaleFactor(0.6)
-                .lineLimit(1)
+            // Countdown + phase pill on the same row — paired so the user
+            // sees both decision-critical bits (remaining time + which phase
+            // they're in) in a single glance.
+            HStack(alignment: .firstTextBaseline, spacing: 12) {
+                Text(FormattingUtils.formatTimer(max(0, remaining)))
+                    .font(.system(size: 104, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(stepColor)
+                    .contentTransition(.numericText())
+                    .minimumScaleFactor(0.6)
+                    .lineLimit(1)
+                if let engine = engine, let step = engine.currentStep {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack(spacing: 5) {
+                            Circle().fill(stepColor).frame(width: 7, height: 7)
+                            Text(displayName(for: step.type).uppercased())
+                                .font(ShuttlXFont.cardCaption.weight(.bold))
+                                .foregroundStyle(stepColor)
+                        }
+                        Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundStyle(ShuttlXColor.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
+            }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
@@ -339,7 +341,7 @@ struct iPhoneWorkoutTimerView: View {
             metricCard(label: "STEPS",
                        value: "\(controller.totalSteps)",
                        color: ShuttlXColor.steps)
-            metricCard(label: "CAD",
+            metricCard(label: "SPM",
                        value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "—",
                        color: ShuttlXColor.steps)
         }
@@ -363,7 +365,7 @@ struct iPhoneWorkoutTimerView: View {
                            value: FormattingUtils.formatTimer(controller.elapsedTime),
                            color: ShuttlXColor.textPrimary,
                            compact: true)
-                metricCard(label: "CAD",
+                metricCard(label: "SPM",
                            value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "—",
                            color: ShuttlXColor.steps,
                            compact: true)

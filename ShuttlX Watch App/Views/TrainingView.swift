@@ -193,20 +193,10 @@ struct TrainingView: View {
                             value: pausePulse
                         )
                     Spacer()
-                    if isInterval, let engine = workoutManager.intervalEngine, let step = engine.currentStep {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(ShuttlXColor.forStepType(step.type))
-                                .frame(width: 6, height: 6)
-                            Text(step.type.displayName.uppercased())
-                                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                                .foregroundColor(ShuttlXColor.forStepType(step.type))
-                        }
-                        Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
-                            .font(.system(size: labelSize, weight: .regular, design: .monospaced))
-                            .foregroundColor(ShuttlXColor.textSecondary)
-                            .monospacedDigit()
-                    }
+                    // Step pill moved to the same line as the countdown hero below
+                    // (intervalCountdownHero) — the workout name keeps the header
+                    // to itself so the two decision-critical pieces (remaining
+                    // time + phase) read together.
                 }
                 .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
 
@@ -268,7 +258,7 @@ struct TrainingView: View {
                     HStack(spacing: 8) {
                         compactMetric("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
                                       tertiarySize, labelSize)
-                        compactMetric("CAD",
+                        compactMetric("SPM",
                                       workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
                                       tertiarySize, labelSize)
                     }
@@ -283,7 +273,7 @@ struct TrainingView: View {
                         compactMetric("PACE", paceText, tertiarySize, labelSize)
                     }
                     HStack(spacing: 8) {
-                        compactMetric("CAD",
+                        compactMetric("SPM",
                                       workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
                                       tertiarySize, labelSize)
                         Color.clear.frame(maxWidth: .infinity)
@@ -460,13 +450,30 @@ struct TrainingView: View {
         }()
 
         return VStack(spacing: 4) {
-            Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
-                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(stepColor)
-                .contentTransition(.numericText())
-                .minimumScaleFactor(0.7)
-                .lineLimit(1)
+            // Countdown + phase pill on the same row — saves vertical space and
+            // pairs the two most decision-critical bits (remaining time + which
+            // phase you're in).
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+                    .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundColor(stepColor)
+                    .contentTransition(.numericText())
+                    .minimumScaleFactor(0.7)
+                    .lineLimit(1)
+                if let step = engine.currentStep {
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(step.type.displayName.uppercased())
+                            .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                            .foregroundColor(stepColor)
+                            .lineLimit(1)
+                        Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
+                            .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                            .foregroundColor(ShuttlXColor.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
+            }
 
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
