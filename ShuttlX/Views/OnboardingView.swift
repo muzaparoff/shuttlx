@@ -34,11 +34,11 @@ struct OnboardingView: View {
                 .accessibilityHidden(true)
 
             Text("Welcome to ShuttlX")
-                .font(.largeTitle.bold())
+                .font(ShuttlXFont.metricLarge)
                 .accessibilityAddTraits(.isHeader)
 
             Text("Move at your own pace,\nguided by your heart rate")
-                .font(.title3)
+                .font(ShuttlXFont.sectionHeader)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
@@ -70,11 +70,11 @@ struct OnboardingView: View {
                 .accessibilityHidden(true)
 
             Text("Health Integration")
-                .font(.largeTitle.bold())
+                .font(ShuttlXFont.metricLarge)
                 .accessibilityAddTraits(.isHeader)
 
             Text("Track heart rate, calories,\nand workout data")
-                .font(.title3)
+                .font(ShuttlXFont.sectionHeader)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
 
@@ -101,7 +101,7 @@ struct OnboardingView: View {
                 withAnimation { currentPage = 2 }
             } label: {
                 Text("Skip for Now")
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
             }
             .accessibilityHint("Skip health access. Enable later in Settings.")
@@ -124,12 +124,12 @@ struct OnboardingView: View {
                 .accessibilityHidden(true)
 
             Text("Apple Watch")
-                .font(.largeTitle.bold())
+                .font(ShuttlXFont.metricLarge)
                 .accessibilityAddTraits(.isHeader)
 
             if watchPaired && watchAppInstalled {
                 Text("Your watch is paired and ready.\nWorkouts start on your wrist and sync automatically.")
-                    .font(.title3)
+                    .font(ShuttlXFont.sectionHeader)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
@@ -139,12 +139,12 @@ struct OnboardingView: View {
                 }
             } else {
                 Text("No Apple Watch paired — that's fine.\nYou can review your sessions and settings on iPhone.")
-                    .font(.title3)
+                    .font(ShuttlXFont.sectionHeader)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
                 Text("To start workouts, open ShuttlX on your Apple Watch.")
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -189,7 +189,7 @@ private struct OnboardingMetric: View {
                 .font(.title2)
                 .foregroundStyle(color)
             Text(label)
-                .font(.caption)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.secondary)
         }
         .accessibilityElement(children: .combine)
@@ -207,7 +207,7 @@ private struct WatchStatusRow: View {
             Image(systemName: icon)
                 .foregroundStyle(isGood ? ShuttlXColor.positive : .secondary)
             Text(label)
-                .font(.subheadline)
+                .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(isGood ? .primary : .secondary)
         }
     }

@@ -849,6 +849,7 @@ struct ThemedCompletionBadge: View {
         case "arcade":       ArcadeCompletionBadge()
         case "classicradio": ClassicRadioCompletionBadge()
         case "vumeter":      VUMeterCompletionBadge()
+        case "neovim":       NeovimCompletionBadge()
         default:             CleanCompletionBadge()
         }
     }
@@ -869,14 +870,14 @@ private struct CleanCompletionBadge: View {
                 .frame(width: 52, height: 52)
 
             Circle()
-                .stroke(Color.indigo.opacity(0.3), lineWidth: 2)
+                .stroke(ShuttlXColor.ctaPrimary.opacity(0.3), lineWidth: 2)
                 .frame(width: 52, height: 52)
 
             Image(systemName: "checkmark")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.green, .mint],
+                        colors: [ShuttlXColor.positive, ShuttlXColor.walking],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
@@ -1050,6 +1051,42 @@ private struct ArcadeCompletionBadge: View {
         .overlay(
             RoundedRectangle(cornerRadius: 4)
                 .stroke(green.opacity(0.5), lineWidth: 2)
+        )
+    }
+}
+
+// MARK: Neovim Completion Badge — `:wq` "SAVED" on Gruvbox dark panel (watch — static, no animation)
+
+private struct NeovimCompletionBadge: View {
+    // Gruvbox Dark palette — same as iOS counterpart; hard-wired for "neovim" theme only
+    private let bg0h  = Color(red: 0.114, green: 0.125, blue: 0.129)  // #1D2021 bg0_hard
+    private let bg1   = Color(red: 0.235, green: 0.220, blue: 0.212)  // #3C3836 bg1
+    private let green = Color(red: 0.722, green: 0.733, blue: 0.149)  // #B8BB26
+    private let aqua  = Color(red: 0.557, green: 0.753, blue: 0.486)  // #8EC07C
+
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(":wq")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundColor(aqua)
+
+            Text("SAVED")
+                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .foregroundColor(green)
+
+            Image(systemName: "checkmark")
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundColor(green)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(bg0h)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(bg1, lineWidth: 1.5)
         )
     }
 }

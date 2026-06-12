@@ -29,11 +29,11 @@ struct WeekStripView: View {
                     } label: {
                         VStack(spacing: 6) {
                             Text(dayName(day.date))
-                                .font(.caption2)
+                                .font(ShuttlXFont.microLabel)
                                 .foregroundStyle(day.isSelected ? ShuttlXColor.iconOnCTA : .secondary)
 
                             Text(dayNumber(day.date))
-                                .font(.subheadline.weight(day.isToday ? .bold : .medium))
+                                .font(ShuttlXFont.cardSubtitle.weight(day.isToday ? .bold : .medium))
                                 .foregroundStyle(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.textPrimary)
 
                             // Session dots

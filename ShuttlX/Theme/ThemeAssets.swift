@@ -15,7 +15,7 @@ struct ThemedTimerFrame: View {
         case "arcade":       ArcadeTimerFrame(width: width, height: height)
         case "classicradio": ClassicRadioTimerFrame(width: width, height: height)
         case "vumeter":      VUMeterTimerFrame(width: width, height: height)
-        case "neovim":       CleanTimerFrame(width: width, height: height)
+        case "neovim":       NeovimTimerFrame(width: width, height: height)
         default:             CleanTimerFrame(width: width, height: height)
         }
     }
@@ -34,7 +34,7 @@ private struct CleanTimerFrame: View {
             RoundedRectangle(cornerRadius: 30)
                 .fill(
                     RadialGradient(
-                        colors: [Color.indigo.opacity(0.06), .clear],
+                        colors: [ShuttlXColor.ctaPrimary.opacity(0.06), .clear],
                         center: .center, startRadius: 0, endRadius: size / 2
                     )
                 )
@@ -45,7 +45,7 @@ private struct CleanTimerFrame: View {
             RoundedRectangle(cornerRadius: 28)
                 .stroke(
                     LinearGradient(
-                        colors: [Color.indigo.opacity(0.3), Color.blue.opacity(0.15)],
+                        colors: [ShuttlXColor.ctaPrimary.opacity(0.3), ShuttlXColor.ctaPrimary.opacity(0.15)],
                         startPoint: .topLeading, endPoint: .bottomTrailing
                     ),
                     lineWidth: 4
@@ -470,12 +470,13 @@ private struct ClassicRadioTimerFrame: View {
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(cream.opacity(0.12), lineWidth: 1)
 
-                    // Red leader stripe at top of tape window
+                    // Red leader stripe at top of tape window (intrinsic to cassette metaphor)
                     Canvas { context, canvasSize in
                         var path = Path()
                         path.move(to: CGPoint(x: 4, y: 2))
                         path.addLine(to: CGPoint(x: canvasSize.width - 4, y: 2))
-                        context.stroke(path, with: .color(Color.red.opacity(0.15)), lineWidth: 0.5)
+                        // Use amber (Classic Radio palette) rather than raw Color.red
+                        context.stroke(path, with: .color(amber.opacity(0.25)), lineWidth: 0.5)
                     }
                     .allowsHitTesting(false)
 
@@ -504,6 +505,8 @@ private struct VUMeterTimerFrame: View {
     let height: CGFloat
     private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
     private let darkPanel = Color(red: 0.07, green: 0.05, blue: 0.03)
+    // VU "over" zone colour — mirrors VUMeter theme ctaDestructive (warm red)
+    private let vuRed = Color(red: 0.90, green: 0.25, blue: 0.20)
 
     var body: some View {
         ZStack {
@@ -586,7 +589,7 @@ private struct VUMeterTimerFrame: View {
                     let outerR = radius + 5
                     let labelR = radius + 14
                     let isRed = i >= 6
-                    let tickColor = isRed ? Color.red.opacity(0.4) : amber.opacity(0.3)
+                    let tickColor = isRed ? vuRed.opacity(0.4) : amber.opacity(0.3)
 
                     // Tick marks
                     var tick = Path()
@@ -607,7 +610,7 @@ private struct VUMeterTimerFrame: View {
                     context.draw(
                         Text(label)
                             .font(.system(size: 5, weight: .medium, design: .monospaced))
-                            .foregroundColor(isRed ? .red.opacity(0.3) : amber.opacity(0.25)),
+                            .foregroundColor(isRed ? vuRed.opacity(0.3) : amber.opacity(0.25)),
                         at: labelPoint, anchor: .center
                     )
                 }
@@ -657,7 +660,7 @@ private struct VUMeterTimerFrame: View {
             HStack(spacing: 2) {
                 ForEach(0..<5, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 0.5)
-                        .fill(i < 3 ? Color.green.opacity(0.3) : Color.red.opacity(0.3))
+                        .fill(i < 3 ? ShuttlXColor.positive.opacity(0.3) : ShuttlXColor.ctaDestructive.opacity(0.3))
                         .frame(width: 4, height: 3)
                 }
             }
@@ -839,6 +842,71 @@ private struct ArcadeTimerFrame: View {
     }
 }
 
+// MARK: Neovim Timer Frame — gutter stripe border (mirrors neovimBackground left gutter)
+
+private struct NeovimTimerFrame: View {
+    let width: CGFloat
+    let height: CGFloat
+    // Gruvbox Dark palette — matches NeovimTimerHero and NeovimTheme exactly
+    private let bg0h   = Color(red: 0.114, green: 0.125, blue: 0.129)  // #1D2021 bg0_hard
+    private let bg0    = Color(red: 0.157, green: 0.157, blue: 0.157)  // #282828 bg0
+    private let bg1    = Color(red: 0.235, green: 0.220, blue: 0.212)  // #3C3836 bg1
+    private let bg3    = Color(red: 0.388, green: 0.357, blue: 0.337)  // #665C54 bg3
+    private let green  = Color(red: 0.722, green: 0.733, blue: 0.149)  // #B8BB26
+    // Gutter stripe width matches NeovimTimerHero.gutterWidth and neovimBackground stripe
+    private let gutterWidth: CGFloat = 10
+
+    var body: some View {
+        ZStack {
+            // Dark background fill (bg0_hard)
+            RoundedRectangle(cornerRadius: 4)
+                .fill(bg0h)
+                .frame(width: width, height: height)
+
+            // Left gutter stripe (bg0 — slightly lighter than bg0_hard)
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(bg0)
+                    .frame(width: gutterWidth, height: height)
+                Spacer()
+            }
+            .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .allowsHitTesting(false)
+
+            // Thin gutter separator line (bg3)
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(bg3)
+                    .frame(width: 0.5, height: height)
+                    .offset(x: gutterWidth)
+                Spacer()
+            }
+            .frame(width: width, height: height)
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .allowsHitTesting(false)
+
+            // Outer border — bg1 (subtle, no neon)
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(bg1, lineWidth: 1.5)
+                .frame(width: width, height: height)
+                .allowsHitTesting(false)
+
+            // Green accent top-edge bar (matches Neovim tabline orange-bar convention,
+            // but in Gruvbox green to signal "active workout")
+            Canvas { context, canvasSize in
+                var path = Path()
+                path.move(to: CGPoint(x: gutterWidth + 2, y: 1))
+                path.addLine(to: CGPoint(x: canvasSize.width - 2, y: 1))
+                context.stroke(path, with: .color(green.opacity(0.6)), lineWidth: 1.5)
+            }
+            .frame(width: width, height: height)
+            .allowsHitTesting(false)
+        }
+        .frame(width: width, height: height)
+    }
+}
+
 // MARK: - Themed Completion Badge
 
 struct ThemedCompletionBadge: View {
@@ -850,7 +918,7 @@ struct ThemedCompletionBadge: View {
         case "arcade":       ArcadeCompletionBadge()
         case "classicradio": ClassicRadioCompletionBadge()
         case "vumeter":      VUMeterCompletionBadge()
-        case "neovim":       CleanCompletionBadge()
+        case "neovim":       NeovimCompletionBadge()
         default:             CleanCompletionBadge()
         }
     }
@@ -871,14 +939,14 @@ private struct CleanCompletionBadge: View {
                 .frame(width: 52, height: 52)
 
             Circle()
-                .stroke(Color.indigo.opacity(0.3), lineWidth: 2)
+                .stroke(ShuttlXColor.ctaPrimary.opacity(0.3), lineWidth: 2)
                 .frame(width: 52, height: 52)
 
             Image(systemName: "checkmark")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(
                     LinearGradient(
-                        colors: [.green, .mint],
+                        colors: [ShuttlXColor.positive, ShuttlXColor.walking],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
@@ -1018,11 +1086,57 @@ private struct VUMeterCompletionBadge: View {
     }
 }
 
+// MARK: Neovim Completion Badge — `:wq` "SAVED" on Gruvbox dark panel
+
+private struct NeovimCompletionBadge: View {
+    // Gruvbox Dark palette — hard-wired, this struct only shows for "neovim" theme
+    private let bg0h  = Color(red: 0.114, green: 0.125, blue: 0.129)  // #1D2021 bg0_hard
+    private let bg0   = Color(red: 0.157, green: 0.157, blue: 0.157)  // #282828 bg0
+    private let bg1   = Color(red: 0.235, green: 0.220, blue: 0.212)  // #3C3836 bg1
+    private let fg    = Color(red: 0.922, green: 0.859, blue: 0.698)  // #EBDBB2 fg
+    private let green = Color(red: 0.722, green: 0.733, blue: 0.149)  // #B8BB26
+    private let aqua  = Color(red: 0.557, green: 0.753, blue: 0.486)  // #8EC07C
+
+    var body: some View {
+        VStack(spacing: 4) {
+            // `:wq` — the canonical Vim save-and-quit command
+            Text(":wq")
+                .font(.system(size: 18, weight: .bold, design: .monospaced))
+                .foregroundColor(aqua)
+                .shadow(color: aqua.opacity(0.35), radius: 2)
+
+            Text("SAVED")
+                .font(.system(size: 13, weight: .bold, design: .monospaced))
+                .foregroundColor(green)
+                .shadow(color: green.opacity(0.35), radius: 2)
+
+            // Block cursor on the "checkmark" position — Gruvbox green
+            Image(systemName: "checkmark")
+                .font(.system(size: 16, weight: .bold, design: .monospaced))
+                .foregroundColor(green)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(bg0h)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(bg1, lineWidth: 1.5)
+        )
+    }
+}
+
 // MARK: Arcade Completion Badge — "HIGH SCORE" CRT display
 
 private struct ArcadeCompletionBadge: View {
     private let green = Color(red: 0.0, green: 1.0, blue: 0.0)
     private let orange = Color(red: 1.0, green: 0.67, blue: 0.0)
+    // Arcade palette accent colours for the tri-colour star row (pixel-art decoration)
+    private let arcadeYellow  = Color(red: 1.0, green: 1.0, blue: 0.0)   // crossTraining / ctaPause
+    private let arcadeCyan    = Color(red: 0.0, green: 1.0, blue: 1.0)   // swimming
+    private let arcadeMagenta = Color(red: 1.0, green: 0.0, blue: 1.0)   // elliptical
 
     var body: some View {
         VStack(spacing: 4) {
@@ -1032,9 +1146,9 @@ private struct ArcadeCompletionBadge: View {
                 .shadow(color: orange.opacity(0.4), radius: 2)
 
             HStack(spacing: 2) {
-                Image(systemName: "star.fill").foregroundColor(.yellow)
-                Image(systemName: "star.fill").foregroundColor(.cyan)
-                Image(systemName: "star.fill").foregroundColor(.pink)
+                Image(systemName: "star.fill").foregroundColor(arcadeYellow)
+                Image(systemName: "star.fill").foregroundColor(arcadeCyan)
+                Image(systemName: "star.fill").foregroundColor(arcadeMagenta)
             }
             .font(.system(size: 8))
 

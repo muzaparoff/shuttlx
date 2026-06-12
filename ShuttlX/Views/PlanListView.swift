@@ -69,16 +69,16 @@ struct PlanListView: View {
                     .foregroundStyle(plan.sportType?.themeColor ?? ShuttlXColor.running)
                     .frame(width: 20)
                 Text(plan.name)
-                    .font(.headline)
+                    .font(ShuttlXFont.cardTitle)
             }
 
             Text(plan.summaryText)
-                .font(.subheadline)
+                .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(.secondary)
 
             if let desc = plan.planDescription {
                 Text(desc)
-                    .font(.caption)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
             }

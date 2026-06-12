@@ -28,7 +28,7 @@ struct WeeklyDistanceChart: View {
                     AxisValueLabel {
                         if let km = value.as(Double.self) {
                             Text(String(format: "%.1f", km))
-                                .font(.caption2)
+                                .font(ShuttlXFont.microLabel)
                         }
                     }
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
@@ -37,7 +37,7 @@ struct WeeklyDistanceChart: View {
             .chartXAxis {
                 AxisMarks { value in
                     AxisValueLabel()
-                        .font(.caption2)
+                        .font(ShuttlXFont.microLabel)
                 }
             }
             .frame(height: 160)

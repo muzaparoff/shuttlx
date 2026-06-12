@@ -285,8 +285,8 @@ struct TrainingView: View {
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : (themeManager.current.id == "mixtape" ? 60 : 0))
             .padding(.trailing, themeManager.current.id == "vumeter" ? 18 : 0)
-            .padding(.top, themeManager.current.id == "fmtuner" ? 18 : (themeManager.current.id == "synthwave" ? 4 : (themeManager.current.id == "arcade" ? 6 : (themeManager.current.id == "classicradio" ? 16 : (themeManager.current.id == "neovim" ? 16 : 0)))))
-            .padding(.bottom, themeManager.current.id == "fmtuner" ? 16 : (themeManager.current.id == "synthwave" ? 6 : (themeManager.current.id == "arcade" ? 6 : (themeManager.current.id == "neovim" ? 16 : 0))))
+            .padding(.top, watchTimerTopPadding(themeManager.current.id))
+            .padding(.bottom, watchTimerBottomPadding(themeManager.current.id))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             // Synthwave chrome — non-interactive backdrop, only when active.
@@ -381,6 +381,32 @@ struct TrainingView: View {
     }
 
     // Compact two-up metric (used in interval mode's tertiary rows).
+    // MARK: - Theme Padding Helpers
+
+    /// Top padding for the metrics VStack in `fullWorkoutDisplayTab`, keyed by theme id.
+    /// Extracted from a nested ternary to aid readability and future maintenance.
+    private func watchTimerTopPadding(_ themeID: String) -> CGFloat {
+        switch themeID {
+        case "fmtuner":     return 18
+        case "synthwave":   return 4
+        case "arcade":      return 6
+        case "classicradio": return 16
+        case "neovim":      return 16
+        default:            return 0
+        }
+    }
+
+    /// Bottom padding for the metrics VStack in `fullWorkoutDisplayTab`, keyed by theme id.
+    private func watchTimerBottomPadding(_ themeID: String) -> CGFloat {
+        switch themeID {
+        case "fmtuner":   return 16
+        case "synthwave": return 6
+        case "arcade":    return 6
+        case "neovim":    return 16
+        default:          return 0
+        }
+    }
+
     private func compactMetric(_ label: String, _ value: String,
                                _ valueSize: CGFloat, _ labelSize: CGFloat) -> some View {
         HStack(spacing: 4) {

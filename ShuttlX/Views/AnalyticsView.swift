@@ -184,7 +184,7 @@ struct AnalyticsView: View {
                     AxisValueLabel {
                         if let load = value.as(Double.self) {
                             Text(String(format: "%.0f", load))
-                                .font(.caption2)
+                                .font(ShuttlXFont.microLabel)
                         }
                     }
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
@@ -193,7 +193,7 @@ struct AnalyticsView: View {
             .chartXAxis {
                 AxisMarks { _ in
                     AxisValueLabel()
-                        .font(.caption2)
+                        .font(ShuttlXFont.microLabel)
                 }
             }
             .frame(height: 180)
@@ -236,7 +236,7 @@ struct AnalyticsView: View {
                     AxisValueLabel {
                         if let mins = value.as(Double.self) {
                             Text("\(Int(mins))m")
-                                .font(.caption2)
+                                .font(ShuttlXFont.microLabel)
                         }
                     }
                     AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
@@ -245,7 +245,7 @@ struct AnalyticsView: View {
             .chartXAxis {
                 AxisMarks { _ in
                     AxisValueLabel()
-                        .font(.caption2)
+                        .font(ShuttlXFont.microLabel)
                 }
             }
             .frame(height: 160)
@@ -255,10 +255,10 @@ struct AnalyticsView: View {
                 ForEach(weeklyTrend) { week in
                     VStack(spacing: 2) {
                         Text(FormattingUtils.formatDistance(week.totalDistance))
-                            .font(.caption2)
+                            .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.secondary)
                         Text("\(week.sessionCount)")
-                            .font(.caption2)
+                            .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.tertiary)
                     }
                     .frame(maxWidth: .infinity)
@@ -285,7 +285,7 @@ struct AnalyticsView: View {
                             .font(ShuttlXFont.sectionHeader)
 
                         Text(vo2maxCategory(vo2))
-                            .font(.caption)
+                            .font(ShuttlXFont.cardCaption)
                             .foregroundStyle(.secondary)
                     }
 
@@ -298,14 +298,14 @@ struct AnalyticsView: View {
 
                         if let isUp = trending {
                             Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
-                                .font(.title3.weight(.semibold))
+                                .font(ShuttlXFont.sectionHeader)
                                 .foregroundStyle(isUp ? ShuttlXColor.positive : ShuttlXColor.negative)
                         }
                     }
                 }
 
                 Text("ml/kg/min")
-                    .font(.caption2)
+                    .font(ShuttlXFont.microLabel)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
@@ -408,7 +408,7 @@ struct AnalyticsView: View {
                 ForEach(paceZones) { zone in
                     HStack(spacing: 8) {
                         Text(zone.zone)
-                            .font(.caption)
+                            .font(ShuttlXFont.cardCaption)
                             .frame(width: 70, alignment: .leading)
 
                         GeometryReader { geo in
@@ -419,7 +419,7 @@ struct AnalyticsView: View {
                         .frame(height: 20)
 
                         Text(String(format: "%.0f%%", zone.percentage))
-                            .font(.caption2)
+                            .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.secondary)
                             .frame(width: 36, alignment: .trailing)
                     }
@@ -516,11 +516,11 @@ private struct PRCard: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.caption)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(color)
 
                 Text(title)
-                    .font(.caption2)
+                    .font(ShuttlXFont.microLabel)
                     .foregroundStyle(.secondary)
             }
 

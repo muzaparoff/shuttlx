@@ -11,7 +11,7 @@ struct HRZoneChart: View {
 
             if zones.isEmpty {
                 Text("No heart rate data")
-                    .font(.caption)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.secondary)
                     .frame(height: 120)
                     .frame(maxWidth: .infinity)
@@ -25,7 +25,7 @@ struct HRZoneChart: View {
                     .cornerRadius(4)
                     .annotation(position: .trailing) {
                         Text(String(format: "%.0f%%", zone.percentage))
-                            .font(.caption2)
+                            .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.secondary)
                     }
                 }
@@ -33,7 +33,7 @@ struct HRZoneChart: View {
                 .chartYAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(.caption2)
+                            .font(ShuttlXFont.microLabel)
                     }
                 }
                 .frame(height: CGFloat(zones.count) * 32 + 20)

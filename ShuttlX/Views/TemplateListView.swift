@@ -56,23 +56,23 @@ struct TemplateListView: View {
                     .foregroundStyle(ShuttlXColor.heartRate)
                     .frame(width: 20)
                 Text("Gym Recovery")
-                    .font(.headline)
+                    .font(ShuttlXFont.cardTitle)
             }
 
             Text("HR recovery monitoring between sets")
-                .font(.subheadline)
+                .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(.secondary)
 
             if let last = lastGymRecoverySession {
                 let minutes = Int(last.duration / 60)
                 let sets = last.recoveryReport?.sets ?? 0
                 Text("Last: \(minutes)m · \(sets) sets · \(relativeDate(last.startDate))")
-                    .font(.caption2)
+                    .font(ShuttlXFont.cardCaption)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             } else {
                 Text("Start on your Apple Watch")
-                    .font(.caption2)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.secondary)
             }
         }
@@ -90,19 +90,19 @@ struct TemplateListView: View {
                     .foregroundStyle(ShuttlXColor.running)
                     .frame(width: 20)
                 Text("Free Run")
-                    .font(.headline)
+                    .font(ShuttlXFont.cardTitle)
             }
 
             HStack(spacing: 12) {
                 Text("Auto-detects run & walk")
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
             }
 
             if let last = lastFreeRunSession {
                 let minutes = Int(last.duration / 60)
                 Text("Last: \(minutes)m · \(relativeDate(last.startDate))")
-                    .font(.caption2)
+                    .font(ShuttlXFont.cardCaption)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
             }
@@ -187,17 +187,17 @@ struct TemplateListView: View {
                     .foregroundStyle(template.sportType?.themeColor ?? ShuttlXColor.running)
                     .frame(width: 20)
                 Text(template.name)
-                    .font(.headline)
+                    .font(ShuttlXFont.cardTitle)
             }
 
             HStack(spacing: 12) {
                 Text(template.summaryText)
-                    .font(.subheadline)
+                    .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
 
                 if template.warmup != nil {
                     Text("Warm Up")
-                        .font(.caption2)
+                        .font(ShuttlXFont.cardCaption)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(ShuttlXColor.stepWarmup.opacity(0.15), in: Capsule())
@@ -206,7 +206,7 @@ struct TemplateListView: View {
 
                 if template.cooldown != nil {
                     Text("Cool Down")
-                        .font(.caption2)
+                        .font(ShuttlXFont.cardCaption)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
                         .background(ShuttlXColor.stepCooldown.opacity(0.15), in: Capsule())
@@ -221,7 +221,7 @@ struct TemplateListView: View {
                 }
                 if template.repeatCount > 1 {
                     Text("\u{00D7}\(template.repeatCount)")
-                        .font(.caption2.weight(.bold))
+                        .font(ShuttlXFont.cardCaption.weight(.bold))
                         .foregroundStyle(.secondary)
                 }
             }

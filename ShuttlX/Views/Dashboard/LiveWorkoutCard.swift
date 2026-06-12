@@ -106,10 +106,10 @@ private struct LiveMetricPill: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.caption2)
+                .font(ShuttlXFont.microLabel)
                 .foregroundStyle(color)
             Text(value)
-                .font(.caption.monospacedDigit())
+                .font(ShuttlXFont.cardCaption.monospacedDigit())
                 .contentTransition(.numericText())
         }
         .accessibilityElement(children: .combine)

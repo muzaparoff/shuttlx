@@ -132,13 +132,14 @@ struct ProgramsTabView: View {
     }
 
     private func templateStartRow(_ template: WorkoutTemplate) -> some View {
-        Button {
+        let sportColor = template.sportType?.themeColor ?? ShuttlXColor.running
+        return Button {
             workoutController.presentInterval(template: template)
         } label: {
             HStack(spacing: 12) {
-                Image(systemName: "flame.fill")
+                Image(systemName: template.sportType?.systemImage ?? "flame.fill")
                     .font(.title2)
-                    .foregroundStyle(ShuttlXColor.calories)
+                    .foregroundStyle(sportColor)
                     .frame(width: 36)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(template.name)
@@ -151,7 +152,7 @@ struct ProgramsTabView: View {
                 }
                 Spacer()
                 Image(systemName: "play.circle.fill")
-                    .foregroundStyle(ShuttlXColor.calories)
+                    .foregroundStyle(sportColor)
             }
             .padding(.vertical, 4)
         }

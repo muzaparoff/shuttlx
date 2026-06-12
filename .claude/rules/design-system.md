@@ -9,6 +9,30 @@ globs:
 
 All new UI code must follow these conventions. Existing code should be migrated when touched.
 
+## Signature Shape DNA
+
+Each theme owns ONE signature shape, reused across surfaces so the whole app feels themed without redesigning every screen ×8:
+
+| Theme | Signature shape |
+|---|---|
+| Clean | soft glass ring |
+| Synthwave | neon perspective grid / horizon line |
+| Mixtape | cassette spool (circle + spokes) |
+| Arcade | 7-segment digit block / pixel border |
+| Classic Radio | tuning dial arc + needle |
+| VU Meter | analog needle arc + dB ticks |
+| Neovim | block cursor / gutter stripe |
+| FM Tuner | LCD segment bar / signal dots |
+
+Reuse as: chart frame, progress indicator, summary medal, empty/loading state. One parametric `Canvas` per theme — never N illustrations per state.
+
+### Themed vs Neutral Surfaces
+
+- **Themed** (must carry full identity, dispatch on `themeManager.current.id`): dashboard hero, analytics data-viz, workout summary/celebration, empty states, watch home, timer
+- **Neutral** (theme colors only — keep legible): forms, settings rows, sign-in, paywall, plan/template editors, maps (accent polyline only), modal sheets
+- **Anti-goals**: no idle animations (watch battery), no per-theme icon sets (SF Symbols + tint), Clean stays the calm cardiac-patient accessibility baseline, chrome never competes with data
+- Raw semantic fonts (`.font(.body)`, `.font(.headline)`) are violations on themed surfaces — they block per-theme typography; use `ShuttlXFont.*`
+
 ## Theme System
 
 - 8 selectable themes: **Clean** (default), **Synthwave**, **Mixtape**, **Arcade**, **Classic Radio**, **VU Meter**, **Neovim**, **FM Tuner**

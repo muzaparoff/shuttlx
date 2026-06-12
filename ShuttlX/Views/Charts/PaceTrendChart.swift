@@ -15,7 +15,7 @@ struct PaceTrendChart: View {
 
             if paceData.isEmpty {
                 Text("Not enough data")
-                    .font(.caption)
+                    .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(.secondary)
                     .frame(height: 140)
                     .frame(maxWidth: .infinity)
@@ -40,7 +40,7 @@ struct PaceTrendChart: View {
                         AxisValueLabel {
                             if let mins = value.as(Double.self) {
                                 Text(String(format: "%.0f'", mins))
-                                    .font(.caption2)
+                                    .font(ShuttlXFont.microLabel)
                             }
                         }
                         AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
@@ -50,7 +50,7 @@ struct PaceTrendChart: View {
                 .chartXAxis {
                     AxisMarks { _ in
                         AxisValueLabel()
-                            .font(.caption2)
+                            .font(ShuttlXFont.microLabel)
                     }
                 }
                 .frame(height: 140)

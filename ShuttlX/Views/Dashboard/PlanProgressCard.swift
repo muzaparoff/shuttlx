@@ -17,7 +17,7 @@ struct PlanProgressCard: View {
                     .font(ShuttlXFont.cardTitle)
                 Spacer()
                 Text("\(Int(completion * 100))%")
-                    .font(.subheadline.weight(.semibold).monospacedDigit())
+                    .font(ShuttlXFont.cardSubtitle.weight(.semibold).monospacedDigit())
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
             }
 
@@ -30,10 +30,10 @@ struct PlanProgressCard: View {
                         .font(.caption)
                         .foregroundStyle(ShuttlXColor.ctaPrimary)
                     Text("Next: \(next.templateName ?? "Workout")")
-                        .font(.caption)
+                        .font(ShuttlXFont.cardCaption)
                     Spacer()
                     Text("Week \(next.week), Day \(next.day)")
-                        .font(.caption)
+                        .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(.secondary)
                 }
             }

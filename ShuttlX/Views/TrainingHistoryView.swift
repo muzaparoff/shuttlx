@@ -85,7 +85,7 @@ struct TrainingHistoryView: View {
             Spacer()
 
             Text(periodLabel)
-                .font(.headline)
+                .font(ShuttlXFont.cardTitle)
 
             Spacer()
 
@@ -195,11 +195,11 @@ struct TrainingHistoryView: View {
                 .accessibilityHidden(true)
 
             Text("No training sessions")
-                .font(.title3)
+                .font(ShuttlXFont.sectionHeader)
                 .foregroundStyle(.secondary)
 
             Text("for this \(viewMode.rawValue.lowercased())")
-                .font(.caption)
+                .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.tertiary)
         }
         .frame(maxWidth: .infinity)

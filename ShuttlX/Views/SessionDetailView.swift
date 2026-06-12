@@ -46,13 +46,13 @@ struct SessionDetailView: View {
         VStack(spacing: 4) {
             if let name = session.programName {
                 Text(name)
-                    .font(.subheadline.weight(.semibold))
+                    .font(ShuttlXFont.cardSubtitle.weight(.semibold))
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
             }
 
             if let sport = session.sportType {
                 Label(sport.displayName, systemImage: sport.systemImage)
-                    .font(.caption.weight(.medium))
+                    .font(ShuttlXFont.cardCaption.weight(.medium))
                     .foregroundStyle(sport.themeColor)
             }
 
@@ -61,7 +61,7 @@ struct SessionDetailView: View {
                 .contentTransition(.numericText())
 
             Text(FormattingUtils.formatSessionDate(session.startDate))
-                .font(.subheadline)
+                .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity)
