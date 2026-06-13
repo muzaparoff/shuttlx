@@ -92,6 +92,22 @@ extension AppTheme {
             hasLCDDotMatrix: false,
             hasCRTEffect: false,
             cardAccentBarWidth: 3
+        ),
+        chartStyle: ThemeChartStyle(
+            gridStyle: .gutter,
+            gridColor: Color(red: 0.314, green: 0.286, blue: 0.271),  // #504945 Gruvbox bg2
+            gridOpacity: 0.50,
+            barShape: .blockChars,
+            barFill: .solid,
+            lineStyle: .stepped,
+            lineGlow: false,
+            pointMarker: .none,
+            axisLabelStyle: .lineNumber,
+            axisLabelColor: Color(red: 0.400, green: 0.361, blue: 0.329),  // #665C54 Gruvbox bg3
+            axisLabelTracking: 1.0,
+            accentColor: Color(red: 0.722, green: 0.733, blue: 0.149),     // running (Gruvbox green)
+            highlightPeak: false,
+            signatureAccent: true
         )
     )
 }

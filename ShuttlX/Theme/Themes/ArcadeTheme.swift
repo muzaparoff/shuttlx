@@ -92,6 +92,22 @@ extension AppTheme {
             hasLCDDotMatrix: false,
             hasCRTEffect: true,
             cardAccentBarWidth: 0
+        ),
+        chartStyle: ThemeChartStyle(
+            gridStyle: .scanline,
+            gridColor: Color(red: 0.0, green: 1.0, blue: 0.0),     // phosphor green
+            gridOpacity: 0.18,
+            barShape: .pixelBlocks,
+            barFill: .glow,
+            lineStyle: .stepped,
+            lineGlow: true,
+            pointMarker: .square,
+            axisLabelStyle: .sevenSegment,
+            axisLabelColor: Color(red: 0.60, green: 0.60, blue: 0.73),
+            axisLabelTracking: 2.0,
+            accentColor: Color(red: 1.0, green: 0.0, blue: 0.0),   // heartRate (player-red)
+            highlightPeak: true,
+            signatureAccent: true
         )
     )
 }

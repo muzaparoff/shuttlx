@@ -115,6 +115,22 @@ extension AppTheme {
             hasLCDDotMatrix: false,
             hasCRTEffect: false,
             cardAccentBarWidth: 0
+        ),
+        chartStyle: ThemeChartStyle(
+            gridStyle: .segments,
+            gridColor: Color(red: 0.486, green: 0.847, blue: 1.000),  // ctaPrimary cyan
+            gridOpacity: 0.15,
+            barShape: .lcdSegments,
+            barFill: .stepped,
+            lineStyle: .stepped,
+            lineGlow: false,
+            pointMarker: .none,
+            axisLabelStyle: .lcdSubtitle,
+            axisLabelColor: Color(red: 0.227, green: 0.561, blue: 0.659),  // textSecondary
+            axisLabelTracking: 1.5,
+            accentColor: Color(red: 0.486, green: 0.847, blue: 1.000),     // ctaPrimary cyan
+            highlightPeak: true,
+            signatureAccent: false
         )
     )
 }

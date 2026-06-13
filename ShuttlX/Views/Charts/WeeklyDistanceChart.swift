@@ -3,49 +3,36 @@ import Charts
 
 struct WeeklyDistanceChart: View {
     let summaries: [DailyWorkoutSummary]
+    @Environment(ThemeManager.self) private var themeManager
+
+    private var chartStyle: ThemeChartStyle { themeManager.current.chartStyle }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Distance")
                 .font(ShuttlXFont.cardTitle)
 
-            Chart(summaries) { day in
-                BarMark(
-                    x: .value("Day", day.dayLabel),
-                    y: .value("Distance", day.totalDistance)
+            if summaries.isEmpty {
+                ThemedBarChart.emptyState(chartStyle: chartStyle, height: 160)
+            } else {
+                ThemedBarChart(
+                    values: summaries.map { $0.totalDistance },
+                    labels: summaries.map { $0.dayLabel },
+                    yUnit: "",
+                    chartHeight: 160,
+                    chartStyle: chartStyle
                 )
-                .foregroundStyle(
-                    LinearGradient(
-                        colors: [ShuttlXColor.running.opacity(0.8), ShuttlXColor.running.opacity(0.4)],
-                        startPoint: .top,
-                        endPoint: .bottom
-                    )
-                )
-                .cornerRadius(4)
             }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisValueLabel {
-                        if let km = value.as(Double.self) {
-                            Text(String(format: "%.1f", km))
-                                .font(ShuttlXFont.microLabel)
-                        }
-                    }
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
-                }
-            }
-            .chartXAxis {
-                AxisMarks { value in
-                    AxisValueLabel()
-                        .font(ShuttlXFont.microLabel)
-                }
-            }
-            .frame(height: 160)
         }
         .padding(16)
         .themedCard(accent: ShuttlXColor.running, headerLabel: "DISTANCE")
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Weekly distance chart")
+        .accessibilityLabel({
+            let summary = summaries.map {
+                "\($0.dayLabel) \(String(format: "%.1f", $0.totalDistance)) km"
+            }.joined(separator: ", ")
+            return "Weekly distance: \(summary.isEmpty ? "no data" : summary)"
+        }())
     }
 }
 
@@ -60,4 +47,5 @@ struct WeeklyDistanceChart: View {
         DailyWorkoutSummary(date: Date(), totalDuration: 1200, totalDistance: 2.0, totalCalories: 180, averageHeartRate: 140, averagePace: 600, sessionCount: 1)
     ])
     .padding()
+    .environment(ThemeManager.shared)
 }

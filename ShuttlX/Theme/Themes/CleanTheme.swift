@@ -92,6 +92,22 @@ extension AppTheme {
             hasLCDDotMatrix: false,
             hasCRTEffect: false,
             cardAccentBarWidth: 0
+        ),
+        chartStyle: ThemeChartStyle(
+            gridStyle: .dashed,
+            gridColor: Color(.secondarySystemFill),
+            gridOpacity: 0.30,
+            barShape: .roundedSwiftCharts,
+            barFill: .gradientVertical,
+            lineStyle: .smoothArea,
+            lineGlow: false,
+            pointMarker: .circle,
+            axisLabelStyle: .system,
+            axisLabelColor: Color(.secondaryLabel),
+            axisLabelTracking: 0,
+            accentColor: .green,
+            highlightPeak: false,
+            signatureAccent: false
         )
     )
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct WeekStripView: View {
     @Binding var selectedDate: Date
     let sessions: [TrainingSession]
+    @Environment(ThemeManager.self) private var themeManager
 
     private var weekDays: [StripDay] {
         let calendar = Calendar.current
@@ -20,6 +21,9 @@ struct WeekStripView: View {
         }
     }
 
+    private var isMixtape: Bool { themeManager.current.id == "mixtape" }
+    private var chartStyle: ThemeChartStyle { themeManager.current.chartStyle }
+
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -36,15 +40,24 @@ struct WeekStripView: View {
                                 .font(ShuttlXFont.cardSubtitle.weight(day.isToday ? .bold : .medium))
                                 .foregroundStyle(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.textPrimary)
 
-                            // Session dots
-                            HStack(spacing: 2) {
-                                ForEach(0..<min(day.sessionCount, 3), id: \.self) { _ in
-                                    Circle()
-                                        .fill(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.running)
-                                        .frame(width: 4, height: 4)
+                            // Mixtape: spool decoration if has sessions; others: dots
+                            if isMixtape && day.sessionCount > 0 {
+                                MixtapeSpoolDot(
+                                    color: day.isSelected ? ShuttlXColor.iconOnCTA : chartStyle.accentColor,
+                                    size: 16
+                                )
+                                .frame(height: 16)
+                            } else {
+                                // Session dots
+                                HStack(spacing: 2) {
+                                    ForEach(0..<min(day.sessionCount, 3), id: \.self) { _ in
+                                        Circle()
+                                            .fill(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.running)
+                                            .frame(width: 4, height: 4)
+                                    }
                                 }
+                                .frame(height: 4)
                             }
-                            .frame(height: 4)
                         }
                         .frame(width: 44, height: 72)
                         .background(
@@ -92,4 +105,5 @@ private struct StripDay: Identifiable {
 
 #Preview {
     WeekStripView(selectedDate: .constant(Date()), sessions: [])
+        .environment(ThemeManager.shared)
 }

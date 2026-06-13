@@ -3,6 +3,9 @@ import Charts
 
 struct PaceTrendChart: View {
     let summaries: [DailyWorkoutSummary]
+    @Environment(ThemeManager.self) private var themeManager
+
+    private var chartStyle: ThemeChartStyle { themeManager.current.chartStyle }
 
     private var paceData: [DailyWorkoutSummary] {
         summaries.filter { ($0.averagePace ?? 0) > 0 }
@@ -14,52 +17,40 @@ struct PaceTrendChart: View {
                 .font(ShuttlXFont.cardTitle)
 
             if paceData.isEmpty {
-                Text("Not enough data")
-                    .font(ShuttlXFont.cardCaption)
-                    .foregroundStyle(.secondary)
-                    .frame(height: 140)
-                    .frame(maxWidth: .infinity)
+                ThemedBarChart.emptyState(chartStyle: chartStyle, height: 140)
             } else {
-                Chart(paceData) { day in
-                    LineMark(
-                        x: .value("Day", day.dayLabel),
-                        y: .value("Pace", (day.averagePace ?? 0) / 60.0)
-                    )
-                    .interpolationMethod(.catmullRom)
-                    .foregroundStyle(ShuttlXColor.pace)
+                ThemedLineChart(
+                    labels: paceData.map { $0.dayLabel },
+                    values: paceData.map { ($0.averagePace ?? 0) / 60.0 },
+                    yUnit: "'",
+                    chartHeight: 140,
+                    chartStyle: chartStyle
+                )
 
-                    PointMark(
-                        x: .value("Day", day.dayLabel),
-                        y: .value("Pace", (day.averagePace ?? 0) / 60.0)
+                // Classic Radio needle pointer overlay (signatureAccent)
+                if themeManager.current.id == "classicradio" && !paceData.isEmpty {
+                    let values = paceData.map { ($0.averagePace ?? 0) / 60.0 }
+                    let minV = values.min() ?? 0
+                    let maxV = values.max() ?? 1
+                    let range = maxV - minV > 0 ? maxV - minV : 1
+                    let lastNorm = ((values.last ?? 0) - minV) / range
+                    ClassicRadioNeedlePointer(
+                        normalizedValue: lastNorm,
+                        brassColor: chartStyle.accentColor,
+                        chartHeight: 140
                     )
-                    .foregroundStyle(ShuttlXColor.pace)
-                    .symbolSize(30)
                 }
-                .chartYAxis {
-                    AxisMarks(position: .leading) { value in
-                        AxisValueLabel {
-                            if let mins = value.as(Double.self) {
-                                Text(String(format: "%.0f'", mins))
-                                    .font(ShuttlXFont.microLabel)
-                            }
-                        }
-                        AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
-                    }
-                }
-                .chartYScale(domain: .automatic(includesZero: false))
-                .chartXAxis {
-                    AxisMarks { _ in
-                        AxisValueLabel()
-                            .font(ShuttlXFont.microLabel)
-                    }
-                }
-                .frame(height: 140)
             }
         }
         .padding(16)
         .themedCard(accent: ShuttlXColor.pace, headerLabel: "PACE TREND")
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Pace trend chart")
+        .accessibilityLabel({
+            let summary = paceData.map {
+                "\($0.dayLabel) \(String(format: "%.1f", ($0.averagePace ?? 0) / 60)) min per km"
+            }.joined(separator: ", ")
+            return "Pace trend: \(summary.isEmpty ? "no data" : summary)"
+        }())
     }
 }
 
@@ -70,4 +61,5 @@ struct PaceTrendChart: View {
         DailyWorkoutSummary(date: Date(), totalDuration: 1200, totalDistance: 2.0, totalCalories: 180, averageHeartRate: 140, averagePace: 600, sessionCount: 1)
     ])
     .padding()
+    .environment(ThemeManager.shared)
 }

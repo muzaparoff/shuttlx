@@ -137,6 +137,14 @@
 		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
 		TH000044 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
 		TH000045 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
+		TC000011 /* ThemeChartStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
+		TC000012 /* ThemedBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000002 /* ThemedBarChart.swift */; };
+		TC000013 /* ThemedLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000003 /* ThemedLineChart.swift */; };
+		TC000014 /* SynthwavePerspectiveGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000004 /* SynthwavePerspectiveGrid.swift */; };
+		TC000015 /* VUMeterDBStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000005 /* VUMeterDBStrip.swift */; };
+		TC000016 /* ClassicRadioNeedlePointer.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000006 /* ClassicRadioNeedlePointer.swift */; };
+		TC000017 /* MixtapeSpoolDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000007 /* MixtapeSpoolDot.swift */; };
+		TC000021 /* ThemeChartStyle.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
 		WG000010 /* ShuttlXWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000001 /* ShuttlXWidgetsBundle.swift */; };
 		WG000011 /* SmallWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000002 /* SmallWidget.swift */; };
 		WG000012 /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000003 /* MediumWidget.swift */; };
@@ -356,6 +364,13 @@
 		FM004F /* FMTunerVUColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerVUColumn.swift; sourceTree = "<group>"; };
 		FM005F /* FMTunerStationTag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerStationTag.swift; sourceTree = "<group>"; };
 		FM006F /* FMTunerStepPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerStepPill.swift; sourceTree = "<group>"; };
+		TC000001 /* ThemeChartStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeChartStyle.swift; sourceTree = "<group>"; };
+		TC000002 /* ThemedBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedBarChart.swift; sourceTree = "<group>"; };
+		TC000003 /* ThemedLineChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedLineChart.swift; sourceTree = "<group>"; };
+		TC000004 /* SynthwavePerspectiveGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwavePerspectiveGrid.swift; sourceTree = "<group>"; };
+		TC000005 /* VUMeterDBStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterDBStrip.swift; sourceTree = "<group>"; };
+		TC000006 /* ClassicRadioNeedlePointer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioNeedlePointer.swift; sourceTree = "<group>"; };
+		TC000007 /* MixtapeSpoolDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeSpoolDot.swift; sourceTree = "<group>"; };
 		WG000001 /* ShuttlXWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWidgetsBundle.swift; sourceTree = "<group>"; };
 		WG000002 /* SmallWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallWidget.swift; sourceTree = "<group>"; };
 		WG000003 /* MediumWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediumWidget.swift; sourceTree = "<group>"; };
@@ -591,6 +606,7 @@
 				TH000001 /* ThemeColors.swift */,
 				TH000002 /* ThemeFonts.swift */,
 				TH000003 /* ThemeEffects.swift */,
+				TC000001 /* ThemeChartStyle.swift */,
 				TH000004 /* AppTheme.swift */,
 				TH000005 /* ThemeManager.swift */,
 				TH000006 /* ThemeModifiers.swift */,
@@ -643,8 +659,22 @@
 				B5923003 /* PaceTrendChart.swift */,
 				B5923004 /* HRZoneChart.swift */,
 				B5923005 /* WeekStripView.swift */,
+				TC000002 /* ThemedBarChart.swift */,
+				TC000003 /* ThemedLineChart.swift */,
+				TC000020 /* Accents */,
 			);
 			path = Charts;
+			sourceTree = "<group>";
+		};
+		TC000020 /* Accents */ = {
+			isa = PBXGroup;
+			children = (
+				TC000004 /* SynthwavePerspectiveGrid.swift */,
+				TC000005 /* VUMeterDBStrip.swift */,
+				TC000006 /* ClassicRadioNeedlePointer.swift */,
+				TC000007 /* MixtapeSpoolDot.swift */,
+			);
+			path = Accents;
 			sourceTree = "<group>";
 		};
 		D39E30B42F9CE31B00FE8D49 /* Recovered References */ = {
@@ -984,6 +1014,7 @@
 				TH000023 /* ClassicRadioTheme.swift in Sources */,
 				TH000024 /* VUMeterTheme.swift in Sources */,
 				TH000025 /* NeovimTheme.swift in Sources */,
+				TC000011 /* ThemeChartStyle.swift in Sources */,
 				FM001B /* FMTunerTheme.swift in Sources */,
 				SW001B /* SynthwaveTimerHero.swift in Sources */,
 				MX001B /* MixtapeTimerHero.swift in Sources */,
@@ -1011,6 +1042,12 @@
 				B5923013 /* PaceTrendChart.swift in Sources */,
 				B5923014 /* HRZoneChart.swift in Sources */,
 				B5923015 /* WeekStripView.swift in Sources */,
+				TC000012 /* ThemedBarChart.swift in Sources */,
+				TC000013 /* ThemedLineChart.swift in Sources */,
+				TC000014 /* SynthwavePerspectiveGrid.swift in Sources */,
+				TC000015 /* VUMeterDBStrip.swift in Sources */,
+				TC000016 /* ClassicRadioNeedlePointer.swift in Sources */,
+				TC000017 /* MixtapeSpoolDot.swift in Sources */,
 				C5923011 /* RoutePoint.swift in Sources */,
 				H5923001 /* WorkoutSport.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
@@ -1074,6 +1111,7 @@
 				WG000017 /* WidgetDataProvider.swift in Sources */,
 				WG000020B /* ShuttlXTheme.swift in Sources */,
 				HR000012 /* HeartRateZoneCalculator.swift in Sources */,
+				TC000021 /* ThemeChartStyle.swift in Sources (Widgets) */,
 				TH000031 /* ThemeColors.swift in Sources */,
 				TH000032 /* ThemeFonts.swift in Sources */,
 				TH000033 /* ThemeEffects.swift in Sources */,

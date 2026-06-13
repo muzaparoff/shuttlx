@@ -3,6 +3,7 @@ import Charts
 
 struct AnalyticsView: View {
     @EnvironmentObject var dataManager: DataManager
+    @Environment(ThemeManager.self) private var themeManager
 
     // Cached analytics results — updated only when session count changes via .task(id:)
     @State private var weeklyTrend: [WeeklySummary] = []
@@ -155,48 +156,18 @@ struct AnalyticsView: View {
             Text("Training Load Trend")
                 .font(ShuttlXFont.cardTitle)
 
-            Chart {
-                ForEach(weeklyTrend) { week in
-                    LineMark(
-                        x: .value("Week", week.weekLabel),
-                        y: .value("Load", week.trainingLoad)
-                    )
-                    .foregroundStyle(ShuttlXColor.running)
-                    .interpolationMethod(.catmullRom)
-                    .symbol(.circle)
-
-                    AreaMark(
-                        x: .value("Week", week.weekLabel),
-                        y: .value("Load", week.trainingLoad)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [ShuttlXColor.running.opacity(0.3), ShuttlXColor.running.opacity(0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .interpolationMethod(.catmullRom)
-                }
+            let chartStyle = themeManager.current.chartStyle
+            if weeklyTrend.isEmpty {
+                ThemedBarChart.emptyState(chartStyle: chartStyle, height: 180)
+            } else {
+                ThemedLineChart(
+                    labels: weeklyTrend.map { $0.weekLabel },
+                    values: weeklyTrend.map { $0.trainingLoad },
+                    yUnit: "",
+                    chartHeight: 180,
+                    chartStyle: chartStyle
+                )
             }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisValueLabel {
-                        if let load = value.as(Double.self) {
-                            Text(String(format: "%.0f", load))
-                                .font(ShuttlXFont.microLabel)
-                        }
-                    }
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
-                }
-            }
-            .chartXAxis {
-                AxisMarks { _ in
-                    AxisValueLabel()
-                        .font(ShuttlXFont.microLabel)
-                }
-            }
-            .frame(height: 180)
         }
         .padding(16)
         .themedCard(
@@ -205,70 +176,88 @@ struct AnalyticsView: View {
             headerLabel: "TRAINING LOAD"
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Training load trend over 6 weeks")
+        .accessibilityLabel({
+            let summary = weeklyTrend.map { "\($0.weekLabel) load \(String(format: "%.0f", $0.trainingLoad))" }.joined(separator: ", ")
+            return "Training load trend: \(summary.isEmpty ? "no data" : summary)"
+        }())
     }
 
     // MARK: - Weekly Volume Chart
 
     private var weeklyVolumeChart: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let chartStyle = themeManager.current.chartStyle
+        let volumeValues = weeklyTrend.map { $0.totalDuration / 60.0 }
+        let volumeLabels = weeklyTrend.map { $0.weekLabel }
+        let a11yLabel = weeklyTrend.map {
+            "\($0.weekLabel) \(Int($0.totalDuration / 60)) minutes"
+        }.joined(separator: ", ")
+
+        return VStack(alignment: .leading, spacing: 8) {
             Text("Weekly Volume")
                 .font(ShuttlXFont.cardTitle)
 
-            Chart {
-                ForEach(weeklyTrend) { week in
-                    BarMark(
-                        x: .value("Week", week.weekLabel),
-                        y: .value("Duration", week.totalDuration / 60.0)
-                    )
-                    .foregroundStyle(
-                        LinearGradient(
-                            colors: [ShuttlXColor.running.opacity(0.8), ShuttlXColor.running.opacity(0.4)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
-                    .cornerRadius(4)
-                }
+            // VU Meter theme: use horizontal dB strip layout
+            if chartStyle.barShape == .dbMeter && !weeklyTrend.isEmpty {
+                vuMeterVolumeLayout(chartStyle: chartStyle)
+            } else if weeklyTrend.isEmpty {
+                ThemedBarChart.emptyState(chartStyle: chartStyle, height: 160)
+            } else {
+                ThemedBarChart(
+                    values: volumeValues,
+                    labels: volumeLabels,
+                    yUnit: "m",
+                    chartHeight: 200,
+                    chartStyle: chartStyle
+                )
             }
-            .chartYAxis {
-                AxisMarks(position: .leading) { value in
-                    AxisValueLabel {
-                        if let mins = value.as(Double.self) {
-                            Text("\(Int(mins))m")
-                                .font(ShuttlXFont.microLabel)
-                        }
-                    }
-                    AxisGridLine(stroke: StrokeStyle(lineWidth: 0.5, dash: [4]))
-                }
-            }
-            .chartXAxis {
-                AxisMarks { _ in
-                    AxisValueLabel()
-                        .font(ShuttlXFont.microLabel)
-                }
-            }
-            .frame(height: 160)
 
-            // Distance sub-row
-            HStack {
-                ForEach(weeklyTrend) { week in
-                    VStack(spacing: 2) {
-                        Text(FormattingUtils.formatDistance(week.totalDistance))
-                            .font(ShuttlXFont.microLabel)
-                            .foregroundStyle(.secondary)
-                        Text("\(week.sessionCount)")
-                            .font(ShuttlXFont.microLabel)
-                            .foregroundStyle(.tertiary)
+            // Distance sub-row (keep for all themes)
+            if !weeklyTrend.isEmpty {
+                HStack {
+                    ForEach(weeklyTrend) { week in
+                        VStack(spacing: 2) {
+                            Text(FormattingUtils.formatDistance(week.totalDistance))
+                                .font(ShuttlXFont.microLabel)
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                            Text("\(week.sessionCount)")
+                                .font(ShuttlXFont.microLabel)
+                                .foregroundStyle(.tertiary)
+                                .monospacedDigit()
+                        }
+                        .frame(maxWidth: .infinity)
                     }
-                    .frame(maxWidth: .infinity)
                 }
             }
         }
         .padding(16)
         .themedCard(accent: ShuttlXColor.calories, headerLabel: "WEEKLY VOLUME")
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Weekly training volume over 6 weeks")
+        .accessibilityLabel("Weekly training volume: \(a11yLabel.isEmpty ? "no data" : a11yLabel)")
+    }
+
+    /// VU Meter special layout: horizontal dB strips, one per week
+    @ViewBuilder
+    private func vuMeterVolumeLayout(chartStyle: ThemeChartStyle) -> some View {
+        let maxDuration = weeklyTrend.map { $0.totalDuration }.max() ?? 1
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(weeklyTrend) { week in
+                HStack(spacing: 8) {
+                    Text(week.weekLabel)
+                        .font(.system(size: 8, design: .monospaced))
+                        .foregroundStyle(chartStyle.axisLabelColor)
+                        .frame(width: 28, alignment: .trailing)
+                        .accessibilityHidden(true)
+
+                    VUMeterDBStrip(
+                        fillFraction: maxDuration > 0 ? week.totalDuration / maxDuration : 0,
+                        amberColor: chartStyle.accentColor,
+                        redZoneColor: chartStyle.accentColor,
+                        height: 18
+                    )
+                }
+            }
+        }
     }
 
     // MARK: - VO2max Card
@@ -401,6 +390,9 @@ struct AnalyticsView: View {
     @ViewBuilder
     private var paceZoneChart: some View {
         if !paceZones.isEmpty {
+            let chartStyle = themeManager.current.chartStyle
+            let a11yLabel = paceZones.map { "\($0.zone) \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", ")
+
             VStack(alignment: .leading, spacing: 12) {
                 Text("Pace Zones")
                     .font(ShuttlXFont.cardTitle)
@@ -411,23 +403,36 @@ struct AnalyticsView: View {
                             .font(ShuttlXFont.cardCaption)
                             .frame(width: 70, alignment: .leading)
 
-                        GeometryReader { geo in
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(ShuttlXColor.forPaceZone(zone.zone))
-                                .frame(width: max(geo.size.width * zone.percentage / 100, 4))
+                        if chartStyle.barShape == .dbMeter {
+                            // VU Meter: segmented strip
+                            VUMeterDBStrip(
+                                fillFraction: zone.percentage / 100.0,
+                                amberColor: chartStyle.accentColor,
+                                redZoneColor: chartStyle.accentColor,
+                                height: 20
+                            )
+                        } else {
+                            // All other themes: RoundedRectangle with themed color
+                            GeometryReader { geo in
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(paceZoneBarColor(zone: zone.zone, chartStyle: chartStyle))
+                                    .frame(width: max(geo.size.width * zone.percentage / 100, 4))
+                            }
+                            .frame(height: 20)
                         }
-                        .frame(height: 20)
 
                         Text(String(format: "%.0f%%", zone.percentage))
                             .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.secondary)
                             .frame(width: 36, alignment: .trailing)
+                            .monospacedDigit()
                     }
+                    .accessibilityHidden(true)
                 }
 
                 // Legend for pace ranges
                 HStack(spacing: 0) {
-                    ForEach(["<4:00", "4:00-4:45", "4:45-5:30", "5:30-6:30", ">6:30"], id: \.self) { label in
+                    ForEach(["<4:00", "4-4:45", "4:45-5:30", "5:30-6:30", ">6:30"], id: \.self) { label in
                         Text(label)
                             .font(ShuttlXFont.microLabel)
                             .foregroundStyle(.tertiary)
@@ -435,6 +440,7 @@ struct AnalyticsView: View {
                     }
                 }
                 .padding(.top, 4)
+                .accessibilityHidden(true)
             }
             .padding(16)
             .themedCard(
@@ -443,7 +449,18 @@ struct AnalyticsView: View {
                 headerLabel: "PACE ZONES"
             )
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("Pace zone distribution: \(paceZones.map { "\($0.zone) \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", "))")
+            .accessibilityLabel("Pace zone distribution: \(a11yLabel)")
+        }
+    }
+
+    private func paceZoneBarColor(zone: String, chartStyle: ThemeChartStyle) -> Color {
+        // Keep stock pace zone colors for Clean / Mixtape / Classic Radio;
+        // for other themes use the chart accent tinted by zone intensity
+        switch chartStyle.barShape {
+        case .roundedSwiftCharts, .tapeStrip, .needle:
+            return ShuttlXColor.forPaceZone(zone)
+        default:
+            return chartStyle.accentColor.opacity(0.70)
         }
     }
 
