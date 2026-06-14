@@ -336,6 +336,13 @@ extension View {
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     )
+
+                    // Static cassette shell frame: rounded shell-edge stroke + 2 top
+                    // corner screws. Drawn once, never animates (the live reel lives
+                    // in MixtapeTimerOverlay). reduceDetail drops the screw specular.
+                    MixtapeCassetteScene(
+                        reduceDetail: ProcessInfo.processInfo.isLowPowerModeEnabled
+                    )
                 }
                 .allowsHitTesting(false)
                 .ignoresSafeArea()

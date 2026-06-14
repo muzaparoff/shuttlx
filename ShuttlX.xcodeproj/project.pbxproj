@@ -30,6 +30,10 @@
 		A5923B04 /* StreakBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A04 /* StreakBadge.swift */; };
 		A5923B05 /* FormattingUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A05 /* FormattingUtils.swift */; };
 		A5923B06 /* PressScaleButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A06 /* PressScaleButtonStyle.swift */; };
+		MX002B /* ThemedTransportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX002F /* ThemedTransportButton.swift */; };
+		MX003B /* ThemedSceneBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX003F /* ThemedSceneBackground.swift */; };
+		MX004B /* ThemedTransportButton.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = MX002F /* ThemedTransportButton.swift */; };
+		MX005B /* ThemedSceneBackground.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = MX003F /* ThemedSceneBackground.swift */; };
 		FM001B /* FMTunerTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM001F /* FMTunerTheme.swift */; };
 		SW001B /* SynthwaveTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = SW001F /* SynthwaveTimerHero.swift */; };
 		MX001B /* MixtapeTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX001F /* MixtapeTimerHero.swift */; };
@@ -186,6 +190,8 @@
 		WW100034 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00015 /* NeovimTheme.swift */; };
 		WW100035 /* FMTunerTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00016 /* FMTunerTheme.swift */; };
 		WW100036 /* FMTunerChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00017 /* FMTunerChrome.swift */; };
+		WW100037 /* ThemedTransportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00018 /* ThemedTransportButton.swift */; };
+		WW100038 /* ThemedSceneBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00019 /* ThemedSceneBackground.swift */; };
 		WW200099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WW000010 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -355,6 +361,8 @@
 		FM001F /* FMTunerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerTheme.swift; sourceTree = "<group>"; };
 		SW001F /* SynthwaveTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTimerHero.swift; sourceTree = "<group>"; };
 		MX001F /* MixtapeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTimerHero.swift; sourceTree = "<group>"; };
+		MX002F /* ThemedTransportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTransportButton.swift; sourceTree = "<group>"; };
+		MX003F /* ThemedSceneBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedSceneBackground.swift; sourceTree = "<group>"; };
 		AR001F /* ArcadeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTimerHero.swift; sourceTree = "<group>"; };
 		CR001F /* ClassicRadioTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTimerHero.swift; sourceTree = "<group>"; };
 		NV001F /* NeovimTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTimerHero.swift; sourceTree = "<group>"; };
@@ -406,6 +414,8 @@
 		WWT00015 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NeovimTheme.swift; path = "ShuttlX Watch App/Theme/Themes/NeovimTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00016 /* FMTunerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FMTunerTheme.swift; path = "ShuttlX Watch App/Theme/Themes/FMTunerTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00017 /* FMTunerChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FMTunerChrome.swift; path = "ShuttlX Watch App/Theme/Themes/Decorations/FMTunerChrome.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00018 /* ThemedTransportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemedTransportButton.swift; path = "ShuttlX Watch App/Theme/Components/ThemedTransportButton.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00019 /* ThemedSceneBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemedSceneBackground.swift; path = "ShuttlX Watch App/Theme/Components/ThemedSceneBackground.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -612,8 +622,18 @@
 				TH000006 /* ThemeModifiers.swift */,
 				TH000021 /* ThemeAssets.swift */,
 				TH000030 /* Themes */,
+				MX010G /* ThemeComponents */,
 			);
 			path = Theme;
+			sourceTree = "<group>";
+		};
+		MX010G /* ThemeComponents */ = {
+			isa = PBXGroup;
+			children = (
+				MX002F /* ThemedTransportButton.swift */,
+				MX003F /* ThemedSceneBackground.swift */,
+			);
+			path = Components;
 			sourceTree = "<group>";
 		};
 		A5923C02 /* Components */ = {
@@ -698,6 +718,8 @@
 				WWT00015 /* NeovimTheme.swift */,
 				WWT00016 /* FMTunerTheme.swift */,
 				WWT00017 /* FMTunerChrome.swift */,
+				WWT00018 /* ThemedTransportButton.swift */,
+				WWT00019 /* ThemedSceneBackground.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -1018,6 +1040,8 @@
 				FM001B /* FMTunerTheme.swift in Sources */,
 				SW001B /* SynthwaveTimerHero.swift in Sources */,
 				MX001B /* MixtapeTimerHero.swift in Sources */,
+				MX002B /* ThemedTransportButton.swift in Sources */,
+				MX003B /* ThemedSceneBackground.swift in Sources */,
 				AR001B /* ArcadeTimerHero.swift in Sources */,
 				CR001B /* ClassicRadioTimerHero.swift in Sources */,
 				NV001B /* NeovimTimerHero.swift in Sources */,
@@ -1132,6 +1156,8 @@
 				FMW04B /* FMTunerVUColumn.swift in Sources */,
 				FMW05B /* FMTunerStationTag.swift in Sources */,
 				FMW06B /* FMTunerStepPill.swift in Sources */,
+				MX004B /* ThemedTransportButton.swift in Sources (Widgets) */,
+				MX005B /* ThemedSceneBackground.swift in Sources (Widgets) */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1168,6 +1194,8 @@
 				WW100034 /* NeovimTheme.swift in Sources */,
 				WW100035 /* FMTunerTheme.swift in Sources */,
 				WW100036 /* FMTunerChrome.swift in Sources */,
+				WW100037 /* ThemedTransportButton.swift in Sources */,
+				WW100038 /* ThemedSceneBackground.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

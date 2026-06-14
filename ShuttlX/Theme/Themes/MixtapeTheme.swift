@@ -25,11 +25,11 @@ extension AppTheme {
             ctaWarning: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue
             ctaPause: Color(red: 0.95, green: 0.65, blue: 0.10),         // #F2A61A cassette-amber (distinguishable from ctaPrimary blue)
             iconOnCTA: Color(red: 0.05, green: 0.08, blue: 0.13),        // dark blue
-            hrZone1: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
-            hrZone2: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
-            hrZone3: Color(red: 0.29, green: 0.54, blue: 0.79),          // blue
-            hrZone4: Color(red: 0.54, green: 0.40, blue: 0.79),          // purple-blue
-            hrZone5: Color(red: 1.0, green: 0.20, blue: 0.20),           // LED red
+            hrZone1: Color(red: 0.11, green: 0.50, blue: 0.04),           // #1C8009 lcdGreenDim — calm baseline
+            hrZone2: Color(red: 0.22, green: 1.00, blue: 0.08),          // #39FF14 lcdGreen — target zone, bright
+            hrZone3: Color(red: 0.95, green: 0.65, blue: 0.10),          // #F2A61A amber — working
+            hrZone4: Color(red: 1.00, green: 0.42, blue: 0.10),          // #FF6A1A orange-red — ceiling (distinct from Z3 amber AND Z5 red)
+            hrZone5: Color(red: 1.00, green: 0.20, blue: 0.20),          // #FF3333 ledRed — max
             stepWork: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
             stepRest: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue
             stepWarmup: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue

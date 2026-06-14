@@ -104,7 +104,10 @@ struct TrainingView: View {
         .onChange(of: workoutManager.healthKitSaveError) { _, newValue in
             showingHealthKitError = newValue != nil
         }
-        .alert("Health Access Required", isPresented: $showingAuthDeniedAlert) {
+        .alert("Health Access Required", isPresented: Binding(
+            get: { showingAuthDeniedAlert },
+            set: { showingAuthDeniedAlert = $0 }
+        )) {
             Button("OK", role: .cancel) {}
         } message: {
             Text("ShuttlX needs Health access to record your workout. Open the Health app or iPhone Settings to grant permission.")
@@ -162,7 +165,8 @@ struct TrainingView: View {
         let h = screenHeight
         let heroSize = max(44, h * 0.26)              // countdown hero — only used in interval mode
         let valueSize = max(40, h * 0.19)             // HR (still large, second-tier)
-        let tertiarySize = max(16, h * 0.10)          // DIST / PACE / TIME / CAD — compact row
+        let tertiarySize = max(16, h * 0.10)          // DIST / PACE / TIME — interval compact two-up
+        let secondarySize = max(24, h * 0.14)         // DIST / PACE — free-run full-width rows
         let labelSize = max(10, h * 0.08)
         let labelWidth = h * 0.20
         let rowSpacing = h * 0.025
@@ -179,8 +183,30 @@ struct TrainingView: View {
                 IntervalStepWash(engine: engine)
             }
 
+            // Mixtape — full cassette-deck face (twin spinning reels flanking an
+            // LCD tape-window hero). Replaces the standard stacked metrics for
+            // this theme; gym-recovery still routes to RecoveryWorkoutView above.
+            if themeManager.current.id == "mixtape" {
+                MixtapeWatchDeck(workoutManager: workoutManager,
+                                 isInterval: isInterval,
+                                 screenH: h)
+                    .onChange(of: workoutManager.heartRate) { _, newHR in
+                        let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
+                        if isHigh && !highIntensityHapticFired {
+                            highIntensityHapticFired = true
+                            #if os(watchOS)
+                            WKInterfaceDevice.current().play(.notification)
+                            #endif
+                        } else if !isHigh {
+                            highIntensityHapticFired = false
+                        }
+                    }
+            }
+
+            if themeManager.current.id != "mixtape" {
             VStack(spacing: rowSpacing) {
-                // Workout name + step pill (interval only)
+                // Workout name + step pill (interval only).
+                // (Mixtape renders its own J-card label strip in MixtapeWatchDeck.)
                 HStack(spacing: 6) {
                     Text(workoutManager.workoutName.uppercased())
                         .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
@@ -200,7 +226,8 @@ struct TrainingView: View {
                 }
                 .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
 
-                // Hero: interval countdown (interval) or elapsed time (free run)
+                // Hero: interval countdown (interval) or elapsed time (free run).
+                // (Mixtape renders its own cassette-deck hero in MixtapeWatchDeck.)
                 timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth,
                          heroSize: heroSize)
 
@@ -212,12 +239,20 @@ struct TrainingView: View {
                         .frame(width: labelWidth, alignment: .leading)
                     Spacer()
                     HStack(spacing: 4) {
-                        Text(heartRateText)
+                        // Number big, "BPM" as a small trailing unit. Rendering the
+                        // whole "132 BPM" string at valueSize (~42pt) overflowed the
+                        // HR row once the Z2 zone badge claimed its slot and clipped
+                        // to "132 B…"; splitting the unit off keeps the wide element
+                        // to just the digits, which always fit.
+                        Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "\u{2014}")
                             .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                             .monospacedDigit()
                             .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
+                        Text("BPM")
+                            .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                            .foregroundColor(ShuttlXColor.textSecondary)
                         if heartRateZoneNumber > 0 {
                             Text("Z\(heartRateZoneNumber)")
                                 .font(.system(size: max(10, labelSize), weight: .bold, design: .monospaced))
@@ -249,7 +284,12 @@ struct TrainingView: View {
                     highIntensityWarningView(labelSize: labelSize)
                 }
 
-                // Tertiary two-up rows: DIST / PACE then TIME / CAD
+                // Tertiary two-up rows. SPM (cadence) was removed from the live
+                // timer — it carried little decision value mid-run and the
+                // CMPedometer-derived value is warmup-laggy/unreliable (see
+                // cadence-derivation notes); PACE is the metric runners actually
+                // steer by, so the tertiary area is DIST / PACE (+ elapsed TIME
+                // in interval mode, where the hero is the step countdown).
                 if isInterval {
                     HStack(spacing: 8) {
                         compactMetric("DIST", distanceText, tertiarySize, labelSize)
@@ -258,36 +298,34 @@ struct TrainingView: View {
                     HStack(spacing: 8) {
                         compactMetric("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
                                       tertiarySize, labelSize)
-                        compactMetric("SPM",
-                                      workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
-                                      tertiarySize, labelSize)
-                    }
-                } else {
-                    // Free-run: compact two-up rows for tertiary metrics. Three
-                    // full-size metricRow calls (DIST/PACE/CAD at ~42pt each) +
-                    // TIME hero + HR row exceeded the 41mm watch's ~180pt usable
-                    // height and pushed the HR row off-screen — the cause of the
-                    // long-standing "BPM not showing in walk/run" complaint.
-                    HStack(spacing: 8) {
-                        compactMetric("DIST", distanceText, tertiarySize, labelSize)
-                        compactMetric("PACE", paceText, tertiarySize, labelSize)
-                    }
-                    HStack(spacing: 8) {
-                        compactMetric("SPM",
-                                      workoutManager.currentCadence > 0 ? "\(workoutManager.currentCadence)" : "—",
-                                      tertiarySize, labelSize)
                         Color.clear.frame(maxWidth: .infinity)
                     }
+                } else {
+                    // Free-run: TIME is the hero above. With SPM dropped, only
+                    // DIST + PACE remain in the tertiary area — few enough that
+                    // each gets its OWN full-width row (label left, value right)
+                    // instead of the cramped two-up compact pair. Full rows are
+                    // larger and avoid the scale-to-fit clipping the half-width
+                    // slots caused ("2.15…"). Two metrics + TIME hero + HR row
+                    // fit the ~180pt 41mm budget now that the third metric (SPM)
+                    // is gone.
+                    metricRow("DIST", distanceText, ShuttlXColor.textPrimary,
+                              secondarySize, labelSize, labelWidth,
+                              accessibilityText: "Distance \(distanceText)")
+                    metricRow("PACE", paceText, ShuttlXColor.textPrimary,
+                              secondarySize, labelSize, labelWidth,
+                              accessibilityText: "Pace \(paceText)")
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
-            .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : (themeManager.current.id == "mixtape" ? 60 : 0))
+            .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : 0)
             .padding(.trailing, themeManager.current.id == "vumeter" ? 18 : 0)
             .padding(.top, watchTimerTopPadding(themeManager.current.id))
             .padding(.bottom, watchTimerBottomPadding(themeManager.current.id))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }   // end: standard stacked-metrics layout (non-mixtape themes)
 
             // Synthwave chrome — non-interactive backdrop, only when active.
             // Renders horizon grid + sun halo + timer bloom behind the metrics.
@@ -296,15 +334,12 @@ struct TrainingView: View {
                 SynthwaveTimerOverlay(workoutManager: workoutManager)
             }
 
-            // Mixtape chrome — non-interactive single reel pinned to the
-            // upper-left, spinning with elapsed time. Cassette body shell,
-            // second reel, and transport row from the iPhone variant are cut
-            // (see MixtapeTimerOverlay header for rationale). The metrics
-            // VStack above gets a 60pt leading inset so HR / step / step-pill
-            // never sit under the reel.
-            if themeManager.current.id == "mixtape" {
-                MixtapeTimerOverlay(workoutManager: workoutManager)
-            }
+            // Mixtape chrome — the spinning reel now rides inline on the J-card
+            // header line (MixtapeReelBadge in the header HStack above) so it no
+            // longer needs a full-screen overlay or a leading inset. The shell
+            // frame + corner screws come from mixtapeBackground(); the J-card
+            // name strip carries the rest of the cassette identity. This keeps
+            // the timer / HR / pace values full-width and legible on 41–46mm.
 
             // Arcade chrome — non-interactive pixel-border bezel + faint
             // scanline backdrop. The iPhone variant's 7-segment HI-SCORE
@@ -413,11 +448,17 @@ struct TrainingView: View {
             Text(label)
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             Text(value)
                 .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(ShuttlXColor.textPrimary)
                 .lineLimit(1)
+                // 0.4 floor: "2.15 km" needs ~0.48 to fit the half-width slot on
+                // 46mm; at the old 0.5 floor it clipped the " km" unit to "2.15…".
+                // (No layoutPriority — that starved the label to "‥".)
+                .minimumScaleFactor(0.4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -485,18 +526,24 @@ struct TrainingView: View {
                     .monospacedDigit()
                     .foregroundColor(stepColor)
                     .contentTransition(.numericText())
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.5)
                     .lineLimit(1)
+                    .layoutPriority(1)   // the countdown is the hero — it claims its
+                                         // width first so the phase column yields,
+                                         // never the digits (was clipping to "01…").
                 if let step = engine.currentStep {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(step.type.displayName.uppercased())
                             .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                             .foregroundColor(stepColor)
                             .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                         Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
                             .font(.system(size: labelSize, weight: .regular, design: .monospaced))
                             .foregroundColor(ShuttlXColor.textSecondary)
                             .monospacedDigit()
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                     }
                 }
             }
@@ -525,7 +572,16 @@ struct TrainingView: View {
 
     // MARK: - Controls Tab (Translucent Circles)
 
+    @ViewBuilder
     private var controlsTab: some View {
+        if themeManager.current.id == "mixtape" {
+            mixtapeControlsTab
+        } else {
+            defaultControlsTab
+        }
+    }
+
+    private var defaultControlsTab: some View {
         VStack(spacing: 0) {
             Spacer()
 
@@ -579,6 +635,73 @@ struct TrainingView: View {
 
             Spacer()
         }
+    }
+
+    // MARK: - Mixtape Controls (cassette transport keys)
+    //
+    // Replaces the circular pause/stop with real chunky cassette keys that depress
+    // mechanically (ThemedTransportButtonStyle). PLAY latches DOWN green while
+    // running, pops UP amber when paused; STOP is the red destructive key. The
+    // controller calls are identical to the default tab — only the chrome differs.
+    private var mixtapeControlsTab: some View {
+        VStack(spacing: ShuttlXSpacing.md) {
+            Spacer()
+
+            HStack(spacing: ShuttlXSpacing.lg) {
+                // PLAY / PAUSE — latched down (green) while running, up (amber) when paused.
+                Button(action: {
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(workoutManager.isPaused ? .directionUp : .directionDown)
+                    #endif
+                    if workoutManager.isPaused {
+                        workoutManager.resumeWorkout()
+                    } else {
+                        workoutManager.pauseWorkout()
+                    }
+                }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: workoutManager.isPaused ? "play.fill" : "pause.fill")
+                            .font(.system(size: 22, weight: .bold))
+                        Text(workoutManager.isPaused ? "PLAY" : "PAUSE")
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    }
+                    .frame(width: 60, height: 56)
+                }
+                .buttonStyle(ThemedTransportButtonStyle(
+                    role: .play,
+                    isLatched: !workoutManager.isPaused,
+                    latchedAmber: workoutManager.isPaused))
+                .accessibilityLabel(workoutManager.isPaused ? "Resume workout" : "Pause workout")
+                .accessibilityHint("Play key")
+
+                // STOP — red destructive key.
+                Button(action: {
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.stop)
+                    #endif
+                    showingStopConfirmation = true
+                }) {
+                    VStack(spacing: 2) {
+                        Image(systemName: "stop.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundColor(ShuttlXColor.ctaDestructive)
+                        Text("STOP")
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                    }
+                    .frame(width: 60, height: 56)
+                }
+                .buttonStyle(ThemedTransportButtonStyle(role: .stop))
+                .accessibilityLabel("Finish workout")
+                .accessibilityHint("Saves the workout and shows your summary")
+            }
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // P3-D: a "clunk" on every pause/resume — including crown- or auto-pause
+        // that happens without a visible key press — so the tape stop/start is
+        // always tactilely confirmed (cardiac-safety nicety).
+        .sensoryFeedback(.impact(weight: .medium), trigger: workoutManager.isPaused)
     }
 
     // MARK: - Computed Properties
@@ -649,8 +772,12 @@ struct TrainingView: View {
     }
 
     private var paceText: String {
-        guard let pace = workoutManager.currentPace else { return "-- /KM" }
-        return "\(FormattingUtils.formatPace(pace)) /KM"
+        // Compact tertiary metric — the "PACE" label + the accessibility string
+        // ("…per kilometer") carry the unit, so we drop the "/KM" suffix here to
+        // keep the value legible in the two-up row (it overflowed the half-width
+        // slot on 41–46mm and clipped to "PACE --…").
+        guard let pace = workoutManager.currentPace else { return "—" }
+        return FormattingUtils.formatPace(pace)
     }
 
     private var accessiblePace: String {
@@ -714,8 +841,20 @@ struct WorkoutSummaryView: View {
                     .animation(reduceMotion ? .easeIn(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
                     .themeModeTag("COMPLETE")
 
-                Text("Workout Complete")
-                    .font(ShuttlXFont.watchHeroTitle)
+                if ThemeManager.shared.current.id == "mixtape" {
+                    // Cassette idiom: the tape has reached the end of SIDE A.
+                    VStack(spacing: ShuttlXSpacing.xs) {
+                        Text("SIDE A COMPLETE")
+                            .font(.system(size: 14, weight: .heavy, design: .monospaced))
+                            .foregroundColor(ShuttlXColor.ctaPrimary)
+                            .tracking(1)
+                        MixtapeParkedReel()
+                            .frame(width: 64, height: 30)
+                    }
+                } else {
+                    Text("Workout Complete")
+                        .font(ShuttlXFont.watchHeroTitle)
+                }
 
                 Text(FormattingUtils.formatTimer(summary.duration))
                     .font(ShuttlXFont.watchSummaryTimer)

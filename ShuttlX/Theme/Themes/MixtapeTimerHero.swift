@@ -4,18 +4,29 @@ import ShuttlXShared
 /// Mixtape-themed iPhone workout timer hero.
 ///
 /// Renders the **full visible workout body** for the Mixtape theme during an
-/// active iPhone workout. The composition follows the Sony Walkman cassette-deck
-/// concept from `design/proposals/timer-theme-redesigns/mixtape.md`:
+/// active iPhone workout. The composition layers ON TOP of the cassette shell
+/// background drawn by `MixtapeCassetteScene` via `.mixtapeBackground()`.
 ///
-///   - Blue Walkman body shell via existing `mixtapeBackground`
-///   - Translucent cassette window with twin spinning Canvas reels
-///   - Green LCD-style tape counter showing elapsed / step-remaining time
-///   - Cassette label sticker showing workout name + side-A distance + steps
-///   - Step pill on REST steps: "WORK · TRACK N/M"
-///   - VU strip row: HR bar-graph (10 segments, green → amber → red by zone)
-///   - "TAPE SPEED" pace strip: needle deflects left/right of 5:00/km target
-///   - Transport-button controls: REW / PLAY-PAUSE / STOP / FFWD
-///   - Same controller method calls as `iPhoneWorkoutTimerView.controlsBar`
+/// The hero owns:
+/// - J-card label well: workout name (italic, no rotation), SIDE A box, REC dot,
+///   distance + step count, and a ruled baseline with laid-paper texture
+/// - LCD tape counter (lcdGreen, shadow radius 4) — 4-digit no-colon tape-counter look
+/// - Step pill (interval / gym-recovery modes)
+/// - Twin spinning reels clipped into the shell's hub windows (differential
+///   reel fill: supply shrinks 1.0→0.65, take-up grows 0.65→1.0; ω ∝ 1/radius)
+/// - VU HR strip (28pt BPM + zone badge) + TAPE SPEED pace strip (20pt dominant numeric)
+/// - Cassette transport keys via `ThemedTransportButtonStyle`
+/// - State variants: IDLE / ACTIVE / PAUSED (amber + PAUSED chip) / COMPLETE
+///
+/// **State machine:**
+/// - `isActive` (not started): reels static, PLAY key up, counter shows READY
+/// - `ACTIVE`: reels spin (TimelineView 24fps), PLAY key latched down
+/// - `PAUSED`: reels frozen, PLAY key pops up, amber tint, solid amber PAUSED chip
+/// - `COMPLETE`: SIDE A COMPLETE label (lcdGreen), reels park at progress 1.0, FLIP hint
+///
+/// **Plumbing note (option B):** this hero draws its own live reels on top of
+/// the resting hub windows drawn by `MixtapeCassetteScene`. No state is
+/// published through `ThemeManager`.
 ///
 /// **Read-only on workout state.** All data flows through `controller`; no
 /// logic is modified here.
@@ -34,51 +45,105 @@ struct MixtapeTimerHero: View {
     @State private var rightReelAngle: Double = 0
     @State private var lastTickDate: Date? = nil
 
-    // Mixtape palette — hard-wired because this struct is only ever displayed
-    // when `themeManager.current.id == "mixtape"`.
-    private let walkyBodyBlue   = Color(red: 0.05, green: 0.08, blue: 0.13)   // #0E1420 shell
-    private let panelBlue       = Color(red: 0.10, green: 0.19, blue: 0.38)   // #1A3060 panel
-    private let borderBlue      = Color(red: 0.29, green: 0.42, blue: 0.60)   // #4A6A9A border
-    private let lcdGreen        = Color(red: 0.22, green: 1.0,  blue: 0.08)   // #39FF14 LCD green
-    private let lcdGreenDim     = Color(red: 0.11, green: 0.50, blue: 0.04)   // dimmed LCD pixel
-    private let accentBlue      = Color(red: 0.29, green: 0.54, blue: 0.79)   // #4A8ACA
-    private let ledRed          = Color(red: 1.0,  green: 0.20, blue: 0.20)   // #FF3333
-    private let amberPause      = Color(red: 0.95, green: 0.65, blue: 0.10)   // #F2A61A cassette-amber
-    private let textPrimary     = Color(red: 0.70, green: 0.82, blue: 0.93)   // #B3D1ED
-    private let textSecondary   = Color(red: 0.55, green: 0.68, blue: 0.80)   // #8CADCC
-    private let reelDarkRing    = Color(red: 0.06, green: 0.06, blue: 0.08)   // reel hub
+    // Tape sheen horizontal offset — travels 0→1 over ~6 s while isRunning.
+    // Parked at 0 when paused. Disabled under reduceDetail.
+    @State private var sheenOffset: Double = 0
+
+    // MARK: - Cassette palette (spec §1 — hard-wired, this IS the theme definition)
+
+    private let shellBackground  = Color(red: 0.086, green: 0.118, blue: 0.161)  // shellBottom #161E29
+    private let panelBlue        = Color(red: 0.10, green: 0.19, blue: 0.38)     // #1A3060 panel
+    private let borderBlue       = Color(red: 0.29, green: 0.42, blue: 0.60)     // #4A6A9A border
+    private let labelPaper       = Color(red: 0.929, green: 0.906, blue: 0.827)  // #EDE7D3 J-card
+    private let labelInk         = Color(red: 0.110, green: 0.137, blue: 0.188)  // #1C2330 ink
+    private let feltPad          = Color(red: 0.722, green: 0.271, blue: 0.227)  // #B8453A felt
+    private let lcdGreen         = Color(red: 0.22,  green: 1.0,  blue: 0.08)   // #39FF14 LCD green
+    private let lcdGreenDim      = Color(red: 0.11,  green: 0.50, blue: 0.04)   // dimmed LCD pixel
+    private let accentBlue       = Color(red: 0.29,  green: 0.54, blue: 0.79)   // #4A8ACA
+    private let ledRed           = Color(red: 1.0,   green: 0.20, blue: 0.20)   // #FF3333
+    private let amberPause       = Color(red: 0.95,  green: 0.65, blue: 0.10)   // #F2A61A
+    private let textPrimary      = Color(red: 0.70,  green: 0.82, blue: 0.93)   // #B3D1ED
+    private let textSecondary    = Color(red: 0.55,  green: 0.68, blue: 0.80)   // #8CADCC
+
+    // MARK: - Computed state
+
+    private var isComplete: Bool {
+        controller.intervalEngine?.isComplete == true
+    }
+
+    private var isRunning: Bool {
+        !controller.isPaused && !isComplete
+    }
+
+    private var reduceDetail: Bool {
+        reduceMotion || ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
+    /// Scalar 0→1 representing how far through the "side A" tape the workout is.
+    /// Drives differential reel scale + RPM.
+    ///
+    /// Free Run:  min(1.0, elapsedTime / 3600) — one full hour = one side.
+    /// Interval:  stepIndex / totalSteps — whole-workout progress (one continuous wind).
+    ///            Reels do NOT reset per step; the tape winds steadily left→right.
+    /// GymRecovery: falls back to free-run elapsed nominal.
+    private var tapeProgress: Double {
+        switch controller.mode {
+        case .freeRun:
+            return min(1.0, controller.elapsedTime / 3600.0)
+        case .interval:
+            if let engine = controller.intervalEngine, engine.totalStepsCount > 0 {
+                return Double(engine.currentStepIndex) / Double(engine.totalStepsCount)
+            }
+            return min(1.0, controller.elapsedTime / 3600.0)
+        case .gymRecovery:
+            return min(1.0, controller.elapsedTime / 3600.0)
+        }
+    }
+
+    // MARK: - Body
 
     var body: some View {
-        ZStack {
-            // ── Walkman body background ───────────────────────────────────
-            walkyBodyBlue.ignoresSafeArea()
+        GeometryReader { screen in
+            ZStack {
+                // The cassette scene background is drawn by mixtapeBackground().
+                // This hero draws its content ON TOP of the J-card and hub windows.
 
-            // Horizontal texture lines (subtle — matches mixtapeBackground)
-            Canvas { ctx, size in
-                drawTextureLines(ctx: ctx, size: size)
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
+                VStack(spacing: 0) {
+                    // J-card label region (top section)
+                    // H3: Dynamic Island safe-area — pad at least safeAreaInsets.top + 12
+                    jCardLabelSection
+                        .padding(.horizontal, 28)
+                        .padding(.top, max(56, screen.safeAreaInsets.top + 12))
+                        .padding(.bottom, 8)
 
-            // ── Foreground composition ─────────────────────────────────────
-            VStack(spacing: 0) {
-                labelStickerHeader
-                    .padding(.horizontal, 16)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    Spacer(minLength: 0)
 
-                cassetteWindow
-                    .padding(.horizontal, 16)
+                    // Transport keys (bottom row)
+                    transportControls
+                        .padding(.horizontal, 28)
+                        .padding(.bottom, 40)  // clears the bottom screws + brand strip
+                }
 
-                vuAndPaceStrips
-                    .padding(.horizontal, 16)
-                    .padding(.top, 10)
+                // ── Live reel overlay — positioned in screen coordinate space ──────
+                // Using MixtapeLayoutConstants so live reels sit exactly over scene bezels.
+                // This ZStack covers the full screen, allowing absolute positioning.
+                reelOverlay(screenSize: screen.size)
 
-                Spacer(minLength: 0)
-
-                transportControls
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 8)
+                // ── VU + pace panel ───────────────────────────────────────────────
+                // Anchored deterministically just below the reel row (reel center +
+                // half a hub + 16pt breathing room) so it always tucks under the
+                // cassette reels regardless of J-card height. The remaining slack
+                // falls into the lower band, where the scene's tape-window strip sits.
+                VStack(spacing: 0) {
+                    Color.clear
+                        .frame(height: screen.size.height
+                               * MixtapeLayoutConstants.hubCenterYFraction
+                               + MixtapeLayoutConstants.hubDiameter / 2 + 16)
+                    vuAndPaceStrips
+                        .padding(.horizontal, 28)
+                    Spacer(minLength: 0)
+                }
+                .allowsHitTesting(false)
             }
         }
         .ignoresSafeArea(edges: .top)
@@ -106,160 +171,308 @@ struct MixtapeTimerHero: View {
         }
     }
 
-    // MARK: - Texture background
+    // MARK: - J-card label section
 
-    private func drawTextureLines(ctx: GraphicsContext, size: CGSize) {
-        let lineSpacing: CGFloat = 8
-        var y: CGFloat = 0
-        while y < size.height {
-            var p = Path()
-            p.move(to: CGPoint(x: 0, y: y))
-            p.addLine(to: CGPoint(x: size.width, y: y))
-            ctx.stroke(p, with: .color(Color.white.opacity(0.025)), lineWidth: 1)
-            y += lineSpacing
-        }
-    }
-
-    // MARK: - Label sticker (header)
-
-    private var labelStickerHeader: some View {
-        ZStack {
+    private var jCardLabelSection: some View {
+        ZStack(alignment: .topLeading) {
+            // Cream paper background with inner top shadow
             RoundedRectangle(cornerRadius: 6)
-                .fill(Color(red: 0.90, green: 0.85, blue: 0.68).opacity(0.12)) // cream sticker tint
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6)
-                        .stroke(borderBlue.opacity(0.5), lineWidth: 1)
-                )
+                .fill(labelPaper)
+                .overlay(alignment: .top) {
+                    Rectangle()
+                        .fill(
+                            LinearGradient(
+                                colors: [Color.black.opacity(0.12), .clear],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                        .frame(height: 6)
+                        .clipShape(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 6,
+                                topTrailingRadius: 6
+                            )
+                        )
+                }
 
-            HStack(spacing: 8) {
-                // Red REC dot
-                Circle()
-                    .fill(ledRed)
-                    .frame(width: 8, height: 8)
-                    .overlay(Circle().stroke(ledRed.opacity(0.4), lineWidth: 2).scaleEffect(1.6))
-
-                Text(controller.workoutName.uppercased())
-                    .font(.system(.subheadline, design: .monospaced).weight(.heavy))
-                    .foregroundStyle(controller.isPaused ? amberPause : textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-
-                Spacer()
-
-                // SIDE A corner with distance + step count
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text("SIDE A · \(FormattingUtils.formatDistance(controller.totalDistance)) KM")
-                        .font(.system(size: 9, design: .monospaced).weight(.heavy))
-                        .foregroundStyle(textSecondary)
-                        .monospacedDigit()
-                    Text("\(controller.totalSteps) STEPS")
-                        .font(.system(size: 9, design: .monospaced).weight(.semibold))
-                        .foregroundStyle(textSecondary)
-                        .monospacedDigit()
+            // P2-2: Laid-paper horizontal line texture — every 4pt, ink 2.5%
+            Canvas { ctx, size in
+                let lineColor = labelInk.opacity(0.025)
+                var y: CGFloat = 0
+                while y < size.height {
+                    var p = Path()
+                    p.move(to: CGPoint(x: 0, y: y))
+                    p.addLine(to: CGPoint(x: size.width, y: y))
+                    ctx.stroke(p, with: .color(lineColor), lineWidth: 0.5)
+                    y += 4
                 }
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-        }
-    }
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .allowsHitTesting(false)
 
-    // MARK: - Cassette window
+            // P2-2: Aged-paper corner crease marks (top-left + bottom-right)
+            Canvas { ctx, size in
+                let crease = labelInk.opacity(0.12)
+                let len: CGFloat = 10
+                var tl = Path()
+                tl.move(to: CGPoint(x: 2, y: 2 + len))
+                tl.addLine(to: CGPoint(x: 2 + len, y: 2))
+                ctx.stroke(tl, with: .color(crease), lineWidth: 1)
+                var br = Path()
+                br.move(to: CGPoint(x: size.width - 2, y: size.height - 2 - len))
+                br.addLine(to: CGPoint(x: size.width - 2 - len, y: size.height - 2))
+                ctx.stroke(br, with: .color(crease), lineWidth: 1)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .allowsHitTesting(false)
 
-    private var cassetteWindow: some View {
-        ZStack {
-            // Window bezel
-            RoundedRectangle(cornerRadius: 10)
-                .fill(panelBlue)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(borderBlue, lineWidth: 1.5)
-                )
+            VStack(alignment: .leading, spacing: 0) {
+                // Row 1: SIDE A box + REC dot + workout name + distance
+                HStack(spacing: 6) {
+                    // SIDE A box
+                    Text(isComplete ? "SIDE B" : "SIDE A")
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(labelInk)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 2)
+                                .stroke(labelInk.opacity(0.5), lineWidth: 1)
+                        )
 
-            VStack(spacing: 6) {
-                // Step pill (interval / gym-recovery modes)
-                if let pill = stepPillInfo {
-                    HStack(spacing: 6) {
+                    // P3-B: REC dot 8pt, full-opacity ledRed when running
+                    if !isComplete {
                         Circle()
-                            .fill(pill.color)
-                            .frame(width: 6, height: 6)
-                        Text(pill.label.uppercased())
-                            .font(.system(.caption, design: .monospaced).weight(.heavy))
-                            .foregroundStyle(pill.color)
+                            .fill(isRunning ? ledRed : ledRed.opacity(0.3))
+                            .frame(width: 8, height: 8)
+                            .overlay(
+                                Circle()
+                                    .stroke(isRunning ? ledRed.opacity(0.4) : .clear, lineWidth: 2)
+                                    .scaleEffect(1.6)
+                            )
+                    }
+
+                    // P2-G: Workout name — italic, NO rotation (long names overlap PAUSED chip)
+                    // P3-C: SIDE A COMPLETE uses lcdGreen (not accentBlue)
+                    if isComplete {
+                        Text("SIDE A COMPLETE")
+                            .font(.system(.subheadline, design: .monospaced).weight(.heavy))
+                            .foregroundStyle(lcdGreen)   // P3-C: lcdGreen, not accentBlue
+                            .italic()
+                            // No .rotationEffect — removed per P2-G
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                    } else {
+                        Text(controller.workoutName.uppercased())
+                            .font(.system(.subheadline, design: .monospaced).weight(.heavy))
+                            .foregroundStyle(controller.isPaused ? amberPause : labelInk)
+                            .italic()
+                            // No .rotationEffect — removed per P2-G
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
+                    }
+
+                    Spacer()
+
+                    // P1-C: PAUSED chip — solid amber fill (#F2A61A), dark ink (~6:1 contrast)
+                    if controller.isPaused && !isComplete {
+                        Text("PAUSED")
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(labelInk)   // dark ink on amber ≈ 6:1
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(amberPause)    // solid fill — no opacity(0.15)
+                            )
+                    }
+
+                    // P2-B: Distance/steps — high contrast on cream (labelInk-based)
+                    VStack(alignment: .trailing, spacing: 0) {
+                        Text("\(FormattingUtils.formatDistance(controller.totalDistance)) KM")
+                            .font(.system(size: 10, design: .monospaced).weight(.heavy))
+                            .foregroundStyle(labelInk)           // ~13:1 on cream
+                            .monospacedDigit()
+                        Text("\(controller.totalSteps) STEPS")
+                            .font(.system(size: 9, design: .monospaced).weight(.semibold))
+                            .foregroundStyle(labelInk.opacity(0.75))   // ~8:1 on cream
                             .monospacedDigit()
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 3)
-                    .background(
-                        RoundedRectangle(cornerRadius: 5)
-                            .fill(pill.color.opacity(0.15))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 5)
-                                    .stroke(pill.color.opacity(0.5), lineWidth: 1)
-                            )
-                    )
                 }
 
-                // Reel + LCD counter row
-                HStack(spacing: 0) {
-                    // Left (supply) reel — shrinks as time elapses
-                    reelView(isSupply: true)
-                        .frame(maxWidth: .infinity)
+                // Baseline rule
+                Rectangle()
+                    .fill(labelInk.opacity(0.25))
+                    .frame(height: 1)
+                    .padding(.top, 4)
+                    .padding(.horizontal, 2)
 
-                    // Central LCD tape counter
+                // Row 2: LCD counter + step pill
+                HStack(spacing: 8) {
                     lcdCounter
-                        .frame(width: 100)
+                        .frame(maxWidth: .infinity, alignment: .center)
 
-                    // Right (take-up) reel — grows as time elapses
-                    reelView(isSupply: false)
-                        .frame(maxWidth: .infinity)
+                    if let pill = stepPillInfo {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(pill.color)
+                                .frame(width: 5, height: 5)
+                            Text(pill.label.uppercased())
+                                .font(.system(size: 8, design: .monospaced).weight(.heavy))
+                                .foregroundStyle(pill.color)
+                                .monospacedDigit()
+                        }
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(pill.color.opacity(0.12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .stroke(pill.color.opacity(0.4), lineWidth: 1)
+                                )
+                        )
+                    }
                 }
-                .frame(height: 130)
+                .padding(.top, 6)
 
-                // Tape-progress track beneath the reels
-                tapeProgressBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
+                // COMPLETE hint
+                if isComplete {
+                    Text("▶▶ FLIP TO SIDE B?")
+                        .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(accentBlue.opacity(0.7))
+                        .padding(.top, 4)
+                }
             }
-            .padding(.top, 10)
+            .padding(10)
         }
-        .frame(height: 220)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(jCardA11yLabel)
+    }
+
+    private var jCardA11yLabel: String {
+        let name = controller.workoutName
+        if isComplete { return "\(name), side A complete" }
+        if controller.isPaused { return "\(name), paused" }
+        return name
+    }
+
+    // MARK: - Reel overlay (full-screen coordinate space)
+    //
+    // Live reels are positioned using MixtapeLayoutConstants so they sit exactly
+    // over the static bezel rings drawn by MixtapeCassetteScene regardless of
+    // screen width. Coordinate space: full-screen (same as the scene's GeometryReader).
+
+    @ViewBuilder
+    private func reelOverlay(screenSize: CGSize) -> some View {
+        let w = screenSize.width
+        let h = screenSize.height
+        let d = MixtapeLayoutConstants.hubDiameter
+        let lx = w * MixtapeLayoutConstants.hubCenterXFractions.0
+        let rx = w * MixtapeLayoutConstants.hubCenterXFractions.1
+        let cy = h * MixtapeLayoutConstants.hubCenterYFraction
+
+        ZStack {
+            // Left (supply) reel — clipped into hub window circle
+            reelView(isSupply: true)
+                .frame(width: d, height: d)
+                .clipShape(Circle())
+                .position(x: lx, y: cy)
+
+            // Right (take-up) reel — clipped into hub window circle
+            reelView(isSupply: false)
+                .frame(width: d, height: d)
+                .clipShape(Circle())
+                .position(x: rx, y: cy)
+
+            // Glass glare on each hub window — static diagonal specular streak.
+            // Disabled under Reduce Motion / Low Power.
+            if !reduceDetail {
+                glassGlare(diameter: d)
+                    .position(x: lx, y: cy)
+                glassGlare(diameter: d)
+                    .position(x: rx, y: cy)
+            }
+
+            // Tape progress track centred between the reels
+            tapeProgressBar
+                .frame(width: w * 0.30, height: 4)
+                .position(x: w / 2, y: cy)
+        }
+        .allowsHitTesting(false)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
         .accessibilityLabel(cassetteA11yLabel)
     }
 
-    // MARK: - Spinning reels
+    /// Fixed diagonal glass glare on a hub window — sells "real polycarbonate".
+    @ViewBuilder
+    private func glassGlare(diameter: CGFloat) -> some View {
+        LinearGradient(
+            colors: [Color.white.opacity(0.10), Color.clear],
+            startPoint: UnitPoint(x: 0.1, y: 0.0),
+            endPoint: UnitPoint(x: 0.7, y: 0.9)
+        )
+        .frame(width: diameter, height: diameter)
+        .clipShape(Circle())
+        .rotationEffect(.degrees(35))
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - Spinning reels (authentic Public-Domain cassette reel image)
+    //
+    // The reel artwork is the SAME real Public-Domain cassette reel used on the
+    // watch (`MixtapeReel` image asset — Wikimedia "Cassette tape.svg" by Paul
+    // Sherman, navy-recolored, circular-masked). It replaces the earlier
+    // Canvas-drawn vector reel so both platforms show identical genuine hardware.
+    //
+    // Differential fill (P1-1):
+    // - Supply (left):  scale = 1.0 - 0.35 * tapeProgress (fat → thin)
+    // - Take-up (right): scale = 0.65 + 0.35 * tapeProgress (thin → fat)
+    // - ω ∝ 1/scale so thinner reel spins faster (physics-correct), capped at 140°/s.
+    //
+    // Under reduceDetail: static reels at their current-progress scale (no spin).
+    //
+    // Window material (P2-3): clip background is faint green-tinted polycarbonate.
 
     @ViewBuilder
     private func reelView(isSupply: Bool) -> some View {
-        if reduceMotion {
-            staticReel(isSupply: isSupply)
-        } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { tl in
-                animatedReel(date: tl.date, isSupply: isSupply)
+        // Differential scale from tapeProgress
+        let scale: Double = isSupply
+            ? (1.0 - 0.35 * tapeProgress)   // supply: 1.0 → 0.65 (tape leaves)
+            : (0.65 + 0.35 * tapeProgress)  // take-up: 0.65 → 1.0 (tape arrives)
+
+        ZStack {
+            // Polycarbonate window tint — faint green, clear polycarbonate look (P2-3)
+            Color(red: 0.05, green: 0.10, blue: 0.06).opacity(0.5)
+
+            if reduceDetail {
+                // Static at current-progress scale
+                reelImage
+                    .scaleEffect(scale)
+            } else {
+                TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: !isRunning)) { tl in
+                    reelImage
+                        .scaleEffect(scale)
+                        .rotationEffect(.degrees(reelAngle(date: tl.date, isSupply: isSupply, scale: scale)))
+                }
             }
         }
     }
 
-    private func animatedReel(date: Date, isSupply: Bool) -> some View {
-        let angle = reelAngle(date: date, isSupply: isSupply)
-        return Canvas { ctx, size in
-            drawReel(ctx: ctx, size: size, isSupply: isSupply)
-        }
-        .rotationEffect(.degrees(angle))
-    }
-
-    private func staticReel(isSupply: Bool) -> some View {
-        Canvas { ctx, size in
-            drawReel(ctx: ctx, size: size, isSupply: isSupply)
-        }
+    private var reelImage: some View {
+        Image("MixtapeReel")
+            .resizable()
+            .interpolation(.high)
+            .scaledToFit()
+            .shadow(color: .black.opacity(0.4), radius: 1)
     }
 
     /// Compute the accumulated rotation angle for a reel.
-    /// The reel spins faster when the workout is active; REST steps run in reverse.
-    private func reelAngle(date: Date, isSupply: Bool) -> Double {
-        // Angular velocity: base 45 deg/s capped at ~120 deg/s for sprinting.
-        // Supply reel rotates clockwise; take-up reel also rotates clockwise (like real tape).
+    /// ω is scaled by 1/reelScale so smaller reels spin faster (physics-correct).
+    /// Angular velocity is capped at 140°/s to prevent strobing.
+    private func reelAngle(date: Date, isSupply: Bool, scale: Double) -> Double {
         let isPausedOrRest: Bool = {
             if controller.isPaused { return true }
             if controller.mode == .interval {
@@ -274,150 +487,77 @@ struct MixtapeTimerHero: View {
         let baseSpeed: Double = isPausedOrRest ? 0 : 45.0
         let paceBonus: Double = {
             guard !isPausedOrRest, let pace = controller.currentPace, pace > 0 else { return 0 }
-            // pace is s/km; 180 s/km (~3:00/km sprint) → max 75 deg/s bonus
             let inverted = max(0, 600.0 - pace)
             return min(75.0, inverted * 0.125)
         }()
-        let angularVelocity = baseSpeed + paceBonus
-
-        // Supply reel spins opposite the take-up reel — matches real cassette
-        // mechanics (tape unspools from supply, winds onto take-up).
+        // ω ∝ 1/radius (smaller reel = faster spin); cap at 140°/s
+        let baseOmega = (baseSpeed + paceBonus) / max(0.1, scale)
+        let angularVelocity = min(140.0, baseOmega)
         let direction: Double = isSupply ? -1.0 : 1.0
-
-        // Accumulate angle using delta-time from the last frame
         let now = date.timeIntervalSinceReferenceDate
         return (now * angularVelocity * direction).truncatingRemainder(dividingBy: 360)
     }
 
-    private func drawReel(ctx: GraphicsContext, size: CGSize, isSupply: Bool) {
-        let cx = size.width / 2
-        let cy = size.height / 2
-
-        // Reel visual radius shrinks (supply) or grows (take-up) based on elapsed fraction.
-        // Use step progress in interval mode; for free-run use elapsed vs. nominal 60 min.
-        let fraction: Double = {
-            if let engine = controller.intervalEngine, let step = engine.currentStep, step.duration > 0 {
-                let remaining = engine.currentStepTimeRemaining
-                return 1.0 - min(1.0, remaining / step.duration)
-            }
-            let nominal: TimeInterval = 3600.0
-            return min(1.0, controller.elapsedTime / nominal)
-        }()
-
-        let maxOuter: CGFloat = min(size.width, size.height) * 0.46
-        let minOuter: CGFloat = maxOuter * 0.42
-
-        let outerRadius: CGFloat = {
-            if isSupply {
-                // Supply: starts large, shrinks to min
-                return maxOuter - CGFloat(fraction) * (maxOuter - minOuter)
-            } else {
-                // Take-up: starts small, grows to max
-                return minOuter + CGFloat(fraction) * (maxOuter - minOuter)
-            }
-        }()
-
-        let hubRadius  = maxOuter * 0.22
-        let tapeRadius = outerRadius * 0.75   // inner tape ring
-
-        // ── Outer tape ring ───────────────────────────────────────────────
-        ctx.fill(
-            Path { p in p.addEllipse(in: CGRect(x: cx - outerRadius, y: cy - outerRadius,
-                                                 width: outerRadius * 2, height: outerRadius * 2)) },
-            with: .color(Color(red: 0.20, green: 0.14, blue: 0.06).opacity(0.95)) // dark brown tape
-        )
-        ctx.stroke(
-            Path { p in p.addEllipse(in: CGRect(x: cx - outerRadius, y: cy - outerRadius,
-                                                 width: outerRadius * 2, height: outerRadius * 2)) },
-            with: .color(borderBlue.opacity(0.5)), lineWidth: 1.2
-        )
-
-        // ── Transparent window ring ───────────────────────────────────────
-        ctx.fill(
-            Path { p in p.addEllipse(in: CGRect(x: cx - tapeRadius, y: cy - tapeRadius,
-                                                 width: tapeRadius * 2, height: tapeRadius * 2)) },
-            with: .color(panelBlue.opacity(0.90))
-        )
-
-        // ── 6 radial spokes ───────────────────────────────────────────────
-        let spokeCount = 6
-        for i in 0..<spokeCount {
-            let angle = Double(i) * (360.0 / Double(spokeCount)) * .pi / 180.0
-            let innerR = hubRadius
-            let outerR = tapeRadius * 0.88
-            let sx = cx + CGFloat(cos(angle)) * innerR
-            let sy = cy + CGFloat(sin(angle)) * innerR
-            let ex = cx + CGFloat(cos(angle)) * outerR
-            let ey = cy + CGFloat(sin(angle)) * outerR
-            var spoke = Path()
-            spoke.move(to: CGPoint(x: sx, y: sy))
-            spoke.addLine(to: CGPoint(x: ex, y: ey))
-            ctx.stroke(spoke, with: .color(borderBlue.opacity(0.7)), lineWidth: 2.5)
-        }
-
-        // ── Hub circle ────────────────────────────────────────────────────
-        ctx.fill(
-            Path { p in p.addEllipse(in: CGRect(x: cx - hubRadius, y: cy - hubRadius,
-                                                 width: hubRadius * 2, height: hubRadius * 2)) },
-            with: .color(reelDarkRing)
-        )
-        ctx.stroke(
-            Path { p in p.addEllipse(in: CGRect(x: cx - hubRadius, y: cy - hubRadius,
-                                                 width: hubRadius * 2, height: hubRadius * 2)) },
-            with: .color(borderBlue.opacity(0.8)), lineWidth: 1.5
-        )
-
-        // ── Center spindle dot ────────────────────────────────────────────
-        let spindleR: CGFloat = hubRadius * 0.30
-        ctx.fill(
-            Path { p in p.addEllipse(in: CGRect(x: cx - spindleR, y: cy - spindleR,
-                                                 width: spindleR * 2, height: spindleR * 2)) },
-            with: .color(borderBlue)
-        )
-    }
-
-    // MARK: - LCD tape counter
+    // MARK: - LCD tape counter (4-digit, no colon — intentional tape-counter aesthetic)
+    //
+    // P3-4 additions: ghost "8888" dead-pixel layer + 1pt center module divider.
+    // KEEP the 4-digit no-colon format — it is the tape-counter design decision.
 
     private var lcdCounter: some View {
-        VStack(spacing: 4) {
-            // Four-character LCD-style counter (MMSS no colon, Walkman-style)
+        let activeColor: Color = controller.isPaused ? amberPause : lcdGreen
+
+        return VStack(spacing: 2) {
             ZStack {
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(Color(red: 0.02, green: 0.08, blue: 0.02)) // dark LCD bezel
+                    .fill(Color(red: 0.02, green: 0.08, blue: 0.02))
                     .overlay(
                         RoundedRectangle(cornerRadius: 5)
                             .stroke(lcdGreenDim.opacity(0.4), lineWidth: 1)
                     )
 
                 VStack(spacing: 1) {
-                    Text(lcdCounterText)
-                        .font(.system(size: 30, weight: .bold, design: .monospaced))
-                        .monospacedDigit()
-                        .foregroundStyle(lcdGreen)
-                        .shadow(color: lcdGreen.opacity(0.5), radius: 4)
-                        .contentTransition(.numericText())
-                        .minimumScaleFactor(0.7)
-                        .lineLimit(1)
+                    ZStack {
+                        // Ghost "8888" — dead-pixel LCD look (back layer)
+                        Text("8888")
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(lcdGreen.opacity(0.04))
+                            .lineLimit(1)
+
+                        // Active counter
+                        Text(lcdCounterText)
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(activeColor)
+                            .shadow(color: activeColor.opacity(0.5), radius: 4)
+                            .contentTransition(.numericText())
+                            .minimumScaleFactor(0.7)
+                            .lineLimit(1)
+
+                        // Center module divider — 1pt vertical line between the two digit pairs.
+                        // This is the physical module gap (NOT a colon).
+                        Rectangle()
+                            .fill(lcdGreenDim.opacity(0.20))
+                            .frame(width: 1, height: 24)
+                    }
 
                     Text(lcdCounterSubLabel)
                         .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(lcdGreenDim)
+                        .foregroundStyle(controller.isPaused ? amberPause.opacity(0.6) : lcdGreenDim)
                 }
                 .padding(.horizontal, 6)
-                .padding(.vertical, 6)
+                .padding(.vertical, 5)
             }
 
-            // "COUNTER" engraved label
             Text("COUNTER")
-                .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                .foregroundStyle(textSecondary.opacity(0.6))
+                .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                .foregroundStyle(labelInk.opacity(0.4))
                 .tracking(1.5)
         }
         .accessibilityLabel(cassetteCounterA11yLabel)
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// MMSS-formatted 4-digit counter, no separator (classic Walkman style).
     private var lcdCounterText: String {
         let seconds: TimeInterval = {
             switch controller.mode {
@@ -427,9 +567,9 @@ struct MixtapeTimerHero: View {
                 return max(0, controller.intervalEngine?.currentStepTimeRemaining ?? controller.elapsedTime)
             case .gymRecovery:
                 switch controller.recoveryState {
-                case .idle:   return controller.elapsedTime
-                case .work:   return controller.stationElapsedTime
-                case .rest:   return controller.restElapsedTime
+                case .idle:  return controller.elapsedTime
+                case .work:  return controller.stationElapsedTime
+                case .rest:  return controller.restElapsedTime
                 }
             }
         }()
@@ -440,6 +580,7 @@ struct MixtapeTimerHero: View {
     }
 
     private var lcdCounterSubLabel: String {
+        if isComplete { return "COMPLETE" }
         switch controller.mode {
         case .freeRun:
             return "ELAPSED"
@@ -473,7 +614,8 @@ struct MixtapeTimerHero: View {
         "\(controller.workoutName). \(cassetteCounterA11yLabel)"
     }
 
-    // MARK: - Tape progress bar (thin strip below reels)
+    // MARK: - Tape progress bar
+    // P3-1: leader-tape at start (6pt pale leader at left edge) + near-done red tint.
 
     private var tapeProgressBar: some View {
         let progress: Double = {
@@ -482,7 +624,6 @@ struct MixtapeTimerHero: View {
                 let remaining = engine.currentStepTimeRemaining
                 return 1.0 - (remaining / step.duration)
             }
-            // Free-run / gym: use elapsed vs. a nominal 60 min
             let nominal: TimeInterval = 3600
             return min(1.0, controller.elapsedTime / nominal)
         }()
@@ -491,14 +632,21 @@ struct MixtapeTimerHero: View {
             ? (controller.intervalEngine?.currentStep.map { sharedStepColor($0.type) } ?? lcdGreen)
             : lcdGreen
 
+        // Near-done: tint remaining track red when >85% done
+        let nearDone = progress > 0.85
+
         return GeometryReader { proxy in
             ZStack(alignment: .leading) {
+                // Track — with optional near-done red tint on the remaining portion
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(lcdGreenDim.opacity(0.3))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 2)
-                            .stroke(borderBlue.opacity(0.3), lineWidth: 0.5)
-                    )
+                    .fill(nearDone ? ledRed.opacity(0.5) : lcdGreenDim.opacity(0.3))
+
+                // Leader tape — 6pt pale leader at left edge (physical cassette leader)
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(Color.white.opacity(0.35))
+                    .frame(width: 6)
+
+                // Progress fill
                 RoundedRectangle(cornerRadius: 2)
                     .fill(barColor)
                     .frame(width: max(0, proxy.size.width * progress))
@@ -506,10 +654,12 @@ struct MixtapeTimerHero: View {
                     .animation(.linear(duration: 1), value: progress)
             }
         }
-        .frame(height: 5)
+        .frame(height: 4)
     }
 
     // MARK: - VU strip + pace strip
+    // P2-3: matte-black head-contact panel (no sheen — contrasts the glossy green window).
+    // Signature #2: slow tape-sheen band travels across the panel while isRunning.
 
     private var vuAndPaceStrips: some View {
         VStack(spacing: 8) {
@@ -518,20 +668,73 @@ struct MixtapeTimerHero: View {
         }
         .padding(12)
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(panelBlue.opacity(0.85))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(borderBlue.opacity(0.5), lineWidth: 1)
-                )
+            ZStack(alignment: .leading) {
+                // Matte-black head panel — flat fill, no gradient sheen (P2-3)
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(red: 0.04, green: 0.07, blue: 0.10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(borderBlue.opacity(0.4), lineWidth: 1)
+                    )
+
+                // Tape sheen — slow horizontal band traveling left→right (~6s period).
+                // Behind all numbers, low-opacity; disabled under Reduce Motion / Low Power.
+                // Uses sheenOffset 0→1 animated while isRunning (parked when paused).
+                if !reduceDetail {
+                    GeometryReader { geo in
+                        let bandW: CGFloat = geo.size.width * 0.3
+                        let travel = (geo.size.width + bandW) * sheenOffset - bandW
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(
+                                LinearGradient(
+                                    colors: [
+                                        Color.white.opacity(0.0),
+                                        Color.white.opacity(0.06),
+                                        Color.white.opacity(0.0)
+                                    ],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: bandW)
+                            .offset(x: travel)
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .allowsHitTesting(false)
+                }
+
+                // Felt pad on leading edge
+                Capsule()
+                    .fill(feltPad)
+                    .frame(width: 5, height: 24)
+                    .padding(.leading, 4)
+            }
         )
+        .onAppear {
+            animateSheenIfNeeded()
+        }
+        .onChange(of: isRunning) { _, running in
+            if running {
+                animateSheenIfNeeded()
+            }
+        }
     }
 
-    /// HR VU strip — 10 segment bar-graph + numeric BPM.
+    private func animateSheenIfNeeded() {
+        guard !reduceDetail, isRunning else { return }
+        sheenOffset = 0
+        withAnimation(.linear(duration: 6).repeatForever(autoreverses: false)) {
+            sheenOffset = 1
+        }
+    }
+
+    /// HR VU strip — 10 segment bar-graph + 28pt zone-colored BPM + Z-badge.
+    /// The numeric BPM is the primary readout; the VU bar is the preattentive indicator.
     private var hrVUStrip: some View {
         let bpm = controller.heartRateMonitor.current
         let activeCells = bpm > 0 ? max(0, min(10, Int(Double(bpm) / 200.0 * 10.0))) : 0
         let zoneColor: Color = bpm > 0 ? ShuttlXColor.forHRZone(bpm) : accentBlue
+        let zoneLabel = bpm > 0 ? hrZoneLabel(bpm) : ""
 
         return HStack(spacing: 6) {
             Text("HR")
@@ -539,10 +742,10 @@ struct MixtapeTimerHero: View {
                 .foregroundStyle(textSecondary)
                 .frame(width: 20, alignment: .leading)
 
-            // 10 VU segments
             HStack(spacing: 2) {
                 ForEach(0..<10, id: \.self) { idx in
                     let lit = idx < activeCells
+                    // Preattentive VU bar keeps its green/amber/red segments
                     let segColor: Color = {
                         if idx < 6 { return lcdGreen }
                         if idx < 8 { return amberPause }
@@ -557,19 +760,40 @@ struct MixtapeTimerHero: View {
             }
             .frame(maxWidth: .infinity)
 
-            // Numeric BPM
-            HStack(alignment: .bottom, spacing: 2) {
-                Text(bpm > 0 ? "\(bpm)" : "—")
-                    .font(.system(size: 16, weight: .bold, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundStyle(zoneColor)
-                    .contentTransition(.numericText())
-                Text("bpm")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(textSecondary)
-                    .padding(.bottom, 1)
+            // BPM readout block — 28pt zone-colored numeric + "bpm" label + Z-badge
+            HStack(alignment: .bottom, spacing: 4) {
+                VStack(alignment: .trailing, spacing: 1) {
+                    HStack(alignment: .lastTextBaseline, spacing: 3) {
+                        // 28pt BPM — the primary cardiac metric
+                        Text(bpm > 0 ? "\(bpm)" : "—")
+                            .font(.system(size: 28, weight: .bold, design: .monospaced))
+                            .monospacedDigit()
+                            .foregroundStyle(zoneColor)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .contentTransition(.numericText())
+
+                        Text("bpm")
+                            .font(.system(size: 9, design: .monospaced))
+                            .foregroundStyle(textSecondary)
+                            .padding(.bottom, 2)
+                    }
+
+                    // Zone badge [Z3] — immediately below/right of BPM
+                    if bpm > 0 {
+                        Text(zoneLabel)
+                            .font(.system(size: 9, weight: .heavy, design: .monospaced))
+                            .foregroundStyle(zoneColor)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 2)
+                                    .stroke(zoneColor, lineWidth: 1)
+                            )
+                    }
+                }
             }
-            .frame(width: 54, alignment: .trailing)
+            .frame(width: 72, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(bpm > 0
@@ -577,16 +801,14 @@ struct MixtapeTimerHero: View {
             : "Heart rate no data")
     }
 
-    /// "TAPE SPEED" pace strip — needle deflects left (slow) / right (fast) of a
-    /// 5:00/km (300 s/km) target center.
+    /// "TAPE SPEED" pace strip — 20pt dominant numeric readout; needle is a thin secondary flourish.
+    /// The numeric is the readout; the needle indicates relative speed decoratively.
     private var paceSpeedStrip: some View {
         let pace = controller.currentPace
         let paceStr = pace.map { FormattingUtils.formatPace($0) } ?? "—"
-        // Needle position: 0.5 = on target (300 s/km). Range 0...1 mapped from 150–600 s/km.
         let needle: Double = {
             guard let p = pace, p > 0 else { return 0.5 }
             let clamped = max(150.0, min(600.0, p))
-            // Higher pace (s/km) = slower = needle left (0); lower = faster = right (1)
             return 1.0 - ((clamped - 150.0) / 450.0)
         }()
 
@@ -596,85 +818,97 @@ struct MixtapeTimerHero: View {
                 .foregroundStyle(textSecondary)
                 .frame(width: 20, alignment: .leading)
 
-            // Needle track
+            // Needle track — demoted to thin secondary flourish (2pt needle, smaller track)
             GeometryReader { proxy in
                 let trackW = proxy.size.width
                 let centerX = trackW * 0.5
                 let needleX = trackW * needle
                 ZStack(alignment: .leading) {
-                    // Track
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(lcdGreenDim.opacity(0.25))
-                        .frame(height: 6)
-                        .padding(.vertical, 5)
-
-                    // Center target tick
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(lcdGreenDim.opacity(0.20))
+                        .frame(height: 4)
+                        .padding(.vertical, 4)
+                    // Center mark
                     Rectangle()
-                        .fill(textSecondary.opacity(0.5))
-                        .frame(width: 1.5, height: 16)
-                        .offset(x: centerX - 0.75)
-
-                    // Needle
+                        .fill(textSecondary.opacity(0.35))
+                        .frame(width: 1, height: 12)
+                        .offset(x: centerX - 0.5)
+                    // Needle — thin (2pt) flourish indicator
                     Rectangle()
-                        .fill(accentBlue)
-                        .frame(width: 3, height: 16)
-                        .shadow(color: accentBlue.opacity(0.6), radius: 3)
-                        .offset(x: needleX - 1.5)
+                        .fill(accentBlue.opacity(0.8))
+                        .frame(width: 2, height: 12)
+                        .shadow(color: accentBlue.opacity(0.4), radius: 2)
+                        .offset(x: needleX - 1)
                         .animation(.spring(duration: 0.8), value: needle)
                 }
-                .frame(height: 16)
+                .frame(height: 12)
                 .frame(maxHeight: .infinity)
             }
-            .frame(height: 16)
+            .frame(height: 12)
             .frame(maxWidth: .infinity)
 
-            // Pace value
-            HStack(alignment: .bottom, spacing: 2) {
+            // Pace numeric — 20pt dominant readout (up from 15pt)
+            HStack(alignment: .lastTextBaseline, spacing: 2) {
                 Text(paceStr)
-                    .font(.system(size: 15, weight: .bold, design: .monospaced))
+                    .font(.system(size: 20, weight: .bold, design: .monospaced))
                     .monospacedDigit()
-                    .foregroundStyle(accentBlue)
+                    .foregroundStyle(lcdGreen)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                     .contentTransition(.numericText())
                 Text("/km")
                     .font(.system(size: 9, design: .monospaced))
                     .foregroundStyle(textSecondary)
-                    .padding(.bottom, 1)
+                    .padding(.bottom, 2)
             }
-            .frame(width: 60, alignment: .trailing)
+            .frame(width: 92, alignment: .trailing)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Pace \(paceStr) per kilometer")
     }
 
-    // MARK: - Transport controls (REW | PLAY-PAUSE | STOP | FFWD)
+    // MARK: - Transport controls (cassette transport keys via ThemedTransportButtonStyle)
 
     private var transportControls: some View {
         HStack(spacing: 10) {
-            // REW → Cancel
-            transportButton(
-                symbol: "backward.end.fill",
-                label: "Cancel",
-                a11yHint: "Ends without saving",
-                color: textSecondary,
-                background: panelBlue
-            ) {
+
+            // ◀◀ Cancel (REW → discard without saving)
+            Button {
                 showingCancelConfirmation = true
-            }
-
-            // Skip step (interval only) — maps to FFWD
-            if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
-                transportButton(
-                    symbol: "forward.end.fill",
-                    label: "Skip",
-                    a11yHint: "Skips the current step",
-                    color: accentBlue,
-                    background: panelBlue
-                ) {
-                    controller.skipStep()
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: TransportRole.rewind.sfSymbol)
+                        .font(.system(size: 18, weight: .bold))
+                    Text("CANCEL")
+                        .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                        .tracking(0.3)
                 }
+                .frame(width: 56, height: 56)
+            }
+            .buttonStyle(ThemedTransportButtonStyle(role: .rewind, isLatched: false))
+            .accessibilityLabel("Cancel workout")
+            .accessibilityHint("Ends without saving. Rewind key.")
+
+            // ▶▶ Skip step (interval only — FFWD)
+            if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
+                Button {
+                    controller.skipStep()
+                } label: {
+                    VStack(spacing: 2) {
+                        Image(systemName: TransportRole.skip.sfSymbol)
+                            .font(.system(size: 18, weight: .bold))
+                        Text("SKIP")
+                            .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                            .tracking(0.3)
+                    }
+                    .frame(width: 56, height: 56)
+                }
+                .buttonStyle(ThemedTransportButtonStyle(role: .skip, isLatched: false))
+                .accessibilityLabel("Skip step")
+                .accessibilityHint("Skips to the next interval step. Fast-forward key.")
             }
 
-            // PLAY / PAUSE — wide primary
+            // ▶ PLAY / ‖ PAUSE — wide primary key; latches DOWN while tape is running
             Button {
                 if controller.isPaused { controller.resume() } else { controller.pause() }
             } label: {
@@ -684,62 +918,40 @@ struct MixtapeTimerHero: View {
                     Text(controller.isPaused ? "PLAY" : "PAUSE")
                         .font(.system(.subheadline, design: .monospaced).weight(.heavy))
                         .tracking(1)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 56)
-                .background(
-                    RoundedRectangle(cornerRadius: 8)
-                        .fill(controller.isPaused ? amberPause : accentBlue)
-                        .shadow(color: (controller.isPaused ? amberPause : accentBlue).opacity(0.5),
-                                radius: 6)
+            }
+            .buttonStyle(
+                ThemedTransportButtonStyle(
+                    role: controller.isPaused ? .play : .pause,
+                    // PLAY latches DOWN while the tape is running (not paused)
+                    isLatched: !controller.isPaused
                 )
-                .foregroundStyle(walkyBodyBlue)
-            }
-            .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
-
-            // STOP → Finish
-            transportButton(
-                symbol: "stop.fill",
-                label: "Stop",
-                a11yHint: "Saves and ends",
-                color: .white,
-                background: ledRed
-            ) {
-                showingFinishConfirmation = true
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func transportButton(
-        symbol: String,
-        label: String,
-        a11yHint: String,
-        color: Color,
-        background: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            VStack(spacing: 3) {
-                Image(systemName: symbol)
-                    .font(.system(size: 20, weight: .bold))
-                Text(label)
-                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                    .tracking(0.5)
-            }
-            .frame(width: 56, height: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(background)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8)
-                            .stroke(borderBlue.opacity(0.6), lineWidth: 1)
-                    )
             )
-            .foregroundStyle(color)
+            .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
+            .accessibilityHint("Play key. Latches down while tape is running.")
+
+            // ■ Stop → Finish (saves and ends)
+            Button {
+                showingFinishConfirmation = true
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: TransportRole.stop.sfSymbol)
+                        .font(.system(size: 18, weight: .bold))
+                    Text("STOP")
+                        .font(.system(size: 7, weight: .heavy, design: .monospaced))
+                        .tracking(0.3)
+                }
+                .frame(width: 56, height: 56)
+            }
+            .buttonStyle(ThemedTransportButtonStyle(role: .stop, isLatched: false))
+            .accessibilityLabel("Finish workout")
+            .accessibilityHint("Saves and ends the workout. Stop key.")
         }
-        .accessibilityLabel(label)
-        .accessibilityHint(a11yHint)
     }
 
     // MARK: - Step pill helper
@@ -761,10 +973,7 @@ struct MixtapeTimerHero: View {
             case .idle:
                 return StepPillInfo(label: "READY", color: textSecondary)
             case .work:
-                return StepPillInfo(
-                    label: "STATION \(controller.recoverySetNumber)",
-                    color: accentBlue
-                )
+                return StepPillInfo(label: "STATION \(controller.recoverySetNumber)", color: accentBlue)
             case .rest:
                 return StepPillInfo(label: "REST", color: amberPause)
             }
@@ -773,7 +982,7 @@ struct MixtapeTimerHero: View {
         }
     }
 
-    // MARK: - Helpers (mirrors iPhoneWorkoutTimerView helpers)
+    // MARK: - Helpers
 
     private func appType(for sharedType: ShuttlXShared.IntervalType) -> IntervalType {
         IntervalType(rawValue: sharedType.rawValue) ?? .work

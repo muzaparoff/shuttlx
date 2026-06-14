@@ -40,7 +40,7 @@ struct iPhoneWorkoutTimerView: View {
 
             themedTimerBody
         }
-        .themedScreenBackground()
+        .timerScreenBackground(themeID: themeManager.current.id)
         .alert("Finish Workout", isPresented: $showingFinishConfirmation) {
             Button("Save & Finish") {
                 _ = controller.finish()
@@ -341,9 +341,6 @@ struct iPhoneWorkoutTimerView: View {
             metricCard(label: "STEPS",
                        value: "\(controller.totalSteps)",
                        color: ShuttlXColor.steps)
-            metricCard(label: "SPM",
-                       value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "—",
-                       color: ShuttlXColor.steps)
         }
     }
 
@@ -360,16 +357,9 @@ struct iPhoneWorkoutTimerView: View {
                            color: ShuttlXColor.pace,
                            compact: true)
             }
-            HStack(spacing: 10) {
-                metricCard(label: "TIME",
-                           value: FormattingUtils.formatTimer(controller.elapsedTime),
-                           color: ShuttlXColor.textPrimary,
-                           compact: true)
-                metricCard(label: "SPM",
-                           value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "—",
-                           color: ShuttlXColor.steps,
-                           compact: true)
-            }
+            metricCard(label: "TIME",
+                       value: FormattingUtils.formatTimer(controller.elapsedTime),
+                       color: ShuttlXColor.textPrimary)
         }
     }
 

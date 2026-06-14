@@ -338,33 +338,49 @@ extension View {
         )
     }
 
-    // MARK: - Mixtape Background (Portable Player)
+    // MARK: - Mixtape Background (Authentic Cassette Shell)
+    //
+    // Renders a full-bleed `MixtapeCassetteScene` — a smoke-blue ABS cassette
+    // shell with 4 corner screws, hub windows, J-card label well, and tape
+    // window strip. This replaces the old generic dark-blue tint.
+    //
+    // The scene is always "resting" (progress 0, isRunning false) here because
+    // `.themedScreenBackground()` has no access to the workout controller.
+    // Live spinning reels are drawn by `MixtapeTimerHero` on top during workouts.
 
     func mixtapeBackground() -> some View {
         self
             .background(
-                ZStack {
-                    Color(red: 0.05, green: 0.08, blue: 0.13)
-                    // Subtle horizontal texture lines (plastic body)
-                    Canvas { context, size in
-                        let lineColor = Color.white.opacity(0.015)
-                        for y in stride(from: CGFloat(0), to: size.height, by: 3) {
-                            var path = Path()
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: size.width, y: y))
-                            context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
-                        }
-                    }
-                    // Blue sheen gradient
-                    LinearGradient(
-                        colors: [Color.blue.opacity(0.06), .clear, Color.blue.opacity(0.03)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
+                MixtapeCassetteScene(
+                    progress: 0,
+                    isRunning: false,
+                    reduceDetail: ProcessInfo.processInfo.isLowPowerModeEnabled
+                )
                 .allowsHitTesting(false)
                 .ignoresSafeArea()
             )
+    }
+
+    // Background for the active-workout timer screen. For Mixtape it draws the
+    // cassette shell WITHOUT the scene J-card (MixtapeTimerHero owns the J-card
+    // on top — drawing the scene's too produced a duplicate strip). All other
+    // themes fall through to the standard themed screen background.
+    @ViewBuilder
+    func timerScreenBackground(themeID: String) -> some View {
+        if themeID == "mixtape" {
+            self.background(
+                MixtapeCassetteScene(
+                    progress: 0,
+                    isRunning: false,
+                    reduceDetail: ProcessInfo.processInfo.isLowPowerModeEnabled,
+                    showJCard: false
+                )
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
+            )
+        } else {
+            self.themedScreenBackground()
+        }
     }
 
     // MARK: - Arcade CRT Background
