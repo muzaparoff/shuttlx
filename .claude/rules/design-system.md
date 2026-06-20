@@ -117,7 +117,8 @@ Each theme renders a unique animated **hero** element during the active-workout 
 - **File structure**: Each theme owns its own `Theme/Themes/<Name>Hero.swift` file (iOS: `ShuttlX/Theme/Themes/`, watch: `ShuttlX Watch App/Theme/Themes/`)
 - **Watch Chrome Pattern**: Overlays placed inside the ZStack of `fullWorkoutDisplayTab` (below metrics, above background) — all overlays use `.allowsHitTesting(false)` to avoid blocking tap controls
 - **Controller Reuse**: all heroes access the same `controller` / `workoutManager` data (HR, pace, distance, etc.) — no controller logic lives in theme files
-- **5 Themes with Heroes**: Synthwave (speedometer needle + grid), Mixtape (dual spinning reels + tape counter), Arcade (7-segment score + INSERT COIN blink), Classic Radio (tuning needle sweep), Neovim (command-line status line with elapsed time register)
+- **5 Themes with Heroes**: Synthwave (speedometer needle + grid), Mixtape (iOS: dual spinning reels + tape counter; **watch: full-screen Walkman LCD deck** — `MixtapeWatchDeck`), Arcade (7-segment score + INSERT COIN blink), Classic Radio (tuning needle sweep), Neovim (command-line status line with elapsed time register)
+- **Mixtape watch deck** (`MixtapeWatchDeck` in `Theme/Themes/Decorations/MixtapeTimerHero.swift`): full-bleed green LCD, `SIDE A ▸ <phase>` now-playing strip beside the system clock, oversized hero timer (leading zero trimmed: `1:48`), inline zone-tinted `<bpm> BPM` + VU bar, `DIST`/`PACE` on separate lines. No zone badge — HR colour IS the zone and a directional haptic fires on zone crossings. Phase wording is Mixtape-only walk-run (`RUN`/`WALK`/`WARM UP`/`COOL DOWN`); the shared `IntervalType.displayName` stays Work/Rest for all other screens.
 - **Clean & FM Tuner**: Clean uses minimal hero (optional), FM Tuner uses existing `FMTunerHeader` + `FMTunerVUColumn` pattern
 
 ## iOS Timer Screen

@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="396" height="484" viewBox="0 0 396 484" font-family="'SF Mono','Menlo',monospace">
+  <defs>
+    <linearGradient id="deck" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2A2E36"/><stop offset="1" stop-color="#15171C"/>
+    </linearGradient>
+    <radialGradient id="amberGlow" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0" stop-color="#FFB02E" stop-opacity="0.55"/><stop offset="1" stop-color="#FFB02E" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="reelMetal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6B7686"/><stop offset="1" stop-color="#2E3742"/>
+    </linearGradient>
+    <clipPath id="screen"><rect x="0" y="0" width="396" height="484" rx="84"/></clipPath>
+  </defs>
+
+  <rect width="396" height="484" rx="84" fill="#000"/>
+  <g clip-path="url(#screen)">
+    <rect x="12" y="24" width="372" height="436" rx="26" fill="url(#deck)"/>
+    <rect x="12" y="24" width="372" height="436" rx="26" fill="none" stroke="#1C8009" stroke-opacity="0.25" stroke-width="1"/>
+
+    <g transform="translate(40,60)">
+      <line x1="16" y1="16" x2="66" y2="16" stroke="#1C8009" stroke-width="2.2"/>
+      <g>
+        <circle cx="16" cy="16" r="16" fill="url(#reelMetal)" stroke="#0c0f13" stroke-width="1.6"/>
+        <circle cx="16" cy="16" r="5" fill="#15171C"/>
+        <g stroke="#9AA6B4" stroke-width="1.5">
+          <line x1="16" y1="3" x2="16" y2="29"/><line x1="3" y1="16" x2="29" y2="16"/>
+          <line x1="7" y1="7" x2="25" y2="25"/><line x1="25" y1="7" x2="7" y2="25"/>
+        </g>
+      </g>
+      <g>
+        <circle cx="66" cy="16" r="16" fill="url(#reelMetal)" stroke="#0c0f13" stroke-width="1.6"/>
+        <circle cx="66" cy="16" r="5" fill="#15171C"/>
+        <g stroke="#9AA6B4" stroke-width="1.5" transform="rotate(22 66 16)">
+          <line x1="66" y1="3" x2="66" y2="29"/><line x1="53" y1="16" x2="79" y2="16"/>
+          <line x1="57" y1="7" x2="75" y2="25"/><line x1="75" y1="7" x2="57" y2="25"/>
+        </g>
+      </g>
+    </g>
+    <rect x="226" y="64" width="68" height="26" rx="13" fill="#FFB02E" fill-opacity="0.88" stroke="#1C2330" stroke-opacity="0.4"/>
+    <text x="260" y="82" text-anchor="middle" font-size="15" font-weight="800" fill="#1C2330" letter-spacing="1">SIDE A</text>
+    <path d="M324 64 L347 77 L324 90 Z" fill="#39FF14"/>
+
+    <rect x="28" y="106" width="340" height="342" rx="18" fill="#051405" stroke="#1C8009" stroke-opacity="0.55" stroke-width="1.5"/>
+
+    <text x="50" y="142" font-size="17" font-weight="800" fill="#8CADCC" letter-spacing="2">ELAPSED</text>
+    <circle cx="338" cy="135" r="9" fill="none" stroke="#1C8009" stroke-width="1.8"/>
+    <circle cx="338" cy="135" r="2.8" fill="#1C8009"/>
+
+    <ellipse cx="198" cy="204" rx="135" ry="46" fill="url(#amberGlow)"/>
+    <text x="198" y="226" text-anchor="middle" font-size="96" font-weight="700" fill="#39FF14" letter-spacing="2" font-variant-numeric="tabular-nums">20:12</text>
+
+    <g transform="translate(50,266)">
+      <rect x="0"   width="12" height="18" rx="3" fill="#39FF14"/>
+      <rect x="16"  width="12" height="18" rx="3" fill="#39FF14"/>
+      <rect x="32"  width="12" height="18" rx="3" fill="#39FF14"/>
+      <rect x="48"  width="12" height="18" rx="3" fill="#39FF14"/>
+      <rect x="64"  width="12" height="18" rx="3" fill="#39FF14"/>
+      <rect x="80"  width="12" height="18" rx="3" fill="#39FF14"/>
+      <rect x="96"  width="12" height="18" rx="3" fill="#1C8009" fill-opacity="0.25"/>
+      <rect x="112" width="12" height="18" rx="3" fill="#1C8009" fill-opacity="0.25"/>
+      <rect x="128" width="12" height="18" rx="3" fill="#1C8009" fill-opacity="0.25"/>
+      <rect x="144" width="12" height="18" rx="3" fill="#1C8009" fill-opacity="0.25"/>
+      <rect x="160" width="12" height="18" rx="3" fill="#1C8009" fill-opacity="0.25"/>
+      <rect x="176" width="12" height="18" rx="3" fill="#1C8009" fill-opacity="0.25"/>
+    </g>
+    <!-- HR cluster, right-aligned. "142" ends at x=360; nothing crosses x=370. -->
+    <text x="360" y="288" text-anchor="end" font-size="58" font-weight="700" fill="#3DDC84" font-variant-numeric="tabular-nums">142</text>
+
+    <!-- label row: HR (far left) ... BPM + Z2 (right cluster ≤370) -->
+    <text x="50" y="325" font-size="15" font-weight="700" fill="#8CADCC" letter-spacing="1">HR</text>
+    <text x="288" y="325" text-anchor="end" font-size="15" font-weight="700" fill="#8CADCC">BPM</text>
+    <rect x="334" y="311" width="34" height="22" rx="4" fill="none" stroke="#3DDC84" stroke-opacity="0.5"/>
+    <text x="351" y="326" text-anchor="middle" font-size="15" font-weight="700" fill="#3DDC84">Z2</text>
+
+    <g transform="translate(50,360)">
+      <text x="0"   y="22" font-size="17" font-weight="700" fill="#8CADCC" letter-spacing="1">DIST</text>
+      <text x="64"  y="24" font-size="30" font-weight="700" fill="#39FF14" font-variant-numeric="tabular-nums">1.92</text>
+      <text x="134" y="22" font-size="14" font-weight="700" fill="#8CADCC">km</text>
+    </g>
+    <g transform="translate(50,402)">
+      <text x="0"   y="22" font-size="17" font-weight="700" fill="#8CADCC" letter-spacing="1">PACE</text>
+      <text x="66"  y="24" font-size="30" font-weight="700" fill="#39FF14" font-variant-numeric="tabular-nums">10'10"</text>
+    </g>
+  </g>
+</svg>

@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 // MARK: - Mixtape watchOS workout hero chrome
 //
@@ -89,27 +90,29 @@ struct MixtapeParkedReel: View {
     }
 }
 
-// MARK: - Mixtape Watch Deck (full cassette-deck timer face)
+// MARK: - Mixtape Watch Deck (full-screen LCD timer face)
 //
-// The watch counterpart to the iOS `MixtapeTimerHero` full cassette deck. It
-// replaces the standard stacked-metrics layout for the Mixtape theme during an
-// active free-run or interval workout (gym-recovery keeps `RecoveryWorkoutView`).
+// The watch counterpart to the iOS `MixtapeTimerHero`. It replaces the standard
+// stacked-metrics layout for the Mixtape theme during an active free-run or
+// interval workout (gym-recovery keeps `RecoveryWorkoutView`).
 //
-// Composition, top → bottom, tuned to fit the ~180pt 41/42mm height budget while
-// keeping HR + the hero number glanceable (the watchOS BPM-visibility rule):
+// Redesign (2026-06-20, user direction): the literal twin-reel chrome was cut —
+// at 14–18pt it read as bicycle wheels, not a cassette, and stole vertical space
+// from the timer. The Walkman identity now lives in the FULL-SCREEN green LCD
+// (one big edge-to-edge display), the amber "SIDE A" tag, and the VU meter — not
+// a drawn cassette. The timer is the hero and fills the screen.
 //
-//   1. J-card label strip — cream paper, SIDE A tag + REC dot + slanted italic
-//      workout name + PAUSED chip. One line; never tilts the values below it.
-//   2. Cassette window band — TWIN authentic `MixtapeReel` images spinning in
-//      opposite directions, flanking a central recessed LCD tape-window that
-//      holds the HERO number (interval countdown / free-run elapsed) plus a tiny
-//      sublabel and a thin tape-progress bar. This is the signature cassette look.
-//   3. HR row — big zone-coloured BPM + Z badge (second-tier, full width).
+// Composition, top → bottom:
+//   1. Status line — phase sublabel (WORK 3/8 / ELAPSED) on the left; small amber
+//      SIDE A tag + play/pause glyph on the right. Sits under the system clock.
+//   2. Hero number — huge interval countdown / free-run elapsed, vertically
+//      centered with flexible space above and below so it dominates.
+//   3. HR line — VU bar (fills slack) + big zone-TINTED BPM number + small "BPM".
+//      No zone badge: the colour IS the zone. Crossing a zone boundary fires a
+//      directional haptic (up on escalation, down on de-escalation).
 //   4. DIST / PACE — compact two-up.
 //
-// Spin is driven off `workoutManager.elapsedTime` (monotonic) so the reels halt
-// the instant the tape "stops" (pause) with no catch-up animation, and respect
-// Reduce Motion. The whole deck is read-only on workout state.
+// The whole deck is read-only on workout state.
 struct MixtapeWatchDeck: View {
     @ObservedObject var workoutManager: WatchWorkoutManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -120,266 +123,219 @@ struct MixtapeWatchDeck: View {
     /// Physical screen height — drives the proportional type sizes.
     let screenH: CGFloat
 
+    /// Last HR zone we fired a haptic for. Drives the zone-change cue that
+    /// replaces the old "Z3" badge.
+    @State private var lastHapticZone: Int = 0
+
     private let hrCalc = HeartRateZoneCalculator.fromSharedDefaults()
 
-    // MARK: Cassette palette (mirrors the iOS hero §1 tokens)
-    private let labelPaper    = Color(red: 0.929, green: 0.906, blue: 0.827) // #EDE7D3 J-card
+    // MARK: LCD palette
     private let labelInk      = Color(red: 0.110, green: 0.137, blue: 0.188) // #1C2330
     private let lcdGreen      = Color(red: 0.22,  green: 1.0,   blue: 0.08)  // #39FF14
     private let lcdGreenDim   = Color(red: 0.11,  green: 0.50,  blue: 0.04)
-    private let lcdWell       = Color(red: 0.02,  green: 0.08,  blue: 0.02)  // recessed LCD black
+    private let lcdWell       = Color(red: 0.02,  green: 0.08,  blue: 0.02)  // LCD black-green
     private let amberPause    = Color(red: 0.95,  green: 0.65,  blue: 0.10)  // #F2A61A
     private let ledRed        = Color(red: 1.0,   green: 0.20,  blue: 0.20)  // #FF3333
-    private let borderBlue    = Color(red: 0.29,  green: 0.42,  blue: 0.60)  // #4A6A9A
     private let textSecondary = Color(red: 0.55,  green: 0.68,  blue: 0.80)  // #8CADCC
+    private let lcdAmber      = Color(red: 1.0,   green: 0.690, blue: 0.180) // #FFB02E
 
-    // MARK: Derived sizes
-    private var reelSize: CGFloat   { max(26, screenH * 0.135) }
-    private var heroSize: CGFloat   { max(30, screenH * 0.17) }
-    private var hrSize: CGFloat     { max(30, screenH * 0.155) }
-    private var labelSize: CGFloat  { max(9,  screenH * 0.052) }
-    private var metricSize: CGFloat { max(15, screenH * 0.085) }
+    // MARK: Derived sizes (proportional to physical screen height) — the timer is
+    // the hero, so it gets the lion's share now that the reel band is gone.
+    private var tagSize: CGFloat    { max(9,  screenH * 0.044) }  // SIDE A tag / glyph
+    private var subLabel: CGFloat   { max(10, screenH * 0.050) }  // ELAPSED / WORK 2/8
+    private var heroSize: CGFloat   { max(40, screenH * 0.225) }  // hero number
+    private var vuHeight: CGFloat   { max(8,  screenH * 0.045) }  // VU bar height
+    private var hrSize: CGFloat     { max(28, screenH * 0.160) }  // BPM number
+    private var labelSize: CGFloat  { max(10, screenH * 0.052) }  // DIST/PACE/BPM labels
+    private var metricSize: CGFloat { max(18, screenH * 0.100) }  // DIST/PACE values
 
-    private var isRunning: Bool { !workoutManager.isPaused }
-
-    /// Monotonic spin — halts on pause because elapsedTime stops advancing.
-    /// ~30°/s (1 rev / ~12s), slowed from 90°/s per P2-E for vestibular comfort
-    /// and battery on the small watch reels.
-    private var spinDegrees: Double { workoutManager.elapsedTime * 0.0833 * 360.0 }
-
-    /// 0 at workout start → 1 at "end of side" — drives the differential reel
-    /// size cue (supply shrinks, take-up grows). Free-run: nominal one-hour tape;
-    /// interval: whole-workout step progress (one continuous wind, not per-step).
-    private var tapeProgress: Double {
-        if isInterval, let engine = workoutManager.intervalEngine, engine.totalStepsCount > 0 {
-            return min(1.0, Double(engine.currentStepIndex) / Double(engine.totalStepsCount))
-        }
-        let nominal: TimeInterval = 3600
-        return min(1.0, workoutManager.elapsedTime / nominal)
-    }
-
-    /// Supply reel (left): fat → thin as the tape unwinds (1.0 → 0.7).
-    private var supplyScale: CGFloat { 1.0 - 0.3 * CGFloat(tapeProgress) }
-    /// Take-up reel (right): thin → fat as the tape winds on (0.7 → 1.0).
-    private var takeUpScale: CGFloat { 0.7 + 0.3 * CGFloat(tapeProgress) }
+    private var isPaused: Bool { workoutManager.isPaused }
 
     var body: some View {
-        VStack(spacing: 3) {
-            jCardStrip
-            cassetteWindowBand
-            hrRow
-            metricsRow
+        VStack(alignment: .leading, spacing: screenH * 0.010) {
+            topBand          // SIDE A ▸ WORK 3/8 — rides up beside the system clock
             Spacer(minLength: 0)
+            heroRow
+            Spacer(minLength: 0)
+            hrLine
+            metricLine("DIST", FormattingUtils.formatDistance(workoutManager.totalDistance),
+                       a11y: "Distance \(FormattingUtils.formatDistance(workoutManager.totalDistance))")
+            metricLine("PACE", workoutManager.currentPace.map { FormattingUtils.formatPace($0) } ?? "\u{2014}",
+                       a11y: "Pace \(workoutManager.currentPace == nil ? "no data" : FormattingUtils.formatPace(workoutManager.currentPace))")
         }
-        .padding(.horizontal, ShuttlXSpacing.xs)
-        .padding(.top, 22)   // clears the 2 top corner screws drawn by the shell scene
+        .padding(.horizontal, 10)
         .padding(.bottom, 4)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .ignoresSafeArea(.container, edges: .top)   // let SIDE A reach the clock line
+        .background(lcdWell.ignoresSafeArea())
+        .onChange(of: workoutManager.heartRate) { _, bpm in
+            handleZoneHaptic(bpm: bpm)
+        }
     }
 
-    // MARK: J-card label strip
+    // MARK: 1. Top band — SIDE A tag + transport glyph, top-left beside the clock
 
-    private var jCardStrip: some View {
-        HStack(spacing: 4) {
+    private var topBand: some View {
+        HStack(spacing: 5) {
             Text("SIDE A")
-                .font(.system(size: labelSize - 1, weight: .heavy, design: .monospaced))
+                .font(.system(size: tagSize, weight: .heavy, design: .monospaced))
                 .foregroundStyle(labelInk)
-                .padding(.horizontal, 3)
+                .padding(.horizontal, 4)
                 .padding(.vertical, 1)
-                .overlay(RoundedRectangle(cornerRadius: 2)
-                    .stroke(labelInk.opacity(0.5), lineWidth: 1))
-
-            Circle()
-                .fill(workoutManager.isPaused ? amberPause : ledRed)
-                .frame(width: 5, height: 5)
-
-            Text(workoutManager.workoutName.uppercased())
-                .font(.system(size: labelSize + 1, weight: .heavy, design: .monospaced))
-                .italic()
-                .foregroundStyle(workoutManager.isPaused ? amberPause : labelInk)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .rotationEffect(.degrees(-3))
-
-            Spacer(minLength: 0)
-
-            if workoutManager.isPaused {
-                // Solid amber chip with dark ink (P1-C): the prior stroke-only
-                // outline was ~1.5:1 on cream; solid fill + labelInk ≈ 6:1.
-                Text("PAUSED")
-                    .font(.system(size: labelSize - 1, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(labelInk)
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(RoundedRectangle(cornerRadius: 3)
-                        .fill(amberPause))
-            }
-        }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 3)
-        .background(
-            RoundedRectangle(cornerRadius: 4)
-                .fill(labelPaper.opacity(0.92))
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(workoutManager.isPaused
-            ? "\(workoutManager.workoutName), paused"
-            : workoutManager.workoutName)
-    }
-
-    // MARK: Cassette window band — twin reels + central LCD tape-window
-
-    private var cassetteWindowBand: some View {
-        HStack(spacing: 4) {
-            // Supply reel (left): unwinds, shrinks over the workout.
-            reel(direction: -1, scale: supplyScale)
-                .frame(width: reelSize, height: reelSize)
-            lcdWindow
-                .frame(maxWidth: .infinity)
-            // Take-up reel (right): winds on, grows over the workout.
-            reel(direction: 1, scale: takeUpScale)
-                .frame(width: reelSize, height: reelSize)
-        }
-    }
-
-    /// Differential reel (P1-1 lite): size-only on watch — supply shrinks, take-up
-    /// grows via `scale`. We deliberately skip the per-reel RPM coupling the iOS
-    /// deck uses (battery + the tiny reel won't read it). The fixed slow spin
-    /// (P2-E) plus the size delta is the cheap, high-impact "tape winding" cue.
-    private func reel(direction: Double, scale: CGFloat) -> some View {
-        Image("MixtapeReel")
-            .resizable()
-            .interpolation(.high)
-            .scaledToFit()
-            .rotationEffect(.degrees(reduceMotion ? 0 : spinDegrees * direction))
-            .animation(reduceMotion ? nil : .linear(duration: 1.0), value: spinDegrees)
-            .scaleEffect(scale)
-            .animation(.easeInOut(duration: 0.6), value: scale)
-            .shadow(color: .black.opacity(0.4), radius: 1)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-    }
-
-    private var lcdWindow: some View {
-        let heroColor = workoutManager.isPaused ? amberPause : heroTint
-        return VStack(spacing: 1) {
-            Text(heroText)
-                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(heroColor)
-                .shadow(color: heroColor.opacity(0.5), radius: 3)
-                .contentTransition(.numericText())
+                .background(Capsule().fill(lcdAmber.opacity(0.88)))
+            Image(systemName: isPaused ? "pause.fill" : "play.fill")
+                .font(.system(size: tagSize * 1.1, weight: .heavy))
+                .foregroundStyle(isPaused ? amberPause : lcdGreen)
+            // Now-playing label: phase word only ("WORK" / "REST" / "ELAPSED").
+            Text(phaseName)
+                .font(.system(size: subLabel, weight: .heavy, design: .monospaced))
+                .foregroundStyle(isPaused ? amberPause : heroTint)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-            Text(heroSubLabel)
-                .font(.system(size: labelSize - 1, weight: .heavy, design: .monospaced))
-                // P2-A: full-opacity amber when paused; lcdGreen.opacity(0.8) when
-                // running (lcdGreenDim on the near-black LCD well was borderline).
-                .foregroundStyle(workoutManager.isPaused ? amberPause : lcdGreen.opacity(0.8))
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            tapeProgressBar
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 6)
-        .padding(.vertical, 4)
-        .frame(maxWidth: .infinity)
-        .background(
-            RoundedRectangle(cornerRadius: 5)
-                .fill(lcdWell)
-                .overlay(RoundedRectangle(cornerRadius: 5)
-                    .stroke(lcdGreenDim.opacity(0.4), lineWidth: 1))
-        )
+        .padding(.leading, 4)         // clear the rounded top-left corner
+        .padding(.top, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(heroA11yLabel)
-        .accessibilityAddTraits(.updatesFrequently)
+        .accessibilityLabel("Side A, \(heroSubLabel), \(isPaused ? "paused" : "playing")")
     }
 
-    private var tapeProgressBar: some View {
-        let barColor = workoutManager.isPaused ? amberPause : heroTint
-        // P3-1 (lite): tint the remaining track red once the tape is nearly out.
-        let trackColor = heroProgress > 0.85 ? ledRed.opacity(0.5) : lcdGreenDim.opacity(0.3)
-        return GeometryReader { proxy in
-            ZStack(alignment: .leading) {
-                Capsule().fill(trackColor)
-                Capsule()
-                    .fill(barColor)
-                    .frame(width: max(0, proxy.size.width * heroProgress))
-                    .animation(.linear(duration: 1), value: heroProgress)
-            }
+    /// Phase label, Mixtape-only walk-run wording. The shared
+    /// `IntervalType.displayName` stays "Work/Rest" for every other screen; here
+    /// we surface the activity ("RUN"/"WALK") to match a walk-run session. Free-run
+    /// has no steps, so it reads "ELAPSED".
+    private var phaseName: String {
+        guard isInterval, let step = workoutManager.intervalEngine?.currentStep else {
+            return "ELAPSED"
         }
-        .frame(height: 5)   // fattened 3 → 5 for glanceability (doubles as the differential-fill confirmation)
+        switch step.type {
+        case .work:     return "RUN"
+        case .rest:     return "WALK"
+        case .warmup:   return "WARM UP"
+        case .cooldown: return "COOL DOWN"
+        }
     }
 
-    // MARK: HR row
 
-    private var hrRow: some View {
+    // MARK: 2. Hero — the timer fills the screen
+
+    private var heroRow: some View {
+        let heroColor = isPaused ? amberPause : heroTint
+        return Text(heroText)
+            .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+            .monospacedDigit()
+            .foregroundStyle(heroColor)
+            .shadow(color: lcdAmber.opacity(isPaused ? 0 : 0.55), radius: heroSize * 0.05)
+            .contentTransition(.numericText())
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(heroA11yLabel)
+            .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    // MARK: 3. HR line — VU bar + zone-tinted BPM + "BPM" (all one row)
+
+    private var hrLine: some View {
         let bpm = workoutManager.heartRate
         let zone = hrCalc.zone(for: Double(bpm))
-        return HStack(spacing: 4) {
-            Text("HR")
-                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                .foregroundStyle(textSecondary)
-            Spacer(minLength: 0)
+        let zoneColor = ShuttlXColor.forHRZone(bpm)
+        return HStack(alignment: .firstTextBaseline, spacing: 6) {
+            MixtapeVUMeter(level: vuLevel(bpm: bpm),
+                           paused: isPaused,
+                           reduceMotion: reduceMotion,
+                           height: vuHeight,
+                           litGreen: lcdGreen,
+                           litAmber: lcdAmber,
+                           litRed: ledRed,
+                           unlit: lcdGreenDim.opacity(0.25),
+                           pausedColor: amberPause)
+                .frame(maxWidth: .infinity)
+                .alignmentGuide(.firstTextBaseline) { $0[.bottom] }
+                .accessibilityHidden(true)
             Text(bpm > 0 ? "\(bpm)" : "\u{2014}")
                 .font(.system(size: hrSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(ShuttlXColor.forHRZone(bpm))
+                .foregroundStyle(zoneColor)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+                .layoutPriority(1)
             Text("BPM")
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(textSecondary)
-            if zone > 0 {
-                Text("Z\(zone)")
-                    .font(.system(size: max(10, labelSize), weight: .bold, design: .monospaced))
-                    .foregroundStyle(ShuttlXColor.forHRZone(bpm).opacity(0.85))
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .overlay(RoundedRectangle(cornerRadius: 3)
-                        .stroke(ShuttlXColor.forHRZone(bpm).opacity(0.5), lineWidth: 1))
-            }
         }
-        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(bpm > 0 ? "\(bpm) beats per minute, Zone \(zone)" : "Heart rate no data")
+        .accessibilityLabel(bpm > 0 ? "\(bpm) beats per minute, Zone \(zone)" : "Heart rate, no data")
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    // MARK: DIST / PACE compact two-up
+    // MARK: 4. DIST / PACE — one readout per line (label left, value right)
 
-    private var metricsRow: some View {
-        HStack(spacing: 8) {
-            compact("DIST", FormattingUtils.formatDistance(workoutManager.totalDistance))
-            compact("PACE", workoutManager.currentPace.map { FormattingUtils.formatPace($0) } ?? "\u{2014}")
-        }
-    }
-
-    private func compact(_ label: String, _ value: String) -> some View {
-        HStack(spacing: 4) {
+    private func metricLine(_ label: String, _ value: String, a11y: String) -> some View {
+        HStack(spacing: 6) {
             Text(label)
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+                .fixedSize()
+            Spacer(minLength: 6)
             Text(value)
                 .font(.system(size: metricSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundStyle(lcdGreen)
                 .lineLimit(1)
-                .minimumScaleFactor(0.4)
+                .minimumScaleFactor(0.5)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) \(value)")
+        .accessibilityLabel(a11y)
+    }
+
+    // MARK: Zone-change haptic (replaces the "Z3" badge)
+    //
+    // Fires a directional Taptic pulse only when the live HR crosses a zone
+    // boundary while running: up on escalation, down on de-escalation. Skipped on
+    // pause and when HR is absent so we never buzz on a 0→real first reading.
+    private func handleZoneHaptic(bpm: Int) {
+        let zone = hrCalc.zone(for: Double(bpm))
+        guard zone > 0, !isPaused else {
+            lastHapticZone = zone
+            return
+        }
+        if lastHapticZone > 0, zone != lastHapticZone {
+            WKInterfaceDevice.current().play(zone > lastHapticZone ? .directionUp : .directionDown)
+        }
+        lastHapticZone = zone
+    }
+
+    /// VU drive level: normalized HR fraction with a floor at 40% of max HR.
+    private func vuLevel(bpm: Int) -> Double {
+        guard bpm > 0 else { return 0 }
+        let maxHR = hrCalc.estimatedMaxHR
+        guard maxHR > 0 else { return 0 }
+        let restApprox = maxHR * 0.40
+        let denom = maxHR - restApprox
+        guard denom > 0 else { return 0 }
+        return min(1.0, max(0.0, (Double(bpm) - restApprox) / denom))
     }
 
     // MARK: Hero value plumbing
 
     private var heroText: String {
         if isInterval, let engine = workoutManager.intervalEngine {
-            return FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining))
+            return trimLeadingZero(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
         }
-        return FormattingUtils.formatTimer(workoutManager.elapsedTime)
+        return trimLeadingZero(FormattingUtils.formatTimer(workoutManager.elapsedTime))
+    }
+
+    /// Drops a single leading zero on the minutes field for the hero only
+    /// ("01:48" → "1:48", "00:48" → "0:48"). Two-digit minutes ("12:30") and
+    /// hour-form times ("1:02:33") are untouched. `formatTimer` itself stays
+    /// `%02d`-padded for every other surface that depends on fixed width.
+    private func trimLeadingZero(_ s: String) -> String {
+        guard s.count >= 2, s.first == "0" else { return s }
+        let second = s[s.index(after: s.startIndex)]
+        return second.isNumber ? String(s.dropFirst()) : s
     }
 
     private var heroSubLabel: String {
@@ -396,19 +352,58 @@ struct MixtapeWatchDeck: View {
         return lcdGreen
     }
 
-    private var heroProgress: Double {
-        if isInterval, let engine = workoutManager.intervalEngine,
-           let step = engine.currentStep, step.duration > 0 {
-            return 1.0 - (engine.currentStepTimeRemaining / step.duration)
-        }
-        let nominal: TimeInterval = 3600
-        return min(1.0, workoutManager.elapsedTime / nominal)
-    }
-
     private var heroA11yLabel: String {
         if isInterval, let engine = workoutManager.intervalEngine {
             return "Time remaining \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), \(heroSubLabel)"
         }
         return "Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))"
+    }
+}
+
+// MARK: - VU meter (§4)
+//
+// 12-segment horizontal peak meter mapping HR effort cold-green → hot-red.
+// Lit count = round(level * 12); per-segment color by index band. Paused freezes
+// the count and recolors all lit segments amber. The only data-driven motion is a
+// 0.5s ease on litN changes (event-driven off HR ticks, halts when steady / paused
+// / Reduce Motion). Decorative — accessibilityHidden upstream.
+private struct MixtapeVUMeter: View {
+    let level: Double            // 0…1 HR effort
+    let paused: Bool
+    let reduceMotion: Bool
+    let height: CGFloat
+    let litGreen: Color
+    let litAmber: Color
+    let litRed: Color
+    let unlit: Color
+    let pausedColor: Color
+
+    private let segments = 12
+
+    private var litN: Int { Int((level * Double(segments)).rounded()) }
+
+    var body: some View {
+        GeometryReader { proxy in
+            let spacing: CGFloat = 2
+            let segW = max(1, (proxy.size.width - spacing * CGFloat(segments - 1)) / CGFloat(segments))
+            HStack(spacing: spacing) {
+                ForEach(0..<segments, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: height * 0.3)
+                        .fill(color(for: i))
+                        .frame(width: segW, height: height)
+                }
+            }
+            .frame(maxHeight: .infinity, alignment: .center)
+        }
+        .frame(height: height)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.5), value: litN)
+    }
+
+    private func color(for i: Int) -> Color {
+        guard i < litN else { return unlit }
+        if paused { return pausedColor }
+        if i >= 10 { return litRed }       // peak / clip
+        if i >= 7  { return litAmber }     // working
+        return litGreen                    // cool
     }
 }
