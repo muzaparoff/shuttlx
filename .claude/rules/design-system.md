@@ -20,7 +20,6 @@ Each theme owns ONE signature shape, reused across surfaces so the whole app fee
 | Mixtape | cassette spool (circle + spokes) |
 | Arcade | 7-segment digit block / pixel border |
 | Classic Radio | tuning dial arc + needle |
-| VU Meter | analog needle arc + dB ticks |
 | Neovim | block cursor / gutter stripe |
 | FM Tuner | LCD segment bar / signal dots |
 
@@ -35,7 +34,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 
 ## Theme System
 
-- 8 selectable themes: **Clean** (default), **Synthwave**, **Mixtape**, **Arcade**, **Classic Radio**, **VU Meter**, **Neovim**, **FM Tuner**
+- 7 selectable themes: **Clean** (default), **Synthwave**, **Mixtape**, **Arcade**, **Classic Radio**, **Neovim**, **FM Tuner**
 - `ThemeManager.shared` is the `@Observable` singleton — injected via `.environment(ThemeManager.shared)` at app root
 - **Theme switching**: always call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
 - `current` is a stored `@Observable` property (not computed) — ensures SwiftUI re-renders on theme change
@@ -47,14 +46,14 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 ## Screen Backgrounds
 
 - Use `.themedScreenBackground()` on every major screen's outermost container (NavigationStack, ScrollView, List, TabView)
-- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), blue body texture (Mixtape), CRT scanlines (Arcade), warm brown grain (Classic Radio), amber glow panels (VU Meter), Gruvbox solid + gutter stripe (Neovim), navy solid + chrome overlay (FM Tuner)
-- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.mixtapeBackground()`, `.arcadeCRTBackground()`, `.classicRadioBackground()`, `.vuMeterBackground()`, `.neovimBackground()`, `.fmTunerBackground()`
+- Switches automatically per active theme: mesh gradient (Clean), horizon grid (Synthwave), blue body texture (Mixtape), CRT scanlines (Arcade), warm brown grain (Classic Radio), Gruvbox solid + gutter stripe (Neovim), navy solid + chrome overlay (FM Tuner)
+- Background modifiers: `.cleanMeshBackground()`, `.synthwaveHorizonBackground()`, `.mixtapeBackground()`, `.arcadeCRTBackground()`, `.classicRadioBackground()`, `.neovimBackground()`, `.fmTunerBackground()`
 - `MeshGradient` is iOS-only — watchOS Clean theme uses `LinearGradient` fallback
 - All background overlays use `.allowsHitTesting(false)` and `.ignoresSafeArea()`
 
 ## Cards & Containers
 
-- Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel/tape/meter/terminal)
+- Use `.themedCard()` for all card containers — adapts per theme (glass/neon/lcd/pixel/tape/terminal)
 - `.glassBackground(cornerRadius:)` still available as a fallback for Clean-only contexts
 - Theme-specific modifiers: `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
 - FM Tuner cards use `.lcd` CardStyle (shared with Mixtape)
@@ -118,7 +117,7 @@ Each theme renders a unique animated **hero** element during the active-workout 
 - **File structure**: Each theme owns its own `Theme/Themes/<Name>Hero.swift` file (iOS: `ShuttlX/Theme/Themes/`, watch: `ShuttlX Watch App/Theme/Themes/`)
 - **Watch Chrome Pattern**: Overlays placed inside the ZStack of `fullWorkoutDisplayTab` (below metrics, above background) — all overlays use `.allowsHitTesting(false)` to avoid blocking tap controls
 - **Controller Reuse**: all heroes access the same `controller` / `workoutManager` data (HR, pace, distance, etc.) — no controller logic lives in theme files
-- **6 Themes with Heroes**: Synthwave (speedometer needle + grid), Mixtape (dual spinning reels + tape counter), Arcade (7-segment score + INSERT COIN blink), Classic Radio (tuning needle sweep), VU Meter (dual vertical needles + dB scale), Neovim (command-line status line with elapsed time register)
+- **5 Themes with Heroes**: Synthwave (speedometer needle + grid), Mixtape (dual spinning reels + tape counter), Arcade (7-segment score + INSERT COIN blink), Classic Radio (tuning needle sweep), Neovim (command-line status line with elapsed time register)
 - **Clean & FM Tuner**: Clean uses minimal hero (optional), FM Tuner uses existing `FMTunerHeader` + `FMTunerVUColumn` pattern
 
 ## iOS Timer Screen

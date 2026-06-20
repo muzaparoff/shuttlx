@@ -284,6 +284,10 @@ struct TrainingView: View {
                     highIntensityWarningView(labelSize: labelSize)
                 }
 
+                if workoutManager.noHeartRateDetected {
+                    noHeartRateBanner(labelSize: labelSize)
+                }
+
                 // Tertiary two-up rows. SPM (cadence) was removed from the live
                 // timer — it carried little decision value mid-run and the
                 // CMPedometer-derived value is warmup-laggy/unreliable (see
@@ -321,7 +325,7 @@ struct TrainingView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : 0)
-            .padding(.trailing, themeManager.current.id == "vumeter" ? 18 : 0)
+            .padding(.trailing, 0)
             .padding(.top, watchTimerTopPadding(themeManager.current.id))
             .padding(.bottom, watchTimerBottomPadding(themeManager.current.id))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -363,17 +367,6 @@ struct TrainingView: View {
             // the dial strip.
             if themeManager.current.id == "classicradio" {
                 ClassicRadioTimerOverlay(workoutManager: workoutManager)
-            }
-
-            // VU Meter chrome — non-interactive vertical VU strip pinned to
-            // the right edge with an HR-driven needle and a peak-hold LED at
-            // the top. The iPhone variant's horizontal arc, secondary step-
-            // countdown needle, side strips, and "rec level" pace caption
-            // are all cut for the watch (see VUMeterTimerOverlay header).
-            // The metrics VStack above gets an 18pt trailing inset so the HR
-            // row and tertiary metrics clear the strip.
-            if themeManager.current.id == "vumeter" {
-                VUMeterTimerOverlay(workoutManager: workoutManager)
             }
 
             // Neovim chrome — non-interactive nvim buffer chrome: top tabline
@@ -757,6 +750,34 @@ struct TrainingView: View {
         .animation(.easeInOut(duration: 0.4), value: isHighIntensityWarning)
         .accessibilityLabel("Heart rate high — ease off. Heart rate above 70 percent of maximum.")
         .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    /// Non-blocking banner shown when no HR sample has arrived after the grace
+    /// period. HealthKit never reports read-permission denial, so a missing HR
+    /// reading is otherwise invisible to the user. We can't deep-link straight to
+    /// the per-app Health permissions on watchOS, so the copy tells the user
+    /// where to check (wrist fit + iPhone Health → ShuttlX).
+    private func noHeartRateBanner(labelSize: CGFloat) -> some View {
+        HStack {
+            Spacer()
+            Text("No heart rate — check wrist & Health access")
+                .font(.system(size: max(9, labelSize * 0.8), weight: .bold, design: .monospaced))
+                .foregroundColor(ShuttlXColor.ctaWarning)
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(ShuttlXColor.ctaWarning, lineWidth: 1)
+                )
+            Spacer()
+        }
+        .transition(.opacity.combined(with: .scale(scale: 0.9)))
+        .animation(.easeInOut(duration: 0.4), value: workoutManager.noHeartRateDetected)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("No heart rate detected. Check that the watch is snug on your wrist and that ShuttlX has heart rate access in the Health app.")
     }
 
     private var distanceText: String {

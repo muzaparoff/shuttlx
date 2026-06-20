@@ -563,7 +563,6 @@ struct SettingsView: View {
         case "mixtape": return "Portable player"
         case "arcade": return "8-bit energy"
         case "classicradio": return "Warm analog tape"
-        case "vumeter": return "Hi-fi dashboard"
         case "neovim": return "Code editor"
         case "fmtuner": return "Deep navy LCD"
         default: return ""

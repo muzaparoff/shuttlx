@@ -196,10 +196,7 @@ struct AnalyticsView: View {
             Text("Weekly Volume")
                 .font(ShuttlXFont.cardTitle)
 
-            // VU Meter theme: use horizontal dB strip layout
-            if chartStyle.barShape == .dbMeter && !weeklyTrend.isEmpty {
-                vuMeterVolumeLayout(chartStyle: chartStyle)
-            } else if weeklyTrend.isEmpty {
+            if weeklyTrend.isEmpty {
                 ThemedBarChart.emptyState(chartStyle: chartStyle, height: 160)
             } else {
                 ThemedBarChart(
@@ -234,30 +231,6 @@ struct AnalyticsView: View {
         .themedCard(accent: ShuttlXColor.calories, headerLabel: "WEEKLY VOLUME")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Weekly training volume: \(a11yLabel.isEmpty ? "no data" : a11yLabel)")
-    }
-
-    /// VU Meter special layout: horizontal dB strips, one per week
-    @ViewBuilder
-    private func vuMeterVolumeLayout(chartStyle: ThemeChartStyle) -> some View {
-        let maxDuration = weeklyTrend.map { $0.totalDuration }.max() ?? 1
-        VStack(alignment: .leading, spacing: 6) {
-            ForEach(weeklyTrend) { week in
-                HStack(spacing: 8) {
-                    Text(week.weekLabel)
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(chartStyle.axisLabelColor)
-                        .frame(width: 28, alignment: .trailing)
-                        .accessibilityHidden(true)
-
-                    VUMeterDBStrip(
-                        fillFraction: maxDuration > 0 ? week.totalDuration / maxDuration : 0,
-                        amberColor: chartStyle.accentColor,
-                        redZoneColor: chartStyle.accentColor,
-                        height: 18
-                    )
-                }
-            }
-        }
     }
 
     // MARK: - VO2max Card
@@ -403,23 +376,12 @@ struct AnalyticsView: View {
                             .font(ShuttlXFont.cardCaption)
                             .frame(width: 70, alignment: .leading)
 
-                        if chartStyle.barShape == .dbMeter {
-                            // VU Meter: segmented strip
-                            VUMeterDBStrip(
-                                fillFraction: zone.percentage / 100.0,
-                                amberColor: chartStyle.accentColor,
-                                redZoneColor: chartStyle.accentColor,
-                                height: 20
-                            )
-                        } else {
-                            // All other themes: RoundedRectangle with themed color
-                            GeometryReader { geo in
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(paceZoneBarColor(zone: zone.zone, chartStyle: chartStyle))
-                                    .frame(width: max(geo.size.width * zone.percentage / 100, 4))
-                            }
-                            .frame(height: 20)
+                        GeometryReader { geo in
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(paceZoneBarColor(zone: zone.zone, chartStyle: chartStyle))
+                                .frame(width: max(geo.size.width * zone.percentage / 100, 4))
                         }
+                        .frame(height: 20)
 
                         Text(String(format: "%.0f%%", zone.percentage))
                             .font(ShuttlXFont.microLabel)

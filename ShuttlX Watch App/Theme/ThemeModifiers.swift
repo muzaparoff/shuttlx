@@ -228,7 +228,6 @@ extension View {
         case "mixtape":      self.mixtapeBackground()
         case "arcade":       self.arcadeCRTBackground()
         case "classicradio": self.classicRadioBackground()
-        case "vumeter":      self.vuMeterBackground()
         case "neovim":       self.neovimBackground()
         case "fmtuner":      self.fmTunerBackground()
         default:             self
@@ -416,35 +415,6 @@ extension View {
         )
     }
 
-    // MARK: - VU Meter Background
-
-    func vuMeterBackground() -> some View {
-        self
-            .background(
-                ZStack {
-                    Color(red: 0.10, green: 0.09, blue: 0.06)
-                    // Horizontal panel lines
-                    Canvas { context, size in
-                        let lineColor = Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.02)
-                        for y in stride(from: CGFloat(0), to: size.height, by: 6) {
-                            var path = Path()
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: size.width, y: y))
-                            context.stroke(path, with: .color(lineColor), lineWidth: 0.5)
-                        }
-                    }
-                    // Amber radial glow
-                    RadialGradient(
-                        colors: [Color(red: 0.91, green: 0.63, blue: 0.19).opacity(0.06), .clear],
-                        center: .center,
-                        startRadius: 30,
-                        endRadius: 200
-                    )
-                }
-                .allowsHitTesting(false)
-                .ignoresSafeArea()
-            )
-    }
 }
 
 // MARK: - Terminal Status Line (Neovim)

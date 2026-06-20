@@ -27,6 +27,51 @@ struct ShuttlXApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if let snapshot = ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT"] {
+                snapshotRoot(theme: snapshot)
+            } else {
+                appRoot
+            }
+            #else
+            appRoot
+            #endif
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                dataManager.loadSessionsFromAppGroup()
+                sharedDataManager.reconcileWithDataManager()
+                sharedDataManager.reconcileSessionIDs()
+                if authManager.isSignedIn {
+                    cloudKitSync.performFullSync(dataManager: dataManager)
+                }
+                Task {
+                    await subscriptionManager.refreshEntitlementStatus()
+                }
+            }
+        }
+    }
+
+    #if DEBUG
+    /// Snapshot harness: renders a single theme's workout timer hero at true
+    /// device size with representative mock data, so `simctl io screenshot`
+    /// captures the genuine SwiftUI output. Activated only via the
+    /// `SHUTTLX_SNAPSHOT=<themeID>` launch environment variable.
+    @ViewBuilder
+    private func snapshotRoot(theme: String) -> some View {
+        let controller = workoutController
+        iPhoneWorkoutTimerView(controller: controller)
+            .environment(themeManager)
+            .environmentObject(dataManager)
+            .task {
+                themeManager.selectTheme(theme)
+                controller.applyPreviewSnapshot()
+            }
+    }
+    #endif
+
+    @ViewBuilder
+    private var appRoot: some View {
             Group {
                 if isFirstLaunch {
                     OnboardingView(isFirstLaunch: $isFirstLaunch)
@@ -82,19 +127,5 @@ struct ShuttlXApp: App {
                     break
                 }
             }
-        }
-        .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                dataManager.loadSessionsFromAppGroup()
-                sharedDataManager.reconcileWithDataManager()
-                sharedDataManager.reconcileSessionIDs()
-                if authManager.isSignedIn {
-                    cloudKitSync.performFullSync(dataManager: dataManager)
-                }
-                Task {
-                    await subscriptionManager.refreshEntitlementStatus()
-                }
-            }
-        }
     }
 }

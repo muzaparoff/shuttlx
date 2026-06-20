@@ -18,11 +18,7 @@ struct HRZoneChart: View {
                     .foregroundStyle(.secondary)
                     .frame(height: 120)
                     .frame(maxWidth: .infinity)
-            } else if chartStyle.barShape == .dbMeter {
-                // VU Meter: horizontal segmented dB strips
-                vuMeterZoneLayout
             } else {
-                // All other themes: Swift Charts horizontal bar
                 swiftChartsZones
             }
         }
@@ -62,37 +58,6 @@ struct HRZoneChart: View {
         }
         .frame(height: CGFloat(zones.count) * 32 + 20)
         .accessibilityHidden(true)
-    }
-
-    // MARK: - VU Meter: dB segment strips
-
-    private var vuMeterZoneLayout: some View {
-        let maxPercent = zones.map { $0.percentage }.max() ?? 100
-        return VStack(alignment: .leading, spacing: 6) {
-            ForEach(zones) { zone in
-                HStack(spacing: 8) {
-                    Text(zone.zone)
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(chartStyle.axisLabelColor)
-                        .frame(width: 44, alignment: .trailing)
-                        .accessibilityHidden(true)
-
-                    VUMeterDBStrip(
-                        fillFraction: maxPercent > 0 ? zone.percentage / maxPercent : 0,
-                        amberColor: chartStyle.accentColor,
-                        redZoneColor: chartStyle.accentColor,
-                        height: 18
-                    )
-
-                    Text(String(format: "%.0f%%", zone.percentage))
-                        .font(.system(size: 8, design: .monospaced))
-                        .foregroundStyle(chartStyle.axisLabelColor)
-                        .frame(width: 28, alignment: .trailing)
-                        .monospacedDigit()
-                        .accessibilityHidden(true)
-                }
-            }
-        }
     }
 
     // MARK: - Helpers

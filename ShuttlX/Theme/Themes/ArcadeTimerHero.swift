@@ -44,59 +44,75 @@ struct ArcadeTimerHero: View {
     private let cyanScore      = Color(red: 0.00, green: 0.85, blue: 1.00)  // hi-score value
     private let magentaAccent  = Color(red: 1.00, green: 0.20, blue: 0.80)  // pause/special
 
+    // Handheld (GBC-era) skin palette — generic shapes + colour only, no trademark.
+    private let bodyTop   = Color(red: 0.525, green: 0.459, blue: 0.812)  // #8675cf
+    private let bodyMid   = Color(red: 0.341, green: 0.290, blue: 0.612)  // #574a9c
+    private let bodyBot   = Color(red: 0.239, green: 0.196, blue: 0.459)  // #3d3275
+    private let bodyEdge  = Color(red: 0.169, green: 0.137, blue: 0.337)  // #2b2356 (embossed dark)
+    private let bodyHi    = Color(red: 0.702, green: 0.651, blue: 0.910)  // #b3a6e8 (embossed light)
+    private let bezelGrey = Color(red: 0.137, green: 0.137, blue: 0.157)  // #23232b
+    private let lcdNavy   = Color(red: 0.024, green: 0.071, blue: 0.106)  // #06121b
+    private let lcdNavyLt = Color(red: 0.047, green: 0.133, blue: 0.188)  // #0c2230
+    private let btnMag1   = Color(red: 1.00,  green: 0.302, blue: 0.553)  // #ff4d8d
+    private let btnMag2   = Color(red: 0.757, green: 0.114, blue: 0.369)  // #c11d5e
+    private let dpadLt    = Color(red: 0.263, green: 0.263, blue: 0.310)  // #43434f
+    private let dpadDk    = Color(red: 0.063, green: 0.063, blue: 0.082)  // #101015
+
+    private var bodyGradient: LinearGradient {
+        LinearGradient(colors: [bodyTop, bodyMid, bodyBot],
+                       startPoint: .init(x: 0.15, y: 0), endPoint: .init(x: 0.7, y: 1))
+    }
+    private var lcdGradient: RadialGradient {
+        RadialGradient(colors: [lcdNavyLt, lcdNavy], center: .init(x: 0.32, y: 0.2),
+                       startRadius: 0, endRadius: 420)
+    }
+    private var bezelGradient: LinearGradient {
+        LinearGradient(colors: [Color(red: 0.165, green: 0.165, blue: 0.196), bezelGrey,
+                                Color(red: 0.086, green: 0.086, blue: 0.110)],
+                       startPoint: .top, endPoint: .bottom)
+    }
+    private var magentaButtonGradient: RadialGradient {
+        RadialGradient(colors: [btnMag1, btnMag2, Color(red: 0.478, green: 0.059, blue: 0.227)],
+                       center: .init(x: 0.36, y: 0.3), startRadius: 0, endRadius: 30)
+    }
+    private var dpadGradient: LinearGradient {
+        LinearGradient(colors: [dpadLt, Color(red: 0.149, green: 0.149, blue: 0.180), dpadDk],
+                       startPoint: .top, endPoint: .bottom)
+    }
+    private var pillGradient: LinearGradient {
+        LinearGradient(colors: [Color(red: 0.227, green: 0.200, blue: 0.345),
+                                Color(red: 0.141, green: 0.122, blue: 0.235)],
+                       startPoint: .top, endPoint: .bottom)
+    }
+
     // MARK: - Body
 
     var body: some View {
         ZStack {
-            // CRT background — use the existing arcadeCRTBackground via the
-            // theme modifier, but we also draw the cabinet body here.
-            cabinetBlack.ignoresSafeArea()
+            // Translucent grape-purple handheld body (generic GBC-era shell)
+            handheldBodyLayer
+                .ignoresSafeArea()
 
-            // Static scanline overlay (always-on, very faint — theme flavour)
-            Canvas { ctx, size in
-                drawGlobalScanlines(ctx: ctx, size: size)
-            }
-            .ignoresSafeArea()
-            .allowsHitTesting(false)
-
-            // Foreground composition
             VStack(spacing: 0) {
-                // 1UP / HI corner bar
-                scoreBoardHeader
+                // Recessed LCD "game screen" carrying all live workout data
+                lcdScreenPanel
                     .padding(.horizontal, 16)
-                    .padding(.top, 10)
-                    .padding(.bottom, 6)
+                    .padding(.top, 14)
 
-                // HI-SCORE banner + INSERT COIN blink
-                bannerRow
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 4)
+                // Embossed generic wordmark under the screen (our brand, no trademark)
+                wordmark
+                    .padding(.top, 12)
 
-                // 7-segment digit hero in a pixel-border box
-                digitHeroBox
-                    .padding(.horizontal, 16)
+                Spacer(minLength: 10)
 
-                // Interval power-bar or step dots
-                if controller.mode == .interval {
-                    intervalDotsRow
-                        .padding(.horizontal, 16)
-                        .padding(.top, 6)
-                }
+                // Molded control deck — D-pad + round A/B buttons + cancel pill
+                controlDeck
+                    .padding(.horizontal, 18)
 
                 Spacer(minLength: 0)
-
-                // Four score-readout metric boxes
-                scoreMetricStrip
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 10)
-
-                // Controls
-                arcadeControlsBar
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 8)
             }
+            .padding(.bottom, 8)
         }
-        .ignoresSafeArea(edges: .top)
         .alert("Finish Workout", isPresented: $showingFinishConfirmation) {
             Button("Save & Finish") {
                 _ = controller.finish()
@@ -183,18 +199,18 @@ struct ArcadeTimerHero: View {
         VStack(alignment: .trailing, spacing: 0) {
             Text("HI")
                 .font(.system(size: 10, weight: .heavy, design: .monospaced))
-                .foregroundStyle(cyanScore)
-            Text(FormattingUtils.formatTimer(controller.elapsedTime))
+                .foregroundStyle(phosphorGreen)
+            Text(String(format: "%05d", controller.totalSteps))
                 .font(.system(size: 18, weight: .heavy, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(cyanScore)
+                .foregroundStyle(phosphorGreen)
                 .contentTransition(.numericText())
-            Text("ELAPSED")
+            Text("STEPS")
                 .font(.system(size: 8, weight: .heavy, design: .monospaced))
-                .foregroundStyle(cyanScore.opacity(0.7))
+                .foregroundStyle(phosphorGreen.opacity(0.7))
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(controller.elapsedTime))")
+        .accessibilityLabel("\(controller.totalSteps) steps")
     }
 
     // MARK: - Banner row (HI-SCORE ★ or INSERT COIN blink)
@@ -367,7 +383,7 @@ struct ArcadeTimerHero: View {
             scoreBox(label: "HR", value: hrScoreValue, color: hrScoreColor)
             scoreBox(label: "DIST", value: FormattingUtils.formatDistance(controller.totalDistance), color: phosphorGreen)
             scoreBox(label: "PACE", value: paceScoreValue, color: cyanScore)
-            scoreBox(label: "STEP", value: "\(controller.totalSteps)", color: coinYellow)
+            scoreBox(label: "SPM", value: controller.currentCadence > 0 ? "\(controller.currentCadence)" : "---", color: magentaAccent)
         }
     }
 
@@ -399,80 +415,210 @@ struct ArcadeTimerHero: View {
         .accessibilityLabel("\(label): \(value)")
     }
 
-    // MARK: - Controls bar
+    // MARK: - Handheld body layer
 
-    private var arcadeControlsBar: some View {
-        HStack(spacing: 10) {
-            // Cancel — xmark in pixel-border circle
-            arcadeButton(symbol: "xmark", a11yLabel: "Cancel workout", a11yHint: "Ends without saving", color: phosphorGreen.opacity(0.7), isWide: false) {
-                showingCancelConfirmation = true
-            }
-
-            // Skip step (interval only)
-            if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
-                arcadeButton(symbol: "forward.end.fill", a11yLabel: "Skip step", a11yHint: "Advances to the next step", color: cyanScore, isWide: false) {
-                    controller.skipStep()
-                }
-            }
-
-            // Pause / Resume — primary wide
-            Button {
-                if controller.isPaused { controller.resume() } else { controller.pause() }
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
-                        .font(.title2.weight(.heavy))
-                    Text(controller.isPaused ? "CONTINUE" : "PAUSE")
-                        .font(.system(.subheadline, design: .monospaced).weight(.heavy))
-                        .tracking(1)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 56)
-                .background(
-                    ZStack {
-                        (controller.isPaused ? coinYellow : phosphorGreen).opacity(0.85)
-                        Canvas { ctx, size in
-                            drawPixelBox(ctx: ctx, size: size,
-                                         borderColor: controller.isPaused ? coinYellow : phosphorGreen)
-                        }
-                    }
-                )
-                .foregroundStyle(cabinetBlack)
-            }
-            .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
-
-            // Finish — checkmark in pixel-border circle (player-red)
-            arcadeButton(symbol: "checkmark", a11yLabel: "Finish workout", a11yHint: "Saves and ends", color: playerRed, isWide: false) {
-                showingFinishConfirmation = true
-            }
+    /// Translucent grape-purple shell that fills the screen behind the LCD and
+    /// control deck. Gradient + a soft edge vignette read as molded plastic.
+    private var handheldBodyLayer: some View {
+        ZStack {
+            bodyGradient
+            // diagonal sheen on the upper-left
+            LinearGradient(colors: [Color.white.opacity(0.14), .clear],
+                           startPoint: .topLeading, endPoint: .init(x: 0.35, y: 0.4))
+            // edge darkening
+            RadialGradient(colors: [.clear, Color.black.opacity(0.45)],
+                           center: .center, startRadius: 200, endRadius: 520)
         }
     }
 
+    // MARK: - LCD screen panel
+
+    /// The recessed "game screen": a grey bezel frame around navy LCD glass that
+    /// carries every live metric. The existing scoreboard / 7-segment / metric
+    /// views render unchanged inside it — only the surround is new.
+    private var lcdScreenPanel: some View {
+        VStack(spacing: 8) {
+            scoreBoardHeader
+            bannerRow
+            digitHeroBox
+            if controller.mode == .interval {
+                intervalDotsRow
+            }
+            scoreMetricStrip
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .background(
+            ZStack {
+                lcdGradient
+                Canvas { ctx, size in drawGlobalScanlines(ctx: ctx, size: size) }
+                    .opacity(0.7)
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(cyanScore.opacity(0.25), lineWidth: 1)
+            }
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .padding(8) // bezel thickness
+        .background(
+            RoundedRectangle(cornerRadius: 18)
+                .fill(bezelGradient)
+                .overlay(RoundedRectangle(cornerRadius: 18).strokeBorder(Color.black.opacity(0.55), lineWidth: 1))
+        )
+        .shadow(color: .black.opacity(0.4), radius: 7, x: 0, y: 3)
+    }
+
+    // MARK: - Embossed wordmark
+
+    private var wordmark: some View {
+        VStack(spacing: 1) {
+            Text("SHUTTLX")
+                .font(.system(size: 22, weight: .black, design: .monospaced))
+                .tracking(2)
+                .foregroundStyle(bodyEdge.opacity(0.9))
+                .shadow(color: bodyHi.opacity(0.5), radius: 0, x: 0.5, y: -0.5)
+            Text("INTERVAL SYSTEM")
+                .font(.system(size: 9, weight: .bold, design: .monospaced))
+                .tracking(4)
+                .foregroundStyle(bodyEdge.opacity(0.7))
+        }
+        .accessibilityHidden(true)
+    }
+
+    // MARK: - Control deck
+
+    /// D-pad (left, skip) · cancel pill + speaker (center) · A/B round buttons
+    /// (right: pause/resume + finish). All four real transport actions remain
+    /// present and individually accessible — only the styling is the handheld
+    /// deck. Functional buttons, not decoration.
+    private var controlDeck: some View {
+        HStack(alignment: .center, spacing: 0) {
+            dPadControl
+            Spacer(minLength: 0)
+            VStack(spacing: 14) {
+                cancelPill
+                speakerGrille
+            }
+            Spacer(minLength: 0)
+            abButtons
+        }
+        .frame(height: 150)
+    }
+
+    private var dPadControl: some View {
+        let skippable = controller.mode == .interval && controller.intervalEngine?.isComplete == false
+        return Button {
+            if skippable { controller.skipStep() }
+        } label: {
+            VStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(Color.black.opacity(0.12)).frame(width: 116, height: 116)
+                    RoundedRectangle(cornerRadius: 8).fill(dpadGradient).frame(width: 30, height: 100)
+                    RoundedRectangle(cornerRadius: 8).fill(dpadGradient).frame(width: 100, height: 30)
+                    Circle().fill(dpadDk)
+                        .frame(width: 22, height: 22)
+                        .overlay(Circle().strokeBorder(dpadLt.opacity(0.6), lineWidth: 1))
+                }
+                .frame(width: 116, height: 116)
+                Text("SKIP STEP")
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .tracking(1.5)
+                    .foregroundStyle(bodyEdge.opacity(skippable ? 0.85 : 0.35))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!skippable)
+        .accessibilityLabel("Skip step")
+        .accessibilityHint("Advances to the next interval step")
+    }
+
+    private var abButtons: some View {
+        ZStack {
+            // B (lower-left) — FINISH
+            roundDeckButton(
+                symbol: "checkmark",
+                caption: "FINISH",
+                a11yLabel: "Finish workout",
+                a11yHint: "Saves and ends the workout"
+            ) { showingFinishConfirmation = true }
+                .offset(x: -30, y: 26)
+
+            // A (upper-right) — PAUSE / RESUME
+            roundDeckButton(
+                symbol: controller.isPaused ? "play.fill" : "pause.fill",
+                caption: controller.isPaused ? "RESUME" : "PAUSE",
+                a11yLabel: controller.isPaused ? "Resume workout" : "Pause workout",
+                a11yHint: ""
+            ) {
+                if controller.isPaused { controller.resume() } else { controller.pause() }
+            }
+                .offset(x: 22, y: -18)
+        }
+        .frame(width: 150, height: 140)
+    }
+
     @ViewBuilder
-    private func arcadeButton(
+    private func roundDeckButton(
         symbol: String,
+        caption: String,
         a11yLabel: String,
         a11yHint: String,
-        color: Color,
-        isWide: Bool,
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Image(systemName: symbol)
-                .font(.title3.weight(.heavy))
-                .frame(width: 56, height: 56)
-                .background(
-                    ZStack {
-                        cabinetPanel
-                        Canvas { ctx, size in
-                            drawPixelBox(ctx: ctx, size: size, borderColor: color)
-                        }
-                    }
-                )
-                .foregroundStyle(color)
+            VStack(spacing: 5) {
+                ZStack {
+                    Circle().fill(Color(red: 0.102, green: 0.078, blue: 0.188)) // socket
+                        .frame(width: 56, height: 56)
+                    Circle().fill(magentaButtonGradient)
+                        .frame(width: 50, height: 50)
+                        .overlay(
+                            Ellipse().fill(Color.white.opacity(0.35))
+                                .frame(width: 18, height: 11)
+                                .offset(x: -7, y: -10)
+                        )
+                    Image(systemName: symbol)
+                        .font(.system(size: 18, weight: .black))
+                        .foregroundStyle(Color(red: 0.227, green: 0.039, blue: 0.118))
+                }
+                Text(caption)
+                    .font(.system(size: 8, weight: .heavy, design: .monospaced))
+                    .tracking(1.5)
+                    .foregroundStyle(bodyEdge.opacity(0.85))
+            }
         }
+        .buttonStyle(.plain)
         .accessibilityLabel(a11yLabel)
         .accessibilityHint(a11yHint)
+    }
+
+    private var cancelPill: some View {
+        Button { showingCancelConfirmation = true } label: {
+            Text("CANCEL")
+                .font(.system(size: 10, weight: .heavy, design: .monospaced))
+                .tracking(2)
+                .foregroundStyle(bodyHi.opacity(0.85))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Capsule().fill(pillGradient)
+                    .overlay(Capsule().strokeBorder(Color.black.opacity(0.4), lineWidth: 1)))
+                .rotationEffect(.degrees(-12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Cancel workout")
+        .accessibilityHint("Ends the workout without saving")
+    }
+
+    /// Decorative speaker grille — diagonal molded slots, no interaction.
+    private var speakerGrille: some View {
+        VStack(spacing: 5) {
+            ForEach(0..<4, id: \.self) { _ in
+                Capsule()
+                    .fill(bodyEdge.opacity(0.55))
+                    .frame(width: 54, height: 4)
+            }
+        }
+        .rotationEffect(.degrees(-12))
+        .accessibilityHidden(true)
     }
 
     // MARK: - Canvas: pixel-art border box

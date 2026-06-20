@@ -46,7 +46,7 @@ globs:
 
 ## Theme System
 
-- All 8 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, Neovim, FM Tuner) are supported on watchOS
+- All 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, Neovim, FM Tuner) are supported on watchOS
 - Theme files mirrored in `ShuttlX Watch App/Theme/` with watch-specific font sizes
 - Theme selection synced from iPhone via WCSession `applicationContext`
 - `ThemeManager.shared` injected at app root in `ShuttlXWatchApp.swift`

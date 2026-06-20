@@ -33,6 +33,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
     @Published var healthKitSaveError: String? = nil
+    /// True if no HR sample has arrived within `noHRDetectedAfter` seconds of an
+    /// active, unpaused workout. HealthKit never tells an app whether READ access
+    /// was granted, so this is the only signal we have that HR is silently
+    /// missing (denied permission, sensor off-wrist, etc.). Drives a non-blocking
+    /// banner in TrainingView. Cleared as soon as the first sample lands.
+    @Published private(set) var noHeartRateDetected: Bool = false
     /// True while a workout start is in progress (auth + session setup). Used for immediate UI feedback.
     @Published var isStarting: Bool = false
 
@@ -87,6 +93,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var caloriesQuery: HKAnchoredObjectQuery?
     private var heartRateAnchor: HKQueryAnchor?
     private var caloriesAnchor: HKQueryAnchor?
+    // No-HR watchdog: fires once if no sample arrives within the grace period.
+    private var noHRTimer: DispatchSourceTimer?
+    private var hasReceivedHRSample: Bool = false
+    /// Grace period before declaring "no HR". 15s covers the Apple Watch optical
+    /// sensor warmup plus the first HKAnchoredObjectQuery delivery.
+    private let noHRDetectedAfter: TimeInterval = 15
     // Running accumulators replace the full samples array — O(1) average, not O(n)
     private var heartRateSampleSum: Double = 0
     private var heartRateSampleCount: Int = 0
@@ -336,6 +348,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
+        hasReceivedHRSample = false
+        noHeartRateDetected = false
         totalCaloriesAccumulated = 0
         cadenceSampleSum = 0
         cadenceSampleCount = 0
@@ -531,6 +545,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         lastCompletedKm = 0
         timeAtLastKm = 0
         segments = []
+        hasReceivedHRSample = false
+        noHeartRateDetected = false
         workoutStartTime = nil
         currentSegmentStartTime = nil
         pendingActivity = nil
@@ -1045,12 +1061,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         stopHeartRateQuery()
 
-        // Restrict to samples from this Apple Watch only — filters out chest straps and
-        // third-party sensors so HR averages and HRR calculations are not contaminated.
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate),
-            HKQuery.predicateForObjects(from: [HKDevice.local()])
-        ])
+        // Time-only predicate. Do NOT filter by HKDevice.local() — the live workout
+        // sensor's device identity rarely matches HKDevice.local() exactly, so the
+        // device filter silently excludes the watch's own HR samples and BPM reads 0.
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
 
         let query = HKAnchoredObjectQuery(
             type: heartRateType,
@@ -1086,6 +1100,26 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateQuery = query
         healthStore.execute(query)
         logger.info("Heart rate query started")
+
+        scheduleNoHRWatchdog()
+    }
+
+    /// Arm a one-shot timer. If no HR sample has arrived after `noHRDetectedAfter`
+    /// seconds — and the workout is still active and not paused — flip
+    /// `noHeartRateDetected` so the UI can surface a "no heart rate" banner.
+    private func scheduleNoHRWatchdog() {
+        noHRTimer?.cancel()
+        let t = DispatchSource.makeTimerSource(queue: .main)
+        t.schedule(deadline: .now() + noHRDetectedAfter)
+        t.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            if !self.hasReceivedHRSample, self.isWorkoutActive, !self.isPaused {
+                self.noHeartRateDetected = true
+                self.logger.warning("No heart rate sample after \(self.noHRDetectedAfter)s — surfacing banner")
+            }
+        }
+        noHRTimer = t
+        t.resume()
     }
 
     nonisolated private func processHeartRateSamples(_ samples: [HKSample]?) {
@@ -1096,6 +1130,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
+            // First real sample — clear any "no HR" banner and stop the watchdog.
+            self.hasReceivedHRSample = true
+            if self.noHeartRateDetected { self.noHeartRateDetected = false }
             // Only include samples taken while workout is not paused
             if !self.isPaused {
                 self.heartRateSampleSum += bpmValues.reduce(0, +)
@@ -1111,6 +1148,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func stopHeartRateQuery() {
+        noHRTimer?.cancel()
+        noHRTimer = nil
         if let query = heartRateQuery {
             healthStore.stop(query)
             heartRateQuery = nil
@@ -1129,10 +1168,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         stopCaloriesQuery()
 
-        let predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
-            HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate),
-            HKQuery.predicateForObjects(from: [HKDevice.local()])
-        ])
+        // Time-only predicate — same rationale as the HR query: an HKDevice.local()
+        // filter can silently exclude the watch's own samples.
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
 
         let query = HKAnchoredObjectQuery(
             type: caloriesType,
@@ -1424,6 +1462,47 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             logger.error("Failed to finalize route: \(error.localizedDescription)")
         }
     }
+
+    #if DEBUG
+    /// Seed representative interval-workout state for snapshot/preview rendering
+    /// only. Never called in production paths. Mirrors the iOS
+    /// `applyPreviewSnapshot` so the Arcade chrome can be captured at true
+    /// device size: stage 3/8, 01:48 countdown, HR 142, live SPM/distance.
+    func applyPreviewSnapshot() {
+        workoutMode = .interval
+        workoutName = "5K Interval"
+        isWorkoutActive = true
+        isPaused = false
+        elapsedTime = 22 * 60 + 14
+        totalDistance = 3.42
+        totalSteps = 4187
+        currentPace = 5 * 60 + 38
+        currentCadence = 168
+        heartRate = 142
+        calories = 268
+
+        let template = WorkoutTemplate(
+            name: "5K Interval",
+            intervals: [
+                IntervalStep(type: .work, duration: 1,   label: "RUN"),
+                IntervalStep(type: .work, duration: 120, label: "RUN"),
+                IntervalStep(type: .rest, duration: 60,  label: "WALK"),
+                IntervalStep(type: .work, duration: 120, label: "RUN"),
+                IntervalStep(type: .rest, duration: 60,  label: "WALK"),
+                IntervalStep(type: .work, duration: 120, label: "RUN")
+            ],
+            repeatCount: 1,
+            warmup: IntervalStep(type: .warmup, duration: 1, label: "WARM UP"),
+            cooldown: IntervalStep(type: .cooldown, duration: 120, label: "COOL DOWN")
+        )
+        let engine = IntervalEngine()
+        engine.configure(template: template)
+        // Advance to step 3/8 (index 2, a 120s work step) at 01:48 remaining:
+        // 1 tick clears the 1s warmup, 1 clears the 1s work, 12 burn 120→108.
+        for _ in 0..<14 { engine.tick(heartRate: 142, distance: 3.42) }
+        intervalEngine = engine
+    }
+    #endif
 }
 
 // MARK: - HKWorkoutSessionDelegate

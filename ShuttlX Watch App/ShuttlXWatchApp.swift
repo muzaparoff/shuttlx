@@ -24,6 +24,27 @@ struct ShuttlXWatchApp: App {
     
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            if let snapshot = ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT"] {
+                TrainingView()
+                    .environment(ThemeManager.shared)
+                    .environmentObject(sharedDataManager)
+                    .environmentObject(workoutManager)
+                    .task {
+                        ThemeManager.shared.selectTheme(snapshot)
+                        workoutManager.applyPreviewSnapshot()
+                    }
+            } else {
+                appRoot
+            }
+            #else
+            appRoot
+            #endif
+        }
+    }
+
+    @ViewBuilder
+    private var appRoot: some View {
             ContentView()
                 .environment(ThemeManager.shared)
                 .environmentObject(sharedDataManager)
@@ -52,6 +73,5 @@ struct ShuttlXWatchApp: App {
                         }
                     }
                 }
-        }
     }
 }

@@ -88,8 +88,6 @@ struct iPhoneWorkoutTimerView: View {
             ClassicRadioTimerHero(controller: controller)
         case "neovim":
             NeovimTimerHero(controller: controller)
-        case "vumeter":
-            VUMeterTimerHero(controller: controller)
         default:
             standardTimerBody
         }

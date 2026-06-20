@@ -14,7 +14,6 @@ struct ThemedTimerFrame: View {
         case "mixtape":      MixtapeTimerFrame(width: width, height: height)
         case "arcade":       ArcadeTimerFrame(width: width, height: height)
         case "classicradio": ClassicRadioTimerFrame(width: width, height: height)
-        case "vumeter":      VUMeterTimerFrame(width: width, height: height)
         default:             CleanTimerFrame(width: width, height: height)
         }
     }
@@ -496,198 +495,6 @@ private struct ClassicRadioTimerFrame: View {
     }
 }
 
-// MARK: VU Meter Timer Frame — professional audio meter panel with mounting screws
-
-private struct VUMeterTimerFrame: View {
-    let width: CGFloat
-    let height: CGFloat
-    private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
-    private let darkPanel = Color(red: 0.07, green: 0.05, blue: 0.03)
-
-    var body: some View {
-        ZStack {
-            // Dark meter panel fill
-            RoundedRectangle(cornerRadius: 8)
-                .fill(darkPanel)
-
-            // Brushed metal texture (horizontal lines)
-            Canvas { context, canvasSize in
-                let lineColor = amber.opacity(0.01)
-                for y in stride(from: CGFloat(0), to: canvasSize.height, by: 0.5) {
-                    var path = Path()
-                    path.move(to: CGPoint(x: 0, y: y))
-                    path.addLine(to: CGPoint(x: canvasSize.width, y: y))
-                    context.stroke(path, with: .color(lineColor), lineWidth: 0.3)
-                }
-            }
-            .frame(width: width - 4, height: height - 4)
-            .clipShape(RoundedRectangle(cornerRadius: 7))
-            .allowsHitTesting(false)
-
-            // Amber border
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(amber.opacity(0.4), lineWidth: 2)
-
-            // Beveled inset (double-line: dark + bright)
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(Color.black.opacity(0.15), lineWidth: 1.5)
-                .padding(5)
-            RoundedRectangle(cornerRadius: 5)
-                .stroke(amber.opacity(0.08), lineWidth: 0.5)
-                .padding(7)
-
-            // VU arc markings with scale labels, dual arc, needle + counterweight
-            Canvas { context, canvasSize in
-                let center = CGPoint(x: canvasSize.width / 2, y: canvasSize.height * 0.7)
-                let radius = min(canvasSize.width, canvasSize.height) * 0.32
-
-                // Main arc path
-                var arcPath = Path()
-                arcPath.addArc(center: center, radius: radius,
-                              startAngle: .degrees(-150), endAngle: .degrees(-30),
-                              clockwise: false)
-                context.stroke(arcPath, with: .color(amber.opacity(0.2)), lineWidth: 1)
-
-                // Secondary inner arc (at 70% radius)
-                let innerRadius = radius * 0.7
-                var innerArc = Path()
-                innerArc.addArc(center: center, radius: innerRadius,
-                               startAngle: .degrees(-145), endAngle: .degrees(-35),
-                               clockwise: false)
-                context.stroke(innerArc, with: .color(amber.opacity(0.08)), lineWidth: 0.5)
-
-                // Inner arc tick marks (5 simple ticks)
-                let innerTickAngles: [Double] = [-140, -115, -90, -65, -40]
-                for angle in innerTickAngles {
-                    let rad = angle * .pi / 180
-                    let tInner = innerRadius - 3
-                    let tOuter = innerRadius + 3
-                    var tick = Path()
-                    tick.move(to: CGPoint(
-                        x: center.x + cos(rad) * tInner,
-                        y: center.y + sin(rad) * tInner
-                    ))
-                    tick.addLine(to: CGPoint(
-                        x: center.x + cos(rad) * tOuter,
-                        y: center.y + sin(rad) * tOuter
-                    ))
-                    context.stroke(tick, with: .color(amber.opacity(0.12)), lineWidth: 0.5)
-                }
-
-                // Scale labels
-                let labels = ["-20", "-10", "-7", "-5", "-3", "0", "+1", "+2", "+3"]
-                let labelAngles: [Double] = [-150, -135, -120, -105, -90, -75, -60, -45, -30]
-
-                for (i, label) in labels.enumerated() {
-                    let angle = labelAngles[i]
-                    let rad = angle * .pi / 180
-                    let innerR = radius - 5
-                    let outerR = radius + 5
-                    let labelR = radius + 14
-                    let isRed = i >= 6
-                    let tickColor = isRed ? Color.red.opacity(0.4) : amber.opacity(0.3)
-
-                    // Tick marks
-                    var tick = Path()
-                    tick.move(to: CGPoint(
-                        x: center.x + cos(rad) * innerR,
-                        y: center.y + sin(rad) * innerR
-                    ))
-                    tick.addLine(to: CGPoint(
-                        x: center.x + cos(rad) * outerR,
-                        y: center.y + sin(rad) * outerR
-                    ))
-                    context.stroke(tick, with: .color(tickColor), lineWidth: 1)
-
-                    // Scale label text
-                    let lx: CGFloat = center.x + cos(rad) * labelR - 6
-                    let ly: CGFloat = center.y + sin(rad) * labelR - 4
-                    let labelPoint = CGPoint(x: lx, y: ly)
-                    context.draw(
-                        Text(label)
-                            .font(.system(size: 5, weight: .medium, design: .monospaced))
-                            .foregroundColor(isRed ? .red.opacity(0.3) : amber.opacity(0.25)),
-                        at: labelPoint, anchor: .center
-                    )
-                }
-
-                // Needle at ~75% position
-                let needleAngle = -60.0 * .pi / 180
-                var needle = Path()
-                needle.move(to: center)
-                needle.addLine(to: CGPoint(
-                    x: center.x + cos(needleAngle) * (radius - 2),
-                    y: center.y + sin(needleAngle) * (radius - 2)
-                ))
-                context.stroke(needle, with: .color(amber.opacity(0.5)), lineWidth: 1)
-
-                // Needle counterweight (opposite end)
-                let counterAngle = needleAngle + .pi
-                let counterR: CGFloat = 3
-                let cx = center.x + cos(counterAngle) * 6
-                let cy = center.y + sin(counterAngle) * 6
-                context.fill(
-                    Path(ellipseIn: CGRect(x: cx - counterR, y: cy - counterR, width: counterR * 2, height: counterR * 2)),
-                    with: .color(amber.opacity(0.3))
-                )
-
-                // Needle pivot dot
-                context.fill(
-                    Path(ellipseIn: CGRect(x: center.x - 2, y: center.y - 2, width: 4, height: 4)),
-                    with: .color(amber.opacity(0.4))
-                )
-            }
-            .padding(2)
-            .allowsHitTesting(false)
-
-            // "VU" and "dB" text below arc
-            HStack(spacing: 2) {
-                Text("VU")
-                    .font(.system(size: 8, weight: .bold, design: .monospaced))
-                    .foregroundColor(amber.opacity(0.3))
-                Text("dB")
-                    .font(.system(size: 5, weight: .medium, design: .monospaced))
-                    .foregroundColor(amber.opacity(0.2))
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .padding(.bottom, 6)
-
-            // LED bar graph (5 rectangles: 3 green, 2 red)
-            HStack(spacing: 2) {
-                ForEach(0..<5, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 0.5)
-                        .fill(i < 3 ? Color.green.opacity(0.3) : Color.red.opacity(0.3))
-                        .frame(width: 4, height: 3)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
-            .padding(.bottom, 7)
-            .padding(.trailing, 10)
-
-            // Mounting screws at corners
-            GeometryReader { geo in
-                let inset: CGFloat = 6
-                ForEach(0..<4, id: \.self) { corner in
-                    ScrewDecoration(color: amber.opacity(0.2))
-                        .frame(width: 3, height: 3)
-                        .position(mountScrewPosition(corner: corner, w: geo.size.width, h: geo.size.height, inset: inset))
-                }
-            }
-        }
-        .frame(width: width, height: height)
-    }
-
-    private func mountScrewPosition(corner: Int, w: CGFloat, h: CGFloat, inset: CGFloat) -> CGPoint {
-        switch corner {
-        case 0: return CGPoint(x: inset, y: inset)
-        case 1: return CGPoint(x: w - inset, y: inset)
-        case 2: return CGPoint(x: inset, y: h - inset)
-        case 3: return CGPoint(x: w - inset, y: h - inset)
-        default: return .zero
-        }
-    }
-}
-
 // MARK: Arcade Timer Frame — CRT monitor cabinet with bezel + sub-pixel dots
 
 private struct ArcadeTimerFrame: View {
@@ -848,7 +655,6 @@ struct ThemedCompletionBadge: View {
         case "mixtape":      MixtapeCompletionBadge()
         case "arcade":       ArcadeCompletionBadge()
         case "classicradio": ClassicRadioCompletionBadge()
-        case "vumeter":      VUMeterCompletionBadge()
         case "neovim":       NeovimCompletionBadge()
         default:             CleanCompletionBadge()
         }
@@ -983,40 +789,6 @@ private struct ClassicRadioCompletionBadge: View {
     }
 }
 
-// MARK: VU Meter Completion Badge — "RECORDING DONE" amber on dark panel
-
-private struct VUMeterCompletionBadge: View {
-    private let amber = Color(red: 0.91, green: 0.63, blue: 0.19)
-    private let darkPanel = Color(red: 0.07, green: 0.05, blue: 0.03)
-
-    var body: some View {
-        VStack(spacing: 4) {
-            Text("RECORDING")
-                .font(.system(size: 10, weight: .bold, design: .monospaced))
-                .foregroundColor(amber.opacity(0.6))
-
-            Text("DONE")
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
-                .foregroundColor(amber)
-                .shadow(color: amber.opacity(0.4), radius: 2)
-
-            Image(systemName: "checkmark")
-                .font(.system(size: 18, weight: .bold, design: .monospaced))
-                .foregroundColor(amber)
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(darkPanel)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(amber.opacity(0.4), lineWidth: 1.5)
-        )
-    }
-}
-
 // MARK: Arcade Completion Badge — "HIGH SCORE" CRT display
 
 private struct ArcadeCompletionBadge: View {
@@ -1123,9 +895,6 @@ struct ThemedControlButtonStyle: ButtonStyle {
         case "arcade":
             Circle()
                 .stroke(ShuttlXColor.ctaPrimary.opacity(0.4), lineWidth: 2)
-        case "vumeter":
-            Circle()
-                .stroke(ShuttlXColor.ctaPrimary.opacity(0.4), lineWidth: 1.5)
         default:
             Circle()
                 .stroke(ShuttlXColor.surfaceBorder.opacity(0.3), lineWidth: 1)

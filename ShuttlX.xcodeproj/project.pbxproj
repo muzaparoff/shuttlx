@@ -40,7 +40,7 @@
 		AR001B /* ArcadeTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = AR001F /* ArcadeTimerHero.swift */; };
 		CR001B /* ClassicRadioTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = CR001F /* ClassicRadioTimerHero.swift */; };
 		NV001B /* NeovimTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = NV001F /* NeovimTimerHero.swift */; };
-		VU001B /* VUMeterTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = VU001F /* VUMeterTimerHero.swift */; };
+
 		FM002B /* FMTunerHeader.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM002F /* FMTunerHeader.swift */; };
 		FM003B /* FMTunerFooter.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM003F /* FMTunerFooter.swift */; };
 		FM004B /* FMTunerVUColumn.swift in Sources */ = {isa = PBXBuildFile; fileRef = FM004F /* FMTunerVUColumn.swift */; };
@@ -125,7 +125,7 @@
 		TH000020 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
 		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		TH000023 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
-		TH000024 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
+
 		TH000025 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
 		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
@@ -139,13 +139,13 @@
 		TH000040 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000010 /* ArcadeTheme.swift */; };
 		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
-		TH000044 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000051 /* VUMeterTheme.swift */; };
+
 		TH000045 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
 		TC000011 /* ThemeChartStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
 		TC000012 /* ThemedBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000002 /* ThemedBarChart.swift */; };
 		TC000013 /* ThemedLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000003 /* ThemedLineChart.swift */; };
 		TC000014 /* SynthwavePerspectiveGrid.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000004 /* SynthwavePerspectiveGrid.swift */; };
-		TC000015 /* VUMeterDBStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000005 /* VUMeterDBStrip.swift */; };
+
 		TC000016 /* ClassicRadioNeedlePointer.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000006 /* ClassicRadioNeedlePointer.swift */; };
 		TC000017 /* MixtapeSpoolDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000007 /* MixtapeSpoolDot.swift */; };
 		TC000021 /* ThemeChartStyle.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
@@ -186,7 +186,7 @@
 		WW100030 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00011 /* MixtapeTheme.swift */; };
 		WW100031 /* ArcadeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00012 /* ArcadeTheme.swift */; };
 		WW100032 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00013 /* ClassicRadioTheme.swift */; };
-		WW100033 /* VUMeterTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00014 /* VUMeterTheme.swift */; };
+
 		WW100034 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00015 /* NeovimTheme.swift */; };
 		WW100035 /* FMTunerTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00016 /* FMTunerTheme.swift */; };
 		WW100036 /* FMTunerChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00017 /* FMTunerChrome.swift */; };
@@ -356,7 +356,7 @@
 		TH000010 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTheme.swift; sourceTree = "<group>"; };
 		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
 		TH000050 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTheme.swift; sourceTree = "<group>"; };
-		TH000051 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterTheme.swift; sourceTree = "<group>"; };
+
 		TH000052 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTheme.swift; sourceTree = "<group>"; };
 		FM001F /* FMTunerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerTheme.swift; sourceTree = "<group>"; };
 		SW001F /* SynthwaveTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTimerHero.swift; sourceTree = "<group>"; };
@@ -366,7 +366,7 @@
 		AR001F /* ArcadeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeTimerHero.swift; sourceTree = "<group>"; };
 		CR001F /* ClassicRadioTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTimerHero.swift; sourceTree = "<group>"; };
 		NV001F /* NeovimTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTimerHero.swift; sourceTree = "<group>"; };
-		VU001F /* VUMeterTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterTimerHero.swift; sourceTree = "<group>"; };
+
 		FM002F /* FMTunerHeader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerHeader.swift; sourceTree = "<group>"; };
 		FM003F /* FMTunerFooter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerFooter.swift; sourceTree = "<group>"; };
 		FM004F /* FMTunerVUColumn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerVUColumn.swift; sourceTree = "<group>"; };
@@ -376,7 +376,7 @@
 		TC000002 /* ThemedBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedBarChart.swift; sourceTree = "<group>"; };
 		TC000003 /* ThemedLineChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedLineChart.swift; sourceTree = "<group>"; };
 		TC000004 /* SynthwavePerspectiveGrid.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwavePerspectiveGrid.swift; sourceTree = "<group>"; };
-		TC000005 /* VUMeterDBStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VUMeterDBStrip.swift; sourceTree = "<group>"; };
+
 		TC000006 /* ClassicRadioNeedlePointer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioNeedlePointer.swift; sourceTree = "<group>"; };
 		TC000007 /* MixtapeSpoolDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeSpoolDot.swift; sourceTree = "<group>"; };
 		WG000001 /* ShuttlXWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWidgetsBundle.swift; sourceTree = "<group>"; };
@@ -410,7 +410,7 @@
 		WWT00011 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MixtapeTheme.swift; path = "ShuttlX Watch App/Theme/Themes/MixtapeTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00012 /* ArcadeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ArcadeTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ArcadeTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00013 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ClassicRadioTheme.swift; path = "ShuttlX Watch App/Theme/Themes/ClassicRadioTheme.swift"; sourceTree = SOURCE_ROOT; };
-		WWT00014 /* VUMeterTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = VUMeterTheme.swift; path = "ShuttlX Watch App/Theme/Themes/VUMeterTheme.swift"; sourceTree = SOURCE_ROOT; };
+
 		WWT00015 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = NeovimTheme.swift; path = "ShuttlX Watch App/Theme/Themes/NeovimTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00016 /* FMTunerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FMTunerTheme.swift; path = "ShuttlX Watch App/Theme/Themes/FMTunerTheme.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00017 /* FMTunerChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FMTunerChrome.swift; path = "ShuttlX Watch App/Theme/Themes/Decorations/FMTunerChrome.swift"; sourceTree = SOURCE_ROOT; };
@@ -690,7 +690,7 @@
 			isa = PBXGroup;
 			children = (
 				TC000004 /* SynthwavePerspectiveGrid.swift */,
-				TC000005 /* VUMeterDBStrip.swift */,
+
 				TC000006 /* ClassicRadioNeedlePointer.swift */,
 				TC000007 /* MixtapeSpoolDot.swift */,
 			);
@@ -714,7 +714,7 @@
 				WWT00011 /* MixtapeTheme.swift */,
 				WWT00012 /* ArcadeTheme.swift */,
 				WWT00013 /* ClassicRadioTheme.swift */,
-				WWT00014 /* VUMeterTheme.swift */,
+
 				WWT00015 /* NeovimTheme.swift */,
 				WWT00016 /* FMTunerTheme.swift */,
 				WWT00017 /* FMTunerChrome.swift */,
@@ -744,7 +744,7 @@
 				TH000009 /* MixtapeTheme.swift */,
 				TH000010 /* ArcadeTheme.swift */,
 				TH000050 /* ClassicRadioTheme.swift */,
-				TH000051 /* VUMeterTheme.swift */,
+
 				TH000052 /* NeovimTheme.swift */,
 				FM001F /* FMTunerTheme.swift */,
 				SW001F /* SynthwaveTimerHero.swift */,
@@ -752,7 +752,7 @@
 				AR001F /* ArcadeTimerHero.swift */,
 				CR001F /* ClassicRadioTimerHero.swift */,
 				NV001F /* NeovimTimerHero.swift */,
-				VU001F /* VUMeterTimerHero.swift */,
+
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -1034,7 +1034,7 @@
 				TH000019 /* MixtapeTheme.swift in Sources */,
 				TH000020 /* ArcadeTheme.swift in Sources */,
 				TH000023 /* ClassicRadioTheme.swift in Sources */,
-				TH000024 /* VUMeterTheme.swift in Sources */,
+
 				TH000025 /* NeovimTheme.swift in Sources */,
 				TC000011 /* ThemeChartStyle.swift in Sources */,
 				FM001B /* FMTunerTheme.swift in Sources */,
@@ -1045,7 +1045,7 @@
 				AR001B /* ArcadeTimerHero.swift in Sources */,
 				CR001B /* ClassicRadioTimerHero.swift in Sources */,
 				NV001B /* NeovimTimerHero.swift in Sources */,
-				VU001B /* VUMeterTimerHero.swift in Sources */,
+
 				FM002B /* FMTunerHeader.swift in Sources */,
 				FM003B /* FMTunerFooter.swift in Sources */,
 				FM004B /* FMTunerVUColumn.swift in Sources */,
@@ -1069,7 +1069,7 @@
 				TC000012 /* ThemedBarChart.swift in Sources */,
 				TC000013 /* ThemedLineChart.swift in Sources */,
 				TC000014 /* SynthwavePerspectiveGrid.swift in Sources */,
-				TC000015 /* VUMeterDBStrip.swift in Sources */,
+
 				TC000016 /* ClassicRadioNeedlePointer.swift in Sources */,
 				TC000017 /* MixtapeSpoolDot.swift in Sources */,
 				C5923011 /* RoutePoint.swift in Sources */,
@@ -1148,7 +1148,7 @@
 				TH000039 /* MixtapeTheme.swift in Sources */,
 				TH000040 /* ArcadeTheme.swift in Sources */,
 				TH000043 /* ClassicRadioTheme.swift in Sources */,
-				TH000044 /* VUMeterTheme.swift in Sources */,
+
 				TH000045 /* NeovimTheme.swift in Sources */,
 				FMW01B /* FMTunerTheme.swift in Sources */,
 				FMW02B /* FMTunerHeader.swift in Sources */,
@@ -1190,7 +1190,7 @@
 				WW100030 /* MixtapeTheme.swift in Sources */,
 				WW100031 /* ArcadeTheme.swift in Sources */,
 				WW100032 /* ClassicRadioTheme.swift in Sources */,
-				WW100033 /* VUMeterTheme.swift in Sources */,
+
 				WW100034 /* NeovimTheme.swift in Sources */,
 				WW100035 /* FMTunerTheme.swift in Sources */,
 				WW100036 /* FMTunerChrome.swift in Sources */,

@@ -214,7 +214,7 @@ struct ThemedBarChart: View {
                 drawTapeStripBar(ctx: ctx, rect: rect, isPeak: isPeak)
 
             case .dbMeter:
-                // dbMeter is handled by VUMeterDBStrip accent; draw minimal amber rect here
+                // dbMeter: draw a minimal filled rect using accent color
                 let fillColor = chartStyle.accentColor.opacity(0.70)
                 ctx.fill(Path(rect), with: .color(fillColor))
 

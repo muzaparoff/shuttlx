@@ -41,13 +41,6 @@ struct WidgetTheme {
                 surface:        Color(red: 0.23, green: 0.18, blue: 0.12),
                 accent:         Color(red: 0.95, green: 0.80, blue: 0.50)   // amber/cream
             )
-        case "vumeter":
-            return WidgetTheme(
-                background:     Color(red: 0.10, green: 0.09, blue: 0.06),
-                backgroundDark: Color(red: 0.06, green: 0.05, blue: 0.03),
-                surface:        Color(red: 0.07, green: 0.05, blue: 0.03),
-                accent:         Color(red: 0.95, green: 0.65, blue: 0.20)   // amber
-            )
         case "neovim":
             return WidgetTheme(
                 background:     Color(red: 0.114, green: 0.125, blue: 0.129), // #1D2021

@@ -17,6 +17,16 @@ final class iOSHeartRateMonitor: ObservableObject {
     @Published private(set) var sourceName: String?
     /// True after at least one HR sample has arrived from any source.
     @Published private(set) var hasReceivedSample: Bool = false
+
+    #if DEBUG
+    /// Inject a fixed BPM for snapshot/preview rendering only. Never called in
+    /// production paths.
+    func _previewSet(bpm: Int, source: String = "Apple Watch") {
+        current = bpm
+        sourceName = source
+        hasReceivedSample = true
+    }
+    #endif
     /// True if `noSourceDetectedAfter` seconds have elapsed since `start(from:)`
     /// without a single HR sample. UI uses this to surface a "pair an HR
     /// device" affordance instead of silently showing `—`.

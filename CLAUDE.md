@@ -69,11 +69,11 @@ Theme sync:
 - **FM Tuner chrome state** (4 properties, FM Tuner theme only): `vuMeterValue` (0.0–1.0), `signalStrength` (0–5), `footerStatusLines` ([String]), `chromeVisible` (Bool) — other themes ignore these
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
 - Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
-- 8 themes: Clean (glass cards, system fonts), Synthwave (Outrun dashboard + scrolling perspective grid), Mixtape (Walkman with spinning cassette reels), Arcade (7-segment HI-SCORE display + INSERT COIN), Classic Radio (horizontal tuning dial with sweeping needle), VU Meter (analog needle gauges driven by metrics), Neovim (modal `:command` status line + line-number gutter), FM Tuner (deep navy LCD, cyan monospaced, 8th theme)
-- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Mixtape: blue body + texture lines, Arcade: CRT scanlines+vignette, Classic Radio: warm brown grain + vignette, VU Meter: amber glow + panel lines, Neovim: #1D2021 solid + left gutter stripe (iOS) / solid (watchOS), FM Tuner: #021018 solid + FMTunerHeader chrome overlay + FMTunerVUColumn overlay (Canvas, 18 segments)
+- 7 themes: Clean (glass cards, system fonts), Synthwave (Outrun dashboard + scrolling perspective grid), Mixtape (Walkman with spinning cassette reels), Arcade (7-segment HI-SCORE display + INSERT COIN), Classic Radio (horizontal tuning dial with sweeping needle), Neovim (modal `:command` status line + line-number gutter), FM Tuner (deep navy LCD, cyan monospaced)
+- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Mixtape: blue body + texture lines, Arcade: CRT scanlines+vignette, Classic Radio: warm brown grain + vignette, Neovim: #1D2021 solid + left gutter stripe (iOS) / solid (watchOS), FM Tuner: #021018 solid + FMTunerHeader chrome overlay + FMTunerVUColumn overlay (Canvas, 18 segments)
 - View modifiers: `.themedCard()`, `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
-- `ThemeEffects.CardStyle` values: `.glass`, `.neon`, `.lcd`, `.pixel`, `.tape`, `.meter`, `.terminal` (Neovim), `.lcd` (shared by Mixtape and FM Tuner)
-- Files: 16 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Mixtape, Themes/Arcade, Themes/ClassicRadio, Themes/VUMeter, Themes/Neovim, Themes/FMTuner, Components/FMTunerHeader, Components/FMTunerVUColumn)
+- `ThemeEffects.CardStyle` values: `.glass`, `.neon`, `.lcd`, `.pixel`, `.tape`, `.terminal` (Neovim)
+- Files: 15 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Mixtape, Themes/Arcade, Themes/ClassicRadio, Themes/Neovim, Themes/FMTuner, Components/FMTunerHeader, Components/FMTunerVUColumn)
 
 ## Data Storage
 
@@ -88,7 +88,7 @@ Theme sync:
 - **Minimal external dependencies** — iOS target uses RevenueCat + TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
-- **Dynamic multi-theme UI**: 8 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, Neovim, FM Tuner) — selectable in Settings
+- **Dynamic multi-theme UI**: 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, Neovim, FM Tuner) — selectable in Settings
 - **Models are duplicated** between iOS and watchOS — update BOTH copies when changing
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 - **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status

@@ -35,9 +35,11 @@ struct ArcadeTimerOverlay: View {
     @ObservedObject var workoutManager: WatchWorkoutManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    // Arcade phosphor palette (mirrors ArcadeTheme tokens)
-    private var phosphor: Color { Color(red: 0.0, green: 1.0, blue: 0.0) }
-    private var phosphorDim: Color { Color(red: 0.0, green: 0.6, blue: 0.0) }
+    // Handheld (GBC-era) identity palette — purple shell frame echoes the iPhone
+    // skin so the two platforms read as the same device family. Generic colour
+    // only; no trademark shapes on the tiny watch face.
+    private var phosphor: Color { Color(red: 0.341, green: 0.290, blue: 0.612) }   // #574a9c body purple
+    private var phosphorDim: Color { Color(red: 0.169, green: 0.137, blue: 0.337) } // #2b2356 edge
 
     var body: some View {
         ZStack {

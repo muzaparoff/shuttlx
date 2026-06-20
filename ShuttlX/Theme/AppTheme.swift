@@ -9,7 +9,7 @@ struct AppTheme: Identifiable, Equatable {
     let effects: ThemeEffects
     let chartStyle: ThemeChartStyle
 
-    static let all: [AppTheme] = [.clean, .synthwave, .mixtape, .arcade, .classicRadio, .vuMeter, .neovim, .fmTuner]
+    static let all: [AppTheme] = [.clean, .synthwave, .mixtape, .arcade, .classicRadio, .neovim, .fmTuner]
 
     static func theme(for id: String) -> AppTheme {
         all.first { $0.id == id } ?? .clean

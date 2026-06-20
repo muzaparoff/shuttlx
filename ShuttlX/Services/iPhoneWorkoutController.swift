@@ -632,6 +632,47 @@ final class iPhoneWorkoutController: ObservableObject {
         }
         locationManager.startUpdatingLocation()
     }
+
+    #if DEBUG
+    /// Seed representative interval-workout state for snapshot/preview rendering
+    /// only. Never called in production paths. Drives the Arcade handheld hero
+    /// at stage 3/8 with a 01:48 countdown, HR 142, and live SPM/distance.
+    func applyPreviewSnapshot() {
+        mode = .interval
+        workoutName = "5K INTERVAL"
+        isActive = true
+        isPaused = false
+        elapsedTime = 22 * 60 + 14
+        totalDistance = 3.42
+        totalSteps = 4187
+        currentPace = 5 * 60 + 38
+        currentCadence = 168
+
+        let engine = IntervalEngine()
+        engine.configure(
+            steps: [
+                IntervalStepDescriptor(type: .warmup, label: "WARM UP", duration: 1),
+                IntervalStepDescriptor(type: .work,   label: "RUN",     duration: 1),
+                IntervalStepDescriptor(type: .work,   label: "RUN",     duration: 120),
+                IntervalStepDescriptor(type: .rest,   label: "WALK",    duration: 60),
+                IntervalStepDescriptor(type: .work,   label: "RUN",     duration: 120),
+                IntervalStepDescriptor(type: .rest,   label: "WALK",    duration: 60),
+                IntervalStepDescriptor(type: .work,   label: "RUN",     duration: 120),
+                IntervalStepDescriptor(type: .cooldown, label: "COOL DOWN", duration: 120)
+            ],
+            templateName: "5K INTERVAL",
+            templateID: nil
+        )
+        // Advance to step 3/8 (index 2) by exhausting the first two 1s steps.
+        engine.tick(heartRate: 142, distance: 3.42)
+        engine.tick(heartRate: 142, distance: 3.42)
+        // Burn the 120s work step down to 01:48 remaining (120 - 108 = 12 ticks).
+        for _ in 0..<12 { engine.tick(heartRate: 142, distance: 3.42) }
+        intervalEngine = engine
+
+        heartRateMonitor._previewSet(bpm: 142)
+    }
+    #endif
 }
 
 /// Thin `CLLocationManagerDelegate` shim so `iPhoneWorkoutController` can stay
