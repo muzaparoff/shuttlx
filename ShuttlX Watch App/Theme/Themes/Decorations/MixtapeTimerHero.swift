@@ -152,11 +152,9 @@ struct MixtapeWatchDeck: View {
     private var isPaused: Bool { workoutManager.isPaused }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: screenH * 0.010) {
-            topBand          // SIDE A ▸ WORK 3/8 — rides up beside the system clock
-            Spacer(minLength: 0)
-            heroRow
-            Spacer(minLength: 0)
+        VStack(alignment: .leading, spacing: screenH * 0.012) {
+            Spacer(minLength: 0)    // push content down — more breathing room at top
+            heroBlock               // SIDE A label (left) + big timer (right) on one line
             hrLine
             metricLine("DIST", FormattingUtils.formatDistance(workoutManager.totalDistance),
                        a11y: "Distance \(FormattingUtils.formatDistance(workoutManager.totalDistance))")
@@ -164,40 +162,56 @@ struct MixtapeWatchDeck: View {
                        a11y: "Pace \(workoutManager.currentPace == nil ? "no data" : FormattingUtils.formatPace(workoutManager.currentPace))")
         }
         .padding(.horizontal, 10)
-        .padding(.bottom, 4)
+        .padding(.bottom, 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .ignoresSafeArea(.container, edges: .top)   // let SIDE A reach the clock line
         .background(lcdWell.ignoresSafeArea())
         .onChange(of: workoutManager.heartRate) { _, bpm in
             handleZoneHaptic(bpm: bpm)
         }
     }
 
-    // MARK: 1. Top band — SIDE A tag + transport glyph, top-left beside the clock
+    // MARK: 1+2. Hero block — SIDE A label column (left) + big timer (right), same line
 
-    private var topBand: some View {
-        HStack(spacing: 5) {
-            Text("SIDE A")
-                .font(.system(size: tagSize, weight: .heavy, design: .monospaced))
-                .foregroundStyle(labelInk)
-                .padding(.horizontal, 4)
-                .padding(.vertical, 1)
-                .background(Capsule().fill(lcdAmber.opacity(0.88)))
-            Image(systemName: isPaused ? "pause.fill" : "play.fill")
-                .font(.system(size: tagSize * 1.1, weight: .heavy))
-                .foregroundStyle(isPaused ? amberPause : lcdGreen)
-            // Now-playing label: phase word only ("WORK" / "REST" / "ELAPSED").
-            Text(phaseName)
-                .font(.system(size: subLabel, weight: .heavy, design: .monospaced))
+    private var heroBlock: some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("SIDE A")
+                    .font(.system(size: tagSize, weight: .heavy, design: .monospaced))
+                    .foregroundStyle(labelInk)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(lcdAmber.opacity(0.88)))
+                HStack(spacing: 3) {
+                    Image(systemName: isPaused ? "pause.fill" : "play.fill")
+                        .font(.system(size: tagSize * 1.1, weight: .heavy))
+                        .foregroundStyle(isPaused ? amberPause : lcdGreen)
+                    Text(phaseName)
+                        .font(.system(size: subLabel, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(isPaused ? amberPause : heroTint)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Side A, \(heroSubLabel), \(isPaused ? "paused" : "playing")")
+
+            Spacer(minLength: 4)
+
+            Text(heroText)
+                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
                 .foregroundStyle(isPaused ? amberPause : heroTint)
+                .shadow(color: lcdAmber.opacity(isPaused ? 0 : 0.55), radius: heroSize * 0.05)
+                .contentTransition(.numericText())
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-            Spacer(minLength: 0)
+                .layoutPriority(1)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(heroA11yLabel)
+                .accessibilityAddTraits(.updatesFrequently)
         }
-        .padding(.leading, 4)         // clear the rounded top-left corner
-        .padding(.top, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Side A, \(heroSubLabel), \(isPaused ? "paused" : "playing")")
+        .frame(maxWidth: .infinity)
     }
 
     /// Phase label, Mixtape-only walk-run wording. The shared
@@ -214,25 +228,6 @@ struct MixtapeWatchDeck: View {
         case .warmup:   return "WARM UP"
         case .cooldown: return "COOL DOWN"
         }
-    }
-
-
-    // MARK: 2. Hero — the timer fills the screen
-
-    private var heroRow: some View {
-        let heroColor = isPaused ? amberPause : heroTint
-        return Text(heroText)
-            .font(.system(size: heroSize, weight: .bold, design: .monospaced))
-            .monospacedDigit()
-            .foregroundStyle(heroColor)
-            .shadow(color: lcdAmber.opacity(isPaused ? 0 : 0.55), radius: heroSize * 0.05)
-            .contentTransition(.numericText())
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(heroA11yLabel)
-            .accessibilityAddTraits(.updatesFrequently)
     }
 
     // MARK: 3. HR line — VU bar + zone-tinted BPM + "BPM" (all one row)
@@ -296,14 +291,15 @@ struct MixtapeWatchDeck: View {
     // Fires a directional Taptic pulse only when the live HR crosses a zone
     // boundary while running: up on escalation, down on de-escalation. Skipped on
     // pause and when HR is absent so we never buzz on a 0→real first reading.
+    // Only buzzes on upward zone crossings while BPM ≥ 105 — no buzz when HR drops.
     private func handleZoneHaptic(bpm: Int) {
         let zone = hrCalc.zone(for: Double(bpm))
-        guard zone > 0, !isPaused else {
+        guard zone > 0, !isPaused, bpm >= 105 else {
             lastHapticZone = zone
             return
         }
-        if lastHapticZone > 0, zone != lastHapticZone {
-            WKInterfaceDevice.current().play(zone > lastHapticZone ? .directionUp : .directionDown)
+        if lastHapticZone > 0, zone > lastHapticZone {
+            WKInterfaceDevice.current().play(.directionUp)
         }
         lastHapticZone = zone
     }
