@@ -127,6 +127,7 @@
 		TH000023 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
 
 		TH000025 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
+		TH000026 /* ThemePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000053 /* ThemePreset.swift */; };
 		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000032 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
 		TH000033 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
@@ -141,6 +142,7 @@
 		TH000043 /* ClassicRadioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000050 /* ClassicRadioTheme.swift */; };
 
 		TH000045 /* NeovimTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000052 /* NeovimTheme.swift */; };
+		TH000046 /* ThemePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000053 /* ThemePreset.swift */; };
 		TC000011 /* ThemeChartStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
 		TC000012 /* ThemedBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000002 /* ThemedBarChart.swift */; };
 		TC000013 /* ThemedLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000003 /* ThemedLineChart.swift */; };
@@ -192,6 +194,7 @@
 		WW100036 /* FMTunerChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00017 /* FMTunerChrome.swift */; };
 		WW100037 /* ThemedTransportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00018 /* ThemedTransportButton.swift */; };
 		WW100038 /* ThemedSceneBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00019 /* ThemedSceneBackground.swift */; };
+		WW100039 /* ThemePreset.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00020 /* ThemePreset.swift */; };
 		WW200099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WW000010 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -358,6 +361,7 @@
 		TH000050 /* ClassicRadioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClassicRadioTheme.swift; sourceTree = "<group>"; };
 
 		TH000052 /* NeovimTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NeovimTheme.swift; sourceTree = "<group>"; };
+		TH000053 /* ThemePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemePreset.swift; sourceTree = "<group>"; };
 		FM001F /* FMTunerTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FMTunerTheme.swift; sourceTree = "<group>"; };
 		SW001F /* SynthwaveTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SynthwaveTimerHero.swift; sourceTree = "<group>"; };
 		MX001F /* MixtapeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTimerHero.swift; sourceTree = "<group>"; };
@@ -416,6 +420,7 @@
 		WWT00017 /* FMTunerChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FMTunerChrome.swift; path = "ShuttlX Watch App/Theme/Themes/Decorations/FMTunerChrome.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00018 /* ThemedTransportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemedTransportButton.swift; path = "ShuttlX Watch App/Theme/Components/ThemedTransportButton.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00019 /* ThemedSceneBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemedSceneBackground.swift; path = "ShuttlX Watch App/Theme/Components/ThemedSceneBackground.swift"; sourceTree = SOURCE_ROOT; };
+		WWT00020 /* ThemePreset.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemePreset.swift; path = "ShuttlX Watch App/Theme/ThemePreset.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -618,6 +623,7 @@
 				TH000003 /* ThemeEffects.swift */,
 				TC000001 /* ThemeChartStyle.swift */,
 				TH000004 /* AppTheme.swift */,
+				TH000053 /* ThemePreset.swift */,
 				TH000005 /* ThemeManager.swift */,
 				TH000006 /* ThemeModifiers.swift */,
 				TH000021 /* ThemeAssets.swift */,
@@ -720,6 +726,7 @@
 				WWT00017 /* FMTunerChrome.swift */,
 				WWT00018 /* ThemedTransportButton.swift */,
 				WWT00019 /* ThemedSceneBackground.swift */,
+				WWT00020 /* ThemePreset.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -1036,6 +1043,7 @@
 				TH000023 /* ClassicRadioTheme.swift in Sources */,
 
 				TH000025 /* NeovimTheme.swift in Sources */,
+				TH000026 /* ThemePreset.swift in Sources */,
 				TC000011 /* ThemeChartStyle.swift in Sources */,
 				FM001B /* FMTunerTheme.swift in Sources */,
 				SW001B /* SynthwaveTimerHero.swift in Sources */,
@@ -1196,6 +1204,7 @@
 				WW100036 /* FMTunerChrome.swift in Sources */,
 				WW100037 /* ThemedTransportButton.swift in Sources */,
 				WW100038 /* ThemedSceneBackground.swift in Sources */,
+				WW100039 /* ThemePreset.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
