@@ -1,82 +1,88 @@
 import SwiftUI
 
+// MARK: - ThemeColors
+//
+// All properties carry Clean-theme defaults so new themes only declare what
+// differs. Existing themes pass all values explicitly — no behaviour change.
+// Use `var c = ThemeColors(); c.background = myBG` to build from a preset.
+
 struct ThemeColors: Equatable {
     // Background & surfaces
-    let background: Color
-    let surface: Color
-    let surfaceBorder: Color
+    var background: Color    = Color.black
+    var surface: Color       = Color.white.opacity(0.12)
+    var surfaceBorder: Color = Color.clear
 
     // Activity
-    let running: Color
-    let walking: Color
-    let heartRate: Color
-    let steps: Color
-    let calories: Color
-    let stationary: Color
+    var running: Color       = .green
+    var walking: Color       = .orange
+    var heartRate: Color     = .red
+    var steps: Color         = .blue
+    var calories: Color      = .orange
+    var stationary: Color    = .secondary
 
     // Sport
-    let cycling: Color
-    let swimming: Color
-    let hiking: Color
-    let elliptical: Color
-    let crossTraining: Color
+    var cycling: Color       = .blue
+    var swimming: Color      = .cyan
+    var hiking: Color        = .brown
+    var elliptical: Color    = .purple
+    var crossTraining: Color = .indigo
 
     // CTA
-    let ctaPrimary: Color
-    let ctaDestructive: Color
-    let ctaWarning: Color
-    let ctaPause: Color
-    let iconOnCTA: Color
+    var ctaPrimary: Color    = .green
+    var ctaDestructive: Color = .red
+    var ctaWarning: Color    = .orange
+    var ctaPause: Color      = .yellow
+    var iconOnCTA: Color     = .black
 
     // HR Zones (1-5)
-    let hrZone1: Color
-    let hrZone2: Color
-    let hrZone3: Color
-    let hrZone4: Color
-    let hrZone5: Color
+    var hrZone1: Color       = .blue
+    var hrZone2: Color       = .green
+    var hrZone3: Color       = .yellow
+    var hrZone4: Color       = .orange
+    var hrZone5: Color       = .red
 
     // Interval steps
-    let stepWork: Color
-    let stepRest: Color
-    let stepWarmup: Color
-    let stepCooldown: Color
+    var stepWork: Color      = .green
+    var stepRest: Color      = .orange
+    var stepWarmup: Color    = .blue
+    var stepCooldown: Color  = .blue
 
     // Semantic
-    let pace: Color
-    let positive: Color
-    let negative: Color
+    var pace: Color          = .purple
+    var positive: Color      = .green
+    var negative: Color      = .orange
 
     // Recovery
-    let recoveryFresh: Color
-    let recoveryNormal: Color
-    let recoveryFatigued: Color
-    let recoveryOverreaching: Color
+    var recoveryFresh: Color        = .green
+    var recoveryNormal: Color       = .blue
+    var recoveryFatigued: Color     = .orange
+    var recoveryOverreaching: Color = .red
 
     // Pace zones
-    let paceInterval: Color
-    let paceThreshold: Color
-    let paceTempo: Color
-    let paceModerate: Color
-    let paceEasy: Color
+    var paceInterval: Color  = .red
+    var paceThreshold: Color = .orange
+    var paceTempo: Color     = .yellow
+    var paceModerate: Color  = .green
+    var paceEasy: Color      = .blue
 
     // Text
-    let textPrimary: Color
-    let textSecondary: Color
+    var textPrimary: Color   = .white
+    var textSecondary: Color = .secondary
 
     // Card backgrounds
-    let cardBackground: Color
+    var cardBackground: Color = Color.white.opacity(0.12)
 
     // Watch surfaces
-    let watchCardBackground: Color
-    let watchButtonBackground: Color
+    var watchCardBackground: Color   = Color.white.opacity(0.12)
+    var watchButtonBackground: Color = Color.white.opacity(0.15)
 
     // MARK: - Helper Methods
 
     func forStepType(_ type: IntervalType) -> Color {
         switch type {
-        case .work: return stepWork
-        case .rest: return stepRest
-        case .warmup: return stepWarmup
+        case .work:     return stepWork
+        case .rest:     return stepRest
+        case .warmup:   return stepWarmup
         case .cooldown: return stepCooldown
         }
     }
@@ -95,12 +101,12 @@ struct ThemeColors: Equatable {
 
     func forPaceZone(_ zone: String) -> Color {
         switch zone {
-        case "Interval": return paceInterval
+        case "Interval":  return paceInterval
         case "Threshold": return paceThreshold
-        case "Tempo": return paceTempo
-        case "Moderate": return paceModerate
-        case "Easy": return paceEasy
-        default: return Color.gray
+        case "Tempo":     return paceTempo
+        case "Moderate":  return paceModerate
+        case "Easy":      return paceEasy
+        default:          return Color.gray
         }
     }
 }

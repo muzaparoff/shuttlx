@@ -67,6 +67,8 @@ struct MixtapeCassetteScene: View, ThemedScene {
     // Timer screen suppresses the scene J-card: MixtapeTimerHero draws its own
     // J-card on top, so drawing the scene's too would show a duplicate strip.
     var showJCard: Bool = true
+    // Timer screen hides hub bezels — the hero draws its own decorative reel row.
+    var showHubs: Bool = true
 
     /// The safe region where content (J-card label, hero metrics) must live.
     var contentSafeInsets: EdgeInsets {
@@ -77,7 +79,6 @@ struct MixtapeCassetteScene: View, ThemedScene {
 
     private let shellTop        = Color(red: 0.149, green: 0.188, blue: 0.247) // #26303F
     private let shellBottom     = Color(red: 0.086, green: 0.118, blue: 0.161) // #161E29
-    private let moldLine        = Color.white.opacity(0.025)
     private let screwRim        = Color(red: 0.541, green: 0.576, blue: 0.627) // #8A93A0
     private let screwRecess     = Color(red: 0.227, green: 0.259, blue: 0.314) // #3A4250
     private let hubWindowBezel  = Color(red: 0.055, green: 0.078, blue: 0.125) // #0E1420
@@ -104,20 +105,6 @@ struct MixtapeCassetteScene: View, ThemedScene {
                         )
                     )
 
-                // ── Horizontal mold lines ─────────────────────────────────────
-                Canvas { ctx, size in
-                    let lineSpacing: CGFloat = 8
-                    var y: CGFloat = 0
-                    while y < size.height {
-                        var p = Path()
-                        p.move(to: CGPoint(x: 0, y: y))
-                        p.addLine(to: CGPoint(x: size.width, y: y))
-                        ctx.stroke(p, with: .color(moldLine), lineWidth: 1)
-                        y += lineSpacing
-                    }
-                }
-                .allowsHitTesting(false)
-
                 // ── 4 corner screws ───────────────────────────────────────────
                 let screwPositions: [(id: String, point: CGPoint)] = [
                     ("tl", CGPoint(x: 20,     y: 20)),
@@ -143,29 +130,27 @@ struct MixtapeCassetteScene: View, ThemedScene {
                 }
 
                 // ── Hub windows (circular bezel cut-outs) ─────────────────────
-                // The static bezel rings are drawn here.
-                // Live reels are drawn ON TOP by MixtapeTimerHero during workouts.
-                hubWindowBezelView(diameter: MixtapeLayoutConstants.hubDiameter)
-                    .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.0,
-                              y: h * MixtapeLayoutConstants.hubCenterYFraction)
-                hubWindowBezelView(diameter: MixtapeLayoutConstants.hubDiameter)
-                    .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.1,
-                              y: h * MixtapeLayoutConstants.hubCenterYFraction)
-
-                // Static reel placeholders (resting oxide distribution)
-                staticReelThumbnail(isSupply: true, progress: progress)
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
-                    .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.0,
-                              y: h * MixtapeLayoutConstants.hubCenterYFraction)
-                    .allowsHitTesting(false)
-
-                staticReelThumbnail(isSupply: false, progress: progress)
-                    .frame(width: 80, height: 80)
-                    .clipShape(Circle())
-                    .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.1,
-                              y: h * MixtapeLayoutConstants.hubCenterYFraction)
-                    .allowsHitTesting(false)
+                // Hidden on the timer screen — hero draws its own reel row.
+                if showHubs {
+                    hubWindowBezelView(diameter: MixtapeLayoutConstants.hubDiameter)
+                        .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.0,
+                                  y: h * MixtapeLayoutConstants.hubCenterYFraction)
+                    hubWindowBezelView(diameter: MixtapeLayoutConstants.hubDiameter)
+                        .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.1,
+                                  y: h * MixtapeLayoutConstants.hubCenterYFraction)
+                    staticReelThumbnail(isSupply: true, progress: progress)
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                        .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.0,
+                                  y: h * MixtapeLayoutConstants.hubCenterYFraction)
+                        .allowsHitTesting(false)
+                    staticReelThumbnail(isSupply: false, progress: progress)
+                        .frame(width: 80, height: 80)
+                        .clipShape(Circle())
+                        .position(x: w * MixtapeLayoutConstants.hubCenterXFractions.1,
+                                  y: h * MixtapeLayoutConstants.hubCenterYFraction)
+                        .allowsHitTesting(false)
+                }
 
                 // ── Tape window strip (head contact area) ─────────────────────
                 tapeWindowStrip(width: w)

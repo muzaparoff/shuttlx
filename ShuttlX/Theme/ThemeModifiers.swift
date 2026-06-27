@@ -372,7 +372,8 @@ extension View {
                     progress: 0,
                     isRunning: false,
                     reduceDetail: ProcessInfo.processInfo.isLowPowerModeEnabled,
-                    showJCard: false
+                    showJCard: false,
+                    showHubs: false
                 )
                 .allowsHitTesting(false)
                 .ignoresSafeArea()

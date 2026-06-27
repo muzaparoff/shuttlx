@@ -2,8 +2,8 @@ import SwiftUI
 
 // MARK: - ThemeChartStyle
 //
-// Parameterises how analytics charts are rendered for each of the 8 themes.
-// Sits alongside ThemeColors / ThemeFonts / ThemeEffects inside AppTheme.
+// All properties carry Clean-theme defaults so new themes only declare what
+// differs. Existing themes pass all values explicitly — no behaviour change.
 // iOS-only — the watch target has no analytics charts.
 
 struct ThemeChartStyle: Equatable {
@@ -19,9 +19,9 @@ struct ThemeChartStyle: Equatable {
         case segments     // FM Tuner — faint LCD segment hash marks
         case none         // VU Meter — meter face IS the chart
     }
-    let gridStyle: GridStyle
-    let gridColor: Color
-    let gridOpacity: Double
+    var gridStyle: GridStyle   = .dashed
+    var gridColor: Color       = Color(.secondarySystemFill)
+    var gridOpacity: Double    = 0.30
 
     // ── Bars ─────────────────────────────────────────────────────────────────
     enum BarShape: String, Equatable {
@@ -34,7 +34,7 @@ struct ThemeChartStyle: Equatable {
         case blockChars           // Neovim — Canvas bars of ▁▂▃▄▅▆▇█ rows
         case needle               // Classic Radio — Canvas line + needle at value
     }
-    let barShape: BarShape
+    var barShape: BarShape     = .roundedSwiftCharts
 
     enum BarFill: String, Equatable {
         case solid
@@ -42,7 +42,7 @@ struct ThemeChartStyle: Equatable {
         case glow                 // solid + outer blur (Synthwave / Arcade peak)
         case stepped              // VU Meter segments
     }
-    let barFill: BarFill
+    var barFill: BarFill       = .gradientVertical
 
     // ── Lines / area ─────────────────────────────────────────────────────────
     enum LineStyle: String, Equatable {
@@ -51,10 +51,10 @@ struct ThemeChartStyle: Equatable {
         case stepped         // Neovim, FM Tuner — stepCenter interpolation
         case needleTip       // Classic Radio — line + needle pointer at latest value
     }
-    let lineStyle: LineStyle
+    var lineStyle: LineStyle   = .smoothArea
 
     /// When true the line chart renders a second LineMark with .blur for a glow halo.
-    let lineGlow: Bool
+    var lineGlow: Bool         = false
 
     // ── Point markers (line chart) ────────────────────────────────────────────
     enum PointMarker: String, Equatable {
@@ -64,7 +64,7 @@ struct ThemeChartStyle: Equatable {
         case none             // FM Tuner, Neovim, VU Meter
         case brassDot         // Classic Radio
     }
-    let pointMarker: PointMarker
+    var pointMarker: PointMarker = .circle
 
     // ── Axis labels ──────────────────────────────────────────────────────────
     enum AxisLabelStyle: String, Equatable {
@@ -74,22 +74,20 @@ struct ThemeChartStyle: Equatable {
         case lineNumber       // Neovim — right-aligned grey gutter numbers
         case lcdSubtitle      // FM Tuner — cyan all-caps
     }
-    let axisLabelStyle: AxisLabelStyle
-    let axisLabelColor: Color
-    let axisLabelTracking: CGFloat   // 0 = Clean / ClassicRadio; up to 2 for Arcade
+    var axisLabelStyle: AxisLabelStyle  = .system
+    var axisLabelColor: Color           = Color(.secondaryLabel)
+    var axisLabelTracking: CGFloat      = 0
 
     // ── Accent / highlight ────────────────────────────────────────────────────
     /// Color applied to the maximum bar / latest data point peak marker.
-    let accentColor: Color
-    let highlightPeak: Bool
+    var accentColor: Color     = .green
+    var highlightPeak: Bool    = false
 
     // ── Signature accent flag ─────────────────────────────────────────────────
     /// When true the renderer calls the theme's one signature accent decorator.
-    let signatureAccent: Bool
+    var signatureAccent: Bool  = false
 
     // ── Equatable ─────────────────────────────────────────────────────────────
-    // Color is not Equatable by default; compare by RGB components is overkill
-    // here — theme structs are value types and only change on theme switch.
     static func == (lhs: ThemeChartStyle, rhs: ThemeChartStyle) -> Bool {
         lhs.gridStyle == rhs.gridStyle
             && lhs.gridOpacity == rhs.gridOpacity

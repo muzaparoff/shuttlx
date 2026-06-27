@@ -103,13 +103,13 @@ struct MixtapeParkedReel: View {
 // a drawn cassette. The timer is the hero and fills the screen.
 //
 // Composition, top → bottom:
-//   1. Status line — phase sublabel (WORK 3/8 / ELAPSED) on the left; small amber
-//      SIDE A tag + play/pause glyph on the right. Sits under the system clock.
-//   2. Hero number — huge interval countdown / free-run elapsed, vertically
-//      centered with flexible space above and below so it dominates.
-//   3. HR line — VU bar (fills slack) + big zone-TINTED BPM number + small "BPM".
-//      No zone badge: the colour IS the zone. Crossing a zone boundary fires a
-//      directional haptic (up on escalation, down on de-escalation).
+//   1. Now-playing row — amber SIDE A capsule + ▶ phase name, all inline on one
+//      line. Sits flush at the top of the content area, visually aligned with the
+//      system clock. No competing with the timer for horizontal space.
+//   2. Hero number — full-width elapsed or step countdown. Free-run shows total
+//      minutes ("68:45" not "1:08:45") — more legible, matches how runners think.
+//   3. HR line — VU bar + zone-tinted BPM + "BPM". Zone colour IS the zone cue;
+//      crossing a boundary fires a directional haptic (upward only, BPM ≥ 105).
 //   4. DIST / PACE — compact two-up.
 //
 // The whole deck is read-only on workout state.
@@ -143,7 +143,7 @@ struct MixtapeWatchDeck: View {
     // the hero, so it gets the lion's share now that the reel band is gone.
     private var tagSize: CGFloat    { max(9,  screenH * 0.044) }  // SIDE A tag / glyph
     private var subLabel: CGFloat   { max(10, screenH * 0.050) }  // ELAPSED / WORK 2/8
-    private var heroSize: CGFloat   { max(40, screenH * 0.225) }  // hero number
+    private var heroSize: CGFloat   { max(38, screenH * 0.200) }  // hero number (slightly smaller to fit 2-row header)
     private var vuHeight: CGFloat   { max(8,  screenH * 0.045) }  // VU bar height
     private var hrSize: CGFloat     { max(28, screenH * 0.160) }  // BPM number
     private var labelSize: CGFloat  { max(10, screenH * 0.052) }  // DIST/PACE/BPM labels
@@ -152,9 +152,9 @@ struct MixtapeWatchDeck: View {
     private var isPaused: Bool { workoutManager.isPaused }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: screenH * 0.012) {
-            Spacer(minLength: 0)    // push content down — more breathing room at top
-            heroBlock               // SIDE A label (left) + big timer (right) on one line
+        VStack(alignment: .leading, spacing: screenH * 0.008) {
+            nowPlayingRow   // SIDE A ▶ ELAPSED — top line, aligns with system clock
+            heroTimerRow    // 68:45 — full-width hero timer below
             hrLine
             metricLine("DIST", FormattingUtils.formatDistance(workoutManager.totalDistance),
                        a11y: "Distance \(FormattingUtils.formatDistance(workoutManager.totalDistance))")
@@ -162,56 +162,53 @@ struct MixtapeWatchDeck: View {
                        a11y: "Pace \(workoutManager.currentPace == nil ? "no data" : FormattingUtils.formatPace(workoutManager.currentPace))")
         }
         .padding(.horizontal, 10)
-        .padding(.bottom, 14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(lcdWell.ignoresSafeArea())
         .onChange(of: workoutManager.heartRate) { _, bpm in
             handleZoneHaptic(bpm: bpm)
         }
     }
 
-    // MARK: 1+2. Hero block — SIDE A label column (left) + big timer (right), same line
+    // MARK: 1. Now-playing row — SIDE A capsule + ▶ phase name, all inline
 
-    private var heroBlock: some View {
-        HStack(alignment: .center, spacing: 8) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text("SIDE A")
-                    .font(.system(size: tagSize, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(labelInk)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(lcdAmber.opacity(0.88)))
-                HStack(spacing: 3) {
-                    Image(systemName: isPaused ? "pause.fill" : "play.fill")
-                        .font(.system(size: tagSize * 1.1, weight: .heavy))
-                        .foregroundStyle(isPaused ? amberPause : lcdGreen)
-                    Text(phaseName)
-                        .font(.system(size: subLabel, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(isPaused ? amberPause : heroTint)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                }
-            }
-            .fixedSize(horizontal: true, vertical: false)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Side A, \(heroSubLabel), \(isPaused ? "paused" : "playing")")
-
-            Spacer(minLength: 4)
-
-            Text(heroText)
-                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
+    private var nowPlayingRow: some View {
+        HStack(alignment: .center, spacing: 6) {
+            Text("SIDE A")
+                .font(.system(size: tagSize, weight: .heavy, design: .monospaced))
+                .foregroundStyle(labelInk)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(lcdAmber.opacity(0.88)))
+            Image(systemName: isPaused ? "pause.fill" : "play.fill")
+                .font(.system(size: tagSize * 1.1, weight: .heavy))
+                .foregroundStyle(isPaused ? amberPause : lcdGreen)
+            Text(phaseName)
+                .font(.system(size: subLabel, weight: .heavy, design: .monospaced))
                 .foregroundStyle(isPaused ? amberPause : heroTint)
-                .shadow(color: lcdAmber.opacity(isPaused ? 0 : 0.55), radius: heroSize * 0.05)
-                .contentTransition(.numericText())
                 .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .layoutPriority(1)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(heroA11yLabel)
-                .accessibilityAddTraits(.updatesFrequently)
+                .minimumScaleFactor(0.7)
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Side A, \(heroSubLabel), \(isPaused ? "paused" : "playing")")
+    }
+
+    // MARK: 2. Hero timer — full-width elapsed or step countdown
+
+    private var heroTimerRow: some View {
+        Text(heroText)
+            .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+            .monospacedDigit()
+            .foregroundStyle(isPaused ? amberPause : heroTint)
+            .shadow(color: lcdAmber.opacity(isPaused ? 0 : 0.55), radius: heroSize * 0.05)
+            .contentTransition(.numericText())
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(heroA11yLabel)
+            .accessibilityAddTraits(.updatesFrequently)
     }
 
     /// Phase label, Mixtape-only walk-run wording. The shared
@@ -319,15 +316,16 @@ struct MixtapeWatchDeck: View {
 
     private var heroText: String {
         if isInterval, let engine = workoutManager.intervalEngine {
+            // Step countdown: short duration, standard MM:SS with leading zero stripped
             return trimLeadingZero(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
         }
-        return trimLeadingZero(FormattingUtils.formatTimer(workoutManager.elapsedTime))
+        // Free-run elapsed: total minutes "68:45" — more legible than "1:08:45"
+        let total = max(0, Int(workoutManager.elapsedTime))
+        return "\(total / 60):\(String(format: "%02d", total % 60))"
     }
 
-    /// Drops a single leading zero on the minutes field for the hero only
-    /// ("01:48" → "1:48", "00:48" → "0:48"). Two-digit minutes ("12:30") and
-    /// hour-form times ("1:02:33") are untouched. `formatTimer` itself stays
-    /// `%02d`-padded for every other surface that depends on fixed width.
+    /// Drops a single leading zero on the minutes field for interval countdowns only
+    /// ("01:48" → "1:48"). Hour-form times ("1:02:33") are untouched.
     private func trimLeadingZero(_ s: String) -> String {
         guard s.count >= 2, s.first == "0" else { return s }
         let second = s[s.index(after: s.startIndex)]
