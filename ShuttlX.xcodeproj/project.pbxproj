@@ -80,8 +80,7 @@
 		G5923001 /* TrainingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923001F /* TrainingPlan.swift */; };
 		G5923002 /* BuiltInPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923002F /* BuiltInPlans.swift */; };
 		G5923003 /* PlanManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923003F /* PlanManager.swift */; };
-		H5923001 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
-		H5923002 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
+		H5923001 /* WorkoutSport+Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport+Theme.swift */; };
 		LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000001 /* ShuttlXLiveActivityBundle.swift */; };
 		LA000011 /* ShuttlXLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000002 /* ShuttlXLiveActivity.swift */; };
 		LA000012 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000003 /* LockScreenView.swift */; };
@@ -167,7 +166,6 @@
 		WW100007 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
 		WW100008 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		WW100009 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
-		WW100010 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
 		WW100012 /* ShuttlXWatchWidgets.appex in Embed Watch Widget Extension */ = {isa = PBXBuildFile; fileRef = WW000006 /* ShuttlXWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		WW100020 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00001 /* ShuttlXTheme.swift */; };
 		WW100021 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00002 /* ThemeColors.swift */; };
@@ -318,7 +316,7 @@
 		G5923001F /* TrainingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlan.swift; sourceTree = "<group>"; };
 		G5923002F /* BuiltInPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltInPlans.swift; sourceTree = "<group>"; };
 		G5923003F /* PlanManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanManager.swift; sourceTree = "<group>"; };
-		H5923001F /* WorkoutSport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutSport.swift; sourceTree = "<group>"; };
+		H5923001F /* WorkoutSport+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkoutSport+Theme.swift"; sourceTree = "<group>"; };
 		LA000001 /* ShuttlXLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivityBundle.swift; sourceTree = "<group>"; };
 		LA000002 /* ShuttlXLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivity.swift; sourceTree = "<group>"; };
 		LA000003 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
@@ -553,7 +551,7 @@
 				B5923001 /* ChartData.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
-				H5923001F /* WorkoutSport.swift */,
+				H5923001F /* WorkoutSport+Theme.swift */,
 				G5923001F /* TrainingPlan.swift */,
 				G5923002F /* BuiltInPlans.swift */,
 				ED000001 /* ExerciseDevice.swift */,
@@ -1070,7 +1068,7 @@
 
 				TC000016 /* ClassicRadioNeedlePointer.swift in Sources */,
 				TC000017 /* MixtapeSpoolDot.swift in Sources */,
-				H5923001 /* WorkoutSport.swift in Sources */,
+				H5923001 /* WorkoutSport+Theme.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
 				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
 				LA000015 /* LiveActivityManager.swift in Sources */,
@@ -1126,7 +1124,6 @@
 				WG000013 /* TrainingSession.swift in Sources */,
 				WG000014 /* ActivitySegment.swift in Sources */,
 				WG000015 /* WorkoutTemplate.swift in Sources */,
-				H5923002 /* WorkoutSport.swift in Sources */,
 				WG000017 /* WidgetDataProvider.swift in Sources */,
 				WG000020B /* ShuttlXTheme.swift in Sources */,
 				TC000021 /* ThemeChartStyle.swift in Sources (Widgets) */,
@@ -1168,7 +1165,6 @@
 				WW100007 /* TrainingSession.swift in Sources */,
 				WW100008 /* ActivitySegment.swift in Sources */,
 				WW100009 /* WorkoutTemplate.swift in Sources */,
-				WW100010 /* WorkoutSport.swift in Sources */,
 				WW100020 /* ShuttlXTheme.swift in Sources */,
 				WW100021 /* ThemeColors.swift in Sources */,
 				WW100022 /* ThemeFonts.swift in Sources */,

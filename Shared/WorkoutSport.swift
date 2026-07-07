@@ -1,10 +1,9 @@
 import Foundation
-import SwiftUI
-#if canImport(HealthKit)
+#if canImport(HealthKit) && !os(macOS)
 import HealthKit
 #endif
 
-enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
+public enum WorkoutSport: String, Codable, CaseIterable, Identifiable, Sendable {
     case running
     case walking
     case cycling
@@ -14,9 +13,9 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
     case crossTraining
     case other
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .running: return "Running"
         case .walking: return "Walking"
@@ -29,7 +28,7 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var systemImage: String {
+    public var systemImage: String {
         switch self {
         case .running: return "figure.run"
         case .walking: return "figure.walk"
@@ -42,8 +41,15 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    #if canImport(HealthKit)
-    var hkActivityType: HKWorkoutActivityType {
+    public var supportsAutoDetection: Bool {
+        switch self {
+        case .running, .walking: return true
+        default: return false
+        }
+    }
+
+    #if canImport(HealthKit) && !os(macOS)
+    public var hkActivityType: HKWorkoutActivityType {
         switch self {
         case .running: return .running
         case .walking: return .walking
@@ -56,7 +62,7 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var hkLocationType: HKWorkoutSessionLocationType {
+    public var hkLocationType: HKWorkoutSessionLocationType {
         switch self {
         case .running, .walking, .cycling, .hiking: return .outdoor
         case .swimming: return .unknown
@@ -65,24 +71,4 @@ enum WorkoutSport: String, Codable, CaseIterable, Identifiable {
         }
     }
     #endif
-
-    var supportsAutoDetection: Bool {
-        switch self {
-        case .running, .walking: return true
-        default: return false
-        }
-    }
-
-    var themeColor: Color {
-        switch self {
-        case .running: return ShuttlXColor.running
-        case .walking: return ShuttlXColor.walking
-        case .cycling: return ShuttlXColor.cycling
-        case .swimming: return ShuttlXColor.swimming
-        case .hiking: return ShuttlXColor.hiking
-        case .elliptical: return ShuttlXColor.elliptical
-        case .crossTraining: return ShuttlXColor.crossTraining
-        case .other: return .secondary
-        }
-    }
 }

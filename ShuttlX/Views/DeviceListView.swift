@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct DeviceListView: View {
     @Environment(ThemeManager.self) var themeManager

@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ShuttlXShared
 
 enum CalorieEstimationEngine {
     private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "CalorieEstimation")
