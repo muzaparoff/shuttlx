@@ -17,6 +17,10 @@ class IntervalEngine: ObservableObject {
     private var stepStartDistance: Double = 0
     private var stepHeartRateSamples: [Double] = []
     private var stepElapsed: TimeInterval = 0
+    // Workout-elapsed timestamp (pause-corrected wall clock) at which the current
+    // step began. The countdown is derived from this, NOT from counting ticks, so
+    // dropped or throttled timer ticks self-heal instead of losing seconds.
+    private var stepStartElapsed: TimeInterval = 0
     private var templateName: String = ""
     private var templateID: UUID?
 
@@ -36,6 +40,7 @@ class IntervalEngine: ObservableObject {
             currentStepTimeRemaining = first.duration
             nextStep = allSteps.count > 1 ? allSteps[1] : nil
             stepElapsed = 0
+            stepStartElapsed = 0
             stepStartDistance = 0
             stepHeartRateSamples = []
         }
@@ -43,29 +48,43 @@ class IntervalEngine: ObservableObject {
 
     // MARK: - Tick (called every 1s from WatchWorkoutManager)
 
-    func tick(heartRate: Int, distance: Double) {
+    /// `workoutElapsed` is the manager's pause-corrected wall-clock elapsed time.
+    /// The countdown is recomputed from it on every tick, so a late or dropped
+    /// tick renders late but never loses time. Ticks are a render pulse only.
+    func tick(heartRate: Int, distance: Double, workoutElapsed: TimeInterval) {
         guard !isComplete, currentStepIndex < allSteps.count else { return }
-
-        stepElapsed += 1
-        currentStepTimeRemaining -= 1
 
         // Collect HR sample
         if heartRate > 0 {
             stepHeartRateSamples.append(Double(heartRate))
         }
 
-        // 5-second countdown haptic
+        // Complete every step whose wall-clock window has fully passed. A long
+        // suspension can pass several steps at once; each gets its target
+        // duration attributed, matching what actually happened on the clock.
+        var elapsedInStep = max(0, workoutElapsed - stepStartElapsed)
+        while !isComplete, let step = currentStep, elapsedInStep >= step.duration {
+            stepElapsed = step.duration
+            completeCurrentStep(distance: distance)
+            stepStartElapsed += step.duration
+            advanceToNextStep(distance: distance)
+            elapsedInStep = max(0, workoutElapsed - stepStartElapsed)
+        }
+
+        guard !isComplete, let step = currentStep else { return }
+        stepElapsed = elapsedInStep
+        // Round to whole seconds so the displayed countdown matches the old
+        // integer behavior (formatTimer truncates fractions).
+        let newRemaining = max(0, (step.duration - elapsedInStep).rounded())
+
+        // 5-second countdown haptic — fire once when crossing the 5s boundary
         #if os(watchOS)
-        if currentStepTimeRemaining == 5 {
+        if currentStepTimeRemaining > 5, newRemaining <= 5, newRemaining > 0 {
             WKInterfaceDevice.current().play(.notification)
         }
         #endif
 
-        // Step complete?
-        if currentStepTimeRemaining <= 0 {
-            completeCurrentStep(distance: distance)
-            advanceToNextStep(distance: distance)
-        }
+        currentStepTimeRemaining = newRemaining
     }
 
     // MARK: - Stop

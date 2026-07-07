@@ -34,11 +34,11 @@ bash tests/build_and_test_both_platforms.sh --clean --build
 # Build for physical device
 bash tests/build_for_physical_device.sh
 
-# iOS only
-xcodebuild -project ShuttlX.xcodeproj -scheme ShuttlX -sdk iphonesimulator build
+# iOS only (destination only — passing -sdk breaks SPM deps of companion targets)
+xcodebuild -project ShuttlX.xcodeproj -scheme ShuttlX -destination 'generic/platform=iOS Simulator' build
 
 # watchOS only
-xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -sdk watchsimulator build
+xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination 'generic/platform=watchOS Simulator' build
 ```
 
 ## Architecture

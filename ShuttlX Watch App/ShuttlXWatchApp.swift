@@ -67,6 +67,9 @@ struct ShuttlXWatchApp: App {
                     workoutManager.requestHealthKitPermissionsIfNeeded()
                     // Crash recovery: deferred off first render to avoid blocking the UI
                     Task {
+                        // Finalize any HKWorkoutSession orphaned by a crash/kill so
+                        // the workout still reaches HealthKit.
+                        workoutManager.recoverOrphanedHKSession()
                         if !workoutManager.isWorkoutActive, let recovered = workoutManager.recoverCrashedWorkout() {
                             logger.info("Recovering crashed workout session")
                             workoutManager.saveRecoveredSession(recovered)

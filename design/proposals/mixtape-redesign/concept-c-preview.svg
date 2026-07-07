@@ -1,0 +1,244 @@
+<svg width="393" height="852" viewBox="0 0 393 852" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glowC">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="softGlow">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="navyBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1D2535"/>
+      <stop offset="100%" stop-color="#0E131C"/>
+    </linearGradient>
+    <linearGradient id="shellGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#26303F"/>
+      <stop offset="100%" stop-color="#161E29"/>
+    </linearGradient>
+    <linearGradient id="lcdGradC" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#010D01"/>
+      <stop offset="100%" stop-color="#000A00"/>
+    </linearGradient>
+    <radialGradient id="screwGrad" cx="35%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#8A93A0"/>
+      <stop offset="100%" stop-color="#3A4250"/>
+    </radialGradient>
+    <linearGradient id="cardGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1E2D42"/>
+      <stop offset="100%" stop-color="#16202E"/>
+    </linearGradient>
+    <linearGradient id="reelGradC" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A3060"/>
+      <stop offset="100%" stop-color="#0E1825"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══ PHONE FRAME ═══ -->
+  <rect x="0" y="0" width="393" height="852" rx="48" ry="48" fill="#0A0D14"/>
+  <rect x="3" y="3" width="387" height="846" rx="45" ry="45" fill="url(#navyBg)"/>
+
+  <!-- STATUS BAR -->
+  <text x="32" y="52" font-family="-apple-system,SF Pro Display,sans-serif" font-size="17" fill="white" font-weight="600" opacity="0.9">9:41</text>
+  <rect x="142" y="14" width="109" height="34" rx="17" fill="#0A0D14"/>
+  <text x="361" y="52" font-family="-apple-system" font-size="13" fill="white" text-anchor="end" opacity="0.8">82%</text>
+
+  <!-- ═══ SPLIT VIEW: Show BOTH screens side by side ═══ -->
+  <!-- Left half: non-timer screen (dashboard with calm navy + felt-pad accents) -->
+  <!-- Right half: timer screen (cassette shell, CONTAINED not full-bleed) -->
+
+  <!-- ─── LEFT PANEL LABEL ─── -->
+  <text x="97" y="85" font-family="-apple-system" font-size="10" fill="#8CADCC" text-anchor="middle" letter-spacing="1">OTHER SCREENS</text>
+  <!-- ─── RIGHT PANEL LABEL ─── -->
+  <text x="295" y="85" font-family="-apple-system" font-size="10" fill="#8CADCC" text-anchor="middle" letter-spacing="1">TIMER SCREEN</text>
+  <!-- Divider line -->
+  <line x1="197" y1="75" x2="197" y2="820" stroke="#FFFFFF" stroke-width="0.5" opacity="0.12" stroke-dasharray="4,4"/>
+
+  <!-- ═══ LEFT PANEL: Dashboard (calm navy, felt-pad accents) ═══ -->
+  <!-- Training title -->
+  <text x="26" y="120" font-family="-apple-system" font-size="22" fill="white" font-weight="700">Training</text>
+
+  <!-- Felt-pad red section accent + TODAY card -->
+  <rect x="24" y="136" width="5" height="56" rx="2.5" fill="#B8453A"/>
+  <rect x="34" y="136" width="152" height="56" rx="10" fill="url(#cardGrad)"/>
+  <rect x="34" y="136" width="152" height="56" rx="10" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.1"/>
+  <text x="44" y="153" font-family="-apple-system" font-size="9" fill="#8CADCC" letter-spacing="0.5">TODAY</text>
+  <text x="44" y="170" font-family="-apple-system" font-size="12" fill="white" font-weight="600">5K Walk-Run</text>
+  <rect x="166" y="148" width="14" height="14" rx="7" fill="#39FF14" opacity="0.8"/>
+  <text x="173" y="158" font-family="-apple-system" font-size="10" fill="#161E29" text-anchor="middle" font-weight="bold">▶</text>
+  <text x="44" y="183" font-family="-apple-system" font-size="10" fill="#39FF14" font-weight="600">START ▶</text>
+
+  <!-- Felt-pad red section accent + LAST WORKOUT -->
+  <rect x="24" y="206" width="5" height="62" rx="2.5" fill="#B8453A"/>
+  <rect x="34" y="206" width="152" height="62" rx="10" fill="url(#cardGrad)"/>
+  <rect x="34" y="206" width="152" height="62" rx="10" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.1"/>
+  <text x="44" y="223" font-family="-apple-system" font-size="9" fill="#8CADCC" letter-spacing="0.5">LAST WORKOUT</text>
+  <text x="44" y="240" font-family="-apple-system" font-size="12" fill="white" font-weight="600">27 Jun · 9.24 km</text>
+  <text x="44" y="257" font-family="-apple-system" font-size="10" fill="#8CADCC">108 BPM · 661 Cal · 1h 33m</text>
+
+  <!-- Felt-pad + THIS WEEK -->
+  <rect x="24" y="282" width="5" height="52" rx="2.5" fill="#B8453A" opacity="0.6"/>
+  <rect x="34" y="282" width="152" height="52" rx="10" fill="url(#cardGrad)"/>
+  <rect x="34" y="282" width="152" height="52" rx="10" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.1"/>
+  <text x="44" y="299" font-family="-apple-system" font-size="9" fill="#8CADCC" letter-spacing="0.5">THIS WEEK</text>
+  <!-- Mini week dots -->
+  <circle cx="46" cy="318" r="5" fill="#39FF14" opacity="0.9"/>
+  <circle cx="62" cy="318" r="5" fill="#4A6A9A" opacity="0.4"/>
+  <circle cx="78" cy="318" r="5" fill="#39FF14" opacity="0.9"/>
+  <circle cx="94" cy="318" r="5" fill="#4A6A9A" opacity="0.4"/>
+  <circle cx="110" cy="318" r="5" fill="#39FF14" opacity="0.9"/>
+  <circle cx="126" cy="318" r="5" fill="#4A6A9A" opacity="0.4"/>
+  <circle cx="142" cy="318" r="5" fill="#4A6A9A" opacity="0.3"/>
+
+  <!-- Note: no cassette shell here -->
+  <text x="110" y="360" font-family="-apple-system" font-size="8.5" fill="#4A6A9A" text-anchor="middle" font-style="italic">no cassette shell</text>
+  <text x="110" y="374" font-family="-apple-system" font-size="8.5" fill="#4A6A9A" text-anchor="middle" font-style="italic">on nav screens</text>
+
+  <!-- Felt-pad accent line on section headers -->
+  <text x="24" y="406" font-family="monospace" font-size="8" fill="#B8453A" letter-spacing="1">▐ PROGRAMS</text>
+  <rect x="34" y="412" width="152" height="36" rx="8" fill="url(#cardGrad)"/>
+  <rect x="34" y="412" width="152" height="36" rx="8" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.08"/>
+  <text x="44" y="434" font-family="-apple-system" font-size="11" fill="white">Training Plans</text>
+  <text x="176" y="434" font-family="-apple-system" font-size="14" fill="#8CADCC" text-anchor="end">›</text>
+
+  <text x="24" y="462" font-family="monospace" font-size="8" fill="#B8453A" letter-spacing="1">▐ ANALYTICS</text>
+  <rect x="34" y="468" width="152" height="36" rx="8" fill="url(#cardGrad)"/>
+  <rect x="34" y="468" width="152" height="36" rx="8" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.08"/>
+  <text x="44" y="490" font-family="-apple-system" font-size="11" fill="white">Weekly Charts</text>
+  <text x="176" y="490" font-family="-apple-system" font-size="14" fill="#8CADCC" text-anchor="end">›</text>
+
+  <!-- ═══ RIGHT PANEL: Timer screen with CONTAINED cassette shell ═══ -->
+  <!-- Cassette shell — CONTAINED, not full-bleed (just the right half width) -->
+  <rect x="205" y="92" width="181" height="680" rx="16" fill="url(#shellGrad)"/>
+  <rect x="205" y="92" width="181" height="680" rx="16" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.08"/>
+  <!-- Soft drop shadow effect inside right panel -->
+  <rect x="209" y="96" width="173" height="672" rx="13" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.05"/>
+
+  <!-- 4 corner screws -->
+  <circle cx="221" cy="108" r="6" fill="url(#screwGrad)"/>
+  <line x1="218" y1="108" x2="224" y2="108" stroke="#3A4250" stroke-width="1.2"/>
+  <line x1="221" y1="105" x2="221" y2="111" stroke="#3A4250" stroke-width="1.2"/>
+  <circle cx="369" cy="108" r="6" fill="url(#screwGrad)"/>
+  <line x1="366" y1="108" x2="372" y2="108" stroke="#3A4250" stroke-width="1.2"/>
+  <line x1="369" y1="105" x2="369" y2="111" stroke="#3A4250" stroke-width="1.2"/>
+  <circle cx="221" cy="760" r="6" fill="url(#screwGrad)"/>
+  <line x1="218" y1="760" x2="224" y2="760" stroke="#3A4250" stroke-width="1.2"/>
+  <line x1="221" y1="757" x2="221" y2="763" stroke="#3A4250" stroke-width="1.2"/>
+  <circle cx="369" cy="760" r="6" fill="url(#screwGrad)"/>
+  <line x1="366" y1="760" x2="372" y2="760" stroke="#3A4250" stroke-width="1.2"/>
+  <line x1="369" y1="757" x2="369" y2="763" stroke="#3A4250" stroke-width="1.2"/>
+
+  <!-- Write-protect tab wells -->
+  <rect x="258" y="98" width="10" height="6" rx="1.5" fill="#0B1018"/>
+  <rect x="323" y="98" width="10" height="6" rx="1.5" fill="#0B1018"/>
+
+  <!-- J-card cream strip -->
+  <rect x="216" y="122" width="161" height="42" rx="4" fill="#EDE7D3"/>
+  <rect x="216" y="122" width="161" height="5" rx="4" fill="#00000015"/>
+  <rect x="222" y="130" width="36" height="16" rx="2" fill="none" stroke="#1C2330" stroke-width="1.2"/>
+  <text x="240" y="141" font-family="monospace" font-size="8" fill="#1C2330" font-weight="bold" text-anchor="middle">SIDE A</text>
+  <circle cx="268" cy="138" r="3.5" fill="#FF3333"/>
+  <text x="278" y="141" font-family="monospace" font-size="8.5" fill="#1C2330" font-weight="bold" font-style="italic">5K RUN</text>
+  <text x="368" y="136" font-family="monospace" font-size="7" fill="#1C2330" text-anchor="end">7.04K</text>
+  <text x="368" y="147" font-family="monospace" font-size="6.5" fill="#1C2330" opacity="0.7" text-anchor="end">1247 ST</text>
+  <!-- Baseline rule -->
+  <rect x="218" y="160" width="157" height="0.8" fill="#1C233040"/>
+
+  <!-- LCD panel -->
+  <rect x="214" y="172" width="163" height="98" rx="7" fill="url(#lcdGradC)"/>
+  <rect x="214" y="172" width="163" height="98" rx="7" fill="none" stroke="#1B6606" stroke-width="1.2"/>
+  <!-- Ghost digits -->
+  <text x="296" y="238" font-family="monospace" font-size="46" fill="#39FF14" fill-opacity="0.05" text-anchor="middle" font-weight="bold">88:88</text>
+  <!-- Active digits -->
+  <text x="296" y="238" font-family="monospace" font-size="46" fill="#39FF14" text-anchor="middle" font-weight="bold" filter="url(#glowC)">29:41</text>
+  <!-- Sublabel -->
+  <text x="220" y="260" font-family="monospace" font-size="7.5" fill="#1B6606" letter-spacing="1">ELAPSED</text>
+  <rect x="276" y="250" width="34" height="13" rx="2.5" fill="#39FF1415" stroke="#39FF1445" stroke-width="1"/>
+  <circle cx="283" cy="256.5" r="2" fill="#39FF14"/>
+  <text x="290" y="260" font-family="monospace" font-size="7" fill="#39FF14" font-weight="bold">RUN</text>
+
+  <!-- VU + HR mini strip -->
+  <rect x="214" y="280" width="163" height="48" rx="6" fill="#060E14"/>
+  <rect x="214" y="280" width="163" height="48" rx="6" fill="none" stroke="#4A6A9A" stroke-width="0.8"/>
+  <rect x="217" y="291" width="4" height="18" rx="2" fill="#B8453A"/>
+  <text x="228" y="299" font-family="monospace" font-size="7" fill="#8CADCC" font-weight="bold">HR</text>
+  <rect x="238" y="292" width="4" height="13" rx="1" fill="#39FF14"/>
+  <rect x="244" y="292" width="4" height="13" rx="1" fill="#39FF14"/>
+  <rect x="250" y="292" width="4" height="13" rx="1" fill="#39FF14"/>
+  <rect x="256" y="292" width="4" height="13" rx="1" fill="#39FF14"/>
+  <rect x="262" y="292" width="4" height="13" rx="1" fill="#F2A61A"/>
+  <rect x="268" y="292" width="4" height="13" rx="1" fill="#FF333330"/>
+  <text x="363" y="301" font-family="monospace" font-size="18" fill="#39FF14" font-weight="bold" text-anchor="end" filter="url(#softGlow)">142</text>
+  <text x="369" y="295" font-family="monospace" font-size="7" fill="#8CADCC">bpm</text>
+  <text x="228" y="320" font-family="monospace" font-size="7" fill="#8CADCC" font-weight="bold">SPD</text>
+  <rect x="244" y="314" width="90" height="3" rx="1.5" fill="#1B6606" opacity="0.3"/>
+  <rect x="289" y="311" width="2" height="9" rx="1" fill="#4A8ACA"/>
+  <text x="362" y="321" font-family="monospace" font-size="14" fill="#39FF14" font-weight="bold" text-anchor="end" filter="url(#softGlow)">5'42"</text>
+
+  <!-- Reels row (decorative, smaller in the contained shell) -->
+  <!-- Left reel -->
+  <circle cx="248" cy="400" r="32" fill="#0A121A"/>
+  <circle cx="248" cy="400" r="32" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.2"/>
+  <circle cx="248" cy="400" r="26" fill="url(#reelGradC)"/>
+  <circle cx="248" cy="400" r="20" fill="#142040" stroke="#4A6A9A" stroke-width="1.2"/>
+  <line x1="248" y1="389" x2="248" y2="380" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="257.5" y1="394.5" x2="265" y2="390" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="257.5" y1="405.5" x2="265" y2="410" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="248" y1="411" x2="248" y2="420" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="238.5" y1="405.5" x2="231" y2="410" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="238.5" y1="394.5" x2="231" y2="390" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="248" cy="400" r="7" fill="#0A0F14" stroke="#4A6A9A" stroke-width="1.2"/>
+  <circle cx="248" cy="400" r="2.5" fill="#4A6A9A"/>
+
+  <!-- Tape progress (between reels) -->
+  <rect x="285" y="398" width="32" height="3" rx="1.5" fill="#1B6606" opacity="0.35"/>
+  <rect x="285" y="398" width="5" height="3" rx="1.5" fill="#FFFFFF" opacity="0.4"/>
+  <rect x="285" y="398" width="18" height="3" rx="1.5" fill="#39FF14" filter="url(#softGlow)"/>
+
+  <!-- Right reel (smaller) -->
+  <circle cx="344" cy="400" r="27" fill="#0A121A"/>
+  <circle cx="344" cy="400" r="27" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.2"/>
+  <circle cx="344" cy="400" r="21" fill="url(#reelGradC)"/>
+  <circle cx="344" cy="400" r="15" fill="#142040" stroke="#4A6A9A" stroke-width="1.2"/>
+  <line x1="344" y1="392" x2="344" y2="385" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="350.5" y1="396" x2="357" y2="392.2" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="350.5" y1="404" x2="357" y2="407.8" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="344" y1="408" x2="344" y2="415" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="337.5" y1="404" x2="331" y2="407.8" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <line x1="337.5" y1="396" x2="331" y2="392.2" stroke="#4A6A9A" stroke-width="2" stroke-linecap="round"/>
+  <circle cx="344" cy="400" r="6" fill="#0A0F14" stroke="#4A6A9A" stroke-width="1.2"/>
+  <circle cx="344" cy="400" r="2.5" fill="#4A6A9A"/>
+
+  <!-- Tape window strip -->
+  <rect x="220" y="446" width="150" height="20" rx="3" fill="#040A10" opacity="0.85"/>
+  <rect x="220" y="446" width="150" height="20" rx="3" fill="none" stroke="#4A6A9A" stroke-width="0.8" opacity="0.4"/>
+  <rect x="223" y="450" width="4" height="12" rx="2" fill="#B8453A"/>
+
+  <!-- Transport buttons (mini) -->
+  <rect x="213" y="478" width="40" height="38" rx="7" fill="#1A1A1A"/>
+  <text x="233" y="497" font-family="-apple-system" font-size="14" fill="#CCCCCC" text-anchor="middle">⏮</text>
+  <text x="233" y="510" font-family="monospace" font-size="5.5" fill="#888" text-anchor="middle">CANCEL</text>
+
+  <rect x="257" y="478" width="34" height="38" rx="7" fill="#1A1A1A"/>
+  <text x="274" y="497" font-family="-apple-system" font-size="14" fill="#CCCCCC" text-anchor="middle">⏭</text>
+  <text x="274" y="510" font-family="monospace" font-size="5.5" fill="#888" text-anchor="middle">SKIP</text>
+
+  <rect x="295" y="474" width="72" height="46" rx="7" fill="#1D3A1A"/>
+  <rect x="295" y="474" width="72" height="46" rx="7" fill="none" stroke="#39FF14" stroke-width="1" opacity="0.4"/>
+  <text x="331" y="495" font-family="-apple-system" font-size="16" fill="#39FF14" text-anchor="middle">⏸</text>
+  <text x="331" y="511" font-family="monospace" font-size="6" fill="#39FF14" text-anchor="middle" font-weight="bold">PAUSE</text>
+
+  <rect x="371" y="478" width="18" height="38" rx="5" fill="#2A0A0A"/>
+  <text x="380" y="501" font-family="-apple-system" font-size="11" fill="#CC4444" text-anchor="middle">⏹</text>
+
+  <!-- Brand strip -->
+  <text x="296" y="776" font-family="monospace" font-size="5.5" fill="#FFFFFF" fill-opacity="0.2" text-anchor="middle" letter-spacing="1">IEC TYPE II · HIGH BIAS · C-90</text>
+
+  <!-- Home indicator -->
+  <rect x="147" y="826" width="99" height="5" rx="2.5" fill="white" opacity="0.15"/>
+
+  <!-- ═══ CONCEPT LABEL ═══ -->
+  <rect x="22" y="800" width="349" height="14" rx="0" fill="none"/>
+  <text x="197" y="793" font-family="-apple-system,system-ui,sans-serif" font-size="11" fill="#8CADCC" text-anchor="middle" font-weight="700">CONCEPT C — Hybrid Hardware Window (Fixed)</text>
+  <text x="197" y="807" font-family="-apple-system,system-ui,sans-serif" font-size="9.5" fill="#4A6A9A" text-anchor="middle">Shell on timer only · felt-pad accent on other screens · 1-day fix</text>
+</svg>

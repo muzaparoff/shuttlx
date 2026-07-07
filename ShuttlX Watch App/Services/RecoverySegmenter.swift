@@ -117,7 +117,8 @@ struct RecoverySegmenter {
             events.append(.enteredWork(setNumber: setNumber))
         case .rest:
             if let restStart = restStartTime {
-                events.append(.restExited(duration: now.timeIntervalSince(restStart)))
+                let duration = now.timeIntervalSince(restStart)
+                events.append(.restExited(duration: duration))
             }
             restStartTime = nil
             notWalkingCandidateStart = nil

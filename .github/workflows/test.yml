@@ -42,7 +42,13 @@ jobs:
           xcodebuild -project ShuttlX.xcodeproj -list
 
       # ------------------------------------------------------------------
-      # 3. Build iOS target
+      # 3. Run SPM unit tests (ShuttlXShared: IntervalEngine, RecoverySegmenter)
+      # ------------------------------------------------------------------
+      - name: Run unit tests (swift test)
+        run: swift test
+
+      # ------------------------------------------------------------------
+      # 4. Build iOS target
       # ------------------------------------------------------------------
       - name: Build iOS (simulator)
         run: |
@@ -56,7 +62,7 @@ jobs:
             clean build | xcpretty --color
 
       # ------------------------------------------------------------------
-      # 4. Build watchOS target
+      # 5. Build watchOS target
       # ------------------------------------------------------------------
       - name: Build watchOS (simulator)
         run: |

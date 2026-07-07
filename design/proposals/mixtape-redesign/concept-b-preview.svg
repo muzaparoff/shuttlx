@@ -1,0 +1,177 @@
+<svg width="393" height="852" viewBox="0 0 393 852" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <pattern id="ruledLines" x="0" y="0" width="1" height="14" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="13" x2="393" y2="13" stroke="#C8BDA8" stroke-width="0.5" opacity="0.5"/>
+    </pattern>
+    <pattern id="paperGrain" x="0" y="0" width="3" height="3" patternUnits="userSpaceOnUse">
+      <circle cx="1" cy="1" r="0.4" fill="#8B7D65" opacity="0.06"/>
+      <circle cx="2.5" cy="2.2" r="0.3" fill="#8B7D65" opacity="0.04"/>
+    </pattern>
+    <linearGradient id="paperBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5F0E8"/>
+      <stop offset="40%" stop-color="#F0EBE0"/>
+      <stop offset="100%" stop-color="#EAE4D8"/>
+    </linearGradient>
+    <linearGradient id="redMarker" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#C0392B" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#E74C3C" stop-opacity="0.6"/>
+    </linearGradient>
+    <filter id="glowGreen">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <linearGradient id="lcdWindow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#010D01"/>
+      <stop offset="100%" stop-color="#000A00"/>
+    </linearGradient>
+    <linearGradient id="paperTopShadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#00000018"/>
+      <stop offset="100%" stop-color="#00000000"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══ PHONE FRAME ═══ -->
+  <rect x="0" y="0" width="393" height="852" rx="48" ry="48" fill="#2A1C10"/>
+  <!-- Cream paper background fills the screen -->
+  <rect x="3" y="3" width="387" height="846" rx="45" ry="45" fill="url(#paperBg)"/>
+  <!-- Ruled lines overlay -->
+  <rect x="3" y="3" width="387" height="846" rx="45" ry="45" fill="url(#ruledLines)"/>
+  <!-- Paper grain texture -->
+  <rect x="3" y="3" width="387" height="846" rx="45" ry="45" fill="url(#paperGrain)"/>
+  <!-- Faint top vignette (worn paper top) -->
+  <rect x="3" y="3" width="387" height="120" rx="45" fill="url(#paperTopShadow)"/>
+
+  <!-- ═══ STATUS BAR ═══ -->
+  <text x="32" y="52" font-family="-apple-system,SF Pro Display,sans-serif" font-size="17" fill="#2C2416" font-weight="600">9:41</text>
+  <rect x="142" y="14" width="109" height="34" rx="17" fill="#2C2416"/>
+  <text x="361" y="52" font-family="-apple-system" font-size="13" fill="#2C2416" text-anchor="end">82%</text>
+
+  <!-- ═══ HEADER SECTION: "Now Playing" J-card header ═══ -->
+  <!-- Red binding edge (signature felt-pad stripe) -->
+  <rect x="22" y="78" width="5" height="128" rx="2.5" fill="#C0392B"/>
+
+  <!-- Handwritten-style section header -->
+  <text x="38" y="100" font-family="Georgia,serif" font-size="13" fill="#2C2416" font-weight="bold" font-style="italic">Mixtape #14 · 2026 spring run</text>
+  <!-- SIDE A / REC indicator row -->
+  <rect x="38" y="108" width="44" height="18" rx="2" fill="none" stroke="#2C2416" stroke-width="1.5"/>
+  <text x="60" y="121" font-family="monospace" font-size="9" fill="#2C2416" font-weight="bold" text-anchor="middle">SIDE A</text>
+  <circle cx="98" cy="117" r="4.5" fill="#C0392B"/>
+  <circle cx="98" cy="117" r="7" fill="none" stroke="#C0392B" stroke-width="1" opacity="0.4"/>
+  <text x="111" y="121" font-family="monospace" font-size="9" fill="#C0392B" font-weight="bold">REC</text>
+  <!-- Playhead info -->
+  <text x="360" y="121" font-family="monospace" font-size="9" fill="#8B6B4A" text-anchor="end">▶ 2 of 8</text>
+  <!-- Baseline rule -->
+  <rect x="30" y="130" width="333" height="1" fill="#C8BDA8"/>
+
+  <!-- ═══ TRACK LISTING (J-card tracklist style) ═══ -->
+  <!-- Track 1: completed -->
+  <text x="38" y="154" font-family="monospace" font-size="10" fill="#8B7D65">01.</text>
+  <text x="62" y="154" font-family="Georgia,serif" font-size="11" fill="#8B7D65">WARM UP</text>
+  <text x="355" y="154" font-family="monospace" font-size="10" fill="#8B7D65" text-anchor="end">5:00 ✓</text>
+  <rect x="30" y="158" width="333" height="0.5" fill="#C8BDA8" opacity="0.6"/>
+
+  <!-- Track 2: CURRENT (red marker stripe highlight) -->
+  <rect x="27" y="162" width="339" height="28" rx="2" fill="url(#redMarker)"/>
+  <!-- Playhead arrow on left -->
+  <text x="29" y="180" font-family="monospace" font-size="10" fill="white" opacity="0.9">▶</text>
+  <text x="46" y="180" font-family="monospace" font-size="10" fill="white" font-weight="bold">02.</text>
+  <text x="70" y="180" font-family="Georgia,serif" font-size="12" fill="white" font-weight="bold">RUN</text>
+  <text x="355" y="180" font-family="monospace" font-size="10" fill="white" font-weight="bold" text-anchor="end">1:30</text>
+  <rect x="30" y="190" width="333" height="0.5" fill="#C8BDA8" opacity="0.6"/>
+
+  <!-- Track 3 -->
+  <text x="38" y="210" font-family="monospace" font-size="10" fill="#5A4E3E">03.</text>
+  <text x="62" y="210" font-family="Georgia,serif" font-size="11" fill="#5A4E3E">WALK</text>
+  <text x="355" y="210" font-family="monospace" font-size="10" fill="#5A4E3E" text-anchor="end">0:45</text>
+  <rect x="30" y="214" width="333" height="0.5" fill="#C8BDA8" opacity="0.6"/>
+
+  <!-- Track 4 -->
+  <text x="38" y="234" font-family="monospace" font-size="10" fill="#5A4E3E">04.</text>
+  <text x="62" y="234" font-family="Georgia,serif" font-size="11" fill="#5A4E3E">RUN</text>
+  <text x="355" y="234" font-family="monospace" font-size="10" fill="#5A4E3E" text-anchor="end">1:30</text>
+  <rect x="30" y="238" width="333" height="0.5" fill="#C8BDA8" opacity="0.6"/>
+
+  <!-- Track 5 -->
+  <text x="38" y="258" font-family="monospace" font-size="10" fill="#5A4E3E">05.</text>
+  <text x="62" y="258" font-family="Georgia,serif" font-size="11" fill="#5A4E3E">WALK</text>
+  <text x="355" y="258" font-family="monospace" font-size="10" fill="#5A4E3E" text-anchor="end">0:45</text>
+  <rect x="30" y="262" width="333" height="0.5" fill="#C8BDA8" opacity="0.6"/>
+
+  <!-- Tracks 6-8 (faded, upcoming) -->
+  <text x="38" y="278" font-family="monospace" font-size="9" fill="#C8BDA8">06. RUN · 07. WALK · 08. COOL DOWN</text>
+
+  <!-- Total runtime -->
+  <rect x="27" y="290" width="339" height="1" fill="#C8BDA8"/>
+  <text x="38" y="305" font-family="monospace" font-size="9" fill="#8B7D65">TOTAL PLAYING TIME</text>
+  <text x="355" y="305" font-family="monospace" font-size="10" fill="#2C2416" text-anchor="end" font-weight="bold">31:14 / 45:00</text>
+
+  <!-- ═══ LCD DIE-CUT WINDOW (live data) ═══ -->
+  <!-- Shadow around cutout (paper above casts shadow) -->
+  <rect x="30" y="322" width="333" height="130" rx="10" fill="#00000020"/>
+  <rect x="33" y="325" width="327" height="124" rx="8" fill="url(#lcdWindow)"/>
+  <rect x="33" y="325" width="327" height="124" rx="8" fill="none" stroke="#1B6606" stroke-width="1.5"/>
+  <!-- Die-cut "torn paper" edge effect at top -->
+  <path d="M33,325 Q40,318 47,325 Q54,318 61,325 Q68,318 75,325 Q82,318 89,325 Q96,318 103,325 Q110,318 117,325 Q124,318 131,325 Q138,318 145,325 Q152,318 159,325 Q166,318 173,325 Q180,318 187,325 Q194,318 201,325 Q208,318 215,325 Q222,318 229,325 Q236,318 243,325 Q250,318 257,325 Q264,318 271,325 Q278,318 285,325 Q292,318 299,325 Q306,318 313,325 Q320,318 327,325 Q334,318 341,325 Q348,318 355,325 Q362,318 360,325" fill="url(#paperBg)" stroke="#C8BDA8" stroke-width="0.5"/>
+
+  <!-- Ghost LCD -->
+  <text x="196" y="400" font-family="monospace" font-size="52" fill="#39FF14" fill-opacity="0.05" text-anchor="middle" font-weight="bold">88:88</text>
+  <!-- Big timer -->
+  <text x="196" y="400" font-family="monospace" font-size="52" fill="#39FF14" text-anchor="middle" font-weight="bold" filter="url(#glowGreen)">29:41</text>
+  <!-- HR + zone row -->
+  <text x="45" y="432" font-family="monospace" font-size="22" fill="#39FF14" font-weight="bold" filter="url(#glowGreen)">142</text>
+  <text x="94" y="424" font-family="monospace" font-size="9" fill="#8CADCC">BPM</text>
+  <rect x="94" y="427" width="26" height="13" rx="2" fill="none" stroke="#39FF14" stroke-width="1"/>
+  <text x="107" y="437" font-family="monospace" font-size="8" fill="#39FF14" text-anchor="middle" font-weight="bold">Z3</text>
+  <!-- VU mini bar -->
+  <rect x="128" y="428" width="5" height="13" rx="1" fill="#39FF14"/>
+  <rect x="135" y="428" width="5" height="13" rx="1" fill="#39FF14"/>
+  <rect x="142" y="428" width="5" height="13" rx="1" fill="#39FF14"/>
+  <rect x="149" y="428" width="5" height="13" rx="1" fill="#39FF14"/>
+  <rect x="156" y="428" width="5" height="13" rx="1" fill="#F2A61A"/>
+  <rect x="163" y="428" width="5" height="13" rx="1" fill="#FF333340"/>
+  <!-- Pace -->
+  <text x="350" y="434" font-family="monospace" font-size="20" fill="#39FF14" font-weight="bold" text-anchor="end" filter="url(#glowGreen)">5'42"</text>
+  <text x="356" y="426" font-family="monospace" font-size="8" fill="#8CADCC">/km</text>
+  <text x="196" y="445" font-family="monospace" font-size="8" fill="#1B6606" text-anchor="middle" letter-spacing="1.5">ELAPSED · STEP 2/8</text>
+
+  <!-- ═══ TRANSPORT CONTROLS (marker-drawn style) ═══ -->
+  <text x="30" y="488" font-family="monospace" font-size="9" fill="#8B7D65" letter-spacing="1">TRANSPORT</text>
+  <rect x="27" y="492" width="339" height="1" fill="#C8BDA8"/>
+
+  <!-- REW box -->
+  <rect x="30" y="502" width="64" height="58" rx="4" fill="none" stroke="#8B7D65" stroke-width="2"/>
+  <text x="62" y="527" font-family="-apple-system" font-size="20" fill="#5A4E3E" text-anchor="middle">⏮</text>
+  <text x="62" y="548" font-family="monospace" font-size="7" fill="#8B7D65" text-anchor="middle">CANCEL</text>
+
+  <!-- SKIP box -->
+  <rect x="100" y="502" width="56" height="58" rx="4" fill="none" stroke="#8B7D65" stroke-width="2"/>
+  <text x="128" y="527" font-family="-apple-system" font-size="20" fill="#5A4E3E" text-anchor="middle">⏭</text>
+  <text x="128" y="548" font-family="monospace" font-size="7" fill="#8B7D65" text-anchor="middle">SKIP</text>
+
+  <!-- PLAY/PAUSE big box (marker-style = thick red border) -->
+  <rect x="162" y="498" width="144" height="66" rx="4" fill="none" stroke="#C0392B" stroke-width="3"/>
+  <!-- Marker fill -->
+  <rect x="164" y="500" width="140" height="62" rx="3" fill="#C0392B" opacity="0.08"/>
+  <text x="234" y="527" font-family="-apple-system" font-size="22" fill="#C0392B" text-anchor="middle">⏸</text>
+  <text x="234" y="547" font-family="monospace" font-size="9" fill="#C0392B" text-anchor="middle" font-weight="bold">PAUSE</text>
+  <text x="234" y="558" font-family="monospace" font-size="6.5" fill="#C0392B" text-anchor="middle" opacity="0.7">PLAY KEY</text>
+
+  <!-- STOP box -->
+  <rect x="312" y="502" width="54" height="58" rx="4" fill="none" stroke="#8B7D65" stroke-width="2"/>
+  <text x="339" y="527" font-family="-apple-system" font-size="20" fill="#5A4E3E" text-anchor="middle">⏹</text>
+  <text x="339" y="548" font-family="monospace" font-size="7" fill="#8B7D65" text-anchor="middle">STOP</text>
+
+  <!-- ═══ CORNER CREASE MARKS (authentic J-card wear) ═══ -->
+  <line x1="10" y1="22" x2="22" y2="10" stroke="#C8BDA8" stroke-width="1.5" opacity="0.7"/>
+  <line x1="371" y1="10" x2="383" y2="22" stroke="#C8BDA8" stroke-width="1.5" opacity="0.7"/>
+  <line x1="10" y1="830" x2="22" y2="842" stroke="#C8BDA8" stroke-width="1.5" opacity="0.7"/>
+  <line x1="383" y1="830" x2="371" y2="842" stroke="#C8BDA8" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- Home indicator -->
+  <rect x="147" y="826" width="99" height="5" rx="2.5" fill="#2C2416" opacity="0.2"/>
+
+  <!-- ═══ CONCEPT LABEL ═══ -->
+  <rect x="22" y="580" width="349" height="36" rx="8" fill="#2C2416" opacity="0.08"/>
+  <text x="197" y="594" font-family="-apple-system,system-ui,sans-serif" font-size="11" fill="#2C2416" text-anchor="middle" font-weight="700">CONCEPT B — J-Card Travel Wallet</text>
+  <text x="197" y="609" font-family="-apple-system,system-ui,sans-serif" font-size="10" fill="#5A4E3E" text-anchor="middle">Real paper texture · tracklist layout · die-cut LCD window</text>
+</svg>

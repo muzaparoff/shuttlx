@@ -130,6 +130,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Live metrics broadcast
     private var lastLiveUpdateTime: Date?
 
+    // Periodic crash-recovery checkpoint (a never-paused workout must still
+    // leave a recoverable backup — see docs/plans/2026-07-stability-and-design-plan.md)
+    private var lastCheckpointDate: Date?
+    private let checkpointInterval: TimeInterval = 15
+
+    // Freeze instrumentation: proves on-device whether ticks stall (main-actor
+    // backlog / suspension) or stop entirely (kill) — see freeze root-cause plan.
+    private var lastTickDate: Date?
+    private var ticksSinceHeartbeat = 0
+
     // CoreLocation
     private let locationManager = CLLocationManager()
     private var routePoints: [RoutePoint] = []
@@ -356,6 +366,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         maxCadenceValue = 0
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
+        lastCheckpointDate = nil
+        lastTickDate = nil
+        ticksSinceHeartbeat = 0
         paceWindowSamples.removeAll(keepingCapacity: true)
         heartRateAnchor = nil
         caloriesAnchor = nil
@@ -460,6 +473,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     func pauseWorkout() {
         guard isWorkoutActive, !isPaused else { return }
+        applyPauseState()
+        workoutSession?.pause()
+        logger.info("Workout paused")
+    }
+
+    /// Everything a pause does EXCEPT pausing the HKWorkoutSession itself.
+    /// Called both from user-initiated pauseWorkout() and from the session
+    /// delegate when watchOS pauses the session on its own — in the latter
+    /// case the session is already paused and must not be paused again.
+    private func applyPauseState() {
         isPaused = true
         pauseStartDate = Date()
 
@@ -472,13 +495,19 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // double-counting calories/HR samples already processed.
         stopLocationUpdates()
 
-        workoutSession?.pause()
         saveWorkoutDataToLocalStorage()
-        logger.info("Workout paused")
     }
 
     func resumeWorkout() {
         guard isWorkoutActive, isPaused else { return }
+        applyResumeState()
+        workoutSession?.resume()
+        logger.info("Workout resumed")
+    }
+
+    /// Everything a resume does EXCEPT resuming the HKWorkoutSession itself.
+    /// See applyPauseState() for why this is split out.
+    private func applyResumeState() {
         isPaused = false
 
         // Accumulate pause duration
@@ -493,7 +522,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentSegmentStartTime = now
         segments.append(ActivitySegment(activityType: currentActivity, startDate: now))
 
-        workoutSession?.resume()
         startDisplayTimer()
         let sport = activeTemplate?.sportType ?? .running
         if sport.supportsAutoDetection || workoutMode == .gymRecovery {
@@ -504,7 +532,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // here. Restarting an HKAnchoredObjectQuery replays all samples since the stored
         // anchor in the initial results handler, causing double-counting on every resume.
         startLocationUpdates()
-        logger.info("Workout resumed")
     }
 
     func stopWorkout() {
@@ -678,12 +705,33 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         guard let startTime = workoutStartTime else { return }
         guard let segStart = currentSegmentStartTime else { return }
 
+        // Tick heartbeat: a growing gap means the timer is being throttled or
+        // the main actor is backlogged; logs stopping entirely means a kill.
+        let tickNow = Date()
+        if let lastTick = lastTickDate {
+            let gap = tickNow.timeIntervalSince(lastTick)
+            if gap > 2.5 {
+                logger.warning("Tick gap \(String(format: "%.1f", gap))s at elapsed \(Int(self.elapsedTime))s — timer throttled or suspended")
+            }
+        }
+        lastTickDate = tickNow
+        ticksSinceHeartbeat += 1
+        if ticksSinceHeartbeat >= 60 {
+            ticksSinceHeartbeat = 0
+            let sessionState = workoutSession?.state.rawValue ?? -1
+            logger.info("Tick heartbeat: elapsed \(Int(self.elapsedTime))s, hr \(self.heartRate), session state \(sessionState)")
+        }
+
+        // Pause-corrected wall-clock elapsed. Computed once here and fed to the
+        // engine so its countdown is wall-clock-derived (dropped ticks self-heal).
+        let wallClockElapsed = Date().timeIntervalSince(startTime) - accumulatedPauseTime
+
         // Order matters: tick the engine FIRST so its @Published state is up to
         // date BEFORE we write to elapsedTime. The elapsedTime write fires the
         // manager's objectWillChange; SwiftUI re-evaluates the body next runloop
         // pass and reads engine.currentStepTimeRemaining (already decremented).
         if workoutMode == .interval, let engine = intervalEngine {
-            engine.tick(heartRate: heartRate, distance: totalDistance)
+            engine.tick(heartRate: heartRate, distance: totalDistance, workoutElapsed: wallClockElapsed)
             if engine.isComplete {
                 saveWorkoutData()
                 stopWorkout()
@@ -691,7 +739,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             }
         }
 
-        elapsedTime = Date().timeIntervalSince(startTime) - accumulatedPauseTime
+        elapsedTime = wallClockElapsed
         currentSegmentTime = Date().timeIntervalSince(segStart)
 
         // Check debounce for pending activity transitions
@@ -720,6 +768,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Broadcast live metrics to iOS every 3 seconds
         broadcastLiveMetricsIfNeeded()
+
+        // Periodic checkpoint: keep the crash backup fresh so a kill at any
+        // point loses at most `checkpointInterval` seconds of the session.
+        let now = Date()
+        let checkpointDue = lastCheckpointDate.map { now.timeIntervalSince($0) >= checkpointInterval } ?? true
+        if checkpointDue {
+            lastCheckpointDate = now
+            saveWorkoutDataToLocalStorage()
+        }
     }
 
     // MARK: - Live Metrics Broadcast
@@ -1312,6 +1369,51 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         logger.info("Recovered session sent to iOS and backup cleared")
     }
 
+    /// Finalize an HKWorkoutSession orphaned by a crash or watchdog kill so its
+    /// collected data still reaches HealthKit. Without this, a workout whose
+    /// process died mid-run never writes an HKWorkout at all — the session stays
+    /// live inside HealthKit with no owner. Called once at app launch.
+    func recoverOrphanedHKSession() {
+        #if os(watchOS)
+        healthStore.recoverActiveWorkoutSession { [weak self] session, error in
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if let error = error {
+                    self.logger.error("recoverActiveWorkoutSession failed: \(error.localizedDescription)")
+                    return
+                }
+                guard let session = session else { return }
+                guard !self.isWorkoutActive else {
+                    self.logger.warning("Orphaned HK session found while a workout is active — ignoring")
+                    return
+                }
+                self.logger.warning("Recovered orphaned HKWorkoutSession (state \(session.state.rawValue)) — finalizing so the workout reaches Health")
+                let builder = session.associatedWorkoutBuilder()
+                if session.state == .running || session.state == .paused {
+                    session.end()
+                }
+                builder.endCollection(withEnd: Date()) { _, endError in
+                    if let endError = endError {
+                        Task { @MainActor [weak self] in
+                            self?.logger.error("endCollection on recovered session failed: \(endError.localizedDescription)")
+                        }
+                    }
+                    builder.finishWorkout { workout, finishError in
+                        Task { @MainActor [weak self] in
+                            guard let self = self else { return }
+                            if let finishError = finishError {
+                                self.logger.error("finishWorkout on recovered session failed: \(finishError.localizedDescription)")
+                            } else {
+                                self.logger.info("Orphaned workout finalized to HealthKit: \(workout?.uuid.uuidString ?? "unknown")")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        #endif
+    }
+
     private func clearWorkoutBackup() {
         guard let backupURL = workoutBackupURL() else { return }
         try? FileManager.default.removeItem(at: backupURL)
@@ -1498,8 +1600,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let engine = IntervalEngine()
         engine.configure(template: template)
         // Advance to step 3/8 (index 2, a 120s work step) at 01:48 remaining:
-        // 1 tick clears the 1s warmup, 1 clears the 1s work, 12 burn 120→108.
-        for _ in 0..<14 { engine.tick(heartRate: 142, distance: 3.42) }
+        // elapsed 1 clears the 1s warmup, 2 clears the 1s work, 14 → 12s into
+        // the 120s step (108s remaining).
+        for i in 1...14 { engine.tick(heartRate: 142, distance: 3.42, workoutElapsed: TimeInterval(i)) }
         intervalEngine = engine
     }
     #endif
@@ -1513,6 +1616,30 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
             logger.info("Workout session state: \(fromState.rawValue) -> \(toState.rawValue)")
 
             switch toState {
+            case .paused:
+                // System-initiated pause (user pause already set isPaused before
+                // the session transition fires). Reflect it so the UI and the
+                // pause-corrected clock stay truthful.
+                if isWorkoutActive && !isPaused {
+                    logger.warning("Session paused by system — reflecting in UI")
+                    applyPauseState()
+                }
+            case .running:
+                if isWorkoutActive && isPaused {
+                    logger.warning("Session resumed by system — reflecting in UI")
+                    applyResumeState()
+                }
+            case .stopped, .ended:
+                // If we didn't initiate this (user stop sets isWorkoutActive=false
+                // before this callback runs), the session died under us — finalize
+                // NOW so the workout is saved instead of leaving a dead session
+                // behind a still-running UI that can never stop.
+                if isWorkoutActive {
+                    logger.error("Session moved to \(toState.rawValue) by system mid-workout — saving and finalizing")
+                    saveWorkoutDataToLocalStorage()
+                    saveWorkoutData()
+                    stopWorkout()
+                }
             default:
                 break
             }
@@ -1522,7 +1649,14 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
     nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
         Task { @MainActor in
             logger.error("Workout session failed: \(error.localizedDescription)")
+            guard isWorkoutActive else { return }
+            // Checkpoint first (cheap, local), then finalize through the normal
+            // save path and tear the workout down so the UI never sits on a dead
+            // session. Previously this only wrote the backup and kept running.
             saveWorkoutDataToLocalStorage()
+            healthKitSaveError = "Workout session failed: \(error.localizedDescription)"
+            saveWorkoutData()
+            stopWorkout()
         }
     }
 }

@@ -1,0 +1,214 @@
+<svg width="393" height="852" viewBox="0 0 393 852" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="glowA">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowSoft">
+      <feGaussianBlur stdDeviation="2" result="blur"/>
+      <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <radialGradient id="yellowBody" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#FFD200"/>
+      <stop offset="60%" stop-color="#F5B800"/>
+      <stop offset="100%" stop-color="#D4950A"/>
+    </radialGradient>
+    <linearGradient id="windowEdge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2A2A2A"/>
+      <stop offset="100%" stop-color="#111111"/>
+    </linearGradient>
+    <pattern id="scratchLines" x="0" y="0" width="4" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="4" y2="4" stroke="#00000010" stroke-width="0.5"/>
+    </pattern>
+    <linearGradient id="lcdBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#010D01"/>
+      <stop offset="100%" stop-color="#020F02"/>
+    </linearGradient>
+    <linearGradient id="reelBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1A3060"/>
+      <stop offset="100%" stop-color="#0E1825"/>
+    </linearGradient>
+  </defs>
+
+  <!-- ═══ PHONE FRAME ═══ -->
+  <rect x="0" y="0" width="393" height="852" rx="48" ry="48" fill="#1A1A1A"/>
+  <rect x="3" y="3" width="387" height="846" rx="45" ry="45" fill="url(#yellowBody)"/>
+
+  <!-- Subtle scratch texture on body -->
+  <rect x="3" y="3" width="387" height="846" rx="45" ry="45" fill="url(#scratchLines)"/>
+
+  <!-- ═══ STATUS BAR ═══ -->
+  <text x="32" y="52" font-family="-apple-system,SF Pro Display,sans-serif" font-size="17" fill="#1A1A1A" font-weight="600">9:41</text>
+  <!-- Dynamic Island -->
+  <rect x="142" y="14" width="109" height="34" rx="17" fill="#1A1A1A"/>
+  <!-- Battery/signal -->
+  <text x="361" y="52" font-family="-apple-system" font-size="13" fill="#1A1A1A" text-anchor="end">82%</text>
+
+  <!-- ═══ WALKMAN HARDWARE CHROME ═══ -->
+  <!-- OPR/BATT LED indicator (top-left) -->
+  <circle cx="36" cy="96" r="5" fill="#FF3333" filter="url(#glowSoft)"/>
+  <text x="22" y="107" font-family="monospace" font-size="6.5" fill="#1A1A1A" font-weight="bold">OPR/BATT</text>
+
+  <!-- POWER switch (right edge, vertical) -->
+  <rect x="367" y="140" width="14" height="44" rx="7" fill="#1A1A1A" opacity="0.8"/>
+  <rect x="369" y="144" width="10" height="16" rx="5" fill="#444"/>
+  <text x="374" y="212" font-family="monospace" font-size="6" fill="#1A1A1A" text-anchor="middle" transform="rotate(90,374,212)">POWER</text>
+
+  <!-- Small HOLD switch (left edge) -->
+  <rect x="12" y="200" width="10" height="30" rx="5" fill="#1A1A1A" opacity="0.7"/>
+  <rect x="14" y="204" width="6" height="10" rx="3" fill="#666"/>
+
+  <!-- Cassette window bezel (the main dark housing panel) -->
+  <rect x="22" y="118" width="349" height="570" rx="24" fill="#1A1A1A"/>
+  <rect x="25" y="121" width="343" height="564" rx="21" fill="url(#windowEdge)"/>
+  <!-- Inner bezel rim highlight -->
+  <rect x="25" y="121" width="343" height="564" rx="21" fill="none" stroke="#FFFFFF" stroke-width="1" opacity="0.08"/>
+
+  <!-- ═══ J-CARD STRIP (cream paper, top of window) ═══ -->
+  <rect x="36" y="134" width="321" height="46" rx="5" fill="#EDE7D3"/>
+  <!-- Paper texture shadow at top -->
+  <rect x="36" y="134" width="321" height="6" rx="5" fill="#00000018"/>
+  <!-- SIDE A box -->
+  <rect x="44" y="143" width="44" height="19" rx="2" fill="none" stroke="#1C2330" stroke-width="1.5"/>
+  <text x="66" y="156" font-family="monospace" font-size="9.5" fill="#1C2330" font-weight="bold" text-anchor="middle">SIDE A</text>
+  <!-- REC dot (red, pulsing feel) -->
+  <circle cx="102" cy="152" r="4.5" fill="#FF3333"/>
+  <circle cx="102" cy="152" r="7" fill="none" stroke="#FF3333" stroke-width="1" opacity="0.4"/>
+  <!-- Workout name -->
+  <text x="115" y="157" font-family="monospace" font-size="11" fill="#1C2330" font-weight="bold" font-style="italic">MORNING RUN</text>
+  <!-- Distance + steps (right side) -->
+  <text x="352" y="150" font-family="monospace" font-size="9" fill="#1C2330" font-weight="bold" text-anchor="end">7.04 KM</text>
+  <text x="352" y="161" font-family="monospace" font-size="8" fill="#1C2330" opacity="0.7" text-anchor="end">1247 STEPS</text>
+
+  <!-- ═══ BIG LCD HERO PANEL ═══ -->
+  <rect x="36" y="192" width="321" height="118" rx="10" fill="url(#lcdBg)"/>
+  <rect x="36" y="192" width="321" height="118" rx="10" fill="none" stroke="#1B6606" stroke-width="1.5"/>
+  <!-- Ghost dead-pixel 88:88 -->
+  <text x="197" y="271" font-family="monospace" font-size="58" fill="#39FF14" fill-opacity="0.05" text-anchor="middle" font-weight="bold">88:88</text>
+  <!-- Active timer -->
+  <text x="197" y="271" font-family="monospace" font-size="58" fill="#39FF14" text-anchor="middle" font-weight="bold" filter="url(#glowA)">29:41</text>
+  <!-- Sublabels -->
+  <text x="52" y="298" font-family="monospace" font-size="9" fill="#1B6606" letter-spacing="1.5" font-weight="bold">ELAPSED</text>
+  <!-- Step pill -->
+  <rect x="140" y="287" width="46" height="16" rx="3" fill="#39FF1415" stroke="#39FF1455" stroke-width="1"/>
+  <circle cx="148" cy="295" r="2.5" fill="#39FF14"/>
+  <text x="155" y="299" font-family="monospace" font-size="8" fill="#39FF14" font-weight="bold">RUN</text>
+
+  <!-- ═══ VU + HR STRIP ═══ -->
+  <rect x="36" y="322" width="321" height="62" rx="8" fill="#060E14"/>
+  <rect x="36" y="322" width="321" height="62" rx="8" fill="none" stroke="#4A6A9A" stroke-width="1"/>
+  <!-- Felt pad red accent -->
+  <rect x="40" y="335" width="5" height="24" rx="2.5" fill="#B8453A"/>
+  <!-- HR label -->
+  <text x="54" y="350" font-family="monospace" font-size="9" fill="#8CADCC" font-weight="bold">HR</text>
+  <!-- VU segments: 6 green, 2 amber, 2 red (8 lit of 10) -->
+  <rect x="72" y="335" width="7" height="17" rx="1.5" fill="#39FF14" filter="url(#glowSoft)"/>
+  <rect x="81" y="335" width="7" height="17" rx="1.5" fill="#39FF14" filter="url(#glowSoft)"/>
+  <rect x="90" y="335" width="7" height="17" rx="1.5" fill="#39FF14" filter="url(#glowSoft)"/>
+  <rect x="99" y="335" width="7" height="17" rx="1.5" fill="#39FF14" filter="url(#glowSoft)"/>
+  <rect x="108" y="335" width="7" height="17" rx="1.5" fill="#39FF14" filter="url(#glowSoft)"/>
+  <rect x="117" y="335" width="7" height="17" rx="1.5" fill="#39FF14" filter="url(#glowSoft)"/>
+  <rect x="126" y="335" width="7" height="17" rx="1.5" fill="#F2A61A"/>
+  <rect x="135" y="335" width="7" height="17" rx="1.5" fill="#F2A61A"/>
+  <rect x="144" y="335" width="7" height="17" rx="1.5" fill="#FF3333" opacity="0.25"/>
+  <rect x="153" y="335" width="7" height="17" rx="1.5" fill="#FF3333" opacity="0.25"/>
+  <!-- BPM value -->
+  <text x="310" y="350" font-family="monospace" font-size="26" fill="#39FF14" font-weight="bold" text-anchor="end" filter="url(#glowSoft)">142</text>
+  <text x="318" y="341" font-family="monospace" font-size="8.5" fill="#8CADCC">bpm</text>
+  <!-- Z3 badge -->
+  <rect x="287" y="354" width="28" height="14" rx="2" fill="none" stroke="#39FF14" stroke-width="1.2"/>
+  <text x="301" y="364" font-family="monospace" font-size="8.5" fill="#39FF14" text-anchor="middle" font-weight="bold">Z3</text>
+
+  <!-- SPD row -->
+  <text x="54" y="375" font-family="monospace" font-size="9" fill="#8CADCC" font-weight="bold">SPD</text>
+  <rect x="72" y="369" width="180" height="3" rx="1.5" fill="#1B6606" opacity="0.35"/>
+  <rect x="163" y="366" width="2" height="9" rx="1" fill="#4A8ACA"/>
+  <text x="312" y="376" font-family="monospace" font-size="18" fill="#39FF14" font-weight="bold" text-anchor="end">5'42"</text>
+  <text x="320" y="369" font-family="monospace" font-size="8" fill="#8CADCC">/km</text>
+
+  <!-- ═══ DECORATIVE REELS (lower section of cassette housing) ═══ -->
+  <!-- Left supply reel (larger — more tape) -->
+  <circle cx="122" cy="488" r="48" fill="#0A121A"/>
+  <circle cx="122" cy="488" r="48" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.25"/>
+  <circle cx="122" cy="488" r="42" fill="url(#reelBg)"/>
+  <circle cx="122" cy="488" r="32" fill="#142040" stroke="#4A6A9A" stroke-width="1.5"/>
+  <line x1="122" y1="474" x2="122" y2="458" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="135.9" y1="481" x2="149.8" y2="473.1" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="135.9" y1="495" x2="149.8" y2="502.9" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="122" y1="502" x2="122" y2="518" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="108.1" y1="495" x2="94.2" y2="502.9" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="108.1" y1="481" x2="94.2" y2="473.1" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="122" cy="488" r="12" fill="#0A0F14" stroke="#4A6A9A" stroke-width="1.5"/>
+  <circle cx="122" cy="488" r="4" fill="#4A6A9A"/>
+  <!-- Polycarbonate glare -->
+  <ellipse cx="106" cy="473" rx="16" ry="10" fill="white" opacity="0.06" transform="rotate(-30,106,473)"/>
+
+  <!-- Tape progress bar (between reels) -->
+  <rect x="176" y="486" width="49" height="4" rx="2" fill="#1B6606" opacity="0.3"/>
+  <rect x="176" y="486" width="6" height="4" rx="2" fill="#FFFFFF" opacity="0.4"/>
+  <rect x="176" y="486" width="29" height="4" rx="2" fill="#39FF14" filter="url(#glowSoft)"/>
+
+  <!-- Right take-up reel (smaller — taking tape) -->
+  <circle cx="271" cy="488" r="40" fill="#0A121A"/>
+  <circle cx="271" cy="488" r="40" fill="none" stroke="#FFFFFF" stroke-width="1.5" opacity="0.25"/>
+  <circle cx="271" cy="488" r="34" fill="url(#reelBg)"/>
+  <circle cx="271" cy="488" r="24" fill="#142040" stroke="#4A6A9A" stroke-width="1.5"/>
+  <line x1="271" y1="476" x2="271" y2="465" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="281.4" y1="482" x2="290.4" y2="476.6" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="281.4" y1="494" x2="290.4" y2="499.4" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="271" y1="500" x2="271" y2="511" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="260.6" y1="494" x2="251.6" y2="499.4" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="260.6" y1="482" x2="251.6" y2="476.6" stroke="#4A6A9A" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="271" cy="488" r="9" fill="#0A0F14" stroke="#4A6A9A" stroke-width="1.5"/>
+  <circle cx="271" cy="488" r="3.5" fill="#4A6A9A"/>
+  <ellipse cx="256" cy="473" rx="13" ry="8" fill="white" opacity="0.06" transform="rotate(-30,256,473)"/>
+
+  <!-- ═══ TRANSPORT CONTROLS ═══ -->
+  <!-- REW -->
+  <rect x="36" y="557" width="60" height="58" rx="10" fill="#1A1A1A"/>
+  <rect x="36" y="557" width="60" height="58" rx="10" fill="none" stroke="#444" stroke-width="1"/>
+  <text x="66" y="581" font-family="-apple-system" font-size="20" fill="#CCCCCC" text-anchor="middle">⏮</text>
+  <text x="66" y="597" font-family="monospace" font-size="7" fill="#888" text-anchor="middle" letter-spacing="0.5">CANCEL</text>
+  <text x="66" y="607" font-family="monospace" font-size="6" fill="#555" text-anchor="middle">REW</text>
+  <!-- SKIP -->
+  <rect x="104" y="557" width="52" height="58" rx="10" fill="#1A1A1A"/>
+  <rect x="104" y="557" width="52" height="58" rx="10" fill="none" stroke="#444" stroke-width="1"/>
+  <text x="130" y="581" font-family="-apple-system" font-size="20" fill="#CCCCCC" text-anchor="middle">⏭</text>
+  <text x="130" y="597" font-family="monospace" font-size="7" fill="#888" text-anchor="middle" letter-spacing="0.5">SKIP</text>
+  <text x="130" y="607" font-family="monospace" font-size="6" fill="#555" text-anchor="middle">FF</text>
+  <!-- PLAY/PAUSE (primary, yellow accent key — LATCHED) -->
+  <rect x="164" y="551" width="151" height="70" rx="10" fill="#F5B800"/>
+  <rect x="164" y="551" width="151" height="70" rx="10" fill="none" stroke="#FFD700" stroke-width="1.5"/>
+  <!-- Inset pressed look -->
+  <rect x="166" y="553" width="147" height="66" rx="9" fill="#D4950A" opacity="0.25"/>
+  <text x="240" y="582" font-family="-apple-system" font-size="24" fill="#1A1A1A" text-anchor="middle">⏸</text>
+  <text x="240" y="601" font-family="monospace" font-size="9" fill="#1A1A1A" text-anchor="middle" font-weight="bold" letter-spacing="2">PAUSE</text>
+  <text x="240" y="612" font-family="monospace" font-size="6" fill="#1A1A1A" text-anchor="middle" opacity="0.6">PLAY KEY · LATCHED</text>
+  <!-- STOP -->
+  <rect x="323" y="557" width="60" height="58" rx="10" fill="#2A0A0A"/>
+  <rect x="323" y="557" width="60" height="58" rx="10" fill="none" stroke="#662222" stroke-width="1"/>
+  <text x="353" y="581" font-family="-apple-system" font-size="20" fill="#CC4444" text-anchor="middle">⏹</text>
+  <text x="353" y="597" font-family="monospace" font-size="7" fill="#884444" text-anchor="middle" letter-spacing="0.5">STOP</text>
+  <text x="353" y="607" font-family="monospace" font-size="6" fill="#553333" text-anchor="middle">FINISH</text>
+
+  <!-- ═══ BRAND STRIP AT BOTTOM OF HOUSING ═══ -->
+  <text x="197" y="643" font-family="monospace" font-size="7" fill="#FFFFFF" fill-opacity="0.25" text-anchor="middle" letter-spacing="2">IEC TYPE II · HIGH BIAS · 90 · C-90 · 90 MIN</text>
+
+  <!-- Bottom edge of cassette housing -->
+  <!-- (window ends at y=688, body continues below) -->
+
+  <!-- ═══ YELLOW WALKMAN BODY BOTTOM AREA ═══ -->
+  <!-- FLASHLIGHT / CAMERA labels (from reference photo) -->
+  <text x="20" y="780" font-family="monospace" font-size="7" fill="#1A1A1A" opacity="0.4" text-anchor="middle" transform="rotate(-90,20,730)">FLASHLIGHT</text>
+  <text x="373" y="780" font-family="monospace" font-size="7" fill="#1A1A1A" opacity="0.4" text-anchor="middle" transform="rotate(90,373,730)">CAMERA</text>
+  <circle cx="24" cy="810" r="5" fill="#1A1A1A" opacity="0.3"/>
+  <circle cx="369" cy="810" r="5" fill="#1A1A1A" opacity="0.3"/>
+
+  <!-- Home indicator -->
+  <rect x="147" y="826" width="99" height="5" rx="2.5" fill="#1A1A1A" opacity="0.3"/>
+
+  <!-- ═══ CONCEPT LABEL ═══ -->
+  <rect x="22" y="660" width="349" height="34" rx="8" fill="#00000030"/>
+  <text x="197" y="673" font-family="-apple-system,system-ui,sans-serif" font-size="11" fill="#FFD200" text-anchor="middle" font-weight="600">CONCEPT A — Real Walkman Wallpaper</text>
+  <text x="197" y="687" font-family="-apple-system,system-ui,sans-serif" font-size="10" fill="#FFFFFF" text-anchor="middle" opacity="0.7">CC0 photo background · yellow body · live data in cassette window</text>
+</svg>

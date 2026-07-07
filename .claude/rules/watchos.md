@@ -9,7 +9,7 @@ globs:
 
 - Scheme name: `ShuttlX Watch App`
 - watchOS target path: `ShuttlX Watch App/`
-- Build: `xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -sdk watchsimulator build`
+- Build: `xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination 'generic/platform=watchOS Simulator' build` (do NOT pass `-sdk` — it forces the iOS companion target onto the watch SDK and breaks its SPM deps)
 - Background mode: `workout-processing` for active workouts
 
 ## Timer Display
