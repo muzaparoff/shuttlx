@@ -12,34 +12,39 @@ import Foundation
 ///   Zone 4 (Hard):    80–90%
 ///   Zone 5 (Peak):    90–100%
 ///
-/// Both targets share this identical file — do not let the copies diverge.
-struct HeartRateZoneCalculator: Codable {
+public struct HeartRateZoneCalculator: Codable, Sendable {
 
     // MARK: - Constants
 
     /// UserDefaults key used in the App Group shared container.
-    static let userDefaultsMaxHRKey = "userMaxHeartRate"
+    public static let userDefaultsMaxHRKey = "userMaxHeartRate"
 
     /// Conservative fallback when no age or manual max HR is available.
     /// 190 BPM errs on the safe side for most adult users.
-    static let fallbackMaxHR: Double = 190
+    public static let fallbackMaxHR: Double = 190
 
     /// Warning threshold as a fraction of max HR (70%) — conservative default suitable for
     /// cardiac-rehab and general-population users. Can be raised to 0.85 for performance-athlete mode.
-    static let highIntensityThreshold: Double = 0.70
+    public static let highIntensityThreshold: Double = 0.70
 
     // MARK: - Stored Properties
 
     /// User-supplied age in years. Optional — may be read from HealthKit.
-    var age: Int?
+    public var age: Int?
 
     /// Manually overridden max HR (e.g. from a lab test). Takes precedence over the formula.
-    var manualMaxHR: Double?
+    public var manualMaxHR: Double?
+
+
+    public init(age: Int? = nil, manualMaxHR: Double? = nil) {
+        self.age = age
+        self.manualMaxHR = manualMaxHR
+    }
 
     // MARK: - Computed Properties
 
     /// Effective max HR: manual override → Tanaka formula → fallback.
-    var estimatedMaxHR: Double {
+    public var estimatedMaxHR: Double {
         if let manual = manualMaxHR, manual > 0 {
             return manual
         }
@@ -50,7 +55,7 @@ struct HeartRateZoneCalculator: Codable {
     }
 
     /// True when no age or manual max HR is available and we are using the fallback value.
-    var isUsingFallback: Bool {
+    public var isUsingFallback: Bool {
         manualMaxHR == nil && age == nil
     }
 
@@ -58,7 +63,7 @@ struct HeartRateZoneCalculator: Codable {
 
     /// Returns the zone number (1–5) for a given heart rate.
     /// Returns 0 when the heart rate is zero or negative.
-    func zone(for heartRate: Double) -> Int {
+    public func zone(for heartRate: Double) -> Int {
         guard heartRate > 0 else { return 0 }
         let pct = heartRate / estimatedMaxHR
         switch pct {
@@ -71,7 +76,7 @@ struct HeartRateZoneCalculator: Codable {
     }
 
     /// Returns a human-readable zone name for a given heart rate.
-    func zoneName(for heartRate: Double) -> String {
+    public func zoneName(for heartRate: Double) -> String {
         switch zone(for: heartRate) {
         case 1: return "Zone 1 Easy"
         case 2: return "Zone 2 Fat Burn"
@@ -84,7 +89,7 @@ struct HeartRateZoneCalculator: Codable {
 
     /// Returns the BPM boundaries for each zone, calculated from `estimatedMaxHR`.
     /// Useful for displaying zone charts and tooltips.
-    func zoneBoundaries() -> [(zone: Int, name: String, lower: Int, upper: Int)] {
+    public func zoneBoundaries() -> [(zone: Int, name: String, lower: Int, upper: Int)] {
         let max = estimatedMaxHR
         return [
             (1, "Zone 1 Easy",    Int((max * 0.50).rounded()), Int((max * 0.60).rounded()) - 1),
@@ -100,7 +105,7 @@ struct HeartRateZoneCalculator: Codable {
     /// This is a cardiac safety indicator. A person exercising above this threshold
     /// is working at very high relative intensity — which may be dangerous for older users
     /// if displayed zones do not reflect their actual physiology.
-    func isHighIntensityWarning(heartRate: Double) -> Bool {
+    public func isHighIntensityWarning(heartRate: Double) -> Bool {
         guard heartRate > 0 else { return false }
         return heartRate / estimatedMaxHR > Self.highIntensityThreshold
     }
@@ -108,7 +113,7 @@ struct HeartRateZoneCalculator: Codable {
     // MARK: - Persistence
 
     /// Loads the saved max HR from the App Group UserDefaults.
-    static func loadSavedMaxHR() -> Double? {
+    public static func loadSavedMaxHR() -> Double? {
         guard let defaults = UserDefaults(suiteName: "group.com.shuttlx.shared") else { return nil }
         let value = defaults.double(forKey: userDefaultsMaxHRKey)
         return value > 0 ? value : nil
@@ -118,7 +123,7 @@ struct HeartRateZoneCalculator: Codable {
     /// between the iOS app, watchOS app, and widgets without requiring HealthKit access.
     ///
     /// Pass 0 or a negative value to clear a manual override (reverts to Tanaka formula / HealthKit age).
-    static func saveMaxHR(_ maxHR: Double) {
+    public static func saveMaxHR(_ maxHR: Double) {
         guard let defaults = UserDefaults(suiteName: "group.com.shuttlx.shared") else { return }
         if maxHR > 0 {
             defaults.set(maxHR, forKey: userDefaultsMaxHRKey)
@@ -131,7 +136,7 @@ struct HeartRateZoneCalculator: Codable {
 
     /// Creates a calculator pre-populated from App Group UserDefaults.
     /// Falls back to the fallback max HR when nothing is stored.
-    static func fromSharedDefaults(age: Int? = nil) -> HeartRateZoneCalculator {
+    public static func fromSharedDefaults(age: Int? = nil) -> HeartRateZoneCalculator {
         let savedMaxHR = loadSavedMaxHR()
         return HeartRateZoneCalculator(age: age, manualMaxHR: savedMaxHR)
     }

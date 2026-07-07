@@ -2,6 +2,7 @@ import Foundation
 import WatchConnectivity
 import WidgetKit
 import os.log
+import ShuttlXShared
 
 @MainActor
 class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {

@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ShuttlXShared
 
 struct DailyWorkoutSummary: Identifiable {
     let id = UUID()

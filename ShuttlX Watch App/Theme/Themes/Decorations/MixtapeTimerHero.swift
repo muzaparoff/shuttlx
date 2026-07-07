@@ -1,5 +1,6 @@
 import SwiftUI
 import WatchKit
+import ShuttlXShared
 
 // MARK: - Mixtape watchOS workout hero chrome
 //

@@ -1,6 +1,7 @@
 import SwiftUI
 #if os(watchOS)
 import WatchKit
+import ShuttlXShared
 #endif
 
 struct TrainingView: View {

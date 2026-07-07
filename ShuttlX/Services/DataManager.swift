@@ -5,6 +5,7 @@ import StoreKit
 import WidgetKit
 import TelemetryDeck
 import os.log
+import ShuttlXShared
 
 @MainActor
 class DataManager: ObservableObject {

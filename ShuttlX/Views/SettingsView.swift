@@ -4,6 +4,7 @@ import WatchConnectivity
 import WidgetKit
 import RevenueCatUI
 import TelemetryDeck
+import ShuttlXShared
 
 struct SettingsView: View {
     @Environment(ThemeManager.self) var themeManager
