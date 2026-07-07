@@ -2,9 +2,9 @@ import SwiftUI
 
 // MARK: - AppTheme
 //
-// `colors`, `fonts`, `effects`, `chartStyle` are `var` so callers can build
-// from a preset and override individual tokens:
-//   var t = ThemePreset.neon.makeTheme(id: "myNeon", displayName: "My Neon", icon: "bolt")
+// `colors`, `fonts`, `effects`, `chartStyle` are `var` so callers can copy an
+// existing theme and override individual tokens:
+//   var t = SynthwaveTheme.theme
 //   t.colors.running = .pink
 //
 // `id`, `displayName`, `icon` stay `let` — they form the theme's identity.

@@ -101,14 +101,6 @@ extension View {
             }
             .background(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).fill(theme.colors.surface))
             .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder, lineWidth: 1))
-        case .meter:
-            VStack(spacing: 0) {
-                if headerLabel != nil { VUGaugeHeader() }
-                self.padding(0)
-                if headerLabel != nil { VUScaleFooter() }
-            }
-            .background(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).fill(theme.colors.surface))
-            .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder, lineWidth: 1))
         case .terminal:
             let barWidth = theme.effects.cardAccentBarWidth
             let accentColor = accent ?? theme.colors.ctaPrimary
@@ -633,74 +625,3 @@ struct RadioBandFooter: View {
     }
 }
 
-// MARK: - VU Gauge Header
-
-struct VUGaugeHeader: View {
-    private let amberColor = Color(red: 0.91, green: 0.63, blue: 0.19)
-
-    var body: some View {
-        HStack(spacing: 3) {
-            Text("L")
-                .font(.system(size: 7, weight: .medium, design: .monospaced))
-                .foregroundStyle(amberColor.opacity(0.5))
-                .frame(width: 12)
-            HStack(spacing: 1) {
-                ForEach(0..<15, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 1)
-                        .fill(segmentColor(for: i))
-                        .frame(width: 3, height: 8)
-                }
-            }
-            Text("-3dB")
-                .font(.system(size: 7, weight: .medium, design: .monospaced))
-                .foregroundStyle(amberColor.opacity(0.6))
-                .frame(width: 30, alignment: .trailing)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .overlay(alignment: .bottom) {
-            Rectangle()
-                .fill(amberColor.opacity(0.1))
-                .frame(height: 1)
-        }
-    }
-
-    private func segmentColor(for index: Int) -> Color {
-        if index < 7 {
-            return Color(red: 0.55, green: 0.76, blue: 0.29)   // green
-        } else if index < 10 {
-            return Color(red: 1.0, green: 0.76, blue: 0.03)    // yellow
-        } else if index < 12 {
-            return Color(red: 0.96, green: 0.26, blue: 0.21)   // red
-        } else {
-            return amberColor.opacity(0.08)                      // unlit
-        }
-    }
-}
-
-// MARK: - VU Scale Footer
-
-struct VUScaleFooter: View {
-    private let amberColor = Color(red: 0.91, green: 0.63, blue: 0.19)
-    private let marks = ["-20", "-10", "-7", "-5", "-3", "0", "+3"]
-
-    var body: some View {
-        HStack {
-            ForEach(Array(marks.enumerated()), id: \.offset) { index, mark in
-                Text(mark)
-                if index < marks.count - 1 {
-                    Spacer(minLength: 0)
-                }
-            }
-        }
-        .font(.system(size: 6, weight: .regular, design: .monospaced))
-        .foregroundStyle(amberColor.opacity(0.25))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(amberColor.opacity(0.08))
-                .frame(height: 1)
-        }
-    }
-}

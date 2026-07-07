@@ -26,7 +26,6 @@ struct ThemeEffects: Equatable {
         case lcd
         case pixel
         case tape
-        case meter
         case terminal
     }
 
