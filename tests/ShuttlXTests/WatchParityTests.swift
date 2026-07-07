@@ -9,6 +9,7 @@ import XCTest
 ///   - `public` access modifiers (package copy is public, watch copy internal)
 ///   - `Sendable` conformances (package copy declares them)
 ///   - the explicit `init() {}` the package copy needs for public visibility
+///   - import lines (the watch copy imports ShuttlXShared for DetectedActivity)
 ///   - comments and blank lines
 ///
 /// Any other difference means the copies have functionally diverged and the
@@ -67,6 +68,6 @@ final class WatchParityTests: XCTestCase {
                 l = l.replacingOccurrences(of: ": Sendable", with: "")
                 return l.trimmingCharacters(in: .whitespaces)
             }
-            .filter { !$0.isEmpty && $0 != "init() {}" }
+            .filter { !$0.isEmpty && $0 != "init() {}" && !$0.hasPrefix("import ") }
     }
 }

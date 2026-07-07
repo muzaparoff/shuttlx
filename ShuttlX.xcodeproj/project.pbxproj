@@ -22,7 +22,6 @@
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
 		A5923521B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5923521F /* Assets.xcassets */; };
-		A5923530 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		A5923531 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923531F /* SessionDetailView.swift */; };
 		A5923B01 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
@@ -110,6 +109,7 @@
 		TH000012 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
 		TH000013 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
 		TH000097 /* IntervalTypeThemeHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000098 /* IntervalTypeThemeHelpers.swift */; };
+		DA000001 /* DetectedActivity+Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* DetectedActivity+Theme.swift */; };
 		TH000014 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000004 /* AppTheme.swift */; };
 		TH000015 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
 		TH000016 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
@@ -147,7 +147,6 @@
 		WG000011 /* SmallWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000002 /* SmallWidget.swift */; };
 		WG000012 /* MediumWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000003 /* MediumWidget.swift */; };
 		WG000013 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
-		WG000014 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		WG000015 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
 		WG000017 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000007 /* WidgetDataProvider.swift */; };
 		WG000018 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000007 /* WidgetDataProvider.swift */; };
@@ -161,7 +160,6 @@
 		WW100005 /* TodayWorkoutComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000005 /* TodayWorkoutComplication.swift */; };
 		WW100006 /* WatchWidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000007 /* WatchWidgetDataProvider.swift */; };
 		WW100007 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
-		WW100008 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		WW100009 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
 		WW100012 /* ShuttlXWatchWidgets.appex in Embed Watch Widget Extension */ = {isa = PBXBuildFile; fileRef = WW000006 /* ShuttlXWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		WW100020 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00001 /* ShuttlXTheme.swift */; };
@@ -277,7 +275,7 @@
 		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		A5923530F /* ActivitySegment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitySegment.swift; sourceTree = "<group>"; };
+		A5923530F /* DetectedActivity+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DetectedActivity+Theme.swift"; sourceTree = "<group>"; };
 		A5923531F /* SessionDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionDetailView.swift; sourceTree = "<group>"; };
 		A5923A01 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXTheme.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
@@ -541,7 +539,7 @@
 			isa = PBXGroup;
 			children = (
 				A5923505F /* TrainingSession.swift */,
-				A5923530F /* ActivitySegment.swift */,
+				A5923530F /* DetectedActivity+Theme.swift */,
 				B5923001 /* ChartData.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
@@ -997,7 +995,6 @@
 				A5923502 /* ContentView.swift in Sources */,
 				A5923503 /* ShuttlXApp.swift in Sources */,
 				A5923505 /* TrainingSession.swift in Sources */,
-				A5923530 /* ActivitySegment.swift in Sources */,
 				A5923507B /* DataManager.swift in Sources */,
 				A5923508B /* PhoneSyncCoordinator.swift in Sources */,
 				A5923531 /* SessionDetailView.swift in Sources */,
@@ -1013,6 +1010,7 @@
 				TH000012 /* ThemeFonts.swift in Sources */,
 				TH000013 /* ThemeEffects.swift in Sources */,
 				TH000097 /* IntervalTypeThemeHelpers.swift in Sources */,
+				DA000001 /* DetectedActivity+Theme.swift in Sources */,
 				TH000014 /* AppTheme.swift in Sources */,
 				TH000015 /* ThemeManager.swift in Sources */,
 				TH000016 /* ThemeModifiers.swift in Sources */,
@@ -1110,7 +1108,6 @@
 				WG000011 /* SmallWidget.swift in Sources */,
 				WG000012 /* MediumWidget.swift in Sources */,
 				WG000013 /* TrainingSession.swift in Sources */,
-				WG000014 /* ActivitySegment.swift in Sources */,
 				WG000015 /* WorkoutTemplate.swift in Sources */,
 				WG000017 /* WidgetDataProvider.swift in Sources */,
 				WG000020B /* ShuttlXTheme.swift in Sources */,
@@ -1151,7 +1148,6 @@
 				WW100005 /* TodayWorkoutComplication.swift in Sources */,
 				WW100006 /* WatchWidgetDataProvider.swift in Sources */,
 				WW100007 /* TrainingSession.swift in Sources */,
-				WW100008 /* ActivitySegment.swift in Sources */,
 				WW100009 /* WorkoutTemplate.swift in Sources */,
 				WW100020 /* ShuttlXTheme.swift in Sources */,
 				WW100021 /* ThemeColors.swift in Sources */,

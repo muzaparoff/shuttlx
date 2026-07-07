@@ -1,16 +1,26 @@
 import Foundation
 
-// Foundation-only mirror of the app-target `DetectedActivity` enum.
-// The app copy (in ShuttlX/Models/ActivitySegment.swift) is the source of truth
-// for UI concerns (color/icon/displayName) — but tests only need the raw cases,
-// so we keep this shim free of SwiftUI to make the Shared/ SPM target compile.
-//
-// Future work: once the app targets import ShuttlXShared, the SwiftUI extensions
-// can move to a separate file in the app target and this becomes the single
-// source of truth.
+/// Motion-classified activity for a workout segment. Single source of truth —
+/// theme-coupled color lives in each app target's DetectedActivity+Theme.swift.
 public enum DetectedActivity: String, Codable, CaseIterable, Sendable {
     case running
     case walking
     case stationary
     case unknown
+
+    public var displayName: String {
+        switch self {
+        case .running: return "Running"
+        case .walking: return "Walking"
+        case .stationary, .unknown: return "Stationary"
+        }
+    }
+
+    public var systemImage: String {
+        switch self {
+        case .running: return "figure.run"
+        case .walking: return "figure.walk"
+        case .stationary, .unknown: return "figure.stand"
+        }
+    }
 }
