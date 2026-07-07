@@ -3,11 +3,6 @@ import ShuttlXShared
 
 // MARK: - Session Mode
 
-enum SessionMode: String, Codable {
-    case standard = "standard"
-    case gymRecovery = "gymRecovery"
-}
-
 // MARK: - Heart-Rate Recovery Capture (one rest period in a gym recovery session)
 
 struct HRRCapture: Identifiable, Codable, Hashable {
