@@ -89,7 +89,7 @@ Theme sync:
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
 - **Dynamic multi-theme UI**: 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, Neovim, FM Tuner) — selectable in Settings
-- **Models are duplicated** between iOS and watchOS — update BOTH copies when changing
+- **Most models live in the ShuttlXShared package** (`Shared/`) — single source of truth, `import ShuttlXShared`. Only `TrainingSession` and `WorkoutTemplate` remain duplicated per target (update BOTH copies) until the Phase 4 engine unification — see `.claude/rules/models.md`
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 - **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status
 

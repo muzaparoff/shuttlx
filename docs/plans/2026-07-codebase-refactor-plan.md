@@ -1,5 +1,13 @@
 # Codebase Readability & Maintainability Refactor Plan — July 2026
 
+> **Status (2026-07-07):** Phase 0 DONE (CI runs swift test; parity guard added).
+> Phase 1 DONE (dead theme code deleted; PhoneSyncCoordinator/WatchSyncCoordinator
+> rename; iOS helper dedup). Phase 2 DONE-with-scope-note: RoutePoint, HRZC,
+> FormattingUtils, WorkoutSport (split), SessionMode, TrainingPlan, BuiltInPlans,
+> ExerciseDevice, ActivitySegment+DetectedActivity all moved to ShuttlXShared;
+> TrainingSession + WorkoutTemplate BLOCKED on the IntervalType name collision
+> with the package engine — they move as part of Phase 4. Phases 3–5 pending.
+
 Synthesis of a 4-agent read-only audit (senior-architect: repo structure; senior-ios-developer: iOS god-files; swiftui-watchos-specialist: watch decomposition; test-author: safety net). Companion to `2026-07-stability-and-design-plan.md` (freeze fixes + design). Everything here is structure-only — zero behavior change — except Phase 4, which is explicitly flagged.
 
 ## Corrected facts (verified by audit — update mental model & docs)
