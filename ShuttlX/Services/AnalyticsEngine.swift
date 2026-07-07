@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import ShuttlXShared
 
 // MARK: - Analytics Data Types
 

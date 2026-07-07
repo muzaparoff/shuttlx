@@ -3,6 +3,7 @@ import Foundation
 import Combine
 import WidgetKit
 import os.log
+import ShuttlXShared
 
 @MainActor
 class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {

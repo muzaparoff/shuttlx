@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct SessionDetailView: View {
     let session: TrainingSession

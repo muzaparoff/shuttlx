@@ -62,7 +62,6 @@
 		B5923013 /* PaceTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923003 /* PaceTrendChart.swift */; };
 		B5923014 /* HRZoneChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923004 /* HRZoneChart.swift */; };
 		B5923015 /* WeekStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923005 /* WeekStripView.swift */; };
-		C5923011 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
 		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
 		D5923001 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
 		D5923002 /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923002F /* TemplateManager.swift */; };
@@ -106,6 +105,8 @@
 		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
 		SS000001 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		SS000002 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
+		SS000003 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
+		SS000004 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		IW000001 /* iPhoneHapticPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000001F /* iPhoneHapticPlayer.swift */; };
 		IW000002 /* iOSHeartRateMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000002F /* iOSHeartRateMonitor.swift */; };
 		IW000003 /* iPhoneWorkoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000003F /* iPhoneWorkoutController.swift */; };
@@ -156,7 +157,6 @@
 		WG000013 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
 		WG000014 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		WG000015 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
-		WG000016 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
 		WG000017 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000007 /* WidgetDataProvider.swift */; };
 		WG000018 /* WidgetDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000007 /* WidgetDataProvider.swift */; };
 		WG000019 /* ShuttlXWidgets.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = WG000006 /* ShuttlXWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -172,7 +172,6 @@
 		WW100008 /* ActivitySegment.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923530F /* ActivitySegment.swift */; };
 		WW100009 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
 		WW100010 /* WorkoutSport.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport.swift */; };
-		WW100011 /* RoutePoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923001 /* RoutePoint.swift */; };
 		WW100012 /* ShuttlXWatchWidgets.appex in Embed Watch Widget Extension */ = {isa = PBXBuildFile; fileRef = WW000006 /* ShuttlXWatchWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		WW100020 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00001 /* ShuttlXTheme.swift */; };
 		WW100021 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00002 /* ThemeColors.swift */; };
@@ -305,7 +304,6 @@
 		B5923003 /* PaceTrendChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceTrendChart.swift; sourceTree = "<group>"; };
 		B5923004 /* HRZoneChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZoneChart.swift; sourceTree = "<group>"; };
 		B5923005 /* WeekStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStripView.swift; sourceTree = "<group>"; };
-		C5923001 /* RoutePoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RoutePoint.swift; sourceTree = "<group>"; };
 		C5923002 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
 		D5923001F /* WorkoutTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplate.swift; sourceTree = "<group>"; };
 		D5923002F /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
@@ -472,6 +470,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				SS000003 /* ShuttlXShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -479,6 +478,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				SS000004 /* ShuttlXShared in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -558,7 +558,6 @@
 				A5923505F /* TrainingSession.swift */,
 				A5923530F /* ActivitySegment.swift */,
 				B5923001 /* ChartData.swift */,
-				C5923001 /* RoutePoint.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
 				H5923001F /* WorkoutSport.swift */,
@@ -875,6 +874,9 @@
 			dependencies = (
 			);
 			name = ShuttlXWidgets;
+			packageProductDependencies = (
+				SS100001 /* ShuttlXShared */,
+			);
 			productName = ShuttlXWidgets;
 			productReference = WG000006 /* ShuttlXWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -892,6 +894,9 @@
 			dependencies = (
 			);
 			name = ShuttlXWatchWidgets;
+			packageProductDependencies = (
+				SS100001 /* ShuttlXShared */,
+			);
 			productName = ShuttlXWatchWidgets;
 			productReference = WW000006 /* ShuttlXWatchWidgets.appex */;
 			productType = "com.apple.product-type.app-extension";
@@ -1076,7 +1081,6 @@
 
 				TC000016 /* ClassicRadioNeedlePointer.swift in Sources */,
 				TC000017 /* MixtapeSpoolDot.swift in Sources */,
-				C5923011 /* RoutePoint.swift in Sources */,
 				H5923001 /* WorkoutSport.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
 				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
@@ -1135,7 +1139,6 @@
 				WG000014 /* ActivitySegment.swift in Sources */,
 				WG000015 /* WorkoutTemplate.swift in Sources */,
 				H5923002 /* WorkoutSport.swift in Sources */,
-				WG000016 /* RoutePoint.swift in Sources */,
 				WG000017 /* WidgetDataProvider.swift in Sources */,
 				WG000020B /* ShuttlXTheme.swift in Sources */,
 				HR000012 /* HeartRateZoneCalculator.swift in Sources */,
@@ -1179,7 +1182,6 @@
 				WW100008 /* ActivitySegment.swift in Sources */,
 				WW100009 /* WorkoutTemplate.swift in Sources */,
 				WW100010 /* WorkoutSport.swift in Sources */,
-				WW100011 /* RoutePoint.swift in Sources */,
 				WW100020 /* ShuttlXTheme.swift in Sources */,
 				HR000013 /* HeartRateZoneCalculator.swift in Sources */,
 				WW100021 /* ThemeColors.swift in Sources */,

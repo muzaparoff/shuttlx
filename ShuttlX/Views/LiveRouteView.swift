@@ -1,5 +1,6 @@
 import SwiftUI
 import MapKit
+import ShuttlXShared
 
 struct LiveRouteView: View {
     let routePoints: [RoutePoint]

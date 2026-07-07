@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import ShuttlXShared
 
 struct ElevationProfileView: View {
     let route: [RoutePoint]

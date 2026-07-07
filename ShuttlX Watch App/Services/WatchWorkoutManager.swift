@@ -7,6 +7,7 @@ import WatchConnectivity
 import WatchKit
 #endif
 import os.log
+import ShuttlXShared
 
 struct KmSplit: Identifiable {
     let id = UUID()
