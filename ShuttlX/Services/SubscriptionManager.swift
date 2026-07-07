@@ -124,7 +124,7 @@ final class SubscriptionManager {
         isPro = info.entitlements[Self.proEntitlementID]?.isActive == true
         if isPro != wasProBefore {
             logger.info("Entitlement changed — isPro: \(self.isPro)")
-            SharedDataManager.shared.sendSubscriptionStatusToWatch(isPro)
+            PhoneSyncCoordinator.shared.sendSubscriptionStatusToWatch(isPro)
         }
     }
 }

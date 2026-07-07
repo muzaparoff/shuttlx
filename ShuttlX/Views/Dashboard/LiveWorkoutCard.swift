@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct LiveWorkoutCard: View {
-    @ObservedObject var sharedData: SharedDataManager
+    @ObservedObject var sharedData: PhoneSyncCoordinator
 
     private var activityIcon: String {
         switch sharedData.liveCurrentActivity {
@@ -134,6 +134,6 @@ private struct PulseModifier: ViewModifier {
 }
 
 #Preview {
-    LiveWorkoutCard(sharedData: SharedDataManager.shared)
+    LiveWorkoutCard(sharedData: PhoneSyncCoordinator.shared)
         .padding()
 }

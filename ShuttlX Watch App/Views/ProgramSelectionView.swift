@@ -4,7 +4,7 @@ import WatchConnectivity
 
 struct StartTrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
-    @EnvironmentObject var sharedDataManager: SharedDataManager
+    @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
     @State private var lastSession: TrainingSession?
     #if DEBUG
     @State private var showingDebugView = false
@@ -272,6 +272,6 @@ private struct ErrorBanner: View {
     NavigationStack {
         StartTrainingView()
             .environmentObject(WatchWorkoutManager())
-            .environmentObject(SharedDataManager.shared)
+            .environmentObject(WatchSyncCoordinator.shared)
     }
 }

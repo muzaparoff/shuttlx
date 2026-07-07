@@ -4,7 +4,7 @@ import os.log
 
 @main
 struct ShuttlXWatchApp: App {
-    @StateObject private var sharedDataManager: SharedDataManager
+    @StateObject private var sharedDataManager: WatchSyncCoordinator
     @StateObject private var workoutManager: WatchWorkoutManager
     
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "AppInitialization")
@@ -12,7 +12,7 @@ struct ShuttlXWatchApp: App {
     init() {
         logger.info("ShuttlXWatchApp initialization starting")
 
-        let dataManager = SharedDataManager.shared
+        let dataManager = WatchSyncCoordinator.shared
         let manager = WatchWorkoutManager()
         manager.setSharedDataManager(dataManager)
 

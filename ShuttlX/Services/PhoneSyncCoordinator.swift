@@ -5,8 +5,8 @@ import WidgetKit
 import os.log
 
 @MainActor
-class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
-    static let shared = SharedDataManager()
+class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
+    static let shared = PhoneSyncCoordinator()
 
     @Published var syncedSessions: [TrainingSession] = []
     @Published var syncLog: [String] = []
@@ -28,7 +28,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 
     private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
-    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SharedDataManager")
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "PhoneSyncCoordinator")
 
     private let sessionsKey = "sessions.json"
     private let appGroupIdentifier = "group.com.shuttlx.shared"
@@ -93,7 +93,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
             return
         }
 
-        // Check if SharedDataManager has sessions that DataManager is missing
+        // Check if PhoneSyncCoordinator has sessions that DataManager is missing
         let dmSessionIds = Set(dataManager.sessions.map { $0.id })
         let missingSessions = syncedSessions.filter { !dmSessionIds.contains($0.id) }
 
@@ -626,7 +626,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
 }
 
 // MARK: - WCSessionDelegate
-extension SharedDataManager {
+extension PhoneSyncCoordinator {
     nonisolated func session(_ session: WCSession, activationDidCompleteWith activationState: WCSessionActivationState, error: Error?) {
         Task { @MainActor in
             if let error = error {

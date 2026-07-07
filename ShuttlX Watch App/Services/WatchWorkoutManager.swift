@@ -86,7 +86,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var workoutStartTime: Date?
     private var currentSegmentStartTime: Date?
     private var segments: [ActivitySegment] = []
-    private var sharedDataManager: SharedDataManager?
+    private var sharedDataManager: WatchSyncCoordinator?
 
     // HealthKit live queries
     private var heartRateQuery: HKAnchoredObjectQuery?
@@ -168,9 +168,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         logger.info("WatchWorkoutManager initialized")
     }
 
-    func setSharedDataManager(_ dataManager: SharedDataManager) {
+    func setSharedDataManager(_ dataManager: WatchSyncCoordinator) {
         self.sharedDataManager = dataManager
-        logger.info("SharedDataManager dependency set")
+        logger.info("WatchSyncCoordinator dependency set")
     }
 
     // MARK: - HealthKit Permissions

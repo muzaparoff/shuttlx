@@ -2,7 +2,7 @@ import SwiftUI
 
 #if DEBUG
 struct DebugView: View {
-    @ObservedObject var sharedDataManager = SharedDataManager.shared
+    @ObservedObject var sharedDataManager = PhoneSyncCoordinator.shared
     @EnvironmentObject var dataManager: DataManager
     @State private var sessions: [TrainingSession] = []
     @State private var showingCleanupAlert = false

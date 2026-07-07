@@ -2,7 +2,7 @@ import SwiftUI
 
 #if DEBUG
 struct DebugView: View {
-    @ObservedObject var sharedDataManager = SharedDataManager.shared
+    @ObservedObject var sharedDataManager = WatchSyncCoordinator.shared
 
     var body: some View {
         ScrollView {

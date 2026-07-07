@@ -4,7 +4,7 @@ import WatchConnectivity
 #if DEBUG
 struct SyncDebugView: View {
     @StateObject private var syncMonitor = SyncMonitor.shared
-    @ObservedObject private var sharedDataManager: SharedDataManager = .shared
+    @ObservedObject private var sharedDataManager: PhoneSyncCoordinator = .shared
 
     var body: some View {
         NavigationStack {
@@ -140,9 +140,9 @@ class SyncMonitor: ObservableObject {
         isPaired = session.isPaired
         isWatchAppInstalled = session.isWatchAppInstalled
 
-        // Get data from SharedDataManager
-        connectivityHealth = SharedDataManager.shared.connectivityHealth
-        lastSyncTime = SharedDataManager.shared.lastSyncTime
+        // Get data from PhoneSyncCoordinator
+        connectivityHealth = PhoneSyncCoordinator.shared.connectivityHealth
+        lastSyncTime = PhoneSyncCoordinator.shared.lastSyncTime
 
         // Add to log if there are changes
         let statusString = "State: \(activationState), Reachable: \(isReachable), Health: \(connectivityHealthPercent)%"

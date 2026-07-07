@@ -8,7 +8,7 @@ import TelemetryDeck
 struct SettingsView: View {
     @Environment(ThemeManager.self) var themeManager
     @EnvironmentObject var dataManager: DataManager
-    @EnvironmentObject var sharedDataManager: SharedDataManager
+    @EnvironmentObject var sharedDataManager: PhoneSyncCoordinator
     @EnvironmentObject var authManager: AuthenticationManager
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
@@ -457,7 +457,7 @@ struct SettingsView: View {
         .alert("Clear All Training Sessions", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete All", role: .destructive) {
-                SharedDataManager.shared.purgeAllSessionsFromStorage()
+                PhoneSyncCoordinator.shared.purgeAllSessionsFromStorage()
                 dataManager.sessions = []
                 dataManager.saveSessionsToAppGroup()
                 successMessage = "All sessions cleared!"
@@ -647,7 +647,7 @@ struct HealthPermissionsInfoView: View {
         SettingsView()
             .environment(ThemeManager.shared)
             .environmentObject(DataManager())
-            .environmentObject(SharedDataManager.shared)
+            .environmentObject(PhoneSyncCoordinator.shared)
             .environmentObject(AuthenticationManager.shared)
     }
 }

@@ -7,7 +7,7 @@ struct ShuttlXApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @State private var themeManager = ThemeManager.shared
     @StateObject private var dataManager = DataManager()
-    @StateObject private var sharedDataManager = SharedDataManager.shared
+    @StateObject private var sharedDataManager = PhoneSyncCoordinator.shared
     @StateObject private var templateManager = TemplateManager()
     @StateObject private var planManager = PlanManager()
     @StateObject private var authManager = AuthenticationManager.shared

@@ -5,7 +5,7 @@ struct DashboardView: View {
     @EnvironmentObject var planManager: PlanManager
     @EnvironmentObject var authManager: AuthenticationManager
     @EnvironmentObject var workoutController: iPhoneWorkoutController
-    @ObservedObject var sharedData = SharedDataManager.shared
+    @ObservedObject var sharedData = PhoneSyncCoordinator.shared
     @State private var cachedStreak: Int = 0
     @State private var cachedLastSession: TrainingSession?
     @State private var lastSessionCount: Int = 0

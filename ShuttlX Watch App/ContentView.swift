@@ -29,7 +29,7 @@ struct ContentView: View {
 }
 
 #Preview {
-    let dataManager = SharedDataManager.shared
+    let dataManager = WatchSyncCoordinator.shared
     let workoutManager = WatchWorkoutManager()
 
     ContentView()

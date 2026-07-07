@@ -4,7 +4,7 @@ struct ProgramsTabView: View {
     @EnvironmentObject var planManager: PlanManager
     @EnvironmentObject var templateManager: TemplateManager
     @EnvironmentObject var workoutController: iPhoneWorkoutController
-    @ObservedObject var sharedData = SharedDataManager.shared
+    @ObservedObject var sharedData = PhoneSyncCoordinator.shared
 
     var body: some View {
         NavigationStack {

@@ -4,8 +4,8 @@ import WidgetKit
 import os.log
 
 @MainActor
-class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
-    static let shared = SharedDataManager()
+class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
+    static let shared = WatchSyncCoordinator()
     @Published var syncStatus: String = "Not synced"
     @Published var isConnected: Bool = false
     @Published var lastSyncTime: Date?
@@ -14,7 +14,7 @@ class SharedDataManager: NSObject, ObservableObject, WCSessionDelegate {
     @Published var workoutTemplates: [WorkoutTemplate] = []
     @Published var isPro: Bool = false
 
-    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "SharedDataManager")
+    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchSyncCoordinator")
     private let appGroupIdentifier = "group.com.shuttlx.shared"
 
     private var pendingSessions: [TrainingSession] = []

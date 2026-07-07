@@ -12,7 +12,7 @@
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
 		A5923505 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
 		A5923507B /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507F /* DataManager.swift */; };
-		A5923508B /* SharedDataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508F /* SharedDataManager.swift */; };
+		A5923508B /* PhoneSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508F /* PhoneSyncCoordinator.swift */; };
 		A5923510B /* TrainingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923510F /* TrainingHistoryView.swift */; };
 		A5923511B /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923511F /* SessionRowView.swift */; };
 		A5923512B /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923512F /* ProgramListView.swift */; };
@@ -274,7 +274,7 @@
 		IW000003F /* iPhoneWorkoutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneWorkoutController.swift; sourceTree = "<group>"; };
 		IW000004F /* iPhoneWorkoutTimerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Workout/iPhoneWorkoutTimerView.swift"; sourceTree = "<group>"; };
 		A5923508 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		A5923508F /* SharedDataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedDataManager.swift; sourceTree = "<group>"; };
+		A5923508F /* PhoneSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSyncCoordinator.swift; sourceTree = "<group>"; };
 		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A592350A /* ShuttlX.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlX.entitlements; sourceTree = "<group>"; };
 		A5923510F /* TrainingHistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingHistoryView.swift; sourceTree = "<group>"; };
@@ -532,7 +532,7 @@
 			isa = PBXGroup;
 			children = (
 				A5923507F /* DataManager.swift */,
-				A5923508F /* SharedDataManager.swift */,
+				A5923508F /* PhoneSyncCoordinator.swift */,
 				LA000005 /* LiveActivityManager.swift */,
 				D5923002F /* TemplateManager.swift */,
 				G5923003F /* PlanManager.swift */,
@@ -1012,7 +1012,7 @@
 				A5923505 /* TrainingSession.swift in Sources */,
 				A5923530 /* ActivitySegment.swift in Sources */,
 				A5923507B /* DataManager.swift in Sources */,
-				A5923508B /* SharedDataManager.swift in Sources */,
+				A5923508B /* PhoneSyncCoordinator.swift in Sources */,
 				A5923531 /* SessionDetailView.swift in Sources */,
 				A5923510B /* TrainingHistoryView.swift in Sources */,
 				A5923511B /* SessionRowView.swift in Sources */,

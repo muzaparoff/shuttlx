@@ -35,12 +35,12 @@ class DataManager: ObservableObject {
     init() {
         loadSessionsFromAppGroup()
         checkHealthKitAuthorizationStatus()
-        SharedDataManager.shared.setDataManager(self)
+        PhoneSyncCoordinator.shared.setDataManager(self)
         setupBindings()
     }
 
     private func setupBindings() {
-        SharedDataManager.shared.$syncedSessions
+        PhoneSyncCoordinator.shared.$syncedSessions
             .receive(on: DispatchQueue.main)
             .sink { [weak self] receivedSessions in
                 self?.handleReceivedSessions(receivedSessions)

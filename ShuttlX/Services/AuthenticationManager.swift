@@ -68,7 +68,7 @@ class AuthenticationManager: ObservableObject {
 
     /// Deletes user account data: CloudKit records, local credentials, and local sessions.
     /// Required by Apple for Sign In with Apple compliance.
-    func deleteAccount(dataManager: DataManager, sharedDataManager: SharedDataManager) async throws {
+    func deleteAccount(dataManager: DataManager, sharedDataManager: PhoneSyncCoordinator) async throws {
         // 1. Delete CloudKit data
         try await CloudKitSyncManager.shared.deleteAllUserData()
 

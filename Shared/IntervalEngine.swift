@@ -7,14 +7,16 @@ import Combine
 /// dependencies. Platform-specific behavior (haptics) is injected via the
 /// `HapticPlayer` protocol; tests can pass `nil` to silence it.
 ///
-/// This is the canonical implementation. The watchOS app target imports
-/// `ShuttlXShared` and consumes this type directly. iOS will follow when the
-/// iPhone workout timer ships.
+/// This is the canonical implementation. The iOS target imports `ShuttlXShared`
+/// and consumes this type directly (iPhoneWorkoutController + timer heroes).
+/// The WATCH target does NOT yet — it still runs its own older, differently-
+/// shaped `ShuttlX Watch App/Services/IntervalEngine.swift` (WorkoutTemplate-
+/// coupled, direct WKInterfaceDevice haptics).
 ///
-/// NOTE: Until both app targets are migrated, do NOT delete the parallel
-/// `ShuttlX Watch App/Services/IntervalEngine.swift` file. The Xcode project
-/// must add `ShuttlXShared` as a target dependency before that file can be
-/// removed.
+/// NOTE: Do NOT delete the watch's parallel IntervalEngine until the watch is
+/// migrated onto this engine (adapter at the WatchWorkoutManager call sites +
+/// a WatchHapticPlayer). See docs/plans/2026-07-codebase-refactor-plan.md Phase 4 —
+/// that migration is behavior-affecting and gated behind dual-engine tests + QA.
 @MainActor
 public final class IntervalEngine: ObservableObject {
     @Published public private(set) var currentStepIndex: Int = 0

@@ -38,7 +38,7 @@ class TemplateManager: ObservableObject {
     }
 
     private func syncToWatch() {
-        SharedDataManager.shared.sendTemplatesToWatch(templates)
+        PhoneSyncCoordinator.shared.sendTemplatesToWatch(templates)
     }
 
     // MARK: - Persistence
