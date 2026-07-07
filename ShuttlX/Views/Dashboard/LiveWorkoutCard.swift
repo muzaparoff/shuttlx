@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct LiveWorkoutCard: View {
     @ObservedObject var sharedData: PhoneSyncCoordinator

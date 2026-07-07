@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct ActivityBadge: View {
     let activity: DetectedActivity

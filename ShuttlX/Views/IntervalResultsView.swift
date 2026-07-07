@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct IntervalResultsView: View {
     let intervals: [CompletedInterval]

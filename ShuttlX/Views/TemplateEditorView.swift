@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct TemplateEditorView: View {
     @Environment(\.dismiss) private var dismiss

@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import ShuttlXShared
 
 enum HistoryViewMode: String, CaseIterable {
     case day = "Day"

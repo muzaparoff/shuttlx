@@ -1,8 +1,8 @@
 import Foundation
 
-enum FormattingUtils {
+public enum FormattingUtils {
     /// "12m 30s" or "1h 05m"
-    static func formatDuration(_ seconds: TimeInterval) -> String {
+    public static func formatDuration(_ seconds: TimeInterval) -> String {
         let h = Int(seconds / 3600)
         let m = Int((seconds.truncatingRemainder(dividingBy: 3600)) / 60)
         let s = Int(seconds.truncatingRemainder(dividingBy: 60))
@@ -12,7 +12,7 @@ enum FormattingUtils {
     }
 
     /// "02:30" or "1:05:30" for timer display
-    static func formatTimer(_ interval: TimeInterval) -> String {
+    public static func formatTimer(_ interval: TimeInterval) -> String {
         let totalSeconds = Int(interval)
         let h = totalSeconds / 3600
         let m = (totalSeconds % 3600) / 60
@@ -39,23 +39,23 @@ enum FormattingUtils {
     }()
 
     /// "Feb 27, 2:30 PM"
-    static func formatSessionDate(_ date: Date) -> String {
+    public static func formatSessionDate(_ date: Date) -> String {
         sessionDateFormatter.string(from: date)
     }
 
     /// "Feb 27"
-    static func formatShortDate(_ date: Date) -> String {
+    public static func formatShortDate(_ date: Date) -> String {
         shortDateFormatter.string(from: date)
     }
 
     /// "2.10 km" or "450 m"
-    static func formatDistance(_ km: Double) -> String {
+    public static func formatDistance(_ km: Double) -> String {
         if km < 1.0 { return "\(Int(km * 1000)) m" }
         return String(format: "%.2f km", km)
     }
 
     /// "5'30\"" pace format
-    static func formatPace(_ secondsPerKm: TimeInterval?) -> String {
+    public static func formatPace(_ secondsPerKm: TimeInterval?) -> String {
         guard let pace = secondsPerKm else { return "--'--\"" }
         let m = Int(pace) / 60
         let s = Int(pace) % 60
@@ -63,7 +63,7 @@ enum FormattingUtils {
     }
 
     /// Accessible time description: "1 hour 5 minutes 30 seconds"
-    static func formatTimeAccessible(_ interval: TimeInterval) -> String {
+    public static func formatTimeAccessible(_ interval: TimeInterval) -> String {
         let totalSeconds = Int(interval)
         let h = totalSeconds / 3600
         let m = (totalSeconds % 3600) / 60

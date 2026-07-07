@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct WeekSummaryCard: View {
     let sessions: [TrainingSession]

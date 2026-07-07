@@ -1,6 +1,7 @@
 import SwiftUI
 #if os(watchOS)
 import WatchKit
+import ShuttlXShared
 #endif
 
 /// Single-layout gym-recovery view: BPM is always the hero, a state pill
