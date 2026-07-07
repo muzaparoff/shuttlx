@@ -284,7 +284,7 @@ struct NeovimTimerHero: View {
                let engine = controller.intervalEngine {
                 // ── Interval: step countdown is the hero ──────────────────
                 let remaining = max(0, engine.currentStepTimeRemaining)
-                let stepColor = engine.currentStep.map { sharedStepColor($0.type) } ?? green
+                let stepTint = engine.currentStep.map { stepColor(for: $0.type) } ?? green
 
                 HStack(alignment: .lastTextBaseline, spacing: 0) {
                     Text("remaining")
@@ -296,7 +296,7 @@ struct NeovimTimerHero: View {
                     Text(FormattingUtils.formatTimer(remaining))
                         .font(.system(size: 60, weight: .bold, design: .monospaced))
                         .monospacedDigit()
-                        .foregroundStyle(stepColor)
+                        .foregroundStyle(stepTint)
                         .contentTransition(.numericText())
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
@@ -397,7 +397,7 @@ struct NeovimTimerHero: View {
         case .interval:
             if let engine = controller.intervalEngine, let step = engine.currentStep {
                 let appT = appType(for: step.type)
-                let stepColor = sharedStepColor(step.type)
+                let stepTint = stepColor(for: step.type)
                 let remaining = engine.currentStepTimeRemaining
 
                 // line 7: `step[N] = {`
@@ -410,13 +410,13 @@ struct NeovimTimerHero: View {
                 bufferLine(
                     lineNumber: 8,
                     isCursorLine: false,
-                    content: typeLineAttributed(typeName: appT.displayName, color: stepColor)
+                    content: typeLineAttributed(typeName: appT.displayName, color: stepTint)
                 )
                 // line 9: `  remaining = MM:SS█` (cursor + CursorLine)
                 stepRemainingLine(
                     lineNumber: 9,
                     remaining: remaining,
-                    color: stepColor,
+                    color: stepTint,
                     cursorVisible: cursorVisible
                 )
                 // line 10: `  target   = MM:SS,`
@@ -947,27 +947,6 @@ struct NeovimTimerHero: View {
         }
     }
 
-    // MARK: - Helpers (mirrors iPhoneWorkoutTimerView helpers)
-
-    private func appType(for sharedType: ShuttlXShared.IntervalType) -> IntervalType {
-        IntervalType(rawValue: sharedType.rawValue) ?? .work
-    }
-
-    private func sharedStepColor(_ sharedType: ShuttlXShared.IntervalType) -> Color {
-        ShuttlXColor.forStepType(appType(for: sharedType))
-    }
-
-    private func hrZoneLabel(_ bpm: Int) -> String {
-        guard bpm > 0 else { return "" }
-        let pct = Double(bpm) / 185.0
-        switch pct {
-        case ..<0.60:      return "Z1"
-        case 0.60..<0.70:  return "Z2"
-        case 0.70..<0.80:  return "Z3"
-        case 0.80..<0.90:  return "Z4"
-        default:           return "Z5"
-        }
-    }
 }
 
 #if DEBUG

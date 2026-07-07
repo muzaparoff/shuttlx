@@ -633,7 +633,7 @@ struct iPhoneWorkoutTimerView: View {
         case .interval:
             let stepInfo = controller.intervalEngine.flatMap { e in
                 e.currentStep.map { s in
-                    "\(self.displayName(for: s.type).uppercased()) \(e.currentStepIndex + 1)/\(e.totalStepsCount)"
+                    "\(displayName(for: s.type).uppercased()) \(e.currentStepIndex + 1)/\(e.totalStepsCount)"
                 }
             } ?? "—"
             return ["\(controller.workoutName.uppercased()) · \(elapsed)", stepInfo]
@@ -654,33 +654,6 @@ struct iPhoneWorkoutTimerView: View {
         guard controller.mode == .interval,
               let step = controller.intervalEngine?.currentStep else { return nil }
         return stepColor(for: step.type)
-    }
-
-    /// Map a `ShuttlXShared.IntervalType` to the app's `IntervalType`, which is
-    /// what `ShuttlXColor.forStepType(_:)` expects. Same raw values, so this is
-    /// a guaranteed `?? .work` fallback.
-    private func appType(for sharedType: ShuttlXShared.IntervalType) -> IntervalType {
-        IntervalType(rawValue: sharedType.rawValue) ?? .work
-    }
-
-    private func stepColor(for sharedType: ShuttlXShared.IntervalType) -> Color {
-        ShuttlXColor.forStepType(appType(for: sharedType))
-    }
-
-    private func displayName(for sharedType: ShuttlXShared.IntervalType) -> String {
-        appType(for: sharedType).displayName
-    }
-
-    private func hrZoneLabel(_ bpm: Int) -> String {
-        guard bpm > 0 else { return "" }
-        let pct = Double(bpm) / 185.0
-        switch pct {
-        case ..<0.60: return "Z1"
-        case 0.60..<0.70: return "Z2"
-        case 0.70..<0.80: return "Z3"
-        case 0.80..<0.90: return "Z4"
-        default: return "Z5"
-        }
     }
 
     private func isHRSafe(_ bpm: Int) -> Bool {

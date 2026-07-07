@@ -327,7 +327,7 @@ struct MixtapeTimerHero: View {
             return min(1.0, controller.elapsedTime / 3600)
         }()
         let barColor = controller.mode == .interval
-            ? (controller.intervalEngine?.currentStep.map { sharedStepColor($0.type) } ?? lcdGreen)
+            ? (controller.intervalEngine?.currentStep.map { stepColor(for: $0.type) } ?? lcdGreen)
             : lcdGreen
         let nearDone = progress > 0.85
 
@@ -694,10 +694,6 @@ struct MixtapeTimerHero: View {
 
     // MARK: - Step pill
 
-    private struct StepPillInfo {
-        let label: String
-        let color: Color
-    }
 
     private var stepPillInfo: StepPillInfo? {
         switch controller.mode {
@@ -707,7 +703,7 @@ struct MixtapeTimerHero: View {
             // Show only the type name — step count already appears in bigTimerSubLabel
             return StepPillInfo(
                 label: displayName(for: step.type).uppercased(),
-                color: sharedStepColor(step.type)
+                color: stepColor(for: step.type)
             )
         case .gymRecovery:
             switch controller.recoveryState {
@@ -722,29 +718,6 @@ struct MixtapeTimerHero: View {
 
     // MARK: - Helpers
 
-    private func appType(for sharedType: ShuttlXShared.IntervalType) -> IntervalType {
-        IntervalType(rawValue: sharedType.rawValue) ?? .work
-    }
-
-    private func sharedStepColor(_ sharedType: ShuttlXShared.IntervalType) -> Color {
-        ShuttlXColor.forStepType(appType(for: sharedType))
-    }
-
-    private func displayName(for sharedType: ShuttlXShared.IntervalType) -> String {
-        appType(for: sharedType).displayName
-    }
-
-    private func hrZoneLabel(_ bpm: Int) -> String {
-        guard bpm > 0 else { return "" }
-        let pct = Double(bpm) / 185.0
-        switch pct {
-        case ..<0.60:       return "Z1"
-        case 0.60..<0.70:  return "Z2"
-        case 0.70..<0.80:  return "Z3"
-        case 0.80..<0.90:  return "Z4"
-        default:            return "Z5"
-        }
-    }
 }
 
 #if DEBUG

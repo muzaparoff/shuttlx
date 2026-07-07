@@ -872,7 +872,7 @@ struct ArcadeTimerHero: View {
             return phosphorGreen
         case .interval:
             guard let step = controller.intervalEngine?.currentStep else { return phosphorGreen }
-            return sharedStepColor(step.type)
+            return stepColor(for: step.type)
         case .gymRecovery:
             if controller.recoveryState == .rest { return coinYellow }
             return phosphorGreen
@@ -911,10 +911,6 @@ struct ArcadeTimerHero: View {
 
     // MARK: - Step pill helper
 
-    private struct StepPillInfo {
-        let label: String
-        let color: Color
-    }
 
     private var stepPillInfo: StepPillInfo? {
         switch controller.mode {
@@ -922,7 +918,7 @@ struct ArcadeTimerHero: View {
             guard let engine = controller.intervalEngine,
                   let step = engine.currentStep else { return nil }
             let label = "\(displayName(for: step.type).uppercased())  \(engine.currentStepIndex + 1)/\(engine.totalStepsCount)"
-            return StepPillInfo(label: label, color: sharedStepColor(step.type))
+            return StepPillInfo(label: label, color: stepColor(for: step.type))
         case .gymRecovery:
             switch controller.recoveryState {
             case .idle:
@@ -940,31 +936,6 @@ struct ArcadeTimerHero: View {
         }
     }
 
-    // MARK: - Helpers (mirrors iPhoneWorkoutTimerView helpers)
-
-    private func appType(for sharedType: ShuttlXShared.IntervalType) -> IntervalType {
-        IntervalType(rawValue: sharedType.rawValue) ?? .work
-    }
-
-    private func sharedStepColor(_ sharedType: ShuttlXShared.IntervalType) -> Color {
-        ShuttlXColor.forStepType(appType(for: sharedType))
-    }
-
-    private func displayName(for sharedType: ShuttlXShared.IntervalType) -> String {
-        appType(for: sharedType).displayName
-    }
-
-    private func hrZoneLabel(_ bpm: Int) -> String {
-        guard bpm > 0 else { return "" }
-        let pct = Double(bpm) / 185.0
-        switch pct {
-        case ..<0.60: return "Z1"
-        case 0.60..<0.70: return "Z2"
-        case 0.70..<0.80: return "Z3"
-        case 0.80..<0.90: return "Z4"
-        default: return "Z5"
-        }
-    }
 }
 
 #if DEBUG

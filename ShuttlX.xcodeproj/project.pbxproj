@@ -116,6 +116,7 @@
 		TH000011 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000012 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
 		TH000013 /* ThemeEffects.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000003 /* ThemeEffects.swift */; };
+		TH000097 /* IntervalTypeThemeHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000098 /* IntervalTypeThemeHelpers.swift */; };
 		TH000014 /* AppTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000004 /* AppTheme.swift */; };
 		TH000015 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
 		TH000016 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
@@ -347,6 +348,7 @@
 		TH000001 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
 		TH000002 /* ThemeFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeFonts.swift; sourceTree = "<group>"; };
 		TH000003 /* ThemeEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEffects.swift; sourceTree = "<group>"; };
+		TH000098 /* IntervalTypeThemeHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalTypeThemeHelpers.swift; sourceTree = "<group>"; };
 		TH000004 /* AppTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppTheme.swift; sourceTree = "<group>"; };
 		TH000005 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		TH000006 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeModifiers.swift; sourceTree = "<group>"; };
@@ -616,6 +618,7 @@
 				TH000001 /* ThemeColors.swift */,
 				TH000002 /* ThemeFonts.swift */,
 				TH000003 /* ThemeEffects.swift */,
+				TH000098 /* IntervalTypeThemeHelpers.swift */,
 				TC000001 /* ThemeChartStyle.swift */,
 				TH000004 /* AppTheme.swift */,
 				TH000005 /* ThemeManager.swift */,
@@ -1025,6 +1028,7 @@
 				TH000011 /* ThemeColors.swift in Sources */,
 				TH000012 /* ThemeFonts.swift in Sources */,
 				TH000013 /* ThemeEffects.swift in Sources */,
+				TH000097 /* IntervalTypeThemeHelpers.swift in Sources */,
 				TH000014 /* AppTheme.swift in Sources */,
 				TH000015 /* ThemeManager.swift in Sources */,
 				TH000016 /* ThemeModifiers.swift in Sources */,

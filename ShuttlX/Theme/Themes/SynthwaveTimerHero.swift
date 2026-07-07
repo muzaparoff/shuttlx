@@ -423,17 +423,17 @@ struct SynthwaveTimerHero: View {
 
     private var countdownHero: some View {
         let engine = controller.intervalEngine
-        let stepColor: Color = engine?.currentStep.map { sharedStepColor($0.type) } ?? neonCyan
+        let stepTint: Color = engine?.currentStep.map { stepColor(for: $0.type) } ?? neonCyan
         let remaining = engine?.currentStepTimeRemaining ?? 0
         return VStack(spacing: 2) {
             neonTimerText(
                 FormattingUtils.formatTimer(max(0, remaining)),
-                color: stepColor,
+                color: stepTint,
                 size: 76
             )
             Text("REMAINING")
                 .font(.system(.caption2, design: .monospaced).weight(.bold))
-                .foregroundStyle(stepColor.opacity(0.6))
+                .foregroundStyle(stepTint.opacity(0.6))
         }
         .accessibilityLabel("Time remaining \(FormattingUtils.formatTimeAccessible(remaining))")
     }
@@ -481,7 +481,7 @@ struct SynthwaveTimerHero: View {
 
     private var intervalProgressBar: some View {
         let engine = controller.intervalEngine
-        let stepColor: Color = engine?.currentStep.map { sharedStepColor($0.type) } ?? neonCyan
+        let stepTint: Color = engine?.currentStep.map { stepColor(for: $0.type) } ?? neonCyan
         let progress: Double = {
             guard let step = engine?.currentStep, step.duration > 0,
                   let remaining = engine?.currentStepTimeRemaining else { return 0 }
@@ -492,16 +492,16 @@ struct SynthwaveTimerHero: View {
             ZStack(alignment: .leading) {
                 // Track
                 RoundedRectangle(cornerRadius: 3)
-                    .fill(stepColor.opacity(0.15))
+                    .fill(stepTint.opacity(0.15))
                     .overlay(
                         RoundedRectangle(cornerRadius: 3)
-                            .stroke(stepColor.opacity(0.3), lineWidth: 0.5)
+                            .stroke(stepTint.opacity(0.3), lineWidth: 0.5)
                     )
                 // Fill
                 RoundedRectangle(cornerRadius: 3)
-                    .fill(stepColor)
+                    .fill(stepTint)
                     .frame(width: max(0, proxy.size.width * progress))
-                    .shadow(color: stepColor.opacity(0.6), radius: 4)
+                    .shadow(color: stepTint.opacity(0.6), radius: 4)
                     .animation(.linear(duration: 1), value: progress)
             }
         }
@@ -746,10 +746,6 @@ struct SynthwaveTimerHero: View {
 
     // MARK: - Step pill helper
 
-    private struct StepPillInfo {
-        let label: String
-        let color: Color
-    }
 
     private var stepPillInfo: StepPillInfo? {
         switch controller.mode {
@@ -758,7 +754,7 @@ struct SynthwaveTimerHero: View {
                   let step = engine.currentStep else { return nil }
             let remaining = engine.currentStepTimeRemaining
             let label = "\(displayName(for: step.type).uppercased()) · \(FormattingUtils.formatTimer(remaining))"
-            return StepPillInfo(label: label, color: sharedStepColor(step.type))
+            return StepPillInfo(label: label, color: stepColor(for: step.type))
         case .gymRecovery:
             switch controller.recoveryState {
             case .idle:
@@ -775,31 +771,6 @@ struct SynthwaveTimerHero: View {
         }
     }
 
-    // MARK: - Helpers (mirrors iPhoneWorkoutTimerView helpers)
-
-    private func appType(for sharedType: ShuttlXShared.IntervalType) -> IntervalType {
-        IntervalType(rawValue: sharedType.rawValue) ?? .work
-    }
-
-    private func sharedStepColor(_ sharedType: ShuttlXShared.IntervalType) -> Color {
-        ShuttlXColor.forStepType(appType(for: sharedType))
-    }
-
-    private func displayName(for sharedType: ShuttlXShared.IntervalType) -> String {
-        appType(for: sharedType).displayName
-    }
-
-    private func hrZoneLabel(_ bpm: Int) -> String {
-        guard bpm > 0 else { return "" }
-        let pct = Double(bpm) / 185.0
-        switch pct {
-        case ..<0.60: return "Z1"
-        case 0.60..<0.70: return "Z2"
-        case 0.70..<0.80: return "Z3"
-        case 0.80..<0.90: return "Z4"
-        default: return "Z5"
-        }
-    }
 }
 
 #if DEBUG
