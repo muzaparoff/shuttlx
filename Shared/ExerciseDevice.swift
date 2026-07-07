@@ -3,7 +3,7 @@ import ShuttlXShared
 
 // MARK: - Device Category
 
-enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
+public enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
     case treadmill
     case stationaryBike
     case rowingMachine
@@ -14,9 +14,9 @@ enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
     case freeWeights
     case custom
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var displayName: String {
+    public var displayName: String {
         switch self {
         case .treadmill: return "Treadmill"
         case .stationaryBike: return "Stationary Bike"
@@ -30,7 +30,7 @@ enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var defaultIcon: String {
+    public var defaultIcon: String {
         switch self {
         case .treadmill: return "figure.run"
         case .stationaryBike: return "figure.indoor.cycle"
@@ -47,20 +47,20 @@ enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Exercise Device
 
-struct ExerciseDevice: Identifiable, Codable, Hashable {
-    let id: UUID
-    var name: String
-    var category: DeviceCategory
-    var sportType: WorkoutSport
-    var isBuiltIn: Bool
-    var defaultMET: Double
-    var customMET: Double?
-    var icon: String
-    var createdDate: Date
+public struct ExerciseDevice: Identifiable, Codable, Hashable {
+    public let id: UUID
+    public var name: String
+    public var category: DeviceCategory
+    public var sportType: WorkoutSport
+    public var isBuiltIn: Bool
+    public var defaultMET: Double
+    public var customMET: Double?
+    public var icon: String
+    public var createdDate: Date
 
-    var effectiveMET: Double { customMET ?? defaultMET }
+    public var effectiveMET: Double { customMET ?? defaultMET }
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         category: DeviceCategory,
@@ -84,7 +84,7 @@ struct ExerciseDevice: Identifiable, Codable, Hashable {
 
     // MARK: - Built-in Devices
 
-    static let builtInDevices: [ExerciseDevice] = [
+    public static let builtInDevices: [ExerciseDevice] = [
         ExerciseDevice(
             name: "Treadmill",
             category: .treadmill,

@@ -1,17 +1,17 @@
 import Foundation
 
-enum BuiltInPlans {
+public enum BuiltInPlans {
     // Stable UUIDs for built-in plans — never change these
     private static let couchTo5KID = UUID(uuidString: "B1000001-0000-0000-0000-000000000001") ?? UUID()
     private static let hiitStarterID = UUID(uuidString: "B1000001-0000-0000-0000-000000000002") ?? UUID()
     private static let fiveKImprovementID = UUID(uuidString: "B1000001-0000-0000-0000-000000000003") ?? UUID()
     private static let gymHeartRecoveryID = UUID(uuidString: "B1000001-0000-0000-0000-000000000004") ?? UUID()
 
-    static let all: [TrainingPlan] = [couchTo5K, hiitStarter, fiveKImprovement, gymHeartRecovery]
+    public static let all: [TrainingPlan] = [couchTo5K, hiitStarter, fiveKImprovement, gymHeartRecovery]
 
     // MARK: - Couch to 5K (8 weeks)
 
-    static let couchTo5K: TrainingPlan = {
+    public static let couchTo5K: TrainingPlan = {
         let id = couchTo5KID
 
         func week(_ num: Int, label: String, workouts: [(day: Int, name: String)]) -> PlanWeek {
@@ -47,7 +47,7 @@ enum BuiltInPlans {
 
     // MARK: - HIIT Starter (4 weeks)
 
-    static let hiitStarter: TrainingPlan = {
+    public static let hiitStarter: TrainingPlan = {
         let id = hiitStarterID
 
         func week(_ num: Int, label: String, workouts: [(day: Int, name: String)]) -> PlanWeek {
@@ -79,7 +79,7 @@ enum BuiltInPlans {
 
     // MARK: - 5K Improvement (6 weeks)
 
-    static let fiveKImprovement: TrainingPlan = {
+    public static let fiveKImprovement: TrainingPlan = {
         let id = fiveKImprovementID
 
         func week(_ num: Int, label: String, workouts: [(day: Int, name: String)]) -> PlanWeek {
@@ -113,7 +113,7 @@ enum BuiltInPlans {
 
     // MARK: - Gym Heart Recovery (open-ended, 8 weeks, 2 sessions per week)
 
-    static let gymHeartRecovery: TrainingPlan = {
+    public static let gymHeartRecovery: TrainingPlan = {
         // Two recovery sessions per week (Tue + Fri). Each session is free-form — the watch
         // auto-detects work sets and rest periods and captures HRR. No scripted exercises.
         let weeks: [PlanWeek] = (1...8).map { weekNum in

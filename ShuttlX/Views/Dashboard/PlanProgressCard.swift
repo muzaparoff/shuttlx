@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct PlanProgressCard: View {
     let plan: TrainingPlan

@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ShuttlXShared
 
 @MainActor
 class PlanManager: ObservableObject {

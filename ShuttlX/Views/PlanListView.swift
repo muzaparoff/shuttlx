@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct PlanListView: View {
     @EnvironmentObject var planManager: PlanManager

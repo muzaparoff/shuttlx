@@ -69,7 +69,6 @@
 		D5923005 /* IntervalResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923005F /* IntervalResultsView.swift */; };
 		E5923001 /* AnalyticsEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5923001F /* AnalyticsEngine.swift */; };
 		E5923002 /* AnalyticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5923002F /* AnalyticsView.swift */; };
-		ED000011 /* ExerciseDevice.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000001 /* ExerciseDevice.swift */; };
 		ED000012 /* CalorieEstimationEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000002 /* CalorieEstimationEngine.swift */; };
 		ED000013 /* DeviceManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000003 /* DeviceManager.swift */; };
 		ED000014 /* DeviceListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED000004 /* DeviceListView.swift */; };
@@ -77,8 +76,6 @@
 		F5923011 /* AuthenticationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923001 /* AuthenticationManager.swift */; };
 		F5923012 /* CloudKitSyncManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923002 /* CloudKitSyncManager.swift */; };
 		F5923013 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5923003 /* SignInView.swift */; };
-		G5923001 /* TrainingPlan.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923001F /* TrainingPlan.swift */; };
-		G5923002 /* BuiltInPlans.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923002F /* BuiltInPlans.swift */; };
 		G5923003 /* PlanManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = G5923003F /* PlanManager.swift */; };
 		H5923001 /* WorkoutSport+Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = H5923001F /* WorkoutSport+Theme.swift */; };
 		LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000001 /* ShuttlXLiveActivityBundle.swift */; };
@@ -305,7 +302,6 @@
 		D5923005F /* IntervalResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntervalResultsView.swift; sourceTree = "<group>"; };
 		E5923001F /* AnalyticsEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsEngine.swift; sourceTree = "<group>"; };
 		E5923002F /* AnalyticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsView.swift; sourceTree = "<group>"; };
-		ED000001 /* ExerciseDevice.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExerciseDevice.swift; sourceTree = "<group>"; };
 		ED000002 /* CalorieEstimationEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalorieEstimationEngine.swift; sourceTree = "<group>"; };
 		ED000003 /* DeviceManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceManager.swift; sourceTree = "<group>"; };
 		ED000004 /* DeviceListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceListView.swift; sourceTree = "<group>"; };
@@ -313,8 +309,6 @@
 		F5923001 /* AuthenticationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthenticationManager.swift; sourceTree = "<group>"; };
 		F5923002 /* CloudKitSyncManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitSyncManager.swift; sourceTree = "<group>"; };
 		F5923003 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
-		G5923001F /* TrainingPlan.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPlan.swift; sourceTree = "<group>"; };
-		G5923002F /* BuiltInPlans.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BuiltInPlans.swift; sourceTree = "<group>"; };
 		G5923003F /* PlanManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanManager.swift; sourceTree = "<group>"; };
 		H5923001F /* WorkoutSport+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WorkoutSport+Theme.swift"; sourceTree = "<group>"; };
 		LA000001 /* ShuttlXLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivityBundle.swift; sourceTree = "<group>"; };
@@ -552,9 +546,6 @@
 				LA000004 /* WorkoutActivityAttributes.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
 				H5923001F /* WorkoutSport+Theme.swift */,
-				G5923001F /* TrainingPlan.swift */,
-				G5923002F /* BuiltInPlans.swift */,
-				ED000001 /* ExerciseDevice.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1079,8 +1070,6 @@
 				D5923005 /* IntervalResultsView.swift in Sources */,
 				E5923001 /* AnalyticsEngine.swift in Sources */,
 				E5923002 /* AnalyticsView.swift in Sources */,
-				G5923001 /* TrainingPlan.swift in Sources */,
-				G5923002 /* BuiltInPlans.swift in Sources */,
 				G5923003 /* PlanManager.swift in Sources */,
 				P5923001 /* ProgramsTabView.swift in Sources */,
 				P5923002 /* PlanListView.swift in Sources */,
@@ -1093,7 +1082,6 @@
 				F5923011 /* AuthenticationManager.swift in Sources */,
 				F5923012 /* CloudKitSyncManager.swift in Sources */,
 				F5923013 /* SignInView.swift in Sources */,
-				ED000011 /* ExerciseDevice.swift in Sources */,
 				ED000012 /* CalorieEstimationEngine.swift in Sources */,
 				ED000013 /* DeviceManager.swift in Sources */,
 				ED000014 /* DeviceListView.swift in Sources */,
