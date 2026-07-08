@@ -291,12 +291,24 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - App Group Storage
 
+    /// Serial background queue for sessions.json read-append-write. The full
+    /// decode + re-encode of workout history must never run on the main actor —
+    /// at workout stop it stalls the UI for a time that grows with history
+    /// (freeze root-cause H2).
+    private nonisolated static let sessionStoreQueue = DispatchQueue(label: "com.shuttlx.watch-session-store", qos: .utility)
+
     private func saveSessionToAppGroup(_ session: TrainingSession) {
         guard let containerURL = getWorkingContainer() else {
             logger.error("Failed to get App Group container URL")
             return
         }
+        let logger = self.logger
+        Self.sessionStoreQueue.async {
+            Self.appendSessionToStore(session, containerURL: containerURL, logger: logger)
+        }
+    }
 
+    private nonisolated static func appendSessionToStore(_ session: TrainingSession, containerURL: URL, logger: Logger) {
         let sessionsURL = containerURL.appendingPathComponent("sessions.json")
         let coordinator = NSFileCoordinator()
         var coordinatorError: NSError?
@@ -311,13 +323,13 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     let data = try Data(contentsOf: writeURL)
                     sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
                 } catch {
-                    self.logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
+                    logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
                     // Preserve corrupt file — don't overwrite workout history
                     let backupURL = writeURL.deletingLastPathComponent()
                         .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
                     try? FileManager.default.copyItem(at: writeURL, to: backupURL)
-                    self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                    self.purgeOldCorruptBackups(in: writeURL.deletingLastPathComponent())
+                    logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                    Self.purgeOldCorruptBackups(in: writeURL.deletingLastPathComponent(), logger: logger)
                     // Continue with empty array — better to have one session than lose all
                 }
             }
@@ -328,10 +340,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             do {
                 let data = try JSONEncoder().encode(sessions)
                 try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
-                self.logger.info("Session saved to App Group")
+                logger.info("Session saved to App Group")
                 WidgetCenter.shared.reloadAllTimelines()
             } catch {
-                self.logger.error("Failed to save session to App Group: \(error.localizedDescription)")
+                logger.error("Failed to save session to App Group: \(error.localizedDescription)")
             }
         }
         if let coordinatorError {
@@ -615,7 +627,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
                 try? FileManager.default.copyItem(at: readURL, to: backupURL)
                 self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                self.purgeOldCorruptBackups(in: url.deletingLastPathComponent())
+                Self.purgeOldCorruptBackups(in: url.deletingLastPathComponent(), logger: self.logger)
             }
         }
         if let coordinatorError {
@@ -718,7 +730,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Helpers
 
-    private func purgeOldCorruptBackups(in directory: URL) {
+    private nonisolated static func purgeOldCorruptBackups(in directory: URL, logger: Logger) {
         let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
         guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else { return }
         for file in files where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
