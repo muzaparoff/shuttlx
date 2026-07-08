@@ -131,6 +131,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Live metrics broadcast
     private var lastLiveUpdateTime: Date?
 
+    let persistence = WorkoutPersistence()
+
     // Periodic crash-recovery checkpoint (a never-paused workout must still
     // leave a recoverable backup — see docs/plans/2026-07-stability-and-design-plan.md)
     private var lastCheckpointDate: Date?
@@ -527,7 +529,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Clear backup so a Discard path doesn't trigger a false crash-recovery prompt
         // on next launch. (Save path also clears it on confirmed save — idempotent.)
-        clearWorkoutBackup()
+        persistence.clearBackup()
     }
 
     // MARK: - HKWorkoutSession
@@ -1225,35 +1227,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
         )
 
-        do {
-            let data = try JSONEncoder().encode(session)
-            guard let backupURL = workoutBackupURL() else {
-                logger.error("Could not resolve backup URL for workout backup")
-                return
-            }
-            try data.write(to: backupURL, options: [.atomic, .completeFileProtection])
-            logger.info("Workout data backed up")
-        } catch {
-            logger.error("Failed to backup workout data: \(error.localizedDescription)")
-        }
+        persistence.checkpoint(session)
     }
 
     /// Check for a crashed workout backup and recover the session
     func recoverCrashedWorkout() -> TrainingSession? {
-        guard let backupURL = workoutBackupURL() else { return nil }
-        let fileManager = FileManager.default
-        guard fileManager.fileExists(atPath: backupURL.path) else { return nil }
-
-        do {
-            let data = try Data(contentsOf: backupURL)
-            let session = try JSONDecoder().decode(TrainingSession.self, from: data)
-            logger.info("Recovered crashed workout backup: \(Int(session.duration))s")
-            return session
-        } catch {
-            logger.error("Failed to read workout backup: \(error.localizedDescription)")
-            try? fileManager.removeItem(at: backupURL)
-            return nil
-        }
+        persistence.recoverCrashedWorkout()
     }
 
     /// Save a recovered session if not already saved, and clear the backup
@@ -1266,12 +1245,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                let existing = try? JSONDecoder().decode([TrainingSession].self, from: data),
                existing.contains(where: { $0.id == session.id }) {
                 logger.info("Recovered session \(session.id) already exists — skipping duplicate save")
-                clearWorkoutBackup()
+                persistence.clearBackup()
                 return
             }
         }
         sharedDataManager?.sendSessionToiOS(session)
-        clearWorkoutBackup()
+        persistence.clearBackup()
         logger.info("Recovered session sent to iOS and backup cleared")
     }
 
@@ -1320,19 +1299,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         #endif
     }
 
-    private func clearWorkoutBackup() {
-        guard let backupURL = workoutBackupURL() else { return }
-        try? FileManager.default.removeItem(at: backupURL)
-    }
-
-    /// Returns backup URL in App Group container (preferred) or Documents dir (fallback)
-    private func workoutBackupURL() -> URL? {
-        if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
-            return container.appendingPathComponent("active_workout_backup.json")
-        }
-        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
-        return docsURL.appendingPathComponent("active_workout_backup.json")
-    }
 
     func saveWorkoutData() {
         guard let startTime = workoutStartTime else { return }
@@ -1454,7 +1420,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
 
         sharedDataManager?.sendSessionToiOS(sessionToSend)
-        clearWorkoutBackup()
+        persistence.clearBackup()
         logger.info("Session saved: Duration \(Int(sessionToSend.duration))s")
     }
 
