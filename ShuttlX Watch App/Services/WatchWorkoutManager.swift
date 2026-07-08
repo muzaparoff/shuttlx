@@ -126,7 +126,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Apple's canonical fused distance (pedometer + GPS + on-device motion).
     // We prefer it over CMPedometer.distance when > 0, and fall back to the
     // pedometer reading during the brief warmup before the builder reports.
-    private var hkDistanceKm: Double = 0
+    var hkDistanceKm: Double = 0
 
     // Live metrics broadcast
     private var lastLiveUpdateTime: Date?
@@ -143,9 +143,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // CoreLocation
     private let locationManager = CLLocationManager()
-    private var routePoints: [RoutePoint] = []
-    private var routeBuilder: HKWorkoutRouteBuilder?
-    private let maxRoutePoints = 2000
+    var routePoints: [RoutePoint] = []
+    var routeBuilder: HKWorkoutRouteBuilder?
+    let maxRoutePoints = 2000
 
     // CoreMotion
     private let motionActivityManager = CMMotionActivityManager()
@@ -160,7 +160,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var pendingActivity: DetectedActivity?
     private var pendingActivityStartTime: Date?
 
-    private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchWorkoutManager")
+    let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchWorkoutManager")
 
     // MARK: - Init
 
@@ -483,7 +483,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// Called both from user-initiated pauseWorkout() and from the session
     /// delegate when watchOS pauses the session on its own — in the latter
     /// case the session is already paused and must not be paused again.
-    private func applyPauseState() {
+    func applyPauseState() {
         isPaused = true
         pauseStartDate = Date()
 
@@ -508,7 +508,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     /// Everything a resume does EXCEPT resuming the HKWorkoutSession itself.
     /// See applyPauseState() for why this is split out.
-    private func applyResumeState() {
+    func applyResumeState() {
         isPaused = false
 
         // Accumulate pause duration
@@ -981,7 +981,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    private func startLocationUpdates() {
+    func startLocationUpdates() {
         locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         locationManager.distanceFilter = 10
         locationManager.activityType = .fitness
@@ -1289,7 +1289,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Persistence
 
-    private func saveWorkoutDataToLocalStorage() {
+    func saveWorkoutDataToLocalStorage() {
         guard let startTime = workoutStartTime else { return }
 
         var segmentsCopy = segments
@@ -1607,151 +1607,4 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         intervalEngine = engine
     }
     #endif
-}
-
-// MARK: - HKWorkoutSessionDelegate
-#if os(watchOS)
-extension WatchWorkoutManager: HKWorkoutSessionDelegate {
-    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didChangeTo toState: HKWorkoutSessionState, from fromState: HKWorkoutSessionState, date: Date) {
-        Task { @MainActor in
-            logger.info("Workout session state: \(fromState.rawValue) -> \(toState.rawValue)")
-
-            switch toState {
-            case .paused:
-                // System-initiated pause (user pause already set isPaused before
-                // the session transition fires). Reflect it so the UI and the
-                // pause-corrected clock stay truthful.
-                if isWorkoutActive && !isPaused {
-                    logger.warning("Session paused by system — reflecting in UI")
-                    applyPauseState()
-                }
-            case .running:
-                if isWorkoutActive && isPaused {
-                    logger.warning("Session resumed by system — reflecting in UI")
-                    applyResumeState()
-                }
-            case .stopped, .ended:
-                // If we didn't initiate this (user stop sets isWorkoutActive=false
-                // before this callback runs), the session died under us — finalize
-                // NOW so the workout is saved instead of leaving a dead session
-                // behind a still-running UI that can never stop.
-                if isWorkoutActive {
-                    logger.error("Session moved to \(toState.rawValue) by system mid-workout — saving and finalizing")
-                    saveWorkoutDataToLocalStorage()
-                    saveWorkoutData()
-                    stopWorkout()
-                }
-            default:
-                break
-            }
-        }
-    }
-
-    nonisolated func workoutSession(_ workoutSession: HKWorkoutSession, didFailWithError error: Error) {
-        Task { @MainActor in
-            logger.error("Workout session failed: \(error.localizedDescription)")
-            guard isWorkoutActive else { return }
-            // Checkpoint first (cheap, local), then finalize through the normal
-            // save path and tear the workout down so the UI never sits on a dead
-            // session. Previously this only wrote the backup and kept running.
-            saveWorkoutDataToLocalStorage()
-            healthKitSaveError = "Workout session failed: \(error.localizedDescription)"
-            saveWorkoutData()
-            stopWorkout()
-        }
-    }
-}
-
-// MARK: - HKLiveWorkoutBuilderDelegate (T-METRICS.4)
-// We mirror HKLiveWorkoutBuilder's `distanceWalkingRunning` sum statistic into
-// `hkDistanceKm`. The pedometer callback then prefers this value over its own
-// CMPedometer reading, since the builder's value is Apple's canonical fused
-// distance (pedometer + GPS + on-device motion classification — same value
-// shown by Apple Fitness and persisted on the resulting HKWorkout).
-extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
-    nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {
-        // Events (pause/resume/lap/marker) — no-op for distance handling.
-    }
-
-    nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
-        guard let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
-              collectedTypes.contains(distanceType) else { return }
-
-        guard let stats = workoutBuilder.statistics(for: distanceType),
-              let sum = stats.sumQuantity() else { return }
-
-        let meters = sum.doubleValue(for: .meter())
-        let km = meters / 1000.0
-
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.hkDistanceKm = km
-        }
-    }
-}
-#endif
-
-// MARK: - CLLocationManagerDelegate
-extension WatchWorkoutManager: CLLocationManagerDelegate {
-    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        let filtered = locations.filter { $0.horizontalAccuracy >= 0 && $0.horizontalAccuracy <= 50 }
-        guard !filtered.isEmpty else { return }
-
-        let points = filtered.map {
-            RoutePoint(
-                latitude: $0.coordinate.latitude,
-                longitude: $0.coordinate.longitude,
-                altitude: $0.altitude,
-                timestamp: $0.timestamp,
-                speed: $0.speed >= 0 ? $0.speed : nil,
-                horizontalAccuracy: $0.horizontalAccuracy
-            )
-        }
-
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-
-            // Cap in-memory route points for long workouts to avoid exceeding watchOS memory limit.
-            // Full-resolution route is preserved in HealthKit via HKWorkoutRouteBuilder.
-            if self.routePoints.count >= self.maxRoutePoints {
-                var downsampled: [RoutePoint] = []
-                let half = self.routePoints.count / 2
-                for (index, point) in self.routePoints.enumerated() {
-                    if index < half {
-                        if index % 2 == 0 { downsampled.append(point) }
-                    } else {
-                        downsampled.append(point)
-                    }
-                }
-                self.routePoints = downsampled
-                self.logger.info("Route points downsampled from \(self.maxRoutePoints) to \(self.routePoints.count)")
-            }
-            self.routePoints.append(contentsOf: points)
-
-            // Feed HKWorkoutRouteBuilder for official HealthKit route
-            self.routeBuilder?.insertRouteData(filtered) { success, error in
-                if let error = error {
-                    Task { @MainActor in
-                        self.logger.debug("RouteBuilder insert error: \(error.localizedDescription)")
-                    }
-                }
-            }
-        }
-    }
-
-    nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            let status = manager.authorizationStatus
-            if (status == .authorizedWhenInUse || status == .authorizedAlways) && self.isWorkoutActive && !self.isPaused {
-                self.startLocationUpdates()
-            }
-        }
-    }
-
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor [weak self] in
-            self?.logger.error("Location error: \(error.localizedDescription)")
-        }
-    }
 }
