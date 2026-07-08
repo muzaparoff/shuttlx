@@ -20,8 +20,9 @@ The watchOS target remains Apple-frameworks-only.
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 65 | SharedDataManager (605), AnalyticsView (514), DeviceManager, CalorieEstimationEngine, ThemeManager + 16 theme files |
-| watchOS | `ShuttlX Watch App` | 38 | WatchWorkoutManager (944), TrainingView (357), ThemeManager + 16 theme files |
+| iOS | `ShuttlX` | ~60 | PhoneSyncCoordinator (~875), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files |
+| watchOS | `ShuttlX Watch App` | ~45 | WatchWorkoutManager (~1,450, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator, TrainingView (137 + 4 extension files), ThemeManager + theme files |
+| Shared (SPM) | `ShuttlXShared` | 18 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
 | Widgets | `ShuttlXWidgets` | 3 | SmallWidget, MediumWidget |
 
