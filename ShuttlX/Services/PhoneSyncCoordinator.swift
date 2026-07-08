@@ -269,22 +269,32 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Session Storage
 
+    /// Serial background queue for sessions.json writes — encoding the full
+    /// history must never block the main actor (stall grows with history size).
+    private nonisolated static let sessionStoreQueue = DispatchQueue(label: "com.shuttlx.phone-session-store", qos: .utility)
+
     private func saveSessionsToSharedStorage(_ sessions: [TrainingSession]) {
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
-        let coordinator = NSFileCoordinator()
-        var coordinatorError: NSError?
-        coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
-            do {
-                let data = try JSONEncoder().encode(sessions)
-                try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
-            } catch {
-                self.log("Failed to save sessions: \(error.localizedDescription)")
+        Self.sessionStoreQueue.async { [weak self] in
+            let coordinator = NSFileCoordinator()
+            var coordinatorError: NSError?
+            coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
+                do {
+                    let data = try JSONEncoder().encode(sessions)
+                    try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+                } catch {
+                    Task { @MainActor [weak self] in
+                        self?.log("Failed to save sessions: \(error.localizedDescription)")
+                    }
+                }
             }
-        }
-        if let coordinatorError {
-            log("File coordination error saving sessions: \(coordinatorError.localizedDescription)")
+            if let coordinatorError {
+                Task { @MainActor [weak self] in
+                    self?.log("File coordination error saving sessions: \(coordinatorError.localizedDescription)")
+                }
+            }
         }
     }
 
