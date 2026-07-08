@@ -129,7 +129,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     var hkDistanceKm: Double = 0
 
     // Live metrics broadcast
-    private var lastLiveUpdateTime: Date?
+    private let broadcaster = LiveMetricsBroadcaster()
 
     let persistence = WorkoutPersistence()
 
@@ -300,15 +300,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         logger.info("Workout started (sport: \(sport.displayName))")
 
-        // Notify iPhone that workout started — transferUserInfo wakes iOS in background
-        if WCSession.default.activationState == .activated {
-            let startPayload: [String: Any] = [
-                "action": "workoutStarted",
-                "activityType": sport.rawValue,
-                "startTime": Date().timeIntervalSince1970
-            ]
-            WCSession.default.transferUserInfo(startPayload)
-        }
+        broadcaster.notifyWorkoutStarted(sport: sport)
     }
 
     func startIntervalWorkout(template: WorkoutTemplate) {
@@ -498,17 +490,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         totalCaloriesAccumulated = 0
         heartRateAnchor = nil
         caloriesAnchor = nil
-        lastLiveUpdateTime = nil
+        broadcaster.reset()
         routePoints = []
         accumulatedPauseTime = 0
         pauseStartDate = nil
 
-        // Notify iOS that workout ended (immediate + guaranteed)
-        let stopPayload: [String: Any] = ["action": "workoutStopped", "timestamp": Date().timeIntervalSince1970]
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(stopPayload, replyHandler: nil, errorHandler: nil)
-        }
-        WCSession.default.transferUserInfo(stopPayload)
+        broadcaster.notifyWorkoutStopped()
 
         // Reset interval mode
         workoutMode = .freeRun
@@ -689,58 +676,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Live Metrics Broadcast
 
-    // Dual-channel live metrics broadcast:
-    //  • sendMessage — real-time when iPhone is reachable (foregrounded / unlocked)
-    //  • updateApplicationContext — OS-queued, delivered when iPhone next wakes
-    //    (handles locked phone in pocket, suspended app, brief BT hiccups)
-    // Do NOT add an isReachable guard — it silently drops metrics during runs when
-    // the iPhone is locked. applicationContext only stores the latest snapshot,
-    // which is exactly what we want for live metrics.
     private func broadcastLiveMetricsIfNeeded() {
-        let now = Date()
-        if let lastUpdate = lastLiveUpdateTime, now.timeIntervalSince(lastUpdate) < 3.0 {
-            return
-        }
-        lastLiveUpdateTime = now
-
-        guard WCSession.default.activationState == .activated else { return }
-
-        var payload: [String: Any] = [
-            "action": "liveMetrics",
-            "workoutName": workoutName,
-            "elapsedTime": elapsedTime,
-            "heartRate": heartRate,
-            "distance": totalDistance,
-            "calories": calories,
-            "steps": totalSteps,
-            "currentActivity": currentActivity.rawValue,
-            "isPaused": isPaused,
-            "pace": currentPace ?? 0,
-            "cadence": currentCadence,
-            "timestamp": now.timeIntervalSince1970
-        ]
-
-        // Include latest route point for live map on iOS
-        if let lastPoint = routePoints.last {
-            payload["latitude"] = lastPoint.latitude
-            payload["longitude"] = lastPoint.longitude
-        }
-
-        // Channel 1: real-time when reachable
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
-                Task { @MainActor [weak self] in
-                    self?.logger.debug("Live metrics sendMessage failed: \(error.localizedDescription)")
-                }
-            }
-        }
-
-        // Channel 2: applicationContext — always delivered when iPhone next wakes
-        do {
-            try WCSession.default.updateApplicationContext(payload)
-        } catch {
-            logger.debug("Live metrics applicationContext failed: \(error.localizedDescription)")
-        }
+        broadcaster.broadcastIfNeeded(LiveMetricsBroadcaster.Snapshot(
+            workoutName: workoutName,
+            elapsedTime: elapsedTime,
+            heartRate: heartRate,
+            distance: totalDistance,
+            calories: calories,
+            steps: totalSteps,
+            activityRawValue: currentActivity.rawValue,
+            isPaused: isPaused,
+            pace: currentPace,
+            cadence: currentCadence,
+            lastLatitude: routePoints.last?.latitude,
+            lastLongitude: routePoints.last?.longitude
+        ))
     }
 
     // MARK: - Recovery Mode Event Processing
