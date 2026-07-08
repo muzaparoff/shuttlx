@@ -6,6 +6,7 @@ import WatchConnectivity
 #if os(watchOS)
 import WatchKit
 #endif
+import os
 import os.log
 import ShuttlXShared
 
@@ -142,6 +143,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // backlog / suspension) or stop entirely (kill) — see freeze root-cause plan.
     private var lastTickDate: Date?
     private var ticksSinceHeartbeat = 0
+
+    // Tick reentrancy guard — touched from the timer's background queue AND the
+    // main actor, hence a lock rather than actor-isolated state.
+    private nonisolated let tickPending = OSAllocatedUnfairLock(initialState: false)
 
     // CoreLocation
     private let locationManager = CLLocationManager()
@@ -582,8 +587,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         newTimer.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(50))
 
         newTimer.setEventHandler { [weak self] in
+            guard let self = self else { return }
+            // Reentrancy guard: if the previous tick's main-actor task hasn't
+            // run yet, DROP this tick instead of enqueueing another. Under a
+            // main-actor backlog, stacking ticks only deepens the backlog
+            // (freeze root-cause H1); the wall-clock-derived countdown and
+            // elapsed time self-heal on the next executed tick.
+            let alreadyPending = self.tickPending.withLock { pending -> Bool in
+                if pending { return true }
+                pending = true
+                return false
+            }
+            if alreadyPending { return }
             Task { @MainActor [weak self] in
-                self?.updateElapsedTime()
+                guard let self = self else { return }
+                self.tickPending.withLock { $0 = false }
+                self.updateElapsedTime()
             }
         }
 
