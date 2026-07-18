@@ -21,6 +21,9 @@ class DataManager: ObservableObject {
 
     // MARK: - App Group Properties
     private let sessionsKey = "sessions.json"
+    private let archiveKey = "sessions_archive.json"
+    /// Active-history cap. Overflow is archived oldest-first — newest workouts are never dropped.
+    private let sessionCap = 500
     private let appGroupIdentifier = "group.com.shuttlx.shared"
     private var sharedContainer: URL? {
         FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
@@ -55,11 +58,6 @@ class DataManager: ObservableObject {
             guard !processedSessionIds.contains(session.id) else { continue }
             processedSessionIds.insert(session.id)
 
-            guard sessions.count < 500 else {
-                logger.warning("Session cap reached (500). Dropping session \(session.id)")
-                continue
-            }
-
             if !sessions.contains(where: { $0.id == session.id }) {
                 sessions.append(session)
                 hasChanges = true
@@ -67,8 +65,56 @@ class DataManager: ObservableObject {
             }
         }
         if hasChanges {
+            archiveOldestBeyondCap()
             saveSessionsToAppGroup()
             requestAppReviewIfEligible()
+        }
+    }
+
+    /// Keeps the active list at `sessionCap` by moving the OLDEST overflow
+    /// sessions into `sessions_archive.json`. Archived ids stay in
+    /// `processedSessionIds`, so watch re-sends of archived sessions are still
+    /// deduplicated and cannot re-enter the active list.
+    private func archiveOldestBeyondCap() {
+        guard sessions.count > sessionCap else { return }
+        let overflow = sessions.count - sessionCap
+        let evicted = Array(sessions.sorted { $0.startDate < $1.startDate }.prefix(overflow))
+        let evictedIds = Set(evicted.map { $0.id })
+        sessions.removeAll { evictedIds.contains($0.id) }
+        appendToArchive(evicted)
+        logger.warning("Session cap \(self.sessionCap) exceeded — archived \(evicted.count) oldest session(s)")
+    }
+
+    private func appendToArchive(_ evicted: [TrainingSession]) {
+        guard !evicted.isEmpty, let containerURL = getWorkingContainer() else { return }
+
+        let url = containerURL.appendingPathComponent(archiveKey)
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(writingItemAt: url, options: .forMerging, error: &coordinatorError) { writeURL in
+            do {
+                var archived: [TrainingSession] = []
+                if FileManager.default.fileExists(atPath: writeURL.path) {
+                    let data = try Data(contentsOf: writeURL)
+                    do {
+                        archived = try JSONDecoder().decode([TrainingSession].self, from: data)
+                    } catch {
+                        // Corrupt archive: preserve the bytes, then start a fresh archive.
+                        let backupURL = writeURL.deletingLastPathComponent()
+                            .appendingPathComponent("sessions_archive_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                        try? FileManager.default.copyItem(at: writeURL, to: backupURL)
+                        self.logger.error("Corrupt sessions_archive.json backed up to \(backupURL.lastPathComponent): \(error.localizedDescription)")
+                    }
+                }
+                archived.append(contentsOf: evicted)
+                let data = try JSONEncoder().encode(archived)
+                try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+            } catch {
+                self.logger.error("Failed to archive \(evicted.count) session(s): \(error.localizedDescription)")
+            }
+        }
+        if let coordinatorError {
+            logger.error("File coordination error archiving sessions: \(coordinatorError.localizedDescription)")
         }
     }
 
