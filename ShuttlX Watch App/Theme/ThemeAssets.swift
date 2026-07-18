@@ -656,6 +656,7 @@ struct ThemedCompletionBadge: View {
         case "arcade":       ArcadeCompletionBadge()
         case "classicradio": ClassicRadioCompletionBadge()
         case "neovim":       NeovimCompletionBadge()
+        case "fmtuner":      FMTunerCompletionBadge()
         default:             CleanCompletionBadge()
         }
     }
@@ -1026,5 +1027,48 @@ private struct ReelHub: View {
                 context.stroke(spoke, with: .color(hubColor), lineWidth: 0.5)
             }
         }
+    }
+}
+
+// MARK: FM Tuner Completion Badge — LCD "SIGNAL LOCKED" panel, signal bars at full deflection
+
+private struct FMTunerCompletionBadge: View {
+    // FM Tuner LCD palette — same as FMTunerTheme; hard-wired for "fmtuner" theme only
+    private let navy       = Color(red: 0.008, green: 0.063, blue: 0.094)  // #021018 deep navy LCD
+    private let panel      = Color(red: 0.024, green: 0.125, blue: 0.161)  // #062029 panel
+    private let silk       = Color(red: 0.039, green: 0.294, blue: 0.361)  // #0A4B5C PCB silk
+    private let brightCyan = Color(red: 0.486, green: 0.847, blue: 1.000)  // #7CD8FF
+
+    var body: some View {
+        VStack(spacing: 4) {
+            // Signal-strength bars — all 5 lit, ascending, full lock
+            HStack(alignment: .bottom, spacing: 2) {
+                ForEach(0..<5, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(brightCyan)
+                        .frame(width: 4, height: CGFloat(6 + i * 3))
+                        .shadow(color: brightCyan.opacity(0.6), radius: 2)
+                }
+            }
+
+            Text("SIGNAL LOCKED")
+                .font(.system(size: 11, weight: .bold, design: .monospaced))
+                .foregroundColor(brightCyan)
+                .shadow(color: brightCyan.opacity(0.5), radius: 3)
+
+            Image(systemName: "checkmark")
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .foregroundColor(brightCyan)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 4)
+                .fill(navy)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 4)
+                .stroke(silk, lineWidth: 1.5)
+        )
     }
 }

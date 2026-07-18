@@ -122,7 +122,7 @@ struct ClassicRadioTimerHero: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
         } else {
-            TimelineView(.animation(minimumInterval: 1.0 / 8.0)) { tl in
+            TimelineView(.animation(minimumInterval: 1.0 / 8.0, paused: controller.isPaused)) { tl in
                 let alpha = beatGlowAlpha(at: tl.date)
                 amberGlowCanvas(glowAlpha: alpha)
             }

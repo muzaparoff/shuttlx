@@ -86,7 +86,7 @@ struct NeovimTimerHero: View {
                 if reduceMotion {
                     bufferBody(cursorVisible: true)
                 } else {
-                    TimelineView(.animation(minimumInterval: 0.5)) { tl in
+                    TimelineView(.animation(minimumInterval: 0.5, paused: controller.isPaused)) { tl in
                         let blink = Int(tl.date.timeIntervalSinceReferenceDate * 2) % 2 == 0
                         bufferBody(cursorVisible: blink)
                     }

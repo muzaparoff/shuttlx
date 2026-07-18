@@ -40,7 +40,7 @@ struct SynthwaveTimerHero: View {
             if reduceMotion {
                 staticHorizonBackground
             } else {
-                TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: controller.isPaused)) { timeline in
                     animatedHorizonBackground(date: timeline.date)
                 }
             }
@@ -616,7 +616,7 @@ struct SynthwaveTimerHero: View {
                 .foregroundStyle(ShuttlXColor.pace.opacity(0.7))
             // Chevron animation
             if isFast && !reduceMotion {
-                TimelineView(.animation(minimumInterval: 0.35)) { tl in
+                TimelineView(.animation(minimumInterval: 0.35, paused: controller.isPaused)) { tl in
                     chevronArrows(date: tl.date)
                 }
             } else {

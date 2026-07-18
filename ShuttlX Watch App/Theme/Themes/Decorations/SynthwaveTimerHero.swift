@@ -76,7 +76,7 @@ struct SynthwaveTimerOverlay: View {
     // MARK: - Horizon backdrop (Canvas)
 
     private var horizonBackdrop: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 24.0)) { ctx in
+        TimelineView(.animation(minimumInterval: 1.0 / 24.0, paused: workoutManager.isPaused)) { ctx in
             let t = ctx.date.timeIntervalSinceReferenceDate
             Canvas { gfx, size in
                 drawSunHalo(gfx: gfx, size: size)
