@@ -86,6 +86,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var healthStore = HKHealthStore()
     private var displayTimer: DispatchSourceTimer?
     private var workoutStartTime: Date?
+    /// One id per workout, created at start and shared by the 15s checkpoint
+    /// and the final save — recovery dedup compares ids, so both saves MUST
+    /// agree or a surviving backup re-imports as a duplicate session.
+    private var currentSessionID = UUID()
     private var currentSegmentStartTime: Date?
     private var segments: [ActivitySegment] = []
     private var sharedDataManager: WatchSyncCoordinator?
@@ -250,6 +254,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         let now = Date()
         workoutStartTime = now
+        currentSessionID = UUID()
         currentSegmentStartTime = now
         isWorkoutActive = true
         isPaused = false
@@ -1181,6 +1186,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let totalPause = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
 
         let session = TrainingSession(
+            id: currentSessionID,
             startDate: startTime,
             endDate: Date(),
             duration: Date().timeIntervalSince(startTime) - totalPause,
@@ -1285,6 +1291,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let totalPauseTime = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
 
         var session = TrainingSession(
+            id: currentSessionID,
             startDate: startTime,
             endDate: Date(),
             duration: Date().timeIntervalSince(startTime) - totalPauseTime,
