@@ -446,15 +446,25 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     if sessions.isEmpty {
                         replyHandler(["status": "empty", "count": 0])
                     } else {
-                        // Hybrid reply: inline small/medium sessions, route large ones via file transfer
+                        // Hybrid reply: inline sessions up to a CUMULATIVE byte budget;
+                        // per-session oversized AND over-budget sessions route via the
+                        // durable channel instead. sendMessage replies are capped at
+                        // ~65KB for the whole dictionary and base64 inflates by 4/3,
+                        // so 36KB of raw JSON keeps the reply safely under the ceiling
+                        // no matter how many sessions are stored.
+                        let perSessionLimit = 200_000
+                        let inlineBudget = 36_000
                         var inlineSessions: [TrainingSession] = []
-                        var oversizedCount = 0
+                        var inlineBytes = 0
+                        var routedCount = 0
                         for s in sessions {
-                            if let data = try? JSONEncoder().encode(s), data.count > 200_000 {
+                            let size = (try? JSONEncoder().encode(s))?.count ?? 0
+                            if size > perSessionLimit || inlineBytes + size > inlineBudget {
                                 self.sendSessionToiOS(s)
-                                oversizedCount += 1
+                                routedCount += 1
                             } else {
                                 inlineSessions.append(s)
+                                inlineBytes += size
                             }
                         }
                         if let encoded = try? JSONEncoder().encode(inlineSessions) {
@@ -462,7 +472,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                                 "status": "ok",
                                 "count": sessions.count,
                                 "sessionsData": encoded.base64EncodedString(),
-                                "oversizedCount": oversizedCount
+                                "oversizedCount": routedCount
                             ])
                         } else {
                             // Encoding failed — fall back to individual routing
