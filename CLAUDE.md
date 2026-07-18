@@ -111,6 +111,14 @@ Additional rules load automatically based on the files being edited:
 - `/deploy` — Push to main, monitor CI, report TestFlight result
 - `/review-changes` — Check git diff against design system & safety rules
 
+### Domain review checklists (July 2026 audit-derived — agents MUST apply the relevant one before implementing or reviewing in its domain)
+
+- `/wcsession-sync-review` — WCSession payload limits, applicationContext merge semantics, retry rules
+- `/watchos-constraints` — battery/memory budgets, TimelineView `paused:`, AOD, workout survival
+- `/observable-theme-patterns` — `@Observable` tracking gotchas, bridge re-render gap, mirrored-file drift, 7-theme switch coverage
+- `/json-persistence-safety` — single-writer rule, corruption recovery, schema versioning, id-stable dedup
+- `/swift-concurrency-review` — actor isolation, queue conventions, known-good patterns to preserve
+
 ## Agents
 
 | Agent | Purpose | Model |
