@@ -298,10 +298,50 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
-    private func loadSessionsFromSharedStorage() {
-        let appGroupSessions = loadSessionsFromAppGroup()
-        if !appGroupSessions.isEmpty {
-            self.syncedSessions = appGroupSessions
+    private func loadSessionsFromSharedStorage(completion: (() -> Void)? = nil) {
+        readSessionsFromDisk { [weak self] sessions in
+            if let self, !sessions.isEmpty {
+                self.syncedSessions = sessions
+            }
+            completion?()
+        }
+    }
+
+    /// Reads + decodes sessions.json on the store queue — decode cost grows with
+    /// history size (GPS-heavy histories reach several MB) and this runs on every
+    /// app resume. Completion is delivered on the main actor.
+    private func readSessionsFromDisk(_ completion: @escaping ([TrainingSession]) -> Void) {
+        guard let containerURL = getWorkingContainer() else { completion([]); return }
+
+        let url = containerURL.appendingPathComponent(sessionsKey)
+        guard FileManager.default.fileExists(atPath: url.path) else { completion([]); return }
+
+        Self.sessionStoreQueue.async { [weak self] in
+            var result: [TrainingSession] = []
+            let coordinator = NSFileCoordinator()
+            var coordinatorError: NSError?
+            coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+                do {
+                    let data = try Data(contentsOf: readURL)
+                    result = try JSONDecoder().decode([TrainingSession].self, from: data)
+                } catch {
+                    // Preserve corrupt file for potential recovery — never silently drop history
+                    let backupURL = url.deletingLastPathComponent()
+                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                    try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                    Task { @MainActor [weak self] in
+                        self?.log("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
+                        self?.log("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                        self?.purgeOldCorruptBackups(in: url.deletingLastPathComponent())
+                    }
+                }
+            }
+            if let coordinatorError {
+                Task { @MainActor [weak self] in
+                    self?.log("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
+                }
+            }
+            Task { @MainActor in completion(result) }
         }
     }
 
@@ -468,15 +508,19 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Called when app comes to foreground — reconcile any missing sessions
     func reconcileWithDataManager() {
-        // Reload from disk first — picks up sessions saved while app was backgrounded
-        loadSessionsFromSharedStorage()
-        checkForNewSessions()
+        // Reload from disk first — picks up sessions saved while app was
+        // backgrounded. The read is async (off-main decode); the reconcile
+        // steps must run only after it has applied to syncedSessions.
+        loadSessionsFromSharedStorage { [weak self] in
+            guard let self else { return }
+            self.checkForNewSessions()
 
-        // Always attempt pull — sendMessage's errorHandler handles unreachable case,
-        // isReachable can be stale
-        requestSessionsFromWatch { [weak self] count in
-            if count > 0 {
-                self?.log("Reconciliation pulled \(count) session(s)")
+            // Always attempt pull — sendMessage's errorHandler handles unreachable case,
+            // isReachable can be stale
+            self.requestSessionsFromWatch { [weak self] count in
+                if count > 0 {
+                    self?.log("Reconciliation pulled \(count) session(s)")
+                }
             }
         }
     }

@@ -16,6 +16,9 @@ class DataManager: ObservableObject {
 
     private var processedSessionIds = Set<UUID>()
     private var cancellables = Set<AnyCancellable>()
+    /// Serial queue for sessions.json reads — decode cost grows with history
+    /// size and the load runs on every app resume, so it must stay off-main.
+    private nonisolated static let storeQueue = DispatchQueue(label: "com.shuttlx.datamanager-store", qos: .utility)
     private let healthStore = HKHealthStore()
     private var cloudSyncDebounceTask: Task<Void, Never>?
 
@@ -248,30 +251,41 @@ class DataManager: ObservableObject {
         let url = containerURL.appendingPathComponent(sessionsKey)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
 
-        var loaded: [TrainingSession] = []
-        let coordinator = NSFileCoordinator()
-        var coordinatorError: NSError?
-        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
-            do {
-                let data = try Data(contentsOf: readURL)
-                loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
-            } catch {
-                self.logger.error("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
-                // Preserve corrupt file for potential recovery — don't overwrite history
-                let backupURL = url.deletingLastPathComponent()
-                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                try? FileManager.default.copyItem(at: readURL, to: backupURL)
-                self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+        Self.storeQueue.async { [logger, weak self] in
+            var loaded: [TrainingSession] = []
+            let coordinator = NSFileCoordinator()
+            var coordinatorError: NSError?
+            coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+                do {
+                    let data = try Data(contentsOf: readURL)
+                    loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
+                } catch {
+                    logger.error("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
+                    // Preserve corrupt file for potential recovery — don't overwrite history
+                    let backupURL = url.deletingLastPathComponent()
+                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                    try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                    logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                }
+            }
+            if let coordinatorError {
+                logger.error("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
+                return
+            }
+            Task { @MainActor [weak self] in
+                self?.mergeLoadedSessions(loaded)
             }
         }
-        if let coordinatorError {
-            logger.error("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
-            return
-        }
+    }
+
+    private func mergeLoadedSessions(_ loaded: [TrainingSession]) {
+        guard !loaded.isEmpty else { return }
 
         // Fast path: first load (empty in-memory list) — skip the per-session
         // merge loop and just replace wholesale. For users with 500+ sessions
         // this saved a noticeable startup pause from O(n) insert + duplicate-build.
+        // Safe against a session received while the disk read was in flight:
+        // a receive appends to `sessions`, which forces the merge path below.
         let existingIds = Set(sessions.map { $0.id })
         if existingIds.isEmpty {
             sessions = loaded
