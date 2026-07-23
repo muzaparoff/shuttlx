@@ -223,21 +223,18 @@ struct StartTrainingView: View {
     // MARK: - Data
 
     private func loadLastSession() {
-        Task {
-            let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared")
-            guard let url = container?.appendingPathComponent("sessions.json"),
-                  FileManager.default.fileExists(atPath: url.path) else {
-                return
-            }
-            do {
-                let data = try Data(contentsOf: url)
-                let sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-                await MainActor.run {
-                    lastSession = sessions.max(by: { $0.startDate < $1.startDate })
-                }
-            } catch {
-                logger.error("Failed to load last session: \(error.localizedDescription)")
-            }
+        guard let url = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared"
+        )?.appendingPathComponent("sessions.json"),
+        FileManager.default.fileExists(atPath: url.path) else { return }
+
+        // Task.detached escapes @MainActor — Data(contentsOf:) + JSONDecoder must
+        // not run on the main thread (decoding full session history blocks UI).
+        Task.detached(priority: .utility) {
+            guard let data = try? Data(contentsOf: url),
+                  let sessions = try? JSONDecoder().decode([TrainingSession].self, from: data) else { return }
+            let last = sessions.max(by: { $0.startDate < $1.startDate })
+            await MainActor.run { lastSession = last }
         }
     }
 }

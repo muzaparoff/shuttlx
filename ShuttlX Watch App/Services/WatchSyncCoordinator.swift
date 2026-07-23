@@ -50,8 +50,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
 
         Task { @MainActor [weak self] in
-            self?.loadPendingSessionsFromDisk()
-            self?.loadTemplatesFromDisk()
+            await self?.loadPendingSessionsAndTemplates()
         }
         setupBackgroundTasks()
     }
@@ -114,50 +113,49 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     func sendSessionToiOS(_ session: TrainingSession) {
         logger.info("Sending training session to iOS...")
-
-        // Save to App Group for reliability
+        // App Group write is already on sessionStoreQueue (background).
         saveSessionToAppGroup(session)
 
-        do {
-            let sessionData = try JSONEncoder().encode(session)
-            let base64 = sessionData.base64EncodedString()
-            let payloadSize = base64.utf8.count
-            logger.info("Session payload: \(payloadSize) bytes (\(session.route?.count ?? 0) route points)")
-
-            if payloadSize > 200_000 {
-                // Large session — use file transfer (unlimited size). Already queues internally.
-                sendSessionViaFileTransfer(session, sessionData: sessionData)
-            } else if payloadSize > 50_000 {
-                // Medium session — transferUserInfo only (sendMessage would fail at ~65 KB).
-                // Queue as pending so the retry burst + 15s polling cover deferred delivery.
-                queuePendingSession(session)
-                sendSessionViaUserInfo(session, sessionData: sessionData)
-            } else {
-                // Small session — transferUserInfo + sendMessage for immediate delivery.
-                // sendMessage error handler queues to pending if it fails.
-                sendSessionViaUserInfo(session, sessionData: sessionData)
-                sendSessionViaMessage(session, base64: base64)
-            }
-
-            // Tap-on-shoulder: tell iPhone "a new session ID exists" via applicationContext.
-            // This wakes iOS regardless of reachability and lets it pull the session if it
-            // hasn't arrived via userInfo yet.
+        // JSON encoding can take 150–500ms for large GPS sessions — must not run
+        // on @MainActor. Encode on a utility thread, hop back to main only for
+        // the WCSession dispatch calls that require it.
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
             do {
-                try WCSession.default.updateApplicationContext([
-                    "action": "lastSessionID",
-                    "sessionID": session.id.uuidString,
-                    "timestamp": Date().timeIntervalSince1970
-                ])
+                let sessionData = try JSONEncoder().encode(session)
+                // Approximate base64 size without allocating the string yet.
+                let payloadSize = Int(Double(sessionData.count) * 1.34)
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
+                    self.logger.info("Session payload: ~\(payloadSize) bytes (\(session.route?.count ?? 0) route points)")
+                    if payloadSize > 200_000 {
+                        self.sendSessionViaFileTransfer(session, sessionData: sessionData)
+                    } else if payloadSize > 50_000 {
+                        self.queuePendingSession(session)
+                        self.sendSessionViaUserInfo(session, sessionData: sessionData)
+                    } else {
+                        let base64 = sessionData.base64EncodedString()
+                        self.sendSessionViaUserInfo(session, sessionData: sessionData)
+                        self.sendSessionViaMessage(session, base64: base64)
+                    }
+                    do {
+                        try WCSession.default.updateApplicationContext([
+                            "action": "lastSessionID",
+                            "sessionID": session.id.uuidString,
+                            "timestamp": Date().timeIntervalSince1970
+                        ])
+                    } catch {
+                        self.logger.debug("lastSessionID applicationContext failed: \(error.localizedDescription)")
+                    }
+                    self.scheduleFinishRetryBurst()
+                }
             } catch {
-                logger.debug("lastSessionID applicationContext failed: \(error.localizedDescription)")
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
+                    self.logger.error("Failed to encode session: \(error.localizedDescription)")
+                    self.queuePendingSession(session)
+                }
             }
-
-            // Aggressive retry burst — covers cases where transferUserInfo is deferred
-            // by iOS (suspended/locked phone). Steady-state polling is every 15s.
-            scheduleFinishRetryBurst()
-        } catch {
-            logger.error("Failed to encode session: \(error.localizedDescription)")
-            queuePendingSession(session)
         }
     }
 
@@ -178,26 +176,30 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func sendSessionViaFileTransfer(_ session: TrainingSession, sessionData: Data) {
-        // Queue as pending safety net — removed on successful delivery
+        // File write of large data (>200KB) must not run on main — it can take 50–200ms.
+        // queuePendingSession happens immediately on main (fast), file write is background.
         queuePendingSession(session)
-
         let tempDir = FileManager.default.temporaryDirectory
         let fileName = "session_\(session.id.uuidString).json"
         let fileURL = tempDir.appendingPathComponent(fileName)
-
-        do {
-            try sessionData.write(to: fileURL, options: [.atomic, .completeFileProtection])
-            let metadata: [String: Any] = [
-                "action": "saveSession",
-                "sessionID": session.id.uuidString,
-                "timestamp": Date().timeIntervalSince1970
-            ]
-            WCSession.default.transferFile(fileURL, metadata: metadata)
-            logger.info("Session queued via transferFile (\(sessionData.count) bytes)")
-            updateSyncStatus("Large session queued for file transfer")
-        } catch {
-            logger.error("Failed to write temp file for transfer: \(error.localizedDescription)")
-            queuePendingSession(session)
+        let logger = self.logger
+        Task.detached(priority: .utility) { [weak self] in
+            do {
+                try sessionData.write(to: fileURL, options: [.atomic, .completeFileProtection])
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
+                    let metadata: [String: Any] = [
+                        "action": "saveSession",
+                        "sessionID": session.id.uuidString,
+                        "timestamp": Date().timeIntervalSince1970
+                    ]
+                    WCSession.default.transferFile(fileURL, metadata: metadata)
+                    self.logger.info("Session queued via transferFile (\(sessionData.count) bytes)")
+                    self.updateSyncStatus("Large session queued for file transfer")
+                }
+            } catch {
+                logger.error("Failed to write temp file for transfer: \(error.localizedDescription)")
+            }
         }
     }
 
@@ -262,38 +264,61 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func savePendingSessionsToDisk() {
-        guard let containerURL = getWorkingContainer() else {
-            return
-        }
+        guard let containerURL = getWorkingContainer() else { return }
+        // Capture value types on @MainActor; encode + write on background.
+        let sessions = pendingSessions
         let url = containerURL.appendingPathComponent(pendingSessionsFileName)
-        do {
-            if pendingSessions.isEmpty {
-                try? FileManager.default.removeItem(at: url)
-            } else {
-                let data = try JSONEncoder().encode(pendingSessions)
-                try data.write(to: url, options: [.atomic, .completeFileProtection])
+        let logger = self.logger
+        Task.detached(priority: .utility) {
+            do {
+                if sessions.isEmpty {
+                    try? FileManager.default.removeItem(at: url)
+                } else {
+                    let data = try JSONEncoder().encode(sessions)
+                    try data.write(to: url, options: [.atomic, .completeFileProtection])
+                }
+            } catch {
+                logger.error("Failed to save pending sessions: \(error.localizedDescription)")
             }
-        } catch {
-            logger.error("Failed to save pending sessions: \(error.localizedDescription)")
         }
     }
 
-    private func loadPendingSessionsFromDisk() {
+    /// Loads pending sessions + templates off the main thread. Called once at startup.
+    /// Both files are read concurrently on a background task; results are assigned
+    /// on @MainActor after the await.
+    private func loadPendingSessionsAndTemplates() async {
         guard let containerURL = getWorkingContainer() else {
+            loadFallbackTemplates()
             return
         }
-        let url = containerURL.appendingPathComponent(pendingSessionsFileName)
-        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        let pendingURL = containerURL.appendingPathComponent(pendingSessionsFileName)
+        let templatesURL = containerURL.appendingPathComponent("workout_templates.json")
 
-        do {
-            let data = try Data(contentsOf: url)
-            let loaded = try JSONDecoder().decode([TrainingSession].self, from: data)
-            if !loaded.isEmpty {
-                pendingSessions = loaded
-                logger.info("Loaded \(loaded.count) pending session(s) from disk")
+        let (pending, templates) = await Task.detached(priority: .utility) {
+            var pending: [TrainingSession] = []
+            var templates: [WorkoutTemplate] = []
+            if FileManager.default.fileExists(atPath: pendingURL.path),
+               let data = try? Data(contentsOf: pendingURL),
+               let loaded = try? JSONDecoder().decode([TrainingSession].self, from: data) {
+                pending = loaded
             }
-        } catch {
-            logger.error("Failed to load pending sessions: \(error.localizedDescription)")
+            if FileManager.default.fileExists(atPath: templatesURL.path),
+               let data = try? Data(contentsOf: templatesURL),
+               let loaded = try? JSONDecoder().decode([WorkoutTemplate].self, from: data) {
+                templates = loaded
+            }
+            return (pending, templates)
+        }.value
+
+        if !pending.isEmpty {
+            pendingSessions = pending
+            logger.info("Loaded \(pending.count) pending session(s) from disk")
+        }
+        if templates.isEmpty {
+            loadFallbackTemplates()
+        } else {
+            workoutTemplates = templates
+            logger.info("Loaded \(templates.count) template(s) from disk")
         }
     }
 
@@ -349,13 +374,16 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 let data = try JSONEncoder().encode(sessions)
                 try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
                 logger.info("Session saved to App Group")
-                WidgetCenter.shared.reloadAllTimelines()
             } catch {
                 logger.error("Failed to save session to App Group: \(error.localizedDescription)")
             }
         }
         if let coordinatorError {
             logger.error("File coordination error saving session to App Group: \(coordinatorError.localizedDescription)")
+        } else {
+            // Called outside the coordinator block — IPC to widget extension
+            // must not hold the file coordination lock.
+            WidgetCenter.shared.reloadAllTimelines()
         }
     }
 
@@ -377,7 +405,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                     Task { @MainActor in
                         self?.retryPendingSessions()
-                        self?.sendAllStoredSessions()
+                        await self?.sendAllStoredSessions()
                     }
                 }
             }
@@ -397,7 +425,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 // during Bluetooth reconnect flicker in active workouts
                 let now = Date()
                 if self.lastFullResendTime.map({ now.timeIntervalSince($0) > 60 }) ?? true {
-                    self.sendAllStoredSessions()
+                    await self.sendAllStoredSessions()
                     self.lastFullResendTime = now
                 }
             } else {
@@ -458,7 +486,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     self.updateSyncStatus("Connection verified")
                     self.consecutiveFailures = 0
                 case "requestAllSessions":
-                    let sessions = self.loadAllLocalSessions()
+                    let sessions = await self.loadAllLocalSessions()
                     if sessions.isEmpty {
                         replyHandler(["status": "empty", "count": 0])
                     } else {
@@ -499,7 +527,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     }
                 case "reconcileSessions":
                     let knownIDs = Set((message["knownSessionIDs"] as? [String]) ?? [])
-                    let allSessions = self.loadAllLocalSessions()
+                    let allSessions = await self.loadAllLocalSessions()
                     let missingSessions = allSessions.filter { !knownIDs.contains($0.id.uuidString) }
 
                     if missingSessions.isEmpty {
@@ -538,10 +566,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             if let error = error {
                 self.logger.error("UserInfo transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
-                // Re-queue the session for retry
                 if let sessionID = userInfoTransfer.userInfo["sessionID"] as? String,
                    let uuid = UUID(uuidString: sessionID) {
-                    let allSessions = self.loadAllLocalSessions()
+                    let allSessions = await self.loadAllLocalSessions()
                     if let session = allSessions.first(where: { $0.id == uuid }) {
                         self.queuePendingSession(session)
                     }
@@ -565,10 +592,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             if let error = error {
                 self.logger.error("File transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
-                // Re-queue the session for retry
                 if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String,
                    let uuid = UUID(uuidString: sessionID) {
-                    let allSessions = self.loadAllLocalSessions()
+                    let allSessions = await self.loadAllLocalSessions()
                     if let session = allSessions.first(where: { $0.id == uuid }) {
                         self.queuePendingSession(session)
                     }
@@ -620,8 +646,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Bulk Session Sync
 
     /// Send all locally stored sessions to iPhone via size-aware routing
-    func sendAllStoredSessions() {
-        let allSessions = loadAllLocalSessions()
+    func sendAllStoredSessions() async {
+        let allSessions = await loadAllLocalSessions()
         guard !allSessions.isEmpty else { return }
 
         // Only resend sessions from the last 24 hours (not the entire history)
@@ -643,32 +669,36 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         updateSyncStatus("Sent \(sessionsToSend.count) session(s) to iPhone")
     }
 
-    private func loadAllLocalSessions() -> [TrainingSession] {
+    /// Reads sessions.json off the main thread. NSFileCoordinator.coordinate is
+    /// blocking — calling it on @MainActor causes visible freezes when iPhone
+    /// reconnects during or after a workout.
+    private func loadAllLocalSessions() async -> [TrainingSession] {
         guard let containerURL = getWorkingContainer() else { return [] }
         let url = containerURL.appendingPathComponent("sessions.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-
-        var result: [TrainingSession] = []
-        let coordinator = NSFileCoordinator()
-        var coordinatorError: NSError?
-        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
-            do {
-                let data = try Data(contentsOf: readURL)
-                result = try JSONDecoder().decode([TrainingSession].self, from: data)
-            } catch {
-                self.logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
-                // Preserve corrupt file for potential recovery
-                let backupURL = url.deletingLastPathComponent()
-                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                try? FileManager.default.copyItem(at: readURL, to: backupURL)
-                self.logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                Self.purgeOldCorruptBackups(in: url.deletingLastPathComponent(), logger: self.logger)
+        let logger = self.logger
+        return await Task.detached(priority: .utility) {
+            var result: [TrainingSession] = []
+            let coordinator = NSFileCoordinator()
+            var coordinatorError: NSError?
+            coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+                do {
+                    let data = try Data(contentsOf: readURL)
+                    result = try JSONDecoder().decode([TrainingSession].self, from: data)
+                } catch {
+                    logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
+                    let backupURL = url.deletingLastPathComponent()
+                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                    try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                    logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                    Self.purgeOldCorruptBackups(in: url.deletingLastPathComponent(), logger: logger)
+                }
             }
-        }
-        if let coordinatorError {
-            logger.error("File coordination error loading sessions on watch: \(coordinatorError.localizedDescription)")
-        }
-        return result
+            if let coordinatorError {
+                logger.error("File coordination error loading sessions on watch: \(coordinatorError.localizedDescription)")
+            }
+            return result
+        }.value
     }
 
     // MARK: - Template Sync
@@ -722,26 +752,6 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             try data.write(to: url, options: [.atomic, .completeFileProtection])
         } catch {
             logger.error("Failed to save templates to disk: \(error.localizedDescription)")
-        }
-    }
-
-    private func loadTemplatesFromDisk() {
-        guard let containerURL = getWorkingContainer() else {
-            loadFallbackTemplates()
-            return
-        }
-        let url = containerURL.appendingPathComponent("workout_templates.json")
-        guard FileManager.default.fileExists(atPath: url.path) else {
-            loadFallbackTemplates()
-            return
-        }
-        do {
-            let data = try Data(contentsOf: url)
-            workoutTemplates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
-            logger.info("Loaded \(self.workoutTemplates.count) template(s) from disk")
-        } catch {
-            logger.error("Failed to load templates from disk: \(error.localizedDescription)")
-            loadFallbackTemplates()
         }
     }
 
