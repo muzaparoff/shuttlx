@@ -25,13 +25,70 @@ func displayName(for sharedType: ShuttlXShared.IntervalType) -> String {
 
 func hrZoneLabel(_ bpm: Int) -> String {
     guard bpm > 0 else { return "" }
-    let pct = Double(bpm) / 185.0
-    switch pct {
-    case ..<0.60: return "Z1"
-    case 0.60..<0.70: return "Z2"
-    case 0.70..<0.80: return "Z3"
-    case 0.80..<0.90: return "Z4"
-    default: return "Z5"
+    let z = hrZoneNumber(bpm)
+    return z > 0 ? "Z\(z)" : ""
+}
+
+func hrZoneNumber(_ bpm: Int) -> Int {
+    guard bpm > 0 else { return 0 }
+    let calculator = HeartRateZoneCalculator.fromSharedDefaults()
+    return calculator.zone(for: Double(bpm))
+}
+
+/// Compact duration for next-step preview: "45s" under 60s, "1:30" otherwise.
+func formatStepDuration(_ seconds: TimeInterval) -> String {
+    let s = Int(seconds)
+    if s < 60 { return "\(s)s" }
+    return String(format: "%d:%02d", s / 60, s % 60)
+}
+
+// MARK: - HR Zone Arc (iOS)
+
+/// Gauge-style arc showing the current HR zone (1–5). Identical visual
+/// language to the watchOS `HRZoneArc` — 5 segments, 140° sweep.
+struct HRZoneArc: View {
+    let zone: Int
+
+    private static let zoneColors: [Color] = [
+        ShuttlXColor.hrZone1,
+        ShuttlXColor.hrZone2,
+        ShuttlXColor.hrZone3,
+        ShuttlXColor.hrZone4,
+        ShuttlXColor.hrZone5,
+    ]
+
+    var body: some View {
+        Canvas { ctx, size in
+            let cx = size.width / 2
+            let cy = size.height + 1
+            let radius = size.height - 1
+            let lineWidth: CGFloat = 4
+
+            for i in 0..<5 {
+                let segStart = 200.0 + Double(i) * 29.0
+                let segEnd = segStart + 24.0
+                let isFilled = zone > 0 && (i + 1) <= zone
+
+                var path = Path()
+                path.addArc(
+                    center: CGPoint(x: cx, y: cy),
+                    radius: radius,
+                    startAngle: .degrees(segStart),
+                    endAngle: .degrees(segEnd),
+                    clockwise: false
+                )
+
+                ctx.stroke(
+                    path,
+                    with: .color(isFilled
+                        ? HRZoneArc.zoneColors[i]
+                        : Color.white.opacity(0.12)),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+            }
+        }
+        .accessibilityLabel(zone > 0 ? "Zone \(zone)" : "Heart rate zone unknown")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

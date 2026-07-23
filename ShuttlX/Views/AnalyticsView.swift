@@ -420,10 +420,8 @@ struct AnalyticsView: View {
         // Keep stock pace zone colors for Clean / Mixtape / Classic Radio;
         // for other themes use the chart accent tinted by zone intensity
         switch chartStyle.barShape {
-        case .roundedSwiftCharts, .tapeStrip, .needle:
+        case .roundedSwiftCharts, .tapeStrip:
             return ShuttlXColor.forPaceZone(zone)
-        default:
-            return chartStyle.accentColor.opacity(0.70)
         }
     }
 

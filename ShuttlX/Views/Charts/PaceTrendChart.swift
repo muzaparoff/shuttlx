@@ -27,19 +27,6 @@ struct PaceTrendChart: View {
                     chartStyle: chartStyle
                 )
 
-                // Classic Radio needle pointer overlay (signatureAccent)
-                if themeManager.current.id == "classicradio" && !paceData.isEmpty {
-                    let values = paceData.map { ($0.averagePace ?? 0) / 60.0 }
-                    let minV = values.min() ?? 0
-                    let maxV = values.max() ?? 1
-                    let range = maxV - minV > 0 ? maxV - minV : 1
-                    let lastNorm = ((values.last ?? 0) - minV) / range
-                    ClassicRadioNeedlePointer(
-                        normalizedValue: lastNorm,
-                        brassColor: chartStyle.accentColor,
-                        chartHeight: 140
-                    )
-                }
             }
         }
         .padding(16)

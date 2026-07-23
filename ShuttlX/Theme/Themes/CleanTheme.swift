@@ -81,17 +81,12 @@ extension AppTheme {
         ),
         effects: ThemeEffects(
             cardStyle: .glass,
-            hasNeonGlow: false,
             hasScanlines: false,
-            hasGridBackground: false,
             neonGlowColor: nil,
             cardCornerRadius: 16,
             buttonCornerRadius: 14,
             hasMeshBackground: true,
-            hasHorizonGrid: false,
-            hasLCDDotMatrix: false,
-            hasCRTEffect: false,
-            cardAccentBarWidth: 0
+            hasLCDDotMatrix: false
         ),
         chartStyle: ThemeChartStyle(
             gridStyle: .dashed,
@@ -100,14 +95,12 @@ extension AppTheme {
             barShape: .roundedSwiftCharts,
             barFill: .gradientVertical,
             lineStyle: .smoothArea,
-            lineGlow: false,
             pointMarker: .circle,
             axisLabelStyle: .system,
             axisLabelColor: Color(.secondaryLabel),
             axisLabelTracking: 0,
             accentColor: .green,
-            highlightPeak: false,
-            signatureAccent: false
+            highlightPeak: false
         )
     )
 }

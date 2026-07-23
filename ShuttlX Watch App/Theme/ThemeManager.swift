@@ -28,8 +28,15 @@ final class ThemeManager {
     init() {
         if let defaults = UserDefaults(suiteName: appGroupID),
            let saved = defaults.string(forKey: defaultsKey) {
-            selectedThemeID = saved
-            current = AppTheme.theme(for: saved)
+            let validIDs = Set(["clean", "mixtape"])
+            if validIDs.contains(saved) {
+                selectedThemeID = saved
+                current = AppTheme.theme(for: saved)
+            } else {
+                selectedThemeID = "clean"
+                current = .clean
+                defaults.set("clean", forKey: defaultsKey)
+            }
         }
     }
 

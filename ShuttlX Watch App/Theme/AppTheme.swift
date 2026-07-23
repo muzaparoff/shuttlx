@@ -19,7 +19,7 @@ struct AppTheme: Identifiable, Equatable {
     var fonts: ThemeFonts     = ThemeFonts()
     var effects: ThemeEffects = ThemeEffects()
 
-    static var all: [AppTheme] = [.clean, .synthwave, .mixtape, .arcade, .classicRadio, .neovim, .fmTuner]
+    static var all: [AppTheme] = [.clean, .mixtape]
 
     static func theme(for id: String) -> AppTheme {
         all.first { $0.id == id } ?? .clean

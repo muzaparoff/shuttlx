@@ -559,14 +559,9 @@ struct SettingsView: View {
 
     private func themeSubtitle(for id: String) -> String {
         switch id {
-        case "clean": return "Modern & minimal"
-        case "synthwave": return "Neon nights"
+        case "clean":   return "Modern & minimal"
         case "mixtape": return "Portable player"
-        case "arcade": return "8-bit energy"
-        case "classicradio": return "Warm analog tape"
-        case "neovim": return "Code editor"
-        case "fmtuner": return "Deep navy LCD"
-        default: return ""
+        default:        return ""
         }
     }
 }

@@ -81,17 +81,12 @@ extension AppTheme {
         ),
         effects: ThemeEffects(
             cardStyle: .lcd,
-            hasNeonGlow: false,
             hasScanlines: true,
-            hasGridBackground: false,
             neonGlowColor: nil,
             cardCornerRadius: 8,
             buttonCornerRadius: 8,
             hasMeshBackground: false,
-            hasHorizonGrid: false,
-            hasLCDDotMatrix: true,
-            hasCRTEffect: false,
-            cardAccentBarWidth: 0
+            hasLCDDotMatrix: true
         )
     )
 }
