@@ -396,6 +396,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         isPaused = true
         pauseStartDate = Date()
 
+        // Push isPaused:true to iPhone before stopping the timer so the
+        // 10-second timeout on the phone side doesn't clear live state.
+        broadcaster.reset()
+        broadcastLiveMetricsIfNeeded()
+
         stopDisplayTimer()
         stopMotionUpdates()
         stopPedometerUpdates()

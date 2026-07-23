@@ -124,14 +124,8 @@ extension TrainingView {
                         Text("BPM")
                             .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                             .foregroundColor(ShuttlXColor.textSecondary)
-                        if heartRateZoneNumber > 0 {
-                            Text("Z\(heartRateZoneNumber)")
-                                .font(.system(size: max(10, labelSize), weight: .bold, design: .monospaced))
-                                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.8))
-                                .padding(.horizontal, 3)
-                                .padding(.vertical, 1)
-                                .overlay(RoundedRectangle(cornerRadius: 3).stroke(ShuttlXColor.forHRZone(workoutManager.heartRate).opacity(0.5), lineWidth: 1))
-                        }
+                        HRZoneArc(zone: heartRateZoneNumber)
+                            .frame(width: 34, height: 17)
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -168,142 +162,89 @@ extension TrainingView {
                 if isInterval {
                     HStack(spacing: 8) {
                         compactMetric("DIST", distanceText, tertiarySize, labelSize)
+                            .background(kmSplitHighlight)
                         compactMetric("PACE", paceText, tertiarySize, labelSize)
                     }
                     HStack(spacing: 8) {
                         compactMetric("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
                                       tertiarySize, labelSize)
-                        Color.clear.frame(maxWidth: .infinity)
+                        // CAL fills the slot freed by removing SPM
+                        if workoutManager.calories > 0 {
+                            compactMetric("CAL", "\(workoutManager.calories)", tertiarySize, labelSize)
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity)
+                        }
                     }
                 } else {
-                    // Free-run: TIME is the hero above. With SPM dropped, only
-                    // DIST + PACE remain in the tertiary area — few enough that
-                    // each gets its OWN full-width row (label left, value right)
-                    // instead of the cramped two-up compact pair. Full rows are
-                    // larger and avoid the scale-to-fit clipping the half-width
-                    // slots caused ("2.15…"). Two metrics + TIME hero + HR row
-                    // fit the ~180pt 41mm budget now that the third metric (SPM)
-                    // is gone.
+                    // Free-run: TIME is the hero above. DIST + PACE get full-width
+                    // rows; CAL is appended as a compact row when available.
                     metricRow("DIST", distanceText, ShuttlXColor.textPrimary,
                               secondarySize, labelSize, labelWidth,
                               accessibilityText: "Distance \(distanceText)")
+                    .background(kmSplitHighlight)
                     metricRow("PACE", paceText, ShuttlXColor.textPrimary,
                               secondarySize, labelSize, labelWidth,
                               accessibilityText: "Pace \(paceText)")
+                    if workoutManager.calories > 0 {
+                        metricRow("CAL", "\(workoutManager.calories) kcal",
+                                  ShuttlXColor.calories, secondarySize, labelSize, labelWidth,
+                                  accessibilityText: "Calories \(workoutManager.calories) kilocalories")
+                    }
                 }
 
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
-            .padding(.leading, themeManager.current.id == "fmtuner" ? 5 : 0)
             .padding(.trailing, 0)
             .padding(.top, watchTimerTopPadding(themeManager.current.id))
             .padding(.bottom, watchTimerBottomPadding(themeManager.current.id))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             }   // end: standard stacked-metrics layout (non-mixtape themes)
 
-            // Synthwave chrome — non-interactive backdrop, only when active.
-            // Renders horizon grid + sun halo + timer bloom behind the metrics.
-            // No frame, no chevron, no needle gauges (cut from the iPhone variant).
-            if themeManager.current.id == "synthwave" {
-                SynthwaveTimerOverlay(workoutManager: workoutManager)
-            }
-
             // Mixtape chrome — the spinning reel now rides inline on the J-card
             // header line (MixtapeReelBadge in the header HStack above) so it no
             // longer needs a full-screen overlay or a leading inset. The shell
             // frame + corner screws come from mixtapeBackground(); the J-card
-            // name strip carries the rest of the cassette identity. This keeps
-            // the timer / HR / pace values full-width and legible on 41–46mm.
-
-            // Arcade chrome — non-interactive pixel-border bezel + faint
-            // scanline backdrop. The iPhone variant's 7-segment HI-SCORE
-            // digits, ★ HI-SCORE ★ banner, interval-dot row, and WORK power
-            // bar are all cut for the watch (see ArcadeTimerOverlay header).
-            // The metrics VStack above gets a 6pt top/bottom inset so the HR
-            // row and tertiary metrics clear the pixel border.
-            if themeManager.current.id == "arcade" {
-                ArcadeTimerOverlay(workoutManager: workoutManager)
-            }
-
-            // Classic Radio chrome — non-interactive thin tuning-dial strip
-            // pinned to the top, plus a wood-grain backdrop band behind it.
-            // The iPhone variant's bakelite knobs (TONE / VOLUME / BAND),
-            // brand plate header, and station-name labels are all cut for
-            // the watch (see ClassicRadioTimerOverlay header). The dial is
-            // demoted from hero to a "you are here" progress strip — the
-            // amber backlit numeric the base TrainingView already paints in
-            // monospaced is the actual hero. The metrics VStack above gets
-            // a 16pt top inset so the workout-name row + step pill clear
-            // the dial strip.
-            if themeManager.current.id == "classicradio" {
-                ClassicRadioTimerOverlay(workoutManager: workoutManager)
-            }
-
-            // Neovim chrome — non-interactive nvim buffer chrome: top tabline
-            // strip with `workout.log [+]` filename, left line-number gutter
-            // with a single bright CursorLineNr digit, and a bottom modal
-            // status line (`-- INSERT --` WORK / `-- NORMAL --` REST / `-- VISUAL --`
-            // PAUSED). The iPhone variant's 11-line buffer view, multi-line
-            // `step[3] = { ... }` block, `~` empty-line column, `:` command
-            // line, and ruler are all cut for the watch (see NeovimTimerOverlay
-            // header for the cut list). The metrics VStack above gets a 16pt
-            // top and bottom inset so the workout-name row + step pill clear
-            // the tabline, and the HR row + tertiary metrics clear the
-            // status line.
-            if themeManager.current.id == "neovim" {
-                NeovimTimerOverlay(workoutManager: workoutManager)
-            }
-
-            // FM Tuner chrome — non-interactive overlays, only when active
-            if themeManager.current.id == "fmtuner" {
-                VStack(spacing: 0) {
-                    FMTunerCompactHeader()
-                    Spacer()
-                    FMTunerSingleLineFooter(text: watchFMFooterText)
-                        .padding(.horizontal, ShuttlXSpacing.xs)
-                        .padding(.bottom, 2)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .allowsHitTesting(false)
-
-                HStack(alignment: .top, spacing: 0) {
-                    FMTunerWatchVUColumn(level: watchVULevel)
-                        .padding(.top, 20)
-                        .padding(.leading, 1)
-                    Spacer()
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .allowsHitTesting(false)
+            // name strip carries the rest of the cassette identity.
+        }
+        .overlay(alignment: .top) {
+            if isInterval, let engine = workoutManager.intervalEngine {
+                OverallProgressStrip(engine: engine)
+                    .allowsHitTesting(false)
             }
         }
+        .onChange(of: workoutManager.lastCompletedKm) { _, _ in
+            guard !reduceMotion else { return }
+            kmSplitFlash = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                kmSplitFlash = false
+            }
+        }
+    }
+
+    /// Yellow-green highlight capsule shown briefly when a km split fires.
+    var kmSplitHighlight: some View {
+        Capsule()
+            .fill(ShuttlXColor.running.opacity(kmSplitFlash ? 0.25 : 0))
+            .animation(
+                kmSplitFlash
+                    ? .easeIn(duration: 0.08)
+                    : .easeOut(duration: 0.55),
+                value: kmSplitFlash
+            )
     }
 
     // Compact two-up metric (used in interval mode's tertiary rows).
     // MARK: - Theme Padding Helpers
 
     /// Top padding for the metrics VStack in `fullWorkoutDisplayTab`, keyed by theme id.
-    /// Extracted from a nested ternary to aid readability and future maintenance.
     func watchTimerTopPadding(_ themeID: String) -> CGFloat {
-        switch themeID {
-        case "fmtuner":     return 18
-        case "synthwave":   return 4
-        case "arcade":      return 6
-        case "classicradio": return 16
-        case "neovim":      return 16
-        default:            return 0
-        }
+        return 0
     }
 
     /// Bottom padding for the metrics VStack in `fullWorkoutDisplayTab`, keyed by theme id.
     func watchTimerBottomPadding(_ themeID: String) -> CGFloat {
-        switch themeID {
-        case "fmtuner":   return 16
-        case "synthwave": return 6
-        case "arcade":    return 6
-        case "neovim":    return 16
-        default:          return 0
-        }
+        return 0
     }
 
     func compactMetric(_ label: String, _ value: String,
@@ -424,6 +365,28 @@ extension TrainingView {
             }
             .frame(height: 3)
             .frame(maxWidth: heroSize * 2.4)   // arc never wider than the digits
+
+            // Next-step preview — only when there is a next step
+            if let next = engine.nextStep {
+                HStack(spacing: 4) {
+                    Text("NEXT")
+                        .font(.system(size: labelSize * 0.85, weight: .bold, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary.opacity(0.6))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: labelSize * 0.7, weight: .semibold))
+                        .foregroundColor(ShuttlXColor.textSecondary.opacity(0.5))
+                    Text(next.type.displayName.uppercased())
+                        .font(.system(size: labelSize * 0.85, weight: .semibold, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.forStepType(next.type).opacity(0.75))
+                    Text(formatStepDuration(next.duration))
+                        .font(.system(size: labelSize * 0.85, weight: .regular, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary.opacity(0.6))
+                        .monospacedDigit()
+                }
+                .transition(.opacity)
+                .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: engine.currentStepIndex)
+                .accessibilityLabel("Next: \(next.type.displayName), \(formatStepDuration(next.duration))")
+            }
         }
         .frame(maxWidth: .infinity)
         .id(engine.currentStepIndex)
@@ -433,21 +396,14 @@ extension TrainingView {
         .accessibilityLabel("Time remaining in \(engine.currentStep?.type.displayName ?? "step"), \(FormattingUtils.formatTimeAccessible(engine.currentStepTimeRemaining)), step \(engine.currentStepIndex + 1) of \(engine.totalStepsCount)")
         .accessibilityAddTraits(.updatesFrequently)
     }
+
+    /// Compact duration label for the next-step preview: "45s" under 60s, "1:30" otherwise.
+    private func formatStepDuration(_ seconds: TimeInterval) -> String {
+        let s = Int(seconds)
+        if s < 60 { return "\(s)s" }
+        return String(format: "%d:%02d", s / 60, s % 60)
+    }
     // MARK: - Computed Properties
-
-    var watchVULevel: Double {
-        guard workoutManager.heartRate > 0 else { return 0 }
-        return min(1.0, Double(workoutManager.heartRate) / 200.0)
-    }
-
-    var watchFMFooterText: String {
-        let t = FormattingUtils.formatTimer(workoutManager.elapsedTime)
-        if workoutManager.workoutMode == .interval,
-           let step = workoutManager.intervalEngine?.currentStep {
-            return "\(step.type.displayName.uppercased()) · \(t)"
-        }
-        return "\(workoutManager.workoutName.uppercased()) · \(t)"
-    }
 
     var heartRateText: String {
         guard workoutManager.heartRate > 0 else { return "\u{2014} BPM" }
@@ -542,5 +498,109 @@ extension TrainingView {
         let minutes = Int(pace) / 60
         let seconds = Int(pace) % 60
         return "Average pace \(minutes) minutes \(seconds) seconds per kilometer"
+    }
+}
+
+// MARK: - HR Zone Arc
+
+/// Gauge-style arc showing the current HR zone (1–5).
+/// Segments fill from left to right — segments at or below the current zone
+/// are colored with the zone's palette color; segments above are dimmed.
+///
+/// Geometry: 5 segments of 24° each, 5° gap between them, totalling 140° sweep.
+/// Arc center sits at the bottom edge of the view so it reads as an upward gauge.
+struct HRZoneArc: View {
+    let zone: Int   // 0 = no data, 1–5 = zone
+
+    private static let zoneColors: [Color] = [
+        ShuttlXColor.hrZone1,
+        ShuttlXColor.hrZone2,
+        ShuttlXColor.hrZone3,
+        ShuttlXColor.hrZone4,
+        ShuttlXColor.hrZone5,
+    ]
+
+    var body: some View {
+        Canvas { ctx, size in
+            let cx = size.width / 2
+            let cy = size.height + 1   // center just below the view bottom
+            let radius = size.height - 1
+            let lineWidth: CGFloat = 3.5
+
+            // 5 segments: each 24°, with 5° gaps — total 5×24+4×5 = 140°
+            // Centred symmetrically: startAngle = 180 + (360-140)/2 = 180+110 = 290 … wait
+            // We want it centred at 270° (top of circle). So:
+            //   midAngle = 270°, halfSweep = 70°
+            //   start = 270 - 70 = 200°, end = 270 + 70 = 340°
+            let startDeg = 200.0
+            let segDeg = 24.0
+            let gapDeg = 5.0
+
+            for i in 0..<5 {
+                let segStart = startDeg + Double(i) * (segDeg + gapDeg)
+                let segEnd = segStart + segDeg
+                let isFilled = zone > 0 && (i + 1) <= zone
+
+                var path = Path()
+                path.addArc(
+                    center: CGPoint(x: cx, y: cy),
+                    radius: radius,
+                    startAngle: .degrees(segStart),
+                    endAngle: .degrees(segEnd),
+                    clockwise: false
+                )
+
+                ctx.stroke(
+                    path,
+                    with: .color(isFilled
+                        ? HRZoneArc.zoneColors[i]
+                        : Color.white.opacity(0.12)),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
+            }
+        }
+        .accessibilityLabel(zone > 0 ? "Zone \(zone)" : "Heart rate zone unknown")
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+}
+
+// MARK: - Overall Interval Progress Strip
+
+/// Thin bar at the top of the watch timer showing overall workout progress.
+/// Advances smoothly through all steps from 0% to 100%.
+///
+/// Isolated into its own @ObservedObject view so it only re-evaluates on
+/// engine publishes — same decoupling approach as IntervalStepWash.
+struct OverallProgressStrip: View {
+    @ObservedObject var engine: IntervalEngine
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var progress: Double {
+        guard engine.totalStepsCount > 0 else { return 0 }
+        let stepFraction: Double = {
+            guard let step = engine.currentStep, step.duration > 0 else { return 0 }
+            return 1.0 - (engine.currentStepTimeRemaining / step.duration)
+        }()
+        return min(1.0, (Double(engine.currentStepIndex) + stepFraction) / Double(engine.totalStepsCount))
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.10))
+                Capsule()
+                    .fill(ShuttlXColor.ctaPrimary.opacity(0.75))
+                    .frame(width: max(0, proxy.size.width * progress))
+                    .animation(
+                        reduceMotion ? nil : .linear(duration: 1),
+                        value: progress
+                    )
+            }
+        }
+        .frame(height: 3)
+        .ignoresSafeArea()
+        .accessibilityLabel("Workout progress \(Int(progress * 100)) percent")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }

@@ -40,6 +40,12 @@ struct iPhoneWorkoutTimerView: View {
 
             themedTimerBody
         }
+        .overlay(alignment: .top) {
+            if let engine = controller.intervalEngine {
+                iOSOverallProgressStrip(engine: engine)
+                    .allowsHitTesting(false)
+            }
+        }
         .timerScreenBackground(themeID: themeManager.current.id)
         .alert("Finish Workout", isPresented: $showingFinishConfirmation) {
             Button("Save & Finish") {
@@ -76,18 +82,8 @@ struct iPhoneWorkoutTimerView: View {
     @ViewBuilder
     private var themedTimerBody: some View {
         switch themeManager.current.id {
-        case "fmtuner":
-            fmTunerContent
-        case "synthwave":
-            SynthwaveTimerHero(controller: controller)
         case "mixtape":
             MixtapeTimerHero(controller: controller)
-        case "arcade":
-            ArcadeTimerHero(controller: controller)
-        case "classicradio":
-            ClassicRadioTimerHero(controller: controller)
-        case "neovim":
-            NeovimTimerHero(controller: controller)
         default:
             standardTimerBody
         }
@@ -207,6 +203,27 @@ struct iPhoneWorkoutTimerView: View {
             }
             .frame(height: 6)
             .frame(maxWidth: 280)
+
+            // Next-step preview
+            if let next = engine?.nextStep {
+                HStack(spacing: 6) {
+                    Text("NEXT")
+                        .font(ShuttlXFont.cardCaption.weight(.bold))
+                        .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.5))
+                    Text(displayName(for: next.type).uppercased())
+                        .font(ShuttlXFont.cardCaption.weight(.semibold))
+                        .foregroundStyle(ShuttlXColor.forStepType(appType(for: next.type)).opacity(0.8))
+                    Text(formatStepDuration(next.duration))
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
+                        .monospacedDigit()
+                }
+                .transition(.opacity)
+                .accessibilityLabel("Next: \(displayName(for: next.type)), \(formatStepDuration(next.duration))")
+            }
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
@@ -236,18 +253,12 @@ struct iPhoneWorkoutTimerView: View {
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
 
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Text("BPM")
                     .font(ShuttlXFont.cardCaption.weight(.bold))
                     .foregroundStyle(ShuttlXColor.textSecondary)
-                if bpm > 0 {
-                    Text(hrZoneLabel(bpm))
-                        .font(ShuttlXFont.cardCaption.weight(.bold))
-                        .foregroundStyle(ShuttlXColor.forHRZone(bpm))
-                        .padding(.horizontal, 5).padding(.vertical, 1)
-                        .background(RoundedRectangle(cornerRadius: 4)
-                            .stroke(ShuttlXColor.forHRZone(bpm).opacity(0.5), lineWidth: 1))
-                }
+                HRZoneArc(zone: hrZoneNumber(bpm))
+                    .frame(width: 44, height: 22)
                 // Recovering arrow during rest (green when HR safely back in Z1/Z2)
                 if isRest && bpm > 0 {
                     Image(systemName: "arrow.down")
@@ -382,17 +393,8 @@ struct iPhoneWorkoutTimerView: View {
                     Text("BPM")
                         .font(ShuttlXFont.cardCaption.weight(.semibold))
                         .foregroundStyle(ShuttlXColor.textSecondary)
-                    if bpm > 0 {
-                        Text(hrZoneLabel(bpm))
-                            .font(ShuttlXFont.cardCaption.weight(.bold))
-                            .foregroundStyle(ShuttlXColor.forHRZone(bpm))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 1)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .stroke(ShuttlXColor.forHRZone(bpm).opacity(0.5), lineWidth: 1)
-                            )
-                    }
+                    HRZoneArc(zone: hrZoneNumber(bpm))
+                        .frame(width: 44, height: 22)
                 }
                 // Three source states:
                 //   1. Got a sample → show device name (Apple Watch / Powerbeats Pro 2 / AirPods Pro 3 / strap)
@@ -559,95 +561,6 @@ struct iPhoneWorkoutTimerView: View {
         }
     }
 
-    // MARK: - FM Tuner Layout
-
-    private var fmTunerContent: some View {
-        VStack(spacing: 0) {
-            FMTunerHeader()
-
-            HStack(alignment: .top, spacing: 8) {
-                FMTunerVUColumn(value: vuLevel)
-                    .padding(.top, 8)
-
-                VStack(spacing: 16) {
-                    header
-                    heroSection
-                    fmTunerSubValues
-                    metricsSection
-                    Spacer(minLength: 0)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-
-            FMTunerFooter(lines: fmFooterLines)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-
-            controlsBar
-                .padding(.horizontal, 20)
-                .padding(.bottom, 8)
-        }
-    }
-
-    @ViewBuilder
-    private var fmTunerSubValues: some View {
-        if controller.mode == .interval, let engine = controller.intervalEngine {
-            HStack {
-                Text("◄ STEP \(engine.currentStepIndex + 1)")
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-                Spacer()
-                Text("\(engine.totalStepsCount - engine.currentStepIndex - 1) LEFT ►")
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-            }
-            .frame(maxWidth: .infinity)
-        } else if controller.mode == .freeRun {
-            HStack {
-                Text("◄ \(FormattingUtils.formatDistance(controller.totalDistance))")
-                    .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-                Spacer()
-                if let pace = controller.currentPace {
-                    Text("\(FormattingUtils.formatPace(pace)) /KM ►")
-                        .font(.system(size: 11, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(ShuttlXColor.textSecondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-
-    private var vuLevel: Double {
-        let bpm = controller.heartRateMonitor.current
-        guard bpm > 0 else { return 0 }
-        return min(1.0, Double(bpm) / 200.0)
-    }
-
-    private var fmFooterLines: [String] {
-        let elapsed = FormattingUtils.formatTimer(controller.elapsedTime)
-        switch controller.mode {
-        case .freeRun:
-            return ["\(controller.workoutName.uppercased()) · \(elapsed) · LIVE"]
-        case .interval:
-            let stepInfo = controller.intervalEngine.flatMap { e in
-                e.currentStep.map { s in
-                    "\(displayName(for: s.type).uppercased()) \(e.currentStepIndex + 1)/\(e.totalStepsCount)"
-                }
-            } ?? "—"
-            return ["\(controller.workoutName.uppercased()) · \(elapsed)", stepInfo]
-        case .gymRecovery:
-            let stateText: String
-            switch controller.recoveryState {
-            case .idle: stateText = "READY"
-            case .work: stateText = "STATION \(controller.recoverySetNumber)"
-            case .rest: stateText = "REST"
-            }
-            return ["\(controller.workoutName.uppercased()) · \(elapsed)", stateText]
-        }
-    }
-
     // MARK: - Helpers
 
     private var intervalStepColor: Color? {
@@ -691,6 +604,45 @@ struct iPhoneWorkoutTimerView: View {
         .accessibilityLabel(reached
                             ? (value != nil ? "\(label) mark: \(value!) BPM drop" : "\(label) reached")
                             : "\(label) mark not yet reached")
+    }
+}
+
+// MARK: - Overall Interval Progress Strip (iOS)
+
+/// Thin 4pt bar across the top of the iOS interval timer showing total workout
+/// progress from 0% (first step started) to 100% (last step complete).
+/// Uses the same engine-observation pattern as the watchOS counterpart.
+private struct iOSOverallProgressStrip: View {
+    @ObservedObject var engine: IntervalEngine
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var progress: Double {
+        guard engine.totalStepsCount > 0 else { return 0 }
+        let stepFraction: Double = {
+            guard let step = engine.currentStep, step.duration > 0 else { return 0 }
+            return 1.0 - (engine.currentStepTimeRemaining / step.duration)
+        }()
+        return min(1.0, (Double(engine.currentStepIndex) + stepFraction) / Double(engine.totalStepsCount))
+    }
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.white.opacity(0.10))
+                Rectangle()
+                    .fill(ShuttlXColor.ctaPrimary.opacity(0.8))
+                    .frame(width: max(0, proxy.size.width * progress))
+                    .animation(
+                        reduceMotion ? nil : .linear(duration: 1),
+                        value: progress
+                    )
+            }
+        }
+        .frame(height: 4)
+        .ignoresSafeArea()
+        .accessibilityLabel("Workout progress \(Int(progress * 100)) percent")
+        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

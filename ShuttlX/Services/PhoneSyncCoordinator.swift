@@ -26,6 +26,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var liveIsPaused: Bool = false
     @Published var livePace: TimeInterval = 0
     @Published var liveRoutePoints: [RoutePoint] = []
+    @Published var liveMetricsLastUpdated: Date? = nil
 
     private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
@@ -192,6 +193,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     func handleLiveMetrics(_ message: [String: Any]) {
         let wasActive = isWorkoutActiveOnWatch
         isWorkoutActiveOnWatch = true
+        liveMetricsLastUpdated = Date()
 
         liveElapsedTime = message["elapsedTime"] as? TimeInterval ?? 0
         liveHeartRate = message["heartRate"] as? Int ?? 0
@@ -237,12 +239,29 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             pace: livePace
         )
 
-        // Reset timeout — if no update in 10 seconds, clear live state
+        // When paused the watch stops broadcasting — don't time out the live
+        // state so the card stays visible. Resume will restart the timeout.
         liveMetricsTimeoutTimer?.invalidate()
-        liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.clearLiveWorkoutState()
+        if !liveIsPaused {
+            liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+                Task { @MainActor [weak self] in
+                    self?.clearLiveWorkoutState()
+                }
             }
+        }
+    }
+
+    // MARK: - Watch Workout Control
+
+    func pauseWatchWorkout() { sendWorkoutControl("pause") }
+    func resumeWatchWorkout() { sendWorkoutControl("resume") }
+    func stopWatchWorkout() { sendWorkoutControl("stop") }
+
+    private func sendWorkoutControl(_ command: String) {
+        guard WCSession.default.activationState == .activated else { return }
+        let message: [String: Any] = ["action": "workoutControl", "command": command]
+        WCSession.default.sendMessage(message, replyHandler: nil) { [weak self] error in
+            self?.log("workoutControl '\(command)' failed: \(error.localizedDescription)")
         }
     }
 
@@ -260,6 +279,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         liveIsPaused = false
         livePace = 0
         liveRoutePoints = []
+        liveMetricsLastUpdated = nil
         liveMetricsTimeoutTimer?.invalidate()
         liveMetricsTimeoutTimer = nil
         if wasActive {
@@ -691,13 +711,16 @@ extension PhoneSyncCoordinator {
                 self.log("WC Session activated: \(activationState.rawValue)")
                 self.consecutiveFailures = 0
 
-                // After activation, try pulling sessions if Watch is reachable
+                // After activation, try pulling sessions if Watch is reachable,
+                // then reconcile to catch any sessions that overflowed the inline
+                // byte budget and were routed via transferUserInfo.
                 if session.isReachable {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                         self?.requestSessionsFromWatch { count in
                             if count > 0 {
                                 self?.log("Post-activation sync pulled \(count) session(s)")
                             }
+                            self?.reconcileSessionIDs()
                         }
                     }
                 }
@@ -711,13 +734,15 @@ extension PhoneSyncCoordinator {
             self.log("Watch reachability changed: \(session.isReachable)")
             self.updateConnectivityHealth()
 
-            // When Watch becomes reachable, automatically pull any new sessions
+            // When Watch becomes reachable, pull any new sessions then reconcile
+            // to catch sessions the watch has that iOS is missing.
             if session.isReachable {
                 self.log("Watch became reachable — auto-pulling sessions")
-                self.requestSessionsFromWatch { count in
+                self.requestSessionsFromWatch { [weak self] count in
                     if count > 0 {
-                        self.log("Auto-sync pulled \(count) session(s)")
+                        self?.log("Auto-sync pulled \(count) session(s)")
                     }
+                    self?.reconcileSessionIDs()
                 }
             }
         }

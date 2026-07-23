@@ -21,6 +21,8 @@ struct TrainingView: View {
     @Environment(ThemeManager.self) var themeManager
 
     @State var hrCalculator = HeartRateZoneCalculator.fromSharedDefaults()
+    /// Drives the brief DIST flash on every km-split milestone.
+    @State var kmSplitFlash = false
     #if os(watchOS)
     let screenHeight = WKInterfaceDevice.current().screenBounds.height
     #else

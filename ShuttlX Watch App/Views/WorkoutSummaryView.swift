@@ -32,7 +32,6 @@ struct WorkoutSummaryView: View {
                     .scaleEffect(reduceMotion ? 1 : (showBadge ? 1 : 0.3))
                     .opacity(showBadge ? 1 : 0)
                     .animation(reduceMotion ? .easeIn(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
-                    .themeModeTag("COMPLETE")
 
                 if ThemeManager.shared.current.id == "mixtape" {
                     // Cassette idiom: the tape has reached the end of SIDE A.

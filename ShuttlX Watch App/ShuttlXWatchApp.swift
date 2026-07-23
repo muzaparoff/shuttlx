@@ -15,6 +15,7 @@ struct ShuttlXWatchApp: App {
         let dataManager = WatchSyncCoordinator.shared
         let manager = WatchWorkoutManager()
         manager.setSharedDataManager(dataManager)
+        dataManager.setWorkoutManager(manager)
 
         self._sharedDataManager = StateObject(wrappedValue: dataManager)
         self._workoutManager = StateObject(wrappedValue: manager)

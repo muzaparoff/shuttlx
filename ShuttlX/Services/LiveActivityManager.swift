@@ -94,7 +94,10 @@ class LiveActivityManager {
             pace: pace
         )
 
-        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(60))
+        // While active: 15s staleDate (watch broadcasts every 3s).
+        // While paused: 600s so the Live Activity doesn't grey out during long rests.
+        let staleInterval: TimeInterval = isPaused ? 600 : 15
+        let content = ActivityContent(state: state, staleDate: Date().addingTimeInterval(staleInterval))
 
         Task {
             await activity.update(content)

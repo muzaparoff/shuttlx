@@ -16,6 +16,14 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var isPro: Bool = false
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchSyncCoordinator")
+
+    /// Back-reference to the workout manager for handling remote control commands
+    /// from iPhone (pause/resume/stop). Weak to avoid a retain cycle.
+    weak var workoutManager: WatchWorkoutManager?
+
+    func setWorkoutManager(_ manager: WatchWorkoutManager) {
+        workoutManager = manager
+    }
     private let appGroupIdentifier = "group.com.shuttlx.shared"
 
     private var pendingSessions: [TrainingSession] = []
@@ -407,6 +415,14 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     self.logger.info("Ping received from iPhone")
                     self.updateSyncStatus("Connection verified")
                     self.consecutiveFailures = 0
+                case "workoutControl":
+                    let command = message["command"] as? String ?? ""
+                    switch command {
+                    case "pause":  self.workoutManager?.pauseWorkout()
+                    case "resume": self.workoutManager?.resumeWorkout()
+                    case "stop":   self.workoutManager?.stopWorkout()
+                    default: break
+                    }
                 case "syncTheme", "syncTemplates", "syncMaxHR":
                     self.handleIncomingPayload(message)
                 default:
@@ -495,6 +511,15 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         }
                         replyHandler(["status": "resending", "missingCount": missingSessions.count])
                     }
+                case "workoutControl":
+                    let command = message["command"] as? String ?? ""
+                    switch command {
+                    case "pause":  self.workoutManager?.pauseWorkout()
+                    case "resume": self.workoutManager?.resumeWorkout()
+                    case "stop":   self.workoutManager?.stopWorkout()
+                    default: break
+                    }
+                    replyHandler(["status": "ok"])
                 case "syncTheme", "syncTemplates", "syncMaxHR":
                     self.handleIncomingPayload(message)
                     replyHandler(["status": "received"])
