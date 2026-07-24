@@ -138,17 +138,12 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         self.sendSessionViaUserInfo(session, sessionData: sessionData)
                         self.sendSessionViaMessage(session, base64: base64)
                     }
-                    // S-5: use transferUserInfo, not updateApplicationContext.
-                    // applicationContext is last-write-wins — the 3s liveMetrics
-                    // broadcast from LiveMetricsBroadcaster clobbers a lastSessionID
-                    // write that lands in the same slot, so iOS never sees it.
-                    // transferUserInfo is FIFO-queued and delivers exactly once,
-                    // which is correct for a one-time dedup tap-on-shoulder.
-                    WCSession.default.transferUserInfo([
-                        "action": "lastSessionID",
-                        "sessionID": session.id.uuidString,
-                        "timestamp": Date().timeIntervalSince1970
-                    ])
+                    // lastSessionID tap-on-shoulder is sent only for file-transfer sessions
+                    // (>200KB). For userInfo/message paths the full session payload travels
+                    // the same FIFO channel and carries the ID itself — the tap is redundant
+                    // there, and placing it here (called from 8+ retry/burst sites) would
+                    // flood the persistent transferUserInfo queue during offline periods.
+                    // See sendSessionViaFileTransfer for where the tap is actually queued.
                     self.scheduleFinishRetryBurst()
                 }
             } catch {
@@ -196,6 +191,17 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         "timestamp": Date().timeIntervalSince1970
                     ]
                     WCSession.default.transferFile(fileURL, metadata: metadata)
+                    // S-5: transferFile and transferUserInfo are independent channels with
+                    // no ordering guarantee — iOS may not learn the session ID from the
+                    // file metadata alone before the dedup window closes. Send a lightweight
+                    // tap-on-shoulder so the phone can request a pull if it's missing the ID.
+                    // This is the only site that queues this transfer; all other paths (userInfo,
+                    // message) carry the session ID inline in the same ordered channel.
+                    WCSession.default.transferUserInfo([
+                        "action": "lastSessionID",
+                        "sessionID": session.id.uuidString,
+                        "timestamp": Date().timeIntervalSince1970
+                    ])
                     self.logger.info("Session queued via transferFile (\(sessionData.count) bytes)")
                     self.updateSyncStatus("Large session queued for file transfer")
                 }

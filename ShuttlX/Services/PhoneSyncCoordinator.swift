@@ -886,8 +886,8 @@ extension PhoneSyncCoordinator {
 
     // applicationContext is the resilient channel for "latest snapshot" data:
     // it's OS-queued and delivered when the iPhone next wakes, even if we were
-    // suspended/locked. The watch mirrors live metrics here (and a "lastSessionID"
-    // tap-on-shoulder after Finish) so we recover from sendMessage drops.
+    // suspended/locked. The watch sends live metrics here so the phone always
+    // has the latest snapshot regardless of reachability.
     nonisolated func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String : Any]) {
         Task { @MainActor in
             guard let action = applicationContext["action"] as? String else { return }
@@ -895,10 +895,13 @@ extension PhoneSyncCoordinator {
             case "liveMetrics":
                 self.handleLiveMetrics(applicationContext)
             case "lastSessionID":
+                // Kept for version-skew safety (old watch builds sending via applicationContext
+                // paired with a new phone build). Current watch builds route lastSessionID via
+                // transferUserInfo (didReceiveUserInfo) instead — that case is the live path.
                 if let idString = applicationContext["sessionID"] as? String,
                    let id = UUID(uuidString: idString),
                    !self.syncedSessions.contains(where: { $0.id == id }) {
-                    self.log("lastSessionID \(idString) not in synced list — requesting from watch")
+                    self.log("lastSessionID \(idString) via applicationContext — requesting from watch")
                     self.requestSessionsFromWatch { _ in }
                 }
             default:
