@@ -448,7 +448,15 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     switch command {
                     case "pause":  self.workoutManager?.pauseWorkout()
                     case "resume": self.workoutManager?.resumeWorkout()
-                    case "stop":   self.workoutManager?.stopWorkout()
+                    case "stop":
+                        // Remote stop MUST call saveWorkoutData() before stopWorkout().
+                        // The watch-side stop button always calls save → stop in sequence.
+                        // A bare stopWorkout() here would discard all session data because
+                        // stopWorkout() only tears down state — it never calls save itself.
+                        if let wm = self.workoutManager, wm.isWorkoutActive {
+                            wm.saveWorkoutData()
+                            wm.stopWorkout()
+                        }
                     default: break
                     }
                 case "syncTheme", "syncTemplates", "syncMaxHR":
@@ -544,7 +552,11 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     switch command {
                     case "pause":  self.workoutManager?.pauseWorkout()
                     case "resume": self.workoutManager?.resumeWorkout()
-                    case "stop":   self.workoutManager?.stopWorkout()
+                    case "stop":
+                        if let wm = self.workoutManager, wm.isWorkoutActive {
+                            wm.saveWorkoutData()
+                            wm.stopWorkout()
+                        }
                     default: break
                     }
                     replyHandler(["status": "ok"])

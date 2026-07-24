@@ -40,6 +40,12 @@ struct LiveWorkoutCard: View {
         ) {
             Button("End Workout", role: .destructive) {
                 sharedData.stopWatchWorkout()
+                // Clear iOS state immediately — don't wait for watch confirmation
+                // (which arrives via workoutStopped notification after the watch
+                // saves and tears down, potentially 5–15s later). The stop command
+                // is already queued on two channels; a duplicate clear on arrival
+                // is harmless.
+                sharedData.clearLiveWorkoutState()
             }
             Button("Cancel", role: .cancel) {}
         } message: {
