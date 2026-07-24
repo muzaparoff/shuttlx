@@ -31,6 +31,8 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
                     logger.error("Session moved to \(toState.rawValue) by system mid-workout — saving and finalizing")
                     saveWorkoutDataToLocalStorage()
                     saveWorkoutData()
+                    // Build summary before stopWorkout() zeros published state (S-1 pattern).
+                    pendingSummary = buildCurrentSummary()
                     stopWorkout()
                 }
             default:
@@ -47,8 +49,13 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
             // save path and tear the workout down so the UI never sits on a dead
             // session. Previously this only wrote the backup and kept running.
             saveWorkoutDataToLocalStorage()
-            healthKitSaveError = "Workout session failed: \(error.localizedDescription)"
             saveWorkoutData()
+            // Build summary before stopWorkout() zeros published state (S-1 pattern).
+            // healthKitSaveError is preserved in pendingSummary's parent view for display
+            // after F-4 adds WorkoutEndReason; for now the summary screen at least confirms
+            // the data was saved.
+            healthKitSaveError = "Workout session failed: \(error.localizedDescription)"
+            pendingSummary = buildCurrentSummary()
             stopWorkout()
         }
     }

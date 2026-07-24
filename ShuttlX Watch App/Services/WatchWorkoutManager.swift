@@ -49,6 +49,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// TrainingView is still mounted; cleared by the user dismissing the summary.
     @Published var pendingSummary: WorkoutSummary? = nil
 
+    /// Start-phase error visible to ProgramSelectionView (before any workout is active).
+    /// Distinct from healthKitSaveError (which is a mid/post-workout save failure shown
+    /// by TrainingView's alert). Cleared on the next successful workout start.
+    @Published var startupError: String? = nil
+
     /// True average heart rate across all collected samples (excludes paused periods)
     var averageHeartRate: Int {
         guard heartRateSampleCount > 0 else { return 0 }
@@ -260,6 +265,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             // authorizationDenied is already set by requestHealthAuthorizationAsync
             return
         }
+
+        // Clear any previous start-phase error — the user is making a new attempt.
+        startupError = nil
 
         let now = Date()
         workoutStartTime = now
@@ -617,7 +625,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return true
         } catch {
             logger.error("Failed to start workout session: \(error.localizedDescription)")
-            healthKitSaveError = "Could not start workout. Please restart the app and try again."
+            // Use startupError (not healthKitSaveError) — at this point isWorkoutActive
+            // is still false so TrainingView is never shown; the error must surface through
+            // ProgramSelectionView's ErrorBanner which observes startupError.
+            startupError = "Could not start workout. Please try again."
             return false
         }
         #else

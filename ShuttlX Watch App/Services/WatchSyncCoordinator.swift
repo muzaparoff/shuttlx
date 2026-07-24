@@ -455,6 +455,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         // stopWorkout() only tears down state — it never calls save itself.
                         if let wm = self.workoutManager, wm.isWorkoutActive {
                             wm.saveWorkoutData()
+                            wm.pendingSummary = wm.buildCurrentSummary()
                             wm.stopWorkout()
                         }
                     default: break
@@ -555,6 +556,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     case "stop":
                         if let wm = self.workoutManager, wm.isWorkoutActive {
                             wm.saveWorkoutData()
+                            wm.pendingSummary = wm.buildCurrentSummary()
                             wm.stopWorkout()
                         }
                     default: break

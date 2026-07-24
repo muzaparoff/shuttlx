@@ -64,6 +64,14 @@ struct StartTrainingView: View {
                     )
                     .padding(.horizontal, ShuttlXSpacing.md)
                 }
+                if let error = workoutManager.startupError {
+                    ErrorBanner(
+                        icon: "exclamationmark.triangle.fill",
+                        message: error,
+                        color: ShuttlXColor.ctaWarning
+                    )
+                    .padding(.horizontal, ShuttlXSpacing.md)
+                }
 
                 // Free Run card
                 Button(action: {
