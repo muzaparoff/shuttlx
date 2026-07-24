@@ -834,6 +834,15 @@ extension PhoneSyncCoordinator {
                 case "workoutStopped":
                     self.clearLiveWorkoutState()
                     self.log("Workout stopped on Watch (via transferUserInfo)")
+                case "lastSessionID":
+                    // S-5 fix: lastSessionID moved from applicationContext (clobbered by
+                    // 3s liveMetrics updates) to transferUserInfo. Handle it here.
+                    if let idString = userInfo["sessionID"] as? String,
+                       let id = UUID(uuidString: idString),
+                       !self.syncedSessions.contains(where: { $0.id == id }) {
+                        self.log("lastSessionID \(idString) not in synced list — requesting from watch")
+                        self.requestSessionsFromWatch { _ in }
+                    }
                 default:
                     break
                 }

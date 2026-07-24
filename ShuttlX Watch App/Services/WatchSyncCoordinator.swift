@@ -138,15 +138,17 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         self.sendSessionViaUserInfo(session, sessionData: sessionData)
                         self.sendSessionViaMessage(session, base64: base64)
                     }
-                    do {
-                        try WCSession.default.updateApplicationContext([
-                            "action": "lastSessionID",
-                            "sessionID": session.id.uuidString,
-                            "timestamp": Date().timeIntervalSince1970
-                        ])
-                    } catch {
-                        self.logger.debug("lastSessionID applicationContext failed: \(error.localizedDescription)")
-                    }
+                    // S-5: use transferUserInfo, not updateApplicationContext.
+                    // applicationContext is last-write-wins — the 3s liveMetrics
+                    // broadcast from LiveMetricsBroadcaster clobbers a lastSessionID
+                    // write that lands in the same slot, so iOS never sees it.
+                    // transferUserInfo is FIFO-queued and delivers exactly once,
+                    // which is correct for a one-time dedup tap-on-shoulder.
+                    WCSession.default.transferUserInfo([
+                        "action": "lastSessionID",
+                        "sessionID": session.id.uuidString,
+                        "timestamp": Date().timeIntervalSince1970
+                    ])
                     self.scheduleFinishRetryBurst()
                 }
             } catch {

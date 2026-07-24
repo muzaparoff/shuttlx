@@ -644,7 +644,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Use a background queue for the timer source so the 1-second tick does not
         // compete with SwiftUI rendering on the main queue. State updates inside
         // updateElapsedTime() hop back to @MainActor via the class isolation.
-        let newTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInteractive))
+        // S-6: .utility (not .userInteractive) — 1 Hz display tick doesn't need
+        // the highest-priority QoS bucket. On Apple Watch this directly reduces
+        // CPU frequency and battery draw during long workouts.
+        let newTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
         newTimer.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(50))
 
         newTimer.setEventHandler { [weak self] in
@@ -1109,11 +1112,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         noHRTimer?.cancel()
         let t = DispatchSource.makeTimerSource(queue: .main)
         t.schedule(deadline: .now() + noHRDetectedAfter)
+        // S-4: use Task { @MainActor } to hop to the main actor before touching
+        // @MainActor-isolated state. The closure is @Sendable (DispatchSource handler)
+        // so direct access would be a data race — latent today but a hard error under
+        // Swift 6 strict concurrency. Every other timer handler in this file already
+        // uses this pattern (see startDisplayTimer).
         t.setEventHandler { [weak self] in
-            guard let self = self else { return }
-            if !self.hasReceivedHRSample, self.isWorkoutActive, !self.isPaused {
-                self.noHeartRateDetected = true
-                self.logger.warning("No heart rate sample after \(self.noHRDetectedAfter)s — surfacing banner")
+            Task { @MainActor [weak self] in
+                guard let self = self else { return }
+                if !self.hasReceivedHRSample, self.isWorkoutActive, !self.isPaused {
+                    self.noHeartRateDetected = true
+                    self.logger.warning("No heart rate sample after \(self.noHRDetectedAfter)s — surfacing banner")
+                }
             }
         }
         noHRTimer = t
