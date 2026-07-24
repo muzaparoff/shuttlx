@@ -257,12 +257,53 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     func resumeWatchWorkout() { sendWorkoutControl("resume") }
     func stopWatchWorkout() { sendWorkoutControl("stop") }
 
+    /// Sends a pause/resume/stop command to the Watch on two channels:
+    ///
+    ///  1. `sendMessage` — real-time, but **silently drops the command** if the
+    ///     Watch isn't reachable at that instant (screen off / wrist-down / app
+    ///     backgrounded while the HealthKit workout session keeps running in the
+    ///     background — a very common state during an active workout). Before
+    ///     this fix there was no fallback here, so a user-initiated Stop could
+    ///     vanish entirely: the confirmation dialog dismissed, the user believed
+    ///     the workout had ended, but the Watch never received anything and kept
+    ///     broadcasting live metrics — which is exactly why the elapsed timer on
+    ///     the LiveWorkoutCard kept counting up after "End Workout".
+    ///  2. `transferUserInfo` — OS-queued, guaranteed delivery once the Watch is
+    ///     reachable again. Mirrors the same dual-channel pattern already used
+    ///     for the Watch → iPhone `workoutStopped` notification
+    ///     (`LiveMetricsBroadcaster.notifyWorkoutStopped()`) and required by
+    ///     `.claude/rules/services.md` ("Always check isReachable before
+    ///     sendMessage, fall back to transferUserInfo").
+    ///
+    /// Sending on both channels is safe: `stopWorkout()`/`pauseWorkout()`/
+    /// `resumeWorkout()` on the Watch are all guarded (`guard isWorkoutActive`,
+    /// etc.), so a duplicate delivery is a harmless no-op.
     private func sendWorkoutControl(_ command: String) {
-        guard WCSession.default.activationState == .activated else { return }
-        let message: [String: Any] = ["action": "workoutControl", "command": command]
-        WCSession.default.sendMessage(message, replyHandler: nil) { [weak self] error in
-            self?.log("workoutControl '\(command)' failed: \(error.localizedDescription)")
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            log("workoutControl '\(command)' skipped — WCSession not activated")
+            return
         }
+
+        let message: [String: Any] = ["action": "workoutControl", "command": command]
+
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
+                Task { @MainActor in
+                    self?.log("workoutControl '\(command)' delivered via sendMessage")
+                }
+            }, errorHandler: { [weak self] error in
+                Task { @MainActor in
+                    self?.log("workoutControl '\(command)' sendMessage failed: \(error.localizedDescription) — relying on transferUserInfo")
+                }
+            })
+        } else {
+            log("workoutControl '\(command)' — Watch not reachable, relying on transferUserInfo")
+        }
+
+        // Guaranteed fallback — always queued regardless of reachability so a
+        // dropped sendMessage (or a Watch that goes unreachable mid-flight)
+        // still delivers the command once connectivity is restored.
+        WCSession.default.transferUserInfo(message)
     }
 
     func clearLiveWorkoutState() {
