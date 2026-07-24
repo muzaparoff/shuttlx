@@ -628,7 +628,42 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didReceiveUserInfo userInfo: [String: Any] = [:]) {
         Task { @MainActor in
+            // Workout controls arrive here via the transferUserInfo fallback channel.
+            // They must NOT be processed from didReceiveApplicationContext — applicationContext
+            // is last-write-wins and would replay a stale stop command on every reconnect.
+            if let action = userInfo["action"] as? String, action == "workoutControl",
+               let command = userInfo["command"] as? String {
+                self.dispatchWorkoutControl(command: command, sentAt: userInfo["sentAt"] as? TimeInterval)
+                return  // dedicated payload — no other keys to process
+            }
             self.handleIncomingPayload(userInfo)
+        }
+    }
+
+    /// Dispatches a remote workout control command received via the guaranteed
+    /// `transferUserInfo` channel. Guards against stale delivery: transferUserInfo is
+    /// FIFO-queued and can arrive minutes later — a stop meant for a prior workout must
+    /// not kill the next one.
+    private func dispatchWorkoutControl(command: String, sentAt: TimeInterval?) {
+        // Discard if the command is older than 2 minutes — it's almost certainly stale.
+        if let sentAt = sentAt, Date().timeIntervalSince1970 - sentAt > 120 {
+            logger.warning("workoutControl '\(command)' via transferUserInfo discarded — stale (\(Int(Date().timeIntervalSince1970 - sentAt))s old)")
+            return
+        }
+        logger.info("workoutControl '\(command)' dispatched via transferUserInfo fallback")
+        switch command {
+        case "pause":
+            workoutManager?.pauseWorkout()
+        case "resume":
+            workoutManager?.resumeWorkout()
+        case "stop":
+            if let wm = workoutManager, wm.isWorkoutActive {
+                wm.saveWorkoutData()
+                wm.pendingSummary = wm.buildCurrentSummary()
+                wm.stopWorkout()
+            }
+        default:
+            logger.warning("workoutControl '\(command)' via transferUserInfo — unrecognised command")
         }
     }
 

@@ -284,7 +284,10 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             return
         }
 
-        let message: [String: Any] = ["action": "workoutControl", "command": command]
+        // sentAt lets the Watch discard stale deliveries (transferUserInfo is FIFO-queued
+        // and can arrive minutes later — a stop from a prior workout must not kill the next one).
+        let message: [String: Any] = ["action": "workoutControl", "command": command,
+                                      "sentAt": Date().timeIntervalSince1970]
 
         if WCSession.default.isReachable {
             WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
