@@ -176,20 +176,21 @@ extension TrainingView {
                         }
                     }
                 } else {
-                    // Free-run: TIME is the hero above. DIST + PACE get full-width
-                    // rows; CAL is appended as a compact row when available.
-                    metricRow("DIST", distanceText, ShuttlXColor.textPrimary,
-                              secondarySize, labelSize, labelWidth,
-                              accessibilityText: "Distance \(distanceText)")
-                    .background(kmSplitHighlight)
-                    metricRow("PACE", paceText, ShuttlXColor.textPrimary,
-                              secondarySize, labelSize, labelWidth,
-                              accessibilityText: "Pace \(paceText)")
-                    if workoutManager.calories > 0 {
-                        metricRow("CAL", "\(workoutManager.calories) kcal",
-                                  ShuttlXColor.calories, secondarySize, labelSize, labelWidth,
-                                  accessibilityText: "Calories \(workoutManager.calories) kilocalories")
+                    // Free-run: collapse DIST / PACE / CAL to a single compact
+                    // strip. The timer hero (now at heroSize) and HR row dominate;
+                    // these three are context metrics, not command metrics.
+                    HStack(spacing: 0) {
+                        compactMetric("DIST", distanceText, secondarySize, labelSize)
+                            .background(kmSplitHighlight)
+                        compactMetric("PACE", paceText, secondarySize, labelSize)
+                        if workoutManager.calories > 0 {
+                            compactMetric("CAL", "\(workoutManager.calories)", secondarySize, labelSize)
+                        }
                     }
+                    .padding(.top, 2)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel("Distance \(distanceText), pace \(paceText)\(workoutManager.calories > 0 ? ", calories \(workoutManager.calories)" : "")")
+                    .accessibilityAddTraits(.updatesFrequently)
                 }
 
                 Spacer(minLength: 0)
@@ -301,8 +302,10 @@ extension TrainingView {
         if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
             intervalCountdownHero(engine: engine, heroSize: heroSize, labelSize: labelSize)
         } else {
+            // Free-run: timer is the sole hero — use heroSize so it dominates
+            // over the HR row below (which uses valueSize).
             metricRow("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
-                      ShuttlXColor.textPrimary, valueSize, labelSize, labelWidth,
+                      ShuttlXColor.textPrimary, heroSize, labelSize, labelWidth,
                       accessibilityText: "Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
         }
     }

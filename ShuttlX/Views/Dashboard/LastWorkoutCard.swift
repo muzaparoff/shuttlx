@@ -5,7 +5,7 @@ struct LastWorkoutCard: View {
     let session: TrainingSession
 
     var body: some View {
-        VStack(alignment: .leading, spacing: ShuttlXSpacing.lg) {
+        VStack(alignment: .leading, spacing: ShuttlXSpacing.md) {
             // Header
             HStack {
                 Text("Last Workout")
@@ -16,8 +16,14 @@ struct LastWorkoutCard: View {
                     .foregroundStyle(ShuttlXColor.textSecondary)
             }
 
-            // Activity badges
-            HStack(spacing: ShuttlXSpacing.md) {
+            // Hero duration — the primary takeaway from the card
+            Text(FormattingUtils.formatTimer(session.duration))
+                .font(ShuttlXFont.timerDisplay)
+                .monospacedDigit()
+                .foregroundStyle(ShuttlXColor.textPrimary)
+
+            // Activity type pills
+            HStack(spacing: ShuttlXSpacing.sm) {
                 if session.totalRunningDuration > 0 {
                     ActivityBadge(activity: .running, duration: session.totalRunningDuration)
                 }
@@ -25,41 +31,27 @@ struct LastWorkoutCard: View {
                     ActivityBadge(activity: .walking, duration: session.totalWalkingDuration)
                 }
                 Spacer()
-                Text(FormattingUtils.formatDuration(session.duration))
-                    .font(ShuttlXFont.cardCaption.monospacedDigit())
-                    .foregroundStyle(ShuttlXColor.textSecondary)
             }
 
-            // Metrics grid
-            HStack(spacing: ShuttlXSpacing.md) {
-                if let distance = session.distance, distance > 0 {
-                    MetricCard(
-                        icon: "location.fill",
-                        value: FormattingUtils.formatDistance(distance),
-                        label: "Distance",
-                        color: ShuttlXColor.running,
-                        compact: true
-                    )
-                }
+            // Borderless metric strip — colour carries identity, no boxes needed
+            let hasMetrics = (session.distance ?? 0) > 0 || session.averageHeartRate != nil || session.caloriesBurned != nil
+            if hasMetrics {
+                Rectangle()
+                    .fill(ShuttlXColor.surfaceBorder.opacity(0.4))
+                    .frame(height: 0.5)
 
-                if let hr = session.averageHeartRate {
-                    MetricCard(
-                        icon: "heart.fill",
-                        value: "\(Int(hr))",
-                        label: "Avg HR",
-                        color: ShuttlXColor.heartRate,
-                        compact: true
-                    )
-                }
-
-                if let cal = session.caloriesBurned {
-                    MetricCard(
-                        icon: "flame.fill",
-                        value: "\(Int(cal))",
-                        label: "Cal",
-                        color: ShuttlXColor.calories,
-                        compact: true
-                    )
+                HStack(spacing: 0) {
+                    if let distance = session.distance, distance > 0 {
+                        metricColumn(value: FormattingUtils.formatDistance(distance), label: "km", color: ShuttlXColor.running)
+                    }
+                    if let hr = session.averageHeartRate {
+                        if (session.distance ?? 0) > 0 { metricDivider() }
+                        metricColumn(value: "\(Int(hr))", label: "avg hr", color: ShuttlXColor.heartRate)
+                    }
+                    if let cal = session.caloriesBurned {
+                        if session.averageHeartRate != nil || (session.distance ?? 0) > 0 { metricDivider() }
+                        metricColumn(value: "\(Int(cal))", label: "kcal", color: ShuttlXColor.calories)
+                    }
                 }
             }
         }
@@ -71,6 +63,29 @@ struct LastWorkoutCard: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Last workout, \(FormattingUtils.formatShortDate(session.startDate)), \(FormattingUtils.formatDuration(session.duration))")
+    }
+
+    private func metricColumn(value: String, label: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(ShuttlXFont.metricMedium)
+                .monospacedDigit()
+                .foregroundStyle(color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(label)
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value)")
+    }
+
+    private func metricDivider() -> some View {
+        Rectangle()
+            .fill(ShuttlXColor.surfaceBorder.opacity(0.4))
+            .frame(width: 0.5, height: 30)
     }
 }
 

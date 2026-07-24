@@ -29,8 +29,12 @@ struct WeekSummaryCard: View {
         weekDays.reduce(0) { $0 + $1.sessionCount }
     }
 
+    private var maxDayDuration: TimeInterval {
+        weekDays.map(\.totalDuration).max() ?? 1
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: ShuttlXSpacing.lg) {
+        VStack(alignment: .leading, spacing: ShuttlXSpacing.md) {
             HStack {
                 Text("This Week")
                     .font(ShuttlXFont.cardTitle)
@@ -42,41 +46,45 @@ struct WeekSummaryCard: View {
                 }
             }
 
-            // Day dots
-            HStack(spacing: 0) {
+            // Total duration hero — most meaningful single number on the card
+            if weekTotalDuration > 0 {
+                Text(FormattingUtils.formatDuration(weekTotalDuration))
+                    .font(ShuttlXFont.metricLarge)
+                    .monospacedDigit()
+                    .foregroundStyle(ShuttlXColor.textPrimary)
+            } else {
+                Text("No activity yet")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+            }
+
+            // Activity bar chart — height encodes duration per day
+            HStack(alignment: .bottom, spacing: 0) {
                 ForEach(weekDays) { day in
-                    VStack(spacing: ShuttlXSpacing.sm) {
+                    VStack(spacing: 3) {
+                        Spacer(minLength: 0)
+
+                        let proportion = maxDayDuration > 0 ? day.totalDuration / maxDayDuration : 0
+                        let barHeight = day.totalDuration > 0 ? max(5, 44 * proportion) : 3
+
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(barFill(for: day))
+                            .frame(height: barHeight)
+                            .overlay(
+                                day.isToday
+                                    ? RoundedRectangle(cornerRadius: 2)
+                                        .strokeBorder(ShuttlXColor.ctaPrimary, lineWidth: 1)
+                                    : nil
+                            )
+
                         Text(day.shortName)
                             .font(ShuttlXFont.microLabel)
                             .foregroundStyle(day.isToday ? ShuttlXColor.textPrimary : ShuttlXColor.textSecondary)
-
-                        Circle()
-                            .fill(day.sessionCount > 0 ? ShuttlXColor.running : ShuttlXColor.surface)
-                            .frame(width: day.isToday ? 10 : 8, height: day.isToday ? 10 : 8)
-
-                        if day.sessionCount > 0 {
-                            Text(FormattingUtils.formatDuration(day.totalDuration))
-                                .font(ShuttlXFont.microLabel.monospacedDigit())
-                                .foregroundStyle(ShuttlXColor.textSecondary)
-                        } else {
-                            Text(" ")
-                                .font(ShuttlXFont.microLabel)
-                        }
                     }
                     .frame(maxWidth: .infinity)
                 }
             }
-
-            if weekTotalDuration > 0 {
-                HStack {
-                    Text("Total")
-                        .font(ShuttlXFont.cardCaption)
-                        .foregroundStyle(ShuttlXColor.textSecondary)
-                    Spacer()
-                    Text(FormattingUtils.formatDuration(weekTotalDuration))
-                        .font(ShuttlXFont.cardCaption.monospacedDigit().bold())
-                }
-            }
+            .frame(height: 58)
         }
         .padding(ShuttlXSpacing.xl)
         .themedCard(
@@ -86,6 +94,11 @@ struct WeekSummaryCard: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel("This week, \(weekSessionCount) sessions, total \(FormattingUtils.formatDuration(weekTotalDuration))")
+    }
+
+    private func barFill(for day: WeekDay) -> Color {
+        if day.sessionCount == 0 { return ShuttlXColor.surface }
+        return day.isToday ? ShuttlXColor.ctaPrimary : ShuttlXColor.ctaPrimary.opacity(0.45)
     }
 
     private func dayShortName(for date: Date) -> String {
