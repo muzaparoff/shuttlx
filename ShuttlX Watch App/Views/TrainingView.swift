@@ -8,9 +8,7 @@ struct TrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @State var selectedTab = 0
     @State var showingStopConfirmation = false
-    @State var showingSummary = false
     @State var showingHealthKitError = false
-    @State var savedSummary: WorkoutSummary?
     @State var pausePulse = false
     @State var showingAuthDeniedAlert = false
     /// Tracks whether the high-intensity warning haptic has already fired this threshold crossing.
@@ -30,14 +28,10 @@ struct TrainingView: View {
     #endif
 
     var body: some View {
-        if showingSummary, let summary = savedSummary {
-            WorkoutSummaryView(summary: summary) {
-                showingSummary = false
-                savedSummary = nil
-            }
-        } else {
-            workoutTabView
-        }
+        // Summary is now shown by ContentView when workoutManager.pendingSummary != nil,
+        // which is set BEFORE stopWorkout() (so isWorkoutActive is already false when
+        // ContentView reads it — S-1 fix). TrainingView only ever shows the workout UI.
+        workoutTabView
     }
 
     private var workoutTabView: some View {
@@ -68,27 +62,14 @@ struct TrainingView: View {
         .navigationBarHidden(true)
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
-                let captures = workoutManager.completedCaptures
-                let avgHRR1: Double? = {
-                    let vals = captures.compactMap { $0.hrr1 }
-                    guard !vals.isEmpty else { return nil }
-                    return Double(vals.reduce(0, +)) / Double(vals.count)
-                }()
-                let summary = WorkoutSummary(
-                    duration: workoutManager.elapsedTime,
-                    distance: workoutManager.totalDistance,
-                    avgHeartRate: workoutManager.averageHeartRate,
-                    calories: workoutManager.calories,
-                    steps: workoutManager.totalSteps,
-                    avgPace: workoutManager.currentPace,
-                    splitsCount: workoutManager.lastCompletedKm,
-                    completedSets: workoutManager.workoutMode == .gymRecovery ? captures.count : nil,
-                    averageHRR1: avgHRR1
-                )
+                // S-1 fix: build summary and set pendingSummary BEFORE stopWorkout().
+                // stopWorkout() zeros all @Published state (elapsedTime, HR, distance…)
+                // and sets isWorkoutActive = false, which causes ContentView to swap out
+                // TrainingView. pendingSummary being non-nil tells ContentView to show
+                // WorkoutSummaryView instead of StartTrainingView.
                 workoutManager.saveWorkoutData()
+                workoutManager.pendingSummary = workoutManager.buildCurrentSummary()
                 workoutManager.stopWorkout()
-                savedSummary = summary
-                showingSummary = true
             }
             Button("Discard", role: .destructive) {
                 workoutManager.stopWorkout()

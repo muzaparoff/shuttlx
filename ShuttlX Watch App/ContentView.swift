@@ -13,6 +13,17 @@ struct ContentView: View {
                     .onAppear {
                         logger.info("TrainingView appeared - workout active")
                     }
+            } else if let summary = workoutManager.pendingSummary {
+                // S-1 fix: summary is shown here, not inside TrainingView.
+                // pendingSummary is set BEFORE stopWorkout() so it's non-nil when
+                // ContentView re-renders with isWorkoutActive = false.
+                WorkoutSummaryView(summary: summary) {
+                    workoutManager.pendingSummary = nil
+                }
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+                .onAppear {
+                    logger.info("WorkoutSummaryView appeared")
+                }
             } else {
                 StartTrainingView()
                     .transition(.move(edge: .leading).combined(with: .opacity))
@@ -22,6 +33,7 @@ struct ContentView: View {
             }
         }
         .animation(.easeInOut(duration: 0.35), value: workoutManager.isWorkoutActive)
+        .animation(.easeInOut(duration: 0.35), value: workoutManager.pendingSummary != nil)
         .onAppear {
             logger.info("ContentView rendered")
         }

@@ -44,6 +44,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// True while a workout start is in progress (auth + session setup). Used for immediate UI feedback.
     @Published var isStarting: Bool = false
 
+    /// Non-nil while the post-workout summary is pending user dismissal (S-1 fix).
+    /// Set BEFORE stopWorkout() so ContentView can show WorkoutSummaryView while
+    /// TrainingView is still mounted; cleared by the user dismissing the summary.
+    @Published var pendingSummary: WorkoutSummary? = nil
+
     /// True average heart rate across all collected samples (excludes paused periods)
     var averageHeartRate: Int {
         guard heartRateSampleCount > 0 else { return 0 }
@@ -219,15 +224,19 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        // Set isStarting immediately so the UI shows a spinner on the very next frame —
-        // before any async work begins.
-        isStarting = true
+        // RC-3: Always reset interval/recovery state at free-run entry. If the
+        // previous session crashed before stopWorkout() ran, workoutMode/.intervalEngine
+        // can still be .interval with a completed engine. Without this reset, the timer
+        // would tick the stale engine and auto-stop the free run when engine.isComplete
+        // fires (typically at the old template's total duration — coincides with ~500m
+        // at a moderate walking pace).
+        workoutMode = .freeRun
+        intervalEngine = nil
+        activeTemplate = nil
+        workoutName = "Free Run"
 
-        // Name must be set before the async task so the UI reflects the correct
-        // workout name if it reads the property during the auth wait.
-        if workoutMode != .interval {
-            workoutName = "Free Run"
-        }
+        // Set isStarting so the UI shows a spinner on the very next frame.
+        isStarting = true
 
         Task { [weak self] in
             defer { self?.isStarting = false }
@@ -256,7 +265,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutStartTime = now
         currentSessionID = UUID()
         currentSegmentStartTime = now
-        isWorkoutActive = true
+        // NOTE: isWorkoutActive is set AFTER startWorkoutSession() succeeds (RC-1 fix).
+        // Setting it here (before the HK session) would leave the app showing a live
+        // workout with no background runtime if the session fails — killed at wrist-down.
         isPaused = false
         elapsedTime = 0
         currentSegmentTime = 0
@@ -297,7 +308,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Start first segment as unknown
         segments.append(ActivitySegment(activityType: .unknown, startDate: now))
 
-        startWorkoutSession()
+        // RC-1: Only mark the workout active after the HK session is confirmed started.
+        // If the session fails, roll back timestamps so saveWorkoutData() can't persist
+        // a zero-duration session, and return without starting sensors.
+        guard startWorkoutSession() else {
+            workoutStartTime = nil
+            segments = []
+            return
+        }
+        isWorkoutActive = true
         startDisplayTimer()
         let sport = activeTemplate?.sportType ?? .running
         if sport.supportsAutoDetection || workoutMode == .gymRecovery {
@@ -319,13 +338,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
         logger.info("Starting interval workout: \(template.name)")
+        // Set mode/engine BEFORE launching the task. startWorkout() resets these to
+        // .freeRun, so interval callers must NOT call startWorkout() — they launch the
+        // shared async core directly. (RC-3 fix separates the two entry paths.)
         workoutMode = .interval
         workoutName = template.name
         activeTemplate = template
         let engine = IntervalEngine()
         engine.configure(template: template)
         intervalEngine = engine
-        startWorkout()
+        isStarting = true
+        Task { [weak self] in
+            defer { self?.isStarting = false }
+            guard let self = self else { return }
+            await self.startWorkoutAfterAuth()
+        }
     }
 
     func startGymRecoveryWorkout() {
@@ -346,7 +373,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         latestHRR2 = nil
         completedCaptures = []
         currentCadence = 0
-        startWorkout()
+        // Launch async core directly — same as startIntervalWorkout; must NOT call
+        // startWorkout() which resets workoutMode to .freeRun. (RC-3)
+        isStarting = true
+        Task { [weak self] in
+            defer { self?.isStarting = false }
+            guard let self = self else { return }
+            await self.startWorkoutAfterAuth()
+        }
     }
 
     // MARK: - Manual station control (cardiacRehab)
@@ -536,14 +570,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - HKWorkoutSession
 
-    private func startWorkoutSession() {
+    @discardableResult
+    private func startWorkoutSession() -> Bool {
         guard healthKitAuthorized else {
             logger.warning("startWorkoutSession skipped — HealthKit not authorized")
-            return
+            return false
         }
         guard HKHealthStore.isHealthDataAvailable() else {
             logger.warning("HealthKit not available")
-            return
+            return false
         }
 
         #if os(watchOS)
@@ -579,9 +614,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             }
             routeBuilder = HKWorkoutRouteBuilder(healthStore: healthStore, device: nil)
             logger.info("HKWorkoutSession started (sport: \(sport.displayName))")
+            return true
         } catch {
             logger.error("Failed to start workout session: \(error.localizedDescription)")
+            healthKitSaveError = "Could not start workout. Please restart the app and try again."
+            return false
         }
+        #else
+        return true
         #endif
     }
 
@@ -657,7 +697,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         if workoutMode == .interval, let engine = intervalEngine {
             engine.tick(heartRate: heartRate, distance: totalDistance, workoutElapsed: wallClockElapsed)
             if engine.isComplete {
+                // Build summary BEFORE save+stop — stopWorkout() zeros all published state.
+                let summary = buildCurrentSummary()
                 saveWorkoutData()
+                pendingSummary = summary
                 stopWorkout()
                 return
             }
@@ -1248,8 +1291,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     return
                 }
                 guard let session = session else { return }
-                guard !self.isWorkoutActive else {
-                    self.logger.warning("Orphaned HK session found while a workout is active — ignoring")
+                // RC-2: Also guard !isStarting — the 8s HealthKit auth await creates a
+                // window where isWorkoutActive is still false but a new session is mid-start.
+                // Without this guard, the orphan recovery can end() the session we just created,
+                // silently stopping a brand-new workout.
+                guard !self.isWorkoutActive, !self.isStarting else {
+                    self.logger.warning("Orphaned HK session found while a workout is active or starting — ignoring")
                     return
                 }
                 self.logger.warning("Recovered orphaned HKWorkoutSession (state \(session.state.rawValue)) — finalizing so the workout reaches Health")
@@ -1279,6 +1326,30 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         #endif
     }
 
+
+    /// Snapshot current metrics into a WorkoutSummary BEFORE calling stopWorkout().
+    /// stopWorkout() zeros all published state, so the summary must be captured first.
+    /// Used by both the user-initiated "Save & Finish" path and the interval engine
+    /// auto-complete path (when engine.isComplete fires during updateElapsedTime).
+    func buildCurrentSummary() -> WorkoutSummary {
+        let captures = completedCaptures
+        let avgHRR1: Double? = {
+            let vals = captures.compactMap { $0.hrr1 }
+            guard !vals.isEmpty else { return nil }
+            return Double(vals.reduce(0, +)) / Double(vals.count)
+        }()
+        return WorkoutSummary(
+            duration: elapsedTime,
+            distance: totalDistance,
+            avgHeartRate: averageHeartRate,
+            calories: calories,
+            steps: totalSteps,
+            avgPace: currentPace,
+            splitsCount: lastCompletedKm,
+            completedSets: workoutMode == .gymRecovery ? captures.count : nil,
+            averageHRR1: avgHRR1
+        )
+    }
 
     func saveWorkoutData() {
         guard let startTime = workoutStartTime else { return }
