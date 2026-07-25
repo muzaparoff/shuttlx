@@ -1,77 +1,8 @@
 import WidgetKit
 import SwiftUI
 
-// MARK: - WidgetTheme
-// Provides background, surface, and accent colors per theme ID.
-// Widget extensions cannot access ShuttlXColor/ThemeManager — all colors are defined locally.
-
-struct WidgetTheme {
-    let background: Color
-    let backgroundDark: Color  // slightly darker, used as gradient end
-    let surface: Color
-    let accent: Color
-
-    static func forID(_ id: String) -> WidgetTheme {
-        switch id {
-        case "synthwave":
-            return WidgetTheme(
-                background:     Color(red: 0.04, green: 0.04, blue: 0.10),
-                backgroundDark: Color(red: 0.02, green: 0.02, blue: 0.07),
-                surface:        Color(red: 0.08, green: 0.08, blue: 0.16),
-                accent:         Color(red: 0.20, green: 0.90, blue: 0.50)   // neon green
-            )
-        case "mixtape":
-            return WidgetTheme(
-                background:     Color(red: 0.05, green: 0.08, blue: 0.13),
-                backgroundDark: Color(red: 0.03, green: 0.05, blue: 0.09),
-                surface:        Color(red: 0.10, green: 0.19, blue: 0.38),
-                accent:         Color(red: 0.20, green: 0.65, blue: 0.95)   // blue
-            )
-        case "arcade":
-            return WidgetTheme(
-                background:     Color(red: 0.06, green: 0.06, blue: 0.18),
-                backgroundDark: Color(red: 0.03, green: 0.03, blue: 0.12),
-                surface:        Color(red: 0.10, green: 0.10, blue: 0.24),
-                accent:         Color(red: 0.30, green: 0.95, blue: 0.35)   // phosphor green
-            )
-        case "classicradio":
-            return WidgetTheme(
-                background:     Color(red: 0.11, green: 0.08, blue: 0.03),
-                backgroundDark: Color(red: 0.07, green: 0.05, blue: 0.02),
-                surface:        Color(red: 0.23, green: 0.18, blue: 0.12),
-                accent:         Color(red: 0.95, green: 0.80, blue: 0.50)   // amber/cream
-            )
-        case "neovim":
-            return WidgetTheme(
-                background:     Color(red: 0.114, green: 0.125, blue: 0.129), // #1D2021
-                backgroundDark: Color(red: 0.094, green: 0.102, blue: 0.106), // slightly darker
-                surface:        Color(red: 0.157, green: 0.157, blue: 0.157), // #282828
-                accent:         Color(red: 0.722, green: 0.733, blue: 0.149)  // #B8BB26 green
-            )
-        default: // "clean"
-            return WidgetTheme(
-                background:     Color(red: 0.08, green: 0.08, blue: 0.12),
-                backgroundDark: Color(red: 0.04, green: 0.04, blue: 0.08),
-                surface:        Color(red: 0.14, green: 0.14, blue: 0.20),
-                accent:         Color(red: 0.25, green: 0.80, blue: 0.45)   // system green
-            )
-        }
-    }
-
-    static func fromDefaults() -> WidgetTheme {
-        let id = UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: "selectedThemeID") ?? "clean"
-        return forID(id)
-    }
-}
-
-// MARK: - Semantic metric colors (fixed, independent of theme)
-
-private enum MetricColor {
-    static let duration  = Color(red: 0.30, green: 0.65, blue: 0.85)  // blue
-    static let distance  = Color(red: 0.30, green: 0.75, blue: 0.55)  // teal-green
-    static let heartRate = Color(red: 0.88, green: 0.32, blue: 0.35)  // rose
-    static let calories  = Color(red: 0.95, green: 0.55, blue: 0.10)  // amber-orange
-}
+// WidgetTheme + WidgetMetricColor now live in Shared/WidgetTheme.swift —
+// shared across every widget file in this target (Tier-1 widget cleanup).
 
 // MARK: - Timeline provider
 
@@ -105,7 +36,7 @@ struct MediumWidgetProvider: TimelineProvider {
     }
 
     private func currentThemeID() -> String {
-        UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: "selectedThemeID") ?? "clean"
+        WidgetTheme.currentThemeID()
     }
 
     private func makeEntry() -> MediumWidgetEntry {
@@ -266,6 +197,7 @@ struct MediumWidgetView: View {
                         .font(.headline)
                         .foregroundStyle(theme.accent)
                         .frame(width: 22)
+                        .widgetAccentable()
 
                     Text(entry.sportTypeName)
                         .font(.headline)
@@ -286,7 +218,7 @@ struct MediumWidgetView: View {
                 HStack(spacing: 6) {
                     MetricBox(
                         icon: "timer",
-                        color: MetricColor.duration,
+                        color: WidgetMetricColor.duration,
                         value: entry.duration,
                         label: "Duration",
                         surface: theme.surface
@@ -294,7 +226,7 @@ struct MediumWidgetView: View {
                     if !entry.distance.isEmpty {
                         MetricBox(
                             icon: "location.fill",
-                            color: MetricColor.distance,
+                            color: WidgetMetricColor.distance,
                             value: entry.distance,
                             label: "Distance",
                             surface: theme.surface
@@ -302,14 +234,14 @@ struct MediumWidgetView: View {
                     }
                     MetricBox(
                         icon: "heart.fill",
-                        color: MetricColor.heartRate,
+                        color: WidgetMetricColor.heartRate,
                         value: entry.heartRate,
                         label: "Avg HR",
                         surface: theme.surface
                     )
                     MetricBox(
                         icon: "flame.fill",
-                        color: MetricColor.calories,
+                        color: WidgetMetricColor.calories,
                         value: entry.caloriesBurned,
                         label: "Cal",
                         surface: theme.surface
@@ -322,6 +254,7 @@ struct MediumWidgetView: View {
                     Image(systemName: entry.isToday ? "checkmark.circle.fill" : "clock")
                         .font(.caption2)
                         .foregroundStyle(entry.isToday ? theme.accent : .white.opacity(0.45))
+                        .widgetAccentable()
 
                     Text(entry.isToday ? "Today's Workout" : "Last Workout")
                         .font(.caption2)

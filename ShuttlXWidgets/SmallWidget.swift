@@ -23,7 +23,7 @@ struct SmallWidgetProvider: TimelineProvider {
     }
 
     private func currentThemeID() -> String {
-        UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: "selectedThemeID") ?? "clean"
+        WidgetTheme.currentThemeID()
     }
 
     private func makeEntry() -> SmallWidgetEntry {
@@ -97,6 +97,7 @@ struct SmallWidgetView: View {
                 Image(systemName: "flame.fill")
                     .foregroundStyle(theme.accent)
                     .font(.title3)
+                    .widgetAccentable()
                 Spacer()
                 if entry.trainedToday {
                     HStack(spacing: 3) {
@@ -108,6 +109,7 @@ struct SmallWidgetView: View {
                             .foregroundStyle(theme.accent)
                             .lineLimit(1)
                     }
+                    .widgetAccentable()
                 } else {
                     Image(systemName: "figure.run")
                         .foregroundStyle(.white.opacity(0.45))
@@ -123,6 +125,7 @@ struct SmallWidgetView: View {
                     .monospacedDigit()
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.6)
                 Text("day streak")
                     .font(.caption)
                     .foregroundStyle(.white.opacity(0.75))

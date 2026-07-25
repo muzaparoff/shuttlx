@@ -2,7 +2,7 @@ import SwiftUI
 
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
-    @Binding var deepLinkSessionID: UUID?
+    @EnvironmentObject var deepLinkRouter: DeepLinkRouter
     @State private var selectedTab = 0
     @State private var showingDeepLinkSession: TrainingSession?
 
@@ -61,12 +61,47 @@ struct ContentView: View {
                     }
             }
         }
-        .onChange(of: deepLinkSessionID) { _, newID in
-            guard let id = newID,
-                  let session = dataManager.sessions.first(where: { $0.id == id }) else { return }
-            deepLinkSessionID = nil
-            showingDeepLinkSession = session
+        .task {
+            // Cold-launch case: `onOpenURL` can set `deepLinkRouter` state
+            // before this view mounts, so a plain `.onChange` below would
+            // never fire for that value. Consume on mount too.
+            consumePendingSessionDeepLink()
+            selectPendingTab()
         }
+        .onChange(of: deepLinkRouter.pendingSessionID) { _, _ in
+            consumePendingSessionDeepLink()
+        }
+        .onChange(of: dataManager.sessions) { _, _ in
+            // The session id may have arrived before sessions finished
+            // loading from the App Group — retry here instead of dropping
+            // it (see `consumePendingSessionDeepLink`).
+            consumePendingSessionDeepLink()
+        }
+        .onChange(of: deepLinkRouter.pendingTab) { _, _ in
+            selectPendingTab()
+        }
+    }
+
+    /// Consumes `shuttlx://session/{uuid}` deep links. Only clears
+    /// `pendingSessionID` once the matching session is actually found and
+    /// presented — if `dataManager.sessions` hasn't loaded yet, the id is
+    /// left in place so the `onChange(of: dataManager.sessions)` observer
+    /// above can retry once it does, instead of the link being silently
+    /// swallowed.
+    private func consumePendingSessionDeepLink() {
+        guard let id = deepLinkRouter.pendingSessionID else { return }
+        guard let session = dataManager.sessions.first(where: { $0.id == id }) else {
+            return
+        }
+        deepLinkRouter.pendingSessionID = nil
+        showingDeepLinkSession = session
+    }
+
+    /// Consumes `shuttlx://dashboard` deep links (selects the Training tab).
+    private func selectPendingTab() {
+        guard let tab = deepLinkRouter.pendingTab else { return }
+        selectedTab = tab
+        deepLinkRouter.pendingTab = nil
     }
 }
 
@@ -85,6 +120,7 @@ private struct TabBarMinimizeModifier: ViewModifier {
 }
 
 #Preview {
-    ContentView(deepLinkSessionID: .constant(nil))
+    ContentView()
         .environmentObject(DataManager())
+        .environmentObject(DeepLinkRouter())
 }

@@ -31,7 +31,7 @@ struct QuickStartComplication: Widget {
         }
         .configurationDisplayName("Quick Start")
         .description("Tap to start a workout.")
-        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline])
+        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
     }
 }
 
@@ -52,6 +52,14 @@ struct QuickStartComplicationView: View {
                     .font(.headline)
             }
             .accessibilityLabel("Start workout")
+        case .accessoryCorner:
+            // Corner slot: run glyph in the corner, curved "FREE RUN" label
+            // hugging the bezel via .widgetLabel. System-tinted per watch face.
+            Image(systemName: "figure.run")
+                .font(.title2)
+                .widgetAccentable()
+                .widgetLabel("FREE RUN")
+                .accessibilityLabel("Start free run")
         default:
             ZStack {
                 AccessoryWidgetBackground()

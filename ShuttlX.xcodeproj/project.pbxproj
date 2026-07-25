@@ -127,6 +127,14 @@
 		WG000019 /* ShuttlXWidgets.appex in Embed PlugIns */ = {isa = PBXBuildFile; fileRef = WG000006 /* ShuttlXWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		WG000020B /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
 		WG000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WG000008 /* PrivacyInfo.xcprivacy */; };
+		WGT0001B /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0001F /* WidgetTheme.swift */; };
+		WGT0002B /* WidgetProgressShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0002F /* WidgetProgressShapes.swift */; };
+		WGT0003B /* WidgetTemplateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0003F /* WidgetTemplateProvider.swift */; };
+		WGT0004B /* WorkoutTemplateEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0004F /* WorkoutTemplateEntity.swift */; };
+		WGT0005B /* StartIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0005F /* StartIntents.swift */; };
+		WGT0006B /* StartTrainingWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0006F /* StartTrainingWidget.swift */; };
+		WGT0007B /* QuickStartControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0007F /* QuickStartControl.swift */; };
+		WGT0008B /* WeeklyGoalRingWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0008F /* WeeklyGoalRingWidget.swift */; };
 		WW100001 /* ShuttlXWatchWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000001 /* ShuttlXWatchWidgets.swift */; };
 		WW100002 /* LastWorkoutComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000002 /* LastWorkoutComplication.swift */; };
 		WW100003 /* WeeklyProgressComplication.swift in Sources */ = {isa = PBXBuildFile; fileRef = WW000003 /* WeeklyProgressComplication.swift */; };
@@ -322,6 +330,14 @@
 		WG000006 /* ShuttlXWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		WG000007 /* WidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataProvider.swift; sourceTree = "<group>"; };
 		WG000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		WGT0001F /* WidgetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
+		WGT0002F /* WidgetProgressShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetProgressShapes.swift; sourceTree = "<group>"; };
+		WGT0003F /* WidgetTemplateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTemplateProvider.swift; sourceTree = "<group>"; };
+		WGT0004F /* WorkoutTemplateEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplateEntity.swift; sourceTree = "<group>"; };
+		WGT0005F /* StartIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartIntents.swift; sourceTree = "<group>"; };
+		WGT0006F /* StartTrainingWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartTrainingWidget.swift; sourceTree = "<group>"; };
+		WGT0007F /* QuickStartControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickStartControl.swift; sourceTree = "<group>"; };
+		WGT0008F /* WeeklyGoalRingWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyGoalRingWidget.swift; sourceTree = "<group>"; };
 		WW000001 /* ShuttlXWatchWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWatchWidgets.swift; sourceTree = "<group>"; };
 		WW000002 /* LastWorkoutComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutComplication.swift; sourceTree = "<group>"; };
 		WW000003 /* WeeklyProgressComplication.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyProgressComplication.swift; sourceTree = "<group>"; };
@@ -669,8 +685,24 @@
 				WG000001 /* ShuttlXWidgetsBundle.swift */,
 				WG000002 /* SmallWidget.swift */,
 				WG000003 /* MediumWidget.swift */,
+				WGT0006F /* StartTrainingWidget.swift */,
+				WGT0007F /* QuickStartControl.swift */,
+				WGT0008F /* WeeklyGoalRingWidget.swift */,
+				WGT0000G /* Shared */,
 			);
 			path = ShuttlXWidgets;
+			sourceTree = "<group>";
+		};
+		WGT0000G /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				WGT0001F /* WidgetTheme.swift */,
+				WGT0002F /* WidgetProgressShapes.swift */,
+				WGT0003F /* WidgetTemplateProvider.swift */,
+				WGT0004F /* WorkoutTemplateEntity.swift */,
+				WGT0005F /* StartIntents.swift */,
+			);
+			path = Shared;
 			sourceTree = "<group>";
 		};
 		WW200005 /* ShuttlXWatchWidgets */ = {
@@ -1032,6 +1064,14 @@
 
 				MX004B /* ThemedTransportButton.swift in Sources (Widgets) */,
 				MX005B /* ThemedSceneBackground.swift in Sources (Widgets) */,
+				WGT0001B /* WidgetTheme.swift in Sources */,
+				WGT0002B /* WidgetProgressShapes.swift in Sources */,
+				WGT0003B /* WidgetTemplateProvider.swift in Sources */,
+				WGT0004B /* WorkoutTemplateEntity.swift in Sources */,
+				WGT0005B /* StartIntents.swift in Sources */,
+				WGT0006B /* StartTrainingWidget.swift in Sources */,
+				WGT0007B /* QuickStartControl.swift in Sources */,
+				WGT0008B /* WeeklyGoalRingWidget.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
