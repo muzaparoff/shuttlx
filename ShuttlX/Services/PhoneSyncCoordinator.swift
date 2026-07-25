@@ -30,6 +30,15 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
+
+    /// Set when the user requests a remote stop of the Watch workout. While
+    /// pending (< 2 min old), every incoming liveMetrics message triggers a
+    /// sendMessage re-send of the stop command — metrics arriving proves the
+    /// Watch is reachable RIGHT NOW, so the re-send lands within one broadcast
+    /// tick (~3s) even when the original sendMessage was dropped for
+    /// unreachability. Cleared when the Watch confirms via workoutStopped.
+    private var pendingStopSentAt: Date? = nil
+    private var lastStopResendAt: Date? = nil
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "PhoneSyncCoordinator")
 
     private let sessionsKey = "sessions.json"
@@ -191,6 +200,27 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Live Workout Metrics
 
     func handleLiveMetrics(_ message: [String: Any]) {
+        // Stop-pending re-send: metrics arriving proves the Watch is reachable
+        // at this exact moment, so a stop that was dropped (sendMessage skipped
+        // while unreachable / transferUserInfo still queued) can be re-delivered
+        // via sendMessage with certainty. Throttled to one re-send per 2.5s;
+        // pending window expires after 2 minutes so a stale stop can never kill
+        // a future workout.
+        if let pending = pendingStopSentAt {
+            if Date().timeIntervalSince(pending) > 120 {
+                pendingStopSentAt = nil
+            } else {
+                if Date().timeIntervalSince(lastStopResendAt ?? .distantPast) > 2.5 {
+                    lastStopResendAt = Date()
+                    log("liveMetrics arrived while stop pending — re-sending stop via sendMessage")
+                    sendWorkoutControl("stop")
+                }
+                // Keep the dashboard state cleared — don't revive the card or
+                // restart the Live Activity for a workout the user already ended.
+                return
+            }
+        }
+
         let wasActive = isWorkoutActiveOnWatch
         isWorkoutActiveOnWatch = true
         liveMetricsLastUpdated = Date()
@@ -241,11 +271,21 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
         // When paused the watch stops broadcasting — don't time out the live
         // state so the card stays visible. Resume will restart the timeout.
+        //
+        // VERIFIED 2026-07-25 (simulator logs): the old 10s timeout called
+        // clearLiveWorkoutState() which ALSO ended the Live Activity. On real
+        // devices, background delivery gaps >10s are routine (wcd throttling),
+        // so backgrounding the iOS app killed the Live Activity within seconds
+        // — and Activity.request can't restart it from the background ("Target
+        // is not foreground" — captured in logs). The timeout now only clears
+        // the dashboard card state; the Live Activity survives on its own
+        // staleDate (it greys out, never vanishes) and ends only on an
+        // explicit workoutStopped or user stop.
         liveMetricsTimeoutTimer?.invalidate()
         if !liveIsPaused {
-            liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 10.0, repeats: false) { [weak self] _ in
+            liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
                 Task { @MainActor [weak self] in
-                    self?.clearLiveWorkoutState()
+                    self?.clearLiveWorkoutState(endLiveActivity: false)
                 }
             }
         }
@@ -258,7 +298,18 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     func pauseWatchWorkout() { sendWorkoutControl("pause") }
     func resumeWatchWorkout() { sendWorkoutControl("resume") }
-    func stopWatchWorkout() { sendWorkoutControl("stop") }
+    func stopWatchWorkout() {
+        pendingStopSentAt = Date()
+        lastStopResendAt = Date()
+        sendWorkoutControl("stop")
+    }
+
+    /// Watch confirmed the workout ended (workoutStopped received) — the
+    /// pending-stop re-send loop can stand down.
+    private func confirmWatchWorkoutStopped() {
+        pendingStopSentAt = nil
+        clearLiveWorkoutState()
+    }
 
     /// Sends a remote-start command to the Watch so both devices run in sync.
     /// Uses the same dual-channel pattern as pause/resume/stop but with a 30s
@@ -268,6 +319,8 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             log("workoutControl 'start' skipped — WCSession not activated")
             return
         }
+        // A new workout invalidates any stale pending stop from a prior one.
+        pendingStopSentAt = nil
         var message: [String: Any] = [
             "action": "workoutControl",
             "command": "start",
@@ -342,9 +395,15 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         WCSession.default.transferUserInfo(message)
     }
 
-    func clearLiveWorkoutState() {
+    func clearLiveWorkoutState(endLiveActivity: Bool = true) {
+        // NOTE: deliberately does NOT clear pendingStopSentAt — LiveWorkoutCard
+        // calls this immediately after stopWatchWorkout(), and the pending-stop
+        // re-send must keep working until the Watch confirms via workoutStopped
+        // (see confirmWatchWorkoutStopped) or the 2-minute window expires.
         let wasActive = isWorkoutActiveOnWatch
-        LiveActivityManager.shared.endActivity()
+        if endLiveActivity {
+            LiveActivityManager.shared.endActivity()
+        }
         isWorkoutActiveOnWatch = false
         liveElapsedTime = 0
         liveHeartRate = 0
@@ -815,6 +874,18 @@ extension PhoneSyncCoordinator {
             // When Watch becomes reachable, pull any new sessions then reconcile
             // to catch sessions the watch has that iOS is missing.
             if session.isReachable {
+                // Re-deliver a pending stop the instant the Watch comes back —
+                // complements the liveMetrics piggyback re-send for the case
+                // where the watch app was suspended and metrics haven't
+                // resumed yet.
+                if let pending = self.pendingStopSentAt {
+                    if Date().timeIntervalSince(pending) <= 120 {
+                        self.log("Watch became reachable with stop pending — re-sending stop")
+                        self.sendWorkoutControl("stop")
+                    } else {
+                        self.pendingStopSentAt = nil
+                    }
+                }
                 self.log("Watch became reachable — auto-pulling sessions")
                 self.requestSessionsFromWatch { [weak self] count in
                     if count > 0 {
@@ -860,13 +931,14 @@ extension PhoneSyncCoordinator {
                     }
                 case "workoutStarted":
                     if let activityType = userInfo["activityType"] as? String {
+                        self.pendingStopSentAt = nil  // fresh workout — old stop intent is void
                         self.isWorkoutActiveOnWatch = true
                         self.liveCurrentActivity = activityType
                         LiveActivityManager.shared.startActivity(activityType: activityType)
                         self.log("Workout started on Watch (via transferUserInfo) — Live Activity started")
                     }
                 case "workoutStopped":
-                    self.clearLiveWorkoutState()
+                    self.confirmWatchWorkoutStopped()
                     self.log("Workout stopped on Watch (via transferUserInfo)")
                 case "lastSessionID":
                     // S-5 fix: lastSessionID moved from applicationContext (clobbered by
@@ -907,7 +979,7 @@ extension PhoneSyncCoordinator {
                 case "liveMetrics":
                     self.handleLiveMetrics(message)
                 case "workoutStopped":
-                    self.clearLiveWorkoutState()
+                    self.confirmWatchWorkoutStopped()
                 case "ping":
                     self.consecutiveFailures = 0
                 default:
@@ -970,7 +1042,7 @@ extension PhoneSyncCoordinator {
                     self.handleLiveMetrics(message)
                     replyHandler(["status": "received"])
                 case "workoutStopped":
-                    self.clearLiveWorkoutState()
+                    self.confirmWatchWorkoutStopped()
                     replyHandler(["status": "received"])
                 case "ping":
                     replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])

@@ -119,6 +119,16 @@ Additional rules load automatically based on the files being edited:
 - `/json-persistence-safety` — single-writer rule, corruption recovery, schema versioning, id-stable dedup
 - `/swift-concurrency-review` — actor isolation, queue conventions, known-good patterns to preserve
 
+## Agent-First Workflow (MANDATORY)
+
+Every non-trivial task or bug follows this loop — the lead session orchestrates, agents do the work:
+
+1. **Route**: When the user reports a task/bug, pick the right specialist agent(s) from the table below (use the Routing Rules). Don't implement directly in the lead session except for one-line fixes explicitly approved by the user.
+2. **Audit first**: The assigned agent investigates and produces a diagnosis with runtime evidence (logs, reproduction) — never code-reading alone. Unverifiable diagnoses must be labeled *unverified hypothesis*.
+3. **Implement**: The same (or a writing) agent applies changes within its file-ownership scope.
+4. **Verify**: The lead builds both platforms (`bash tests/build_and_test_both_platforms.sh --clean --build` or per-platform xcodebuild). Build failure → route the errors straight back to the implementing agent to fix; repeat until green.
+5. **Review & approve**: The lead summarizes what changed and shows results to the user. Only the user approves the final result (and any commit/push).
+
 ## Agents
 
 | Agent | Purpose | Model |

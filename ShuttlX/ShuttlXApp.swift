@@ -1,4 +1,5 @@
 import SwiftUI
+import os.log
 import RevenueCat
 import TelemetryDeck
 
@@ -47,6 +48,19 @@ struct ShuttlXApp: App {
                 }
                 Task {
                     await subscriptionManager.refreshEntitlementStatus()
+                }
+                // ActivityKit only allows STARTING a Live Activity while the
+                // app is foreground ("Target is not foreground" otherwise —
+                // verified 2026-07-25). If a Watch workout is running and the
+                // Live Activity couldn't start earlier (workout began while
+                // this app was backgrounded), start it now. Conversely, if
+                // nothing is running anywhere, sweep up any orphaned activity.
+                if sharedDataManager.isWorkoutActiveOnWatch {
+                    LiveActivityManager.shared.startActivity(
+                        activityType: sharedDataManager.liveCurrentActivity
+                    )
+                } else if !workoutController.isActive {
+                    LiveActivityManager.shared.cleanupStaleActivities()
                 }
             }
         }
@@ -108,8 +122,27 @@ struct ShuttlXApp: App {
                 PhoneSyncCoordinator.shared.onRemoteWorkoutStopped = { [weak workoutController] in
                     workoutController?.remoteStop()
                 }
+                #if DEBUG
+                // Test hooks (simulator automation): SHUTTLX_AUTOSTART_WATCH
+                // remote-starts a free run on the Watch after N seconds;
+                // SHUTTLX_AUTOSTOP_WATCH stops it after N seconds — both drive
+                // the exact code paths the UI buttons use.
+                if let raw = ProcessInfo.processInfo.environment["SHUTTLX_AUTOSTART_WATCH"],
+                   let secs = Double(raw) {
+                    try? await Task.sleep(for: .seconds(secs))
+                    PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun")
+                }
+                if let raw = ProcessInfo.processInfo.environment["SHUTTLX_AUTOSTOP_WATCH"],
+                   let secs = Double(raw) {
+                    try? await Task.sleep(for: .seconds(secs))
+                    sharedDataManager.stopWatchWorkout()
+                    sharedDataManager.clearLiveWorkoutState()
+                }
+                #endif
             }
             .onOpenURL { url in
+                os_log(.info, log: OSLog(subsystem: "com.shuttlx.ShuttlX", category: "DeepLink"),
+                       "onOpenURL fired: %{public}@", url.absoluteString)
                 guard url.scheme == "shuttlx" else { return }
                 switch url.host {
                 case "session":
@@ -128,6 +161,17 @@ struct ShuttlXApp: App {
                     if workoutController.isActive {
                         workoutController.isPresentingTimer = true
                     }
+                #if DEBUG
+                case "debug-stop-watch":
+                    // Test hook: drives the exact same code path as the
+                    // LiveWorkoutCard "End Workout" confirmation button, so the
+                    // remote-stop flow can be exercised from simctl openurl.
+                    sharedDataManager.stopWatchWorkout()
+                    sharedDataManager.clearLiveWorkoutState()
+                case "debug-start-watch":
+                    // Test hook: remote-starts a free run on the Watch.
+                    PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun")
+                #endif
                 default:
                     break
                 }
