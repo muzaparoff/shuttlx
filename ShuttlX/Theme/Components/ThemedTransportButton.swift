@@ -198,15 +198,14 @@ struct ThemedTransportButtonStyle: ButtonStyle {
     static func spec(for themeID: String, role: TransportRole = .play) -> TransportButtonSpec {
         switch themeID {
         case "mixtape":
-            // Base Mixtape spec — physical ABS keycap material
-            let accentBlue = Color(red: 0.29, green: 0.54, blue: 0.79)   // #4A8ACA
+            // Base Mixtape spec — brushed chrome keycap material
             var base = TransportButtonSpec(
                 cornerRadius: 8,
                 travel: 3,
-                capTop:    Color(red: 0.780, green: 0.800, blue: 0.831), // keyCapTop   #C7CCD4
-                capBottom: Color(red: 0.604, green: 0.631, blue: 0.675), // keyCapBottom #9AA1AC
-                channel:   Color(red: 0.055, green: 0.078, blue: 0.125), // keyChannel  #0E1420
-                glyph:     Color(red: 0.165, green: 0.188, blue: 0.220), // keyGlyph    #2A3038
+                capTop:    Color(red: 0.867, green: 0.886, blue: 0.906), // #DDE2E7 chrome bright
+                capBottom: Color(red: 0.659, green: 0.686, blue: 0.722), // #A8AFB8 chrome mid
+                channel:   Color(red: 0.082, green: 0.090, blue: 0.102), // #15171A bodyDeep
+                glyph:     Color(red: 0.102, green: 0.114, blue: 0.129), // #1A1D21 dark glyph
                 highlight: .white,
                 depressLatches: true,
                 haptic: .impact(weight: .heavy)
@@ -216,11 +215,11 @@ struct ThemedTransportButtonStyle: ButtonStyle {
                 // PLAY latches down; extra shadow radius makes it visually prominent
                 base.proudBoost = 1
             case .stop:
-                // STOP = accentBlue cap with white glyph — clearly distinct from gray CANCEL.
+                // STOP = red cap with cream glyph — unmistakably destructive.
                 // Confirmation alert provides the second safety barrier.
-                base.capTopOverride    = accentBlue.opacity(0.9)
-                base.capBottomOverride = accentBlue.opacity(0.7)
-                base.glyphOverride     = Color.white
+                base.capTopOverride    = Color(red: 1.0, green: 0.231, blue: 0.188)          // #FF3B30 ledRed
+                base.capBottomOverride = Color(red: 0.800, green: 0.145, blue: 0.102)        // darker red
+                base.glyphOverride     = Color(red: 0.937, green: 0.906, blue: 0.824)        // #EFE7D2 cream
             default:
                 break
             }

@@ -38,6 +38,7 @@ struct WeekSummaryCard: View {
             HStack {
                 Text("This Week")
                     .font(ShuttlXFont.cardTitle)
+                    .foregroundStyle(ShuttlXColor.textPrimary)
                 Spacer()
                 if weekSessionCount > 0 {
                     Text("\(weekSessionCount) session\(weekSessionCount == 1 ? "" : "s")")
@@ -51,11 +52,11 @@ struct WeekSummaryCard: View {
                 Text(FormattingUtils.formatDuration(weekTotalDuration))
                     .font(ShuttlXFont.metricLarge)
                     .monospacedDigit()
-                    .foregroundStyle(ShuttlXColor.textPrimary)
+                    .foregroundStyle(ShuttlXColor.running)
             } else {
-                Text("No activity yet")
+                Text("no sessions logged yet")
                     .font(ShuttlXFont.cardCaption)
-                    .foregroundStyle(ShuttlXColor.textSecondary)
+                    .foregroundStyle(ShuttlXColor.textPrimary.opacity(0.8))
             }
 
             // Activity bar chart — height encodes duration per day
@@ -73,7 +74,7 @@ struct WeekSummaryCard: View {
                             .overlay(
                                 day.isToday
                                     ? RoundedRectangle(cornerRadius: 2)
-                                        .strokeBorder(ShuttlXColor.ctaPrimary, lineWidth: 1)
+                                        .strokeBorder(ShuttlXColor.surfaceBorder, lineWidth: 1)
                                     : nil
                             )
 
@@ -97,8 +98,8 @@ struct WeekSummaryCard: View {
     }
 
     private func barFill(for day: WeekDay) -> Color {
-        if day.sessionCount == 0 { return ShuttlXColor.surface }
-        return day.isToday ? ShuttlXColor.ctaPrimary : ShuttlXColor.ctaPrimary.opacity(0.45)
+        if day.sessionCount == 0 { return ShuttlXColor.surfaceBorder.opacity(0.4) }
+        return day.isToday ? ShuttlXColor.running : ShuttlXColor.running.opacity(0.45)
     }
 
     private func dayShortName(for date: Date) -> String {

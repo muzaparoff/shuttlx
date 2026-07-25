@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShuttlX — Dashboard idle state redesign</title>
+<style>
+:root{
+  --shell:#0E1420; --surface:#1A3060; --border:#4A6A9A; --lcd:#39FF14; --lcd-dim:#1C8009;
+  --led-red:#FF3333; --amber:#F2A61A; --blue:#4A8ACA; --txt:#B3D1ED; --txt2:#8CADCC;
+  --paper:#EDE7D3; --ink:#1C2330; --felt:#B8453A; --well:#030F03;
+  --pg:#0a0c11; --pg2:#12151d; --hair:#242a36; --note:#7d8798; --good:#4ec9b0; --bad:#e06c75;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:#d6dbe4;font-family:var(--sys);line-height:1.55;padding:32px 20px 80px}
+.wrap{max-width:1340px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:15px;margin:44px 0 14px;text-transform:uppercase;letter-spacing:.10em;color:var(--note);
+   border-bottom:1px solid var(--hair);padding-bottom:8px;font-weight:600}
+.sub{color:var(--note);font-size:13px;margin:0 0 8px}
+.lede{background:var(--pg2);border:1px solid var(--hair);border-left:3px solid var(--blue);
+      padding:14px 16px;border-radius:6px;font-size:13.5px;margin:20px 0}
+code{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.13em;
+     text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-bottom:10px;font-weight:700}
+.tag.b{background:rgba(224,108,117,.13);color:var(--bad);border:1px solid rgba(224,108,117,.32)}
+.tag.a{background:rgba(78,201,176,.13);color:var(--good);border:1px solid rgba(78,201,176,.32)}
+.tag.n{background:rgba(74,138,202,.13);color:var(--blue);border:1px solid rgba(74,138,202,.32)}
+.row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+.col{flex:1 1 350px;min-width:340px}
+.cap{font-size:12px;color:var(--note);margin-top:9px}
+.cap b{color:#dfe5ee}
+
+.phone{width:100%;max-width:392px;border-radius:26px;padding:12px;border:1px solid var(--hair);
+       background:var(--shell);position:relative;overflow:hidden}
+.hub{position:absolute;width:96px;height:96px;border-radius:50%;top:calc(42% - 48px);
+     background:radial-gradient(circle at 38% 34%,#16203a 0%,#0E1420 62%);
+     border:2px solid rgba(74,106,154,.55);box-shadow:inset 0 2px 6px #000}
+.hub.l{left:calc(30% - 48px)} .hub.r{left:calc(70% - 48px)}
+.hub::after{content:"";position:absolute;inset:34px;border-radius:50%;
+     background:conic-gradient(from 0deg,#3a4250 0 12%,#232a36 0 25%,#3a4250 0 37%,#232a36 0 50%,
+     #3a4250 0 62%,#232a36 0 75%,#3a4250 0 87%,#232a36 0);border:1px solid #55607a}
+.screw{position:absolute;width:11px;height:11px;border-radius:50%;
+       background:radial-gradient(circle at 35% 30%,#8A93A0,#3A4250);border:1px solid #262d3a}
+.screw.tl{top:7px;left:7px}.screw.tr{top:7px;right:7px}
+.screw.bl{bottom:7px;left:7px}.screw.br{bottom:7px;right:7px}
+.stack{position:relative;z-index:3;display:flex;flex-direction:column;gap:12px}
+
+/* BEFORE cards */
+.bcard{background:var(--surface);border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.bhead{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;
+       color:var(--border);padding:4px 8px;background:rgba(74,106,154,.08)}
+.bbody{padding:16px;display:flex;flex-direction:column;gap:12px}
+.btitle{display:flex;justify-content:space-between;align-items:baseline}
+.btitle .t{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--txt)}
+.btitle .d{font-family:var(--mono);font-size:11px;color:var(--txt2)}
+.bbadges{display:flex;gap:8px;align-items:center}
+.bbadge{font-family:var(--mono);font-size:10px;padding:2px 7px;border-radius:9px;
+        background:rgba(57,255,20,.13);color:var(--lcd)}
+.bmetrics{display:flex;gap:8px}
+.bm{flex:1;background:rgba(74,106,154,.14);border-radius:7px;padding:8px;text-align:center}
+.bm .v{font-family:var(--mono);font-size:17px;font-weight:700;color:var(--txt)}
+.bm .l{font-family:var(--mono);font-size:9px;color:var(--txt2)}
+.bfoot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;
+       color:rgba(74,106,154,.5);padding:3px 8px;border-top:1px solid rgba(74,106,154,.15)}
+.bdots{display:flex}
+.bdots>div{flex:1;text-align:center}
+.bdots .dn{font-family:var(--mono);font-size:9px;color:var(--txt2)}
+.bdots .dc{width:8px;height:8px;border-radius:50%;background:var(--surface);margin:6px auto;
+           border:1px solid rgba(74,106,154,.4)}
+.bdots .dc.on{background:var(--lcd);border-color:var(--lcd)}
+.bdots .dc.today{width:10px;height:10px}
+.bdots .dt{font-family:var(--mono);font-size:9px;color:var(--txt2)}
+
+/* ═══ AFTER — Mixtape "The Recording" ═══ */
+.rec{border-radius:8px;background:var(--shell);border:1px solid var(--border);overflow:hidden;
+     box-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 6px 18px rgba(0,0,0,.5)}
+.jc{background:var(--paper);color:var(--ink);padding:7px 9px 6px;position:relative}
+.jc::before{content:"";position:absolute;inset:0 0 auto 0;height:5px;background:linear-gradient(#0003,#0000)}
+.jc-r1{display:flex;align-items:center;gap:6px}
+.side{font-family:var(--mono);font-size:9px;font-weight:800;border:1px solid rgba(28,35,48,.5);
+      border-radius:2px;padding:1px 4px}
+.jc-name{font-family:var(--mono);font-size:12.5px;font-weight:800;font-style:italic;flex:1;
+         white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.jc-date{font-family:var(--mono);font-size:9px;font-weight:700;opacity:.72}
+.jc-rule{height:1px;background:rgba(28,35,48,.28);margin:5px 0 4px}
+.jc-r2{display:flex;gap:12px;font-family:var(--mono);font-size:9px;font-weight:700;opacity:.8}
+/* tracklist */
+.tracks{padding:9px 10px 4px;background:var(--well);border-top:1px solid rgba(28,128,9,.3)}
+.trk{display:flex;align-items:center;gap:8px;padding:3.5px 0}
+.trk .no{font-family:var(--mono);font-size:9px;font-weight:800;color:var(--lcd-dim);width:18px}
+.trk .nm{font-family:var(--mono);font-size:11px;font-weight:800;width:46px}
+.trk .bar{flex:1;height:8px;display:flex;gap:1.5px}
+.trk .bar i{flex:1;border-radius:1px;background:rgba(28,128,9,.22)}
+.trk .bar i.on{background:currentColor}
+.trk .tm{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--lcd);width:42px;
+         text-align:right}
+.run{color:var(--lcd)} .walk{color:var(--blue)}
+/* totals */
+.tot{display:flex;background:var(--well);padding:7px 10px 10px;gap:6px}
+.tot>div{flex:1;text-align:center}
+.tot .v{font-family:var(--mono);font-size:20px;font-weight:700;color:var(--lcd);line-height:1.1}
+.tot .v.hr{color:var(--amber)}
+.tot .l{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--txt2)}
+.brand{display:flex;justify-content:space-between;font-family:var(--mono);font-size:7px;
+       font-weight:600;color:rgba(74,106,154,.6);padding:4px 9px;
+       border-top:1px solid rgba(74,106,154,.2)}
+
+/* ═══ AFTER — Mixtape week = VU columns ═══ */
+.vuw{border-radius:8px;background:var(--shell);border:1px solid var(--border);overflow:hidden}
+.vuh{background:var(--paper);color:var(--ink);display:flex;align-items:center;padding:5px 9px}
+.vuh .t{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.05em;flex:1}
+.vuh .s{font-family:var(--mono);font-size:9px;font-weight:700;opacity:.7}
+.vub{background:var(--well);padding:11px 10px 8px;display:flex;gap:5px;align-items:flex-end}
+.day{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px}
+.colm{display:flex;flex-direction:column-reverse;gap:2px;width:100%;height:62px;justify-content:flex-start}
+.colm i{height:5px;border-radius:1px;background:rgba(28,128,9,.18)}
+.colm i.g{background:var(--lcd);box-shadow:0 0 4px rgba(57,255,20,.45)}
+.colm i.a{background:var(--amber);box-shadow:0 0 4px rgba(242,166,26,.45)}
+.dl{font-family:var(--mono);font-size:9px;font-weight:700;color:var(--txt2)}
+.dl.now{color:var(--paper)}
+.dtm{font-family:var(--mono);font-size:8px;color:var(--lcd-dim)}
+.vuf{display:flex;justify-content:space-between;align-items:baseline;background:var(--well);
+     padding:2px 10px 10px}
+.vuf .l{font-family:var(--mono);font-size:8px;font-weight:700;letter-spacing:.09em;color:var(--txt2)}
+.vuf .v{font-family:var(--mono);font-size:19px;font-weight:700;color:var(--lcd)}
+
+/* Clean variants */
+.gcard{border-radius:16px;padding:16px;background:rgba(28,32,40,.9);
+       border:1px solid rgba(255,255,255,.09);position:relative;overflow:hidden;
+       display:flex;flex-direction:column;gap:13px}
+.gcard::before{content:"";position:absolute;top:0;left:8px;right:8px;height:1px;
+       background:linear-gradient(90deg,#0000,#ffffff30 50%,#0000)}
+.gh{display:flex;justify-content:space-between;align-items:baseline}
+.gh .t{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#8b95a6}
+.gh .d{font-size:11px;color:#8b95a6;font-family:var(--mono)}
+.gname{font-size:19px;font-weight:650;color:#fff;letter-spacing:-.01em;margin-top:-4px}
+.gseg{display:flex;height:9px;border-radius:5px;overflow:hidden;gap:2px}
+.gseg i{border-radius:2px}
+.glegend{display:flex;gap:13px;font-size:11px;color:#9aa4b3}
+.glegend b{color:#fff;font-family:var(--mono);font-weight:600}
+.gdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px}
+.gtot{display:flex;gap:10px}
+.gtot>div{flex:1;background:rgba(255,255,255,.05);border-radius:10px;padding:8px 10px}
+.gtot .l{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#8b95a6;font-weight:600}
+.gtot .v{font-family:var(--mono);font-size:20px;font-weight:600;color:#fff}
+.gweek{display:flex;gap:6px;align-items:flex-end}
+.gday{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px}
+.gbar{width:100%;height:56px;background:rgba(255,255,255,.06);border-radius:6px;
+      display:flex;flex-direction:column-reverse;overflow:hidden}
+.gbar i{background:#30d158;border-radius:5px}
+.gbar.today{outline:1.5px solid rgba(48,209,88,.55);outline-offset:1.5px}
+.gdl{font-size:10px;color:#8b95a6;font-weight:600}
+
+/* empty states */
+.empty-mx{border-radius:8px;background:var(--shell);border:1px solid var(--border);overflow:hidden}
+.empty-jc{background:var(--paper);color:var(--ink);padding:14px 12px;min-height:96px;
+          display:flex;flex-direction:column;justify-content:center;gap:7px;position:relative}
+.empty-jc .rule{height:1px;background:rgba(28,35,48,.22)}
+.empty-jc .ttl{font-family:var(--mono);font-size:11px;font-weight:800;font-style:italic;opacity:.42}
+.empty-cta{background:var(--well);padding:11px;text-align:center}
+.empty-cta .a{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--lcd)}
+.empty-cta .b{font-family:var(--mono);font-size:9px;color:var(--txt2);margin-top:3px}
+
+.ann{list-style:none;padding:0;margin:14px 0 0;font-size:12.5px}
+.ann li{padding:7px 0 7px 26px;border-bottom:1px solid var(--hair);position:relative;color:#b6bdc9}
+.ann li:before{content:attr(data-n);position:absolute;left:0;top:7px;width:17px;height:17px;
+  border-radius:50%;background:var(--blue);color:#08111c;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.ann b{color:#e6ebf2;font-weight:650}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--hair);vertical-align:top}
+th{color:var(--note);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em}
+.foot{margin-top:46px;padding-top:16px;border-top:1px solid var(--hair);color:var(--note);font-size:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Proposal 3 — Dashboard idle state ("dead state")</h1>
+<p class="sub">Surfaces: <code>LastWorkoutCard.swift</code>, <code>WeekSummaryCard.swift</code> + their empty states</p>
+
+<div class="lede">
+<b>The core insight.</b> <code>WeekSummaryCard</code> renders the week as
+<code>7 × Circle().fill(count &gt; 0 ? running : surface)</code> — the exact "charting-library
+default" that reads as generic. Meanwhile the app <b>already contains a segment-bar
+component in two places</b> (<code>hrVUStrip</code> on iOS, <code>MixtapeVUMeter</code> on watch)
+that is far more distinctive, already themed, and used on exactly one screen. This proposal
+promotes it to a shared component and reuses it as the week chart — the "one parametric
+shape, many surfaces" doctrine, at negative code cost.
+<br><br>
+<b>Second insight.</b> A workout's interval segments are <b>a tracklist</b>. Mixtape has been
+sitting on a perfect structural metaphor and using it for decoration only.
+</div>
+
+<h2>Before → After</h2>
+<div class="row">
+
+  <div class="col">
+    <span class="tag b">Before — current build</span>
+    <div class="phone">
+      <div class="screw tl"></div><div class="screw tr"></div>
+      <div class="screw bl"></div><div class="screw br"></div>
+      <div class="hub l"></div><div class="hub r"></div>
+      <div class="stack">
+        <div class="bcard">
+          <div class="bhead"><span>A LAST WORKOUT</span><span>IEC TYPE II</span></div>
+          <div class="bbody">
+            <div class="btitle"><span class="t">Last Workout</span><span class="d">Tue 22</span></div>
+            <div class="bbadges"><span class="bbadge">&#9679; Run 12:04</span>
+              <span class="bbadge" style="background:rgba(74,138,202,.15);color:var(--blue)">&#9679; Walk 6:30</span>
+              <span style="flex:1"></span><span class="d" style="font-family:var(--mono);font-size:11px;color:var(--txt2)">31:20</span></div>
+            <div class="bmetrics">
+              <div class="bm"><div class="v">3.24</div><div class="l">Distance</div></div>
+              <div class="bm"><div class="v">145</div><div class="l">Avg HR</div></div>
+              <div class="bm"><div class="v">280</div><div class="l">Cal</div></div>
+            </div>
+          </div>
+          <div class="bfoot"><span>&#9664;&#9664; REW</span><span style="color:var(--blue)">0000:00</span><span>FF &#9654;&#9654;</span></div>
+        </div>
+
+        <div class="bcard">
+          <div class="bhead"><span>A THIS WEEK</span><span>IEC TYPE II</span></div>
+          <div class="bbody">
+            <div class="btitle"><span class="t">This Week</span><span class="d">4 sessions</span></div>
+            <div class="bdots">
+              <div><div class="dn">Mo</div><div class="dc on"></div><div class="dt">28m</div></div>
+              <div><div class="dn">Tu</div><div class="dc on"></div><div class="dt">31m</div></div>
+              <div><div class="dn">We</div><div class="dc"></div><div class="dt">&nbsp;</div></div>
+              <div><div class="dn">Th</div><div class="dc on"></div><div class="dt">45m</div></div>
+              <div><div class="dn">Fr</div><div class="dc"></div><div class="dt">&nbsp;</div></div>
+              <div><div class="dn">Sa</div><div class="dc on today"></div><div class="dt">22m</div></div>
+              <div><div class="dn">Su</div><div class="dc"></div><div class="dt">&nbsp;</div></div>
+            </div>
+            <div style="display:flex;justify-content:space-between"><span class="d" style="font-family:var(--mono);font-size:11px;color:var(--txt2)">Total</span>
+              <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--txt)">2:06</span></div>
+          </div>
+          <div class="bfoot"><span>&#9664;&#9664; REW</span><span style="color:var(--blue)">0000:00</span><span>FF &#9654;&#9654;</span></div>
+        </div>
+      </div>
+    </div>
+    <ul class="ann">
+      <li data-n="1"><b>Hub bezels again</b> — same P0 as Proposal 1, now behind two cards.</li>
+      <li data-n="2"><b>Seven grey/green circles.</b> Binary "did/didn't" — throws away duration, which the card then prints as tiny text underneath.</li>
+      <li data-n="3"><b>Three identical metric tiles</b> — the default fitness-app grid.</li>
+      <li data-n="4"><b>"IEC TYPE II" / "0000:00" / "REW/FF"</b> are applied as a <i>sticker</i> — 7pt chrome wrapped around an untouched generic card. This is literally "a label on top".</li>
+      <li data-n="5"><b>The card says its own name.</b> "Last Workout" as a title, plus "LAST WORKOUT" in the header strip — twice.</li>
+    </ul>
+  </div>
+
+  <div class="col">
+    <span class="tag a">After — Mixtape</span>
+    <div class="phone">
+      <div class="screw tl"></div><div class="screw tr"></div>
+      <div class="screw bl"></div><div class="screw br"></div>
+      <div class="stack">
+        <!-- The Recording -->
+        <div class="rec">
+          <div class="jc">
+            <div class="jc-r1"><span class="side">SIDE A</span>
+              <span class="jc-name">MORNING INTERVALS</span><span class="jc-date">TUE 22 JUL</span></div>
+            <div class="jc-rule"></div>
+            <div class="jc-r2"><span>31:20 TOTAL</span><span>8 TRACKS</span><span>DOLBY B NR</span></div>
+          </div>
+          <div class="tracks">
+            <div class="trk run"><span class="no">A1</span><span class="nm">RUN</span>
+              <span class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+                <i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></span>
+              <span class="tm">12:04</span></div>
+            <div class="trk walk"><span class="no">A2</span><span class="nm">WALK</span>
+              <span class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+                <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+              <span class="tm" style="color:var(--blue)">6:30</span></div>
+            <div class="trk run"><span class="no">A3</span><span class="nm">RUN</span>
+              <span class="bar"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i>
+                <i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></span>
+              <span class="tm">9:12</span></div>
+            <div style="font-family:var(--mono);font-size:8.5px;color:var(--lcd-dim);
+                        padding:2px 0 4px 26px">+ 5 MORE TRACKS &rsaquo;</div>
+          </div>
+          <div class="tot">
+            <div><div class="v">3.24</div><div class="l">KM</div></div>
+            <div><div class="v hr">145</div><div class="l">AVG BPM</div></div>
+            <div><div class="v">280</div><div class="l">KCAL</div></div>
+          </div>
+          <div class="brand"><span>IEC TYPE II &middot; HIGH BIAS</span><span>SHUTTLX &middot; 90</span></div>
+        </div>
+
+        <!-- Week VU -->
+        <div class="vuw">
+          <div class="vuh"><span class="t">SIDE B &middot; THIS WEEK</span><span class="s">4 REC</span></div>
+          <div class="vub">
+            <div class="day"><div class="colm">
+              <i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i></i><i></i><i></i></div>
+              <div class="dl">MO</div><div class="dtm">28</div></div>
+            <div class="day"><div class="colm">
+              <i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i class="a"></i><i></i><i></i></div>
+              <div class="dl">TU</div><div class="dtm">31</div></div>
+            <div class="day"><div class="colm">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="dl">WE</div><div class="dtm">&nbsp;</div></div>
+            <div class="day"><div class="colm">
+              <i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i class="a"></i><i class="a"></i><i></i></div>
+              <div class="dl">TH</div><div class="dtm">45</div></div>
+            <div class="day"><div class="colm">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="dl">FR</div><div class="dtm">&nbsp;</div></div>
+            <div class="day"><div class="colm">
+              <i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i><i></i><i></i><i></i><i></i></div>
+              <div class="dl now">SA</div><div class="dtm">22</div></div>
+            <div class="day"><div class="colm">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+              <div class="dl">SU</div><div class="dtm">&nbsp;</div></div>
+          </div>
+          <div class="vuf"><span class="l">TOTAL RUNNING TIME</span><span class="v">2:06:14</span></div>
+        </div>
+      </div>
+    </div>
+    <ul class="ann">
+      <li data-n="1"><b>Opaque faceplates</b> — <code>showHubs:false</code>, so the shell frames the cards instead of punching through them.</li>
+      <li data-n="2"><b>Segments become a tracklist.</b> <code>session.segments</code> already exists and is already rendered as two badges — here each becomes a numbered track with a duration bar. Genuinely more informative <i>and</i> perfectly on-theme.</li>
+      <li data-n="3"><b>Week = 7 VU columns.</b> Segment height encodes duration, so the tiny "28m" text becomes redundant reinforcement rather than the only signal. Amber caps mark days over goal.</li>
+      <li data-n="4"><b>Chrome carries data now.</b> "8 TRACKS", "SIDE B · THIS WEEK", "4 REC" — the cassette vocabulary <i>says something true</i> instead of being a sticker.</li>
+      <li data-n="5"><b>Titles deduplicated.</b> The J-card names the workout; the header names the card. Never both.</li>
+      <li data-n="6"><b>Same <code>SegmentBar</code> primitive</b> drives the track bars, the week columns, and the live card's HR VU. One component, three surfaces.</li>
+    </ul>
+  </div>
+
+  <div class="col">
+    <span class="tag a">After — Clean</span>
+    <div class="phone" style="background:#0c0e13">
+      <div class="stack">
+        <div class="gcard">
+          <div class="gh"><span class="t">Last Workout</span><span class="d">Tue 22 Jul</span></div>
+          <div class="gname">Morning Intervals</div>
+          <div class="gseg">
+            <i style="flex:12.04;background:#30d158"></i><i style="flex:6.5;background:#ff9f0a"></i>
+            <i style="flex:9.2;background:#30d158"></i><i style="flex:3.6;background:#ff9f0a"></i>
+          </div>
+          <div class="glegend">
+            <span><span class="gdot" style="background:#30d158"></span>Run <b>21:16</b></span>
+            <span><span class="gdot" style="background:#ff9f0a"></span>Walk <b>10:04</b></span>
+          </div>
+          <div class="gtot">
+            <div><div class="l">Distance</div><div class="v">3.24<span style="font-size:12px;color:#8b95a6"> km</span></div></div>
+            <div><div class="l">Avg HR</div><div class="v" style="color:#ffd426">145</div></div>
+            <div><div class="l">Energy</div><div class="v">280</div></div>
+          </div>
+        </div>
+
+        <div class="gcard">
+          <div class="gh"><span class="t">This Week</span><span class="d">4 sessions &middot; 2h 06m</span></div>
+          <div class="gweek">
+            <div class="gday"><div class="gbar"><i style="height:62%"></i></div><div class="gdl">M</div></div>
+            <div class="gday"><div class="gbar"><i style="height:69%"></i></div><div class="gdl">T</div></div>
+            <div class="gday"><div class="gbar"></div><div class="gdl">W</div></div>
+            <div class="gday"><div class="gbar"><i style="height:100%"></i></div><div class="gdl">T</div></div>
+            <div class="gday"><div class="gbar"></div><div class="gdl">F</div></div>
+            <div class="gday"><div class="gbar today"><i style="height:49%"></i></div><div class="gdl" style="color:#fff">S</div></div>
+            <div class="gday"><div class="gbar"></div><div class="gdl">S</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap"><b>Identical data model, different material.</b> Clean uses a continuous stacked
+    bar (glass language) where Mixtape uses discrete segments (LCD language). Both read
+    duration proportionally; neither is a stock chart. Today's ring around today replaces the
+    "bigger dot".</p>
+  </div>
+</div>
+
+<h2>Empty states — the strongest brand moment, currently the weakest</h2>
+<div class="row">
+  <div class="col" style="flex:0 0 300px">
+    <span class="tag b">Before</span>
+    <div class="bcard"><div class="bhead"><span>A LAST WORKOUT</span><span>IEC TYPE II</span></div>
+      <div class="bbody" style="min-height:120px;align-items:center;justify-content:center">
+        <div style="text-align:center;color:var(--txt2)">
+          <div style="font-size:30px;opacity:.4">&#9711;</div>
+          <div style="font-family:var(--mono);font-size:12px;margin-top:7px">No workouts yet</div>
+        </div></div>
+      <div class="bfoot"><span>&#9664;&#9664; REW</span><span style="color:var(--blue)">0000:00</span><span>FF &#9654;&#9654;</span></div>
+    </div>
+    <p class="cap">Card renders its chrome around an apology. The theme is <i>most</i> absent exactly where a new user looks first.</p>
+  </div>
+
+  <div class="col" style="flex:0 0 300px">
+    <span class="tag a">After — Mixtape</span>
+    <div class="empty-mx">
+      <div class="empty-jc">
+        <div style="display:flex;align-items:center;gap:6px">
+          <span class="side">SIDE A</span>
+          <span class="ttl">&mdash; nothing recorded &mdash;</span></div>
+        <div class="rule"></div><div class="rule"></div><div class="rule"></div><div class="rule"></div>
+      </div>
+      <div class="empty-cta">
+        <div class="a">&#9679; PRESS REC ON YOUR WATCH</div>
+        <div class="b">YOUR FIRST TRACK LANDS HERE</div>
+      </div>
+    </div>
+    <p class="cap"><b>A blank J-card with ruled lines waiting to be filled in.</b> Instantly legible, on-theme, and it tells the user exactly what to do next. Zero new assets — the same J-card primitive with no content.</p>
+  </div>
+
+  <div class="col" style="flex:0 0 300px">
+    <span class="tag a">After — Clean</span>
+    <div class="gcard" style="min-height:150px;justify-content:center;align-items:center;text-align:center">
+      <div style="width:44px;height:44px;border-radius:50%;border:3px solid rgba(48,209,88,.35);
+                  border-right-color:transparent;transform:rotate(-40deg)"></div>
+      <div style="font-size:15px;font-weight:650;color:#fff;margin-top:2px">Your first workout</div>
+      <div style="font-size:12.5px;color:#8b95a6;max-width:210px;line-height:1.45">
+        Start a session on your Apple&nbsp;Watch and it will appear here.</div>
+    </div>
+    <p class="cap">The open glass ring — Clean's signature shape — as an unfinished loop. Same shape that appears as the live-card status glyph and the week's "today" outline.</p>
+  </div>
+
+  <div class="col" style="flex:1 1 300px">
+    <table>
+      <tr><th>Surface</th><th>Clean</th><th>Mixtape</th></tr>
+      <tr><td>Empty last workout</td><td>Open ring, "Your first workout"</td><td>Blank ruled J-card + PRESS REC</td></tr>
+      <tr><td>Empty week</td><td>7 empty rounded troughs, dimmed</td><td>7 unlit VU columns (all segments off)</td></tr>
+      <tr><td>Loading</td><td>Ring at 25% opacity, no spin</td><td>Ghost segments at 12% (the <code>88:88</code> trick)</td></tr>
+      <tr><td>Error / no sync</td><td>Ring in <code>ctaWarning</code> + retry</td><td>Misregistered J-card + <code>NO SIG</code></td></tr>
+    </table>
+    <p class="cap" style="margin-top:12px">Note the week empty state is <b>free</b>: an unlit VU column
+    is the same view with <code>litCount = 0</code>. The dot version needed no special case either —
+    but it also conveyed nothing. This one still shows the week's <i>shape</i>.</p>
+  </div>
+</div>
+
+<h2>The shared primitive</h2>
+<div class="row">
+  <div class="col" style="flex:1 1 100%">
+    <table>
+      <tr><th>Surface</th><th>Uses</th><th>Params</th></tr>
+      <tr><td>Live card HR (Proposal 1)</td><td>horizontal, 10 seg</td><td><code>level: hr/200</code>, bands g6/a2/r2</td></tr>
+      <tr><td>Last workout tracklist</td><td>horizontal, 12 seg × N tracks</td><td><code>level: segDuration/maxSeg</code>, tint <code>forStepType</code></td></tr>
+      <tr><td>Week strip</td><td><b>vertical</b>, 8 seg × 7 days</td><td><code>level: dayDuration/weekMax</code>, amber above goal</td></tr>
+      <tr><td>Watch HR (existing)</td><td>horizontal, 12 seg</td><td><code>MixtapeVUMeter</code> — already written</td></tr>
+      <tr><td>Timer hero HR (existing)</td><td>horizontal, 10 seg</td><td><code>hrVUStrip</code> — already written</td></tr>
+    </table>
+    <p class="cap" style="margin-top:12px">Two of these five already exist as near-duplicate private
+    implementations. Extracting <code>SegmentBar(count:level:axis:bands:)</code> makes this proposal
+    roughly <b>LOC-neutral or negative</b> while adding two surfaces.</p>
+  </div>
+</div>
+
+<div class="foot">
+<b>Motion.</b> Idle-state cards animate on <i>appear only</i> (segments fill left→right / bottom→up
+over 0.35s, staggered 20ms), then are completely static. No loops. Respect
+<code>accessibilityReduceMotion</code> → straight to final state. The dashboard is the app's most
+frequently opened screen; a permanent animation there is a battery and attention cost with
+no informational payload.
+</div>
+
+</div></body></html>

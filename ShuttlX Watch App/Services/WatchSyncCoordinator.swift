@@ -466,6 +466,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                             wm.pendingSummary = wm.buildCurrentSummary()
                             wm.stopWorkout()
                         }
+                    case "start":
+                        self.handleRemoteStart(message: message)
                     default: break
                     }
                 case "syncTheme", "syncTemplates", "syncMaxHR":
@@ -567,6 +569,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                             wm.pendingSummary = wm.buildCurrentSummary()
                             wm.stopWorkout()
                         }
+                    case "start":
+                        self.handleRemoteStart(message: message)
                     default: break
                     }
                     replyHandler(["status": "ok"])
@@ -643,7 +647,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             // is last-write-wins and would replay a stale stop command on every reconnect.
             if let action = userInfo["action"] as? String, action == "workoutControl",
                let command = userInfo["command"] as? String {
-                self.dispatchWorkoutControl(command: command, sentAt: userInfo["sentAt"] as? TimeInterval)
+                self.dispatchWorkoutControl(command: command, sentAt: userInfo["sentAt"] as? TimeInterval, message: userInfo)
                 return  // dedicated payload — no other keys to process
             }
             self.handleIncomingPayload(userInfo)
@@ -654,7 +658,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// `transferUserInfo` channel. Guards against stale delivery: transferUserInfo is
     /// FIFO-queued and can arrive minutes later — a stop meant for a prior workout must
     /// not kill the next one.
-    private func dispatchWorkoutControl(command: String, sentAt: TimeInterval?) {
+    private func dispatchWorkoutControl(command: String, sentAt: TimeInterval?, message: [String: Any] = [:]) {
         // Discard if the command is older than 2 minutes — it's almost certainly stale.
         if let sentAt = sentAt, Date().timeIntervalSince1970 - sentAt > 120 {
             logger.warning("workoutControl '\(command)' via transferUserInfo discarded — stale (\(Int(Date().timeIntervalSince1970 - sentAt))s old)")
@@ -672,8 +676,41 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 wm.pendingSummary = wm.buildCurrentSummary()
                 wm.stopWorkout()
             }
+        case "start":
+            // Stale window for start is tighter than stop — a late-arriving start
+            // from transferUserInfo is almost certainly from a previous session.
+            if let sentAt, Date().timeIntervalSince1970 - sentAt > 30 {
+                logger.warning("workoutControl 'start' via transferUserInfo discarded — stale (\(Int(Date().timeIntervalSince1970 - sentAt))s old)")
+            } else {
+                handleRemoteStart(message: message)
+            }
         default:
             logger.warning("workoutControl '\(command)' via transferUserInfo — unrecognised command")
+        }
+    }
+
+    /// Starts a watch-side workout in response to a remote-start command from iPhone.
+    /// Decodes the mode and optional template data from the message payload.
+    private func handleRemoteStart(message: [String: Any]) {
+        guard let wm = workoutManager, !wm.isWorkoutActive, !wm.isStarting else {
+            logger.info("handleRemoteStart ignored — workout already active or starting")
+            return
+        }
+        let mode = message["mode"] as? String ?? "freeRun"
+        logger.info("Remote start received — mode=\(mode)")
+        switch mode {
+        case "interval":
+            if let data = message["templateData"] as? Data,
+               let template = try? JSONDecoder().decode(WorkoutTemplate.self, from: data) {
+                wm.startIntervalWorkout(template: template)
+            } else {
+                logger.warning("Remote start 'interval' missing/invalid templateData — falling back to freeRun")
+                wm.startWorkout()
+            }
+        case "gymRecovery":
+            wm.startGymRecoveryWorkout()
+        default:
+            wm.startWorkout()
         }
     }
 

@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ShuttlX — watchOS Timer redesign</title>
+<style>
+:root{
+  --lcd:#39FF14; --lcd-dim:#1C8009; --led-red:#FF3333; --amber:#F2A61A; --blue:#4A8ACA;
+  --txt:#B3D1ED; --txt2:#8CADCC; --well:#051405; --paper:#EDE7D3; --ink:#1C2330;
+  --z1:#0a84ff; --z2:#30d158; --z3:#ffd426; --z4:#ff9f0a; --z5:#ff453a;   /* Clean hrZone1..5 */
+  --pg:#0a0c11; --pg2:#12151d; --hair:#242a36; --note:#7d8798; --good:#4ec9b0; --bad:#e06c75;
+  --mono:ui-monospace,"SF Mono",Menlo,monospace;
+  --sys:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:#d6dbe4;font-family:var(--sys);line-height:1.55;padding:32px 20px 80px}
+.wrap{max-width:1320px;margin:0 auto}
+h1{font-size:24px;margin:0 0 4px;letter-spacing:-.02em}
+h2{font-size:15px;margin:44px 0 14px;text-transform:uppercase;letter-spacing:.10em;color:var(--note);
+   border-bottom:1px solid var(--hair);padding-bottom:8px;font-weight:600}
+.sub{color:var(--note);font-size:13px;margin:0 0 8px}
+.lede{background:var(--pg2);border:1px solid var(--hair);border-left:3px solid var(--blue);
+      padding:14px 16px;border-radius:6px;font-size:13.5px;margin:20px 0}
+code{font-family:var(--mono);font-size:12px;color:var(--amber)}
+.tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.13em;
+     text-transform:uppercase;padding:3px 8px;border-radius:3px;margin-bottom:10px;font-weight:700}
+.tag.b{background:rgba(224,108,117,.13);color:var(--bad);border:1px solid rgba(224,108,117,.32)}
+.tag.a{background:rgba(78,201,176,.13);color:var(--good);border:1px solid rgba(78,201,176,.32)}
+.tag.n{background:rgba(74,138,202,.13);color:var(--blue);border:1px solid rgba(74,138,202,.32)}
+.row{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+.unit{flex:0 0 auto}
+.cap{font-size:12px;color:var(--note);margin-top:9px;max-width:270px}
+.cap b{color:#dfe5ee}
+
+/* ── 41mm watch: 176 × 215 pt, rendered at 1.5× = 264 × 322 ── */
+.watch{width:264px;height:322px;border-radius:46px;background:#000;position:relative;
+       overflow:hidden;border:5px solid #1b1e26;box-shadow:0 8px 26px rgba(0,0,0,.6)}
+.scr{position:absolute;inset:0;border-radius:41px;overflow:hidden;background:#000;
+     display:flex;flex-direction:column}
+.clock{position:absolute;top:9px;right:20px;font-family:var(--sys);font-size:13px;font-weight:600;
+       color:#fff;opacity:.92;z-index:9}
+.pad{padding:0 12px;display:flex;flex-direction:column;height:100%}
+.grow{flex:1}
+
+/* BEFORE bits */
+.b-top{height:4.5px;background:rgba(255,255,255,.10);margin:30px 6px 0;border-radius:3px;position:relative}
+.b-top i{position:absolute;inset:0 62% 0 0;background:rgba(48,209,88,.75);border-radius:3px}
+.b-name{font-family:var(--mono);font-size:12px;font-weight:600;color:#30d158;margin:7px 0 0}
+.b-hero{display:flex;align-items:baseline;gap:8px;margin-top:2px}
+.b-hero .n{font-family:var(--mono);font-size:56px;font-weight:700;color:#30d158;line-height:1.02}
+.b-hero .m{font-family:var(--mono);font-size:12px;font-weight:700;color:#30d158;line-height:1.15}
+.b-hero .m span{display:block;color:var(--txt2);font-weight:400}
+.b-cap{height:4.5px;background:rgba(48,209,88,.15);border-radius:3px;margin:3px 0 0;width:74%;position:relative}
+.b-cap i{position:absolute;inset:0 40% 0 0;background:#30d158;border-radius:3px}
+.b-next{font-family:var(--mono);font-size:10px;color:rgba(140,173,204,.6);margin-top:4px}
+.b-line{display:flex;align-items:center;margin-top:7px}
+.b-lbl{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--txt2);width:35px;flex:none}
+.b-val{font-family:var(--mono);font-size:44px;font-weight:700;color:#fff;margin-left:auto;line-height:1}
+.b-unit{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--txt2);margin-left:3px}
+.b-2up{display:flex;gap:8px;margin-top:6px}
+.b-2up>div{flex:1;display:flex;align-items:baseline;gap:4px}
+.b-2up .k{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--txt2)}
+.b-2up .v{font-family:var(--mono);font-size:20px;font-weight:700;color:#fff}
+.ghostcol{position:absolute;left:12px;top:96px;bottom:56px;width:35px;background:rgba(224,108,117,.16);
+          border:1px dashed rgba(224,108,117,.5);border-radius:4px}
+
+/* AFTER — Clean "Focus Rail" */
+.rail{display:flex;gap:2.5px;padding:0 8px;margin-top:8px;height:6px;flex:none}
+.rail i{flex:1;border-radius:2px;background:rgba(255,255,255,.13)}
+.rail i.done{background:rgba(48,209,88,.55)}
+.rail i.now{background:#30d158;box-shadow:0 0 7px rgba(48,209,88,.8)}
+.rail i.now.rest{background:#ff9f0a;box-shadow:0 0 7px rgba(255,159,10,.8)}
+.phase{display:flex;align-items:baseline;gap:6px;margin-top:9px}
+.phase .p{font-family:var(--sys);font-size:15px;font-weight:800;letter-spacing:.11em;color:#30d158}
+.phase .c{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--txt2);margin-left:auto}
+.hero{font-family:var(--mono);font-size:66px;font-weight:700;color:#fff;line-height:.98;
+      letter-spacing:-.035em;margin-top:-2px}
+.hero.rest{color:#ff9f0a}.hero.run{color:#30d158}
+.hrline{display:flex;align-items:flex-end;gap:6px;margin-top:9px}
+.hrline .v{font-family:var(--mono);font-size:46px;font-weight:700;line-height:.92;letter-spacing:-.03em}
+.hrline .u{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--txt2);padding-bottom:5px}
+.arc{margin-left:auto;display:flex;align-items:flex-end;gap:2.5px;padding-bottom:4px}
+.arc i{width:6px;border-radius:2px;background:rgba(255,255,255,.15)}
+.arc i:nth-child(1){height:7px}.arc i:nth-child(2){height:11px}.arc i:nth-child(3){height:15px}
+.arc i:nth-child(4){height:19px}.arc i:nth-child(5){height:23px}
+.arc i.on1{background:var(--z1)}.arc i.on2{background:var(--z2)}
+.arc i.on3{background:var(--z3)}.arc i.on4{background:var(--z4)}.arc i.on5{background:var(--z5)}
+.foot2{display:flex;gap:10px;margin-top:auto;padding-bottom:13px}
+.foot2>div{flex:1}
+.foot2 .k{font-family:var(--sys);font-size:10px;font-weight:700;letter-spacing:.1em;color:var(--txt2)}
+.foot2 .v{font-family:var(--mono);font-size:23px;font-weight:700;color:#fff;line-height:1.1;
+          letter-spacing:-.02em}
+.nextchip{font-family:var(--sys);font-size:11px;font-weight:600;color:rgba(140,173,204,.75);
+          margin-top:5px}
+.nextchip b{color:#ff9f0a;font-weight:700}
+
+/* mixtape reference */
+.mx{background:var(--well);height:100%;padding:0 11px;display:flex;flex-direction:column}
+.mx-np{display:flex;align-items:center;gap:5px;margin-top:30px}
+.mx-side{font-family:var(--mono);font-size:10px;font-weight:800;background:#FFB02E;color:var(--ink);
+         border-radius:9px;padding:2px 6px}
+.mx-ph{font-family:var(--mono);font-size:12px;font-weight:800;color:var(--lcd)}
+.mx-hero{font-family:var(--mono);font-size:58px;font-weight:700;color:var(--lcd);line-height:1.02;
+         text-shadow:0 0 8px rgba(57,255,20,.5)}
+.mx-hr{display:flex;align-items:baseline;gap:5px;margin-top:2px}
+.mx-vu{display:flex;gap:2px;flex:1}
+.mx-vu i{flex:1;height:11px;border-radius:2px;background:rgba(28,128,9,.25)}
+.mx-vu i.g{background:var(--lcd)}.mx-vu i.a{background:#FFB02E}
+.mx-hrv{font-family:var(--mono);font-size:38px;font-weight:700;color:var(--amber);line-height:1}
+.mx-u{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--txt2)}
+.mx-m{display:flex;margin-top:5px}
+.mx-m .k{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--txt2)}
+.mx-m .v{font-family:var(--mono);font-size:22px;font-weight:700;color:var(--lcd);margin-left:auto}
+
+.ann{list-style:none;padding:0;margin:14px 0 0;font-size:12.5px;max-width:560px}
+.ann li{padding:7px 0 7px 26px;border-bottom:1px solid var(--hair);position:relative;color:#b6bdc9}
+.ann li:before{content:attr(data-n);position:absolute;left:0;top:7px;width:17px;height:17px;
+  border-radius:50%;background:var(--blue);color:#08111c;font-size:10px;font-weight:800;
+  display:flex;align-items:center;justify-content:center;font-family:var(--mono)}
+.ann b{color:#e6ebf2;font-weight:650}
+table{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:10px}
+th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--hair);vertical-align:top}
+th{color:var(--note);font-size:10.5px;text-transform:uppercase;letter-spacing:.09em}
+.budget{font-family:var(--mono);font-size:12px;background:var(--pg2);border:1px solid var(--hair);
+        border-radius:6px;padding:14px 16px;white-space:pre;overflow-x:auto;color:#b6bdc9;margin-top:12px}
+.foot{margin-top:46px;padding-top:16px;border-top:1px solid var(--hair);color:var(--note);font-size:12px}
+</style>
+</head>
+<body><div class="wrap">
+
+<h1>Proposal 2 — watchOS Timer screen</h1>
+<p class="sub">Surface: <code>ShuttlX Watch App/Views/TrainingView+Metrics.swift</code> → <code>fullWorkoutDisplayTab</code> · 41mm, 176 × 215pt, shown at 1.5×</p>
+
+<div class="lede">
+<b>Scope note.</b> Mixtape's watch face is already redesigned and good (<code>MixtapeWatchDeck</code>).
+The generic one is the <b>Clean</b> path — the <code>if themeManager.current.id != "mixtape"</code>
+branch. That branch has three concrete problems: a fixed <code>labelWidth = h * 0.20</code>
+column burning ~20% of a 176pt-wide screen on the words "DIST"/"PACE"; <b>three simultaneous
+progress indicators</b> (<code>OverallProgressStrip</code> + the hero's own capsule +
+<code>IntervalStepWash</code>); and up to 7 visible elements against a 5-element budget.
+</div>
+
+<h2>Before → After (interval mode)</h2>
+<div class="row">
+
+  <div class="unit">
+    <span class="tag b">Before — Clean, interval</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div>
+      <div class="pad" style="padding:0 8px">
+        <div class="b-top"><i></i></div>
+        <div class="b-name">MORNING INTERVALS</div>
+        <div class="b-hero"><span class="n">01:48</span><span class="m">WORK<span>3/8</span></span></div>
+        <div class="b-cap"><i></i></div>
+        <div class="b-next">NEXT &rsaquo; REST 1:00</div>
+        <div class="b-line"><span class="b-lbl">HR</span>
+          <span class="b-val" style="color:#ffd426">142</span><span class="b-unit">BPM</span></div>
+        <div class="b-2up"><div><span class="k">DIST</span><span class="v">0.42</span></div>
+          <div><span class="k">PACE</span><span class="v">5:38</span></div></div>
+        <div class="b-2up"><div><span class="k">TIME</span><span class="v">12:34</span></div>
+          <div><span class="k">CAL</span><span class="v">38</span></div></div>
+        <div class="grow"></div>
+      </div>
+      <div class="ghostcol"></div>
+    </div></div>
+    <p class="cap"><b>Dashed red</b> = the fixed label column, ~20% of screen width spent on four words.</p>
+  </div>
+
+  <div class="unit">
+    <span class="tag a">After — Clean "Focus Rail"</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div>
+      <div class="pad">
+        <div class="rail">
+          <i class="done"></i><i class="done"></i><i class="now"></i><i></i>
+          <i></i><i></i><i></i><i></i>
+        </div>
+        <div class="phase"><span class="p">RUN</span><span class="c">3/8</span></div>
+        <div class="hero run">1:48</div>
+        <div class="nextchip">next &rsaquo; <b>WALK</b> 1:00</div>
+        <div class="hrline">
+          <span class="v" style="color:var(--z3)">142</span><span class="u">BPM</span>
+          <span class="arc"><i class="on1"></i><i class="on2"></i><i class="on3"></i><i></i><i></i></span>
+        </div>
+        <div class="grow"></div>
+        <div class="foot2">
+          <div><div class="k">DIST</div><div class="v">0.42</div></div>
+          <div><div class="k">PACE</div><div class="v">5:38</div></div>
+        </div>
+      </div>
+    </div></div>
+    <p class="cap"><b>Countdown grows 56 → 66pt.</b> One progress encoding, not three. Label column deleted; labels become 10pt captions <i>above</i> values.</p>
+  </div>
+
+  <div class="unit" style="max-width:600px">
+    <ul class="ann">
+      <li data-n="1"><b>The step rail replaces all three progress indicators.</b> One tick per interval step: filled = done, glowing = current, tinted by step type. It answers "how far in?" <i>and</i> "how many left?" — the continuous bar answered neither. 6pt tall, full-bleed, one animation per step boundary instead of a per-second bar redraw.</li>
+      <li data-n="2"><b>Label column deleted.</b> <code>labelWidth = h * 0.20</code> ≈ 43pt of a 176pt screen. Labels move above values at 10pt; values gain ~25% width and stop needing <code>minimumScaleFactor(0.4)</code> — the fix that exists today because <code>"2.15 km"</code> was clipping.</li>
+      <li data-n="3"><b>Countdown 56 → 66pt</b> (<code>h * 0.26</code> → <code>h * 0.31</code>). It is the most decision-critical number during interval work and should dominate. Leading zero trimmed ("1:48"), matching what Mixtape already does.</li>
+      <li data-n="4"><b>Phase word is the second-loudest thing</b> at 15pt/800 with wide tracking — readable mid-treadmill without parsing the countdown.</li>
+      <li data-n="5"><b>HR zone arc → 5 vertical ticks.</b> The current <code>HRZoneArc</code> <code>Canvas</code> draws 5 arc strokes at 34×17pt; ascending bars read faster at that size and cost less to redraw. Colours unchanged (<code>hrZone1…5</code>).</li>
+      <li data-n="6"><b>Workout name removed.</b> You chose it 40 seconds ago; it is the least useful pixel on the screen and it forced a 5th row. The step rail carries identity instead.</li>
+      <li data-n="7"><b>DIST/PACE pinned to the bottom.</b> Fixed footer = stable layout across all states, so nothing jumps when the NEXT chip appears or the HR banner fires.</li>
+    </ul>
+  </div>
+</div>
+
+<h2>Free-run mode + the Mixtape face for comparison</h2>
+<div class="row">
+  <div class="unit">
+    <span class="tag a">After — Clean, free run</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div>
+      <div class="pad">
+        <div class="rail"><i class="now" style="flex:1"></i></div>
+        <div class="phase"><span class="p" style="color:var(--txt2)">ELAPSED</span></div>
+        <div class="hero">24:07</div>
+        <div class="hrline">
+          <span class="v" style="color:var(--z2)">128</span><span class="u">BPM</span>
+          <span class="arc"><i class="on1"></i><i class="on2"></i><i></i><i></i><i></i></span>
+        </div>
+        <div class="grow"></div>
+        <div class="foot2">
+          <div><div class="k">DIST</div><div class="v">3.84</div></div>
+          <div><div class="k">PACE</div><div class="v">6:16</div></div>
+        </div>
+      </div>
+    </div></div>
+    <p class="cap">Free run has no steps → the rail becomes a single continuous bar. Same skeleton, 4 elements.</p>
+  </div>
+
+  <div class="unit">
+    <span class="tag n">Reference — Mixtape (already shipped)</span>
+    <div class="watch"><div class="scr"><div class="clock" style="color:#8CADCC">10:09</div>
+      <div class="mx">
+        <div class="mx-np"><span class="mx-side">SIDE A</span>
+          <span style="color:var(--lcd);font-size:12px">&#9654;</span><span class="mx-ph">RUN</span></div>
+        <div class="mx-hero">1:48</div>
+        <div class="mx-hr">
+          <span class="mx-vu"><i class="g"></i><i class="g"></i><i class="g"></i><i class="g"></i>
+            <i class="g"></i><i class="g"></i><i class="g"></i><i class="a"></i><i></i><i></i><i></i><i></i></span>
+          <span class="mx-hrv">142</span><span class="mx-u">BPM</span></div>
+        <div class="mx-m"><span class="k">DIST</span><span class="v">0.42</span></div>
+        <div class="mx-m"><span class="k">PACE</span><span class="v">5:38</span></div>
+        <div class="grow"></div>
+      </div>
+    </div></div>
+    <p class="cap">Not changing this. Shown to confirm the two faces now share a <b>skeleton</b> — phase → hero → HR → two metrics — while looking nothing alike.</p>
+  </div>
+
+  <div class="unit" style="max-width:430px">
+    <p style="font-size:13.5px;color:#b6bdc9">
+      <b style="color:#e6ebf2">The generalization.</b> Both faces are:</p>
+    <div class="budget">1  progress   ← theme's signature shape
+2  phase      ← what am I doing
+3  HERO       ← the number that decides
+4  HR + zone  ← am I safe
+5  two-up     ← DIST / PACE</div>
+    <p style="font-size:12.5px;color:#b6bdc9;margin-top:12px">Exactly 5 elements — the watch budget. Slot 1 is the only slot that carries theme identity:
+    Clean = step-tick rail (glass ring language, flattened); Mixtape = VU + LCD well.
+    A revived theme supplies one <code>Shape</code>/<code>Canvas</code> for slot 1 and inherits the rest.</p>
+  </div>
+</div>
+
+<h2>Every state designed</h2>
+<div class="row">
+
+  <div class="unit"><span class="tag n">Paused</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div><div class="pad">
+      <div class="rail"><i class="done"></i><i class="done"></i><i class="now" style="background:#ff9f0a;box-shadow:none"></i>
+        <i></i><i></i><i></i><i></i><i></i></div>
+      <div class="phase"><span class="p" style="color:#ff9f0a">PAUSED</span><span class="c">3/8</span></div>
+      <div class="hero" style="color:#ff9f0a">1:48</div>
+      <div class="nextchip">tap screen to resume</div>
+      <div class="hrline"><span class="v" style="color:var(--z2)">118</span><span class="u">BPM</span>
+        <span class="arc"><i class="on1"></i><i class="on2"></i><i></i><i></i><i></i></span></div>
+      <div class="grow"></div>
+      <div class="foot2"><div><div class="k">DIST</div><div class="v">0.42</div></div>
+        <div><div class="k">PACE</div><div class="v">5:38</div></div></div>
+    </div></div></div>
+    <p class="cap">Rail stops glowing — motion absence <i>is</i> the pause cue. Amber across phase + hero.</p>
+  </div>
+
+  <div class="unit"><span class="tag n">No HR yet / lost</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div><div class="pad">
+      <div class="rail"><i class="done"></i><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="phase"><span class="p">RUN</span><span class="c">2/8</span></div>
+      <div class="hero run">2:12</div>
+      <div class="hrline"><span class="v" style="color:rgba(140,173,204,.55)">&mdash;&mdash;</span>
+        <span class="u">BPM</span>
+        <span class="arc"><i></i><i></i><i></i><i></i><i></i></span></div>
+      <div style="font-family:var(--sys);font-size:10.5px;font-weight:700;color:#ff9f0a;
+                  border:1px solid rgba(255,159,10,.55);border-radius:5px;padding:3px 6px;margin-top:6px;
+                  line-height:1.3">No heart rate &mdash; check wrist &amp; Health access</div>
+      <div class="grow"></div>
+      <div class="foot2"><div><div class="k">DIST</div><div class="v">0.18</div></div>
+        <div><div class="k">PACE</div><div class="v">&mdash;</div></div></div>
+    </div></div></div>
+    <p class="cap">Banner sits in the <i>reserved</i> slot below HR, so the hero and footer never move. Keeps today's copy.</p>
+  </div>
+
+  <div class="unit"><span class="tag n">HR high &mdash; ease off</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div><div class="pad">
+      <div class="rail"><i class="done"></i><i class="done"></i><i class="done"></i><i class="now"></i>
+        <i></i><i></i><i></i><i></i></div>
+      <div class="phase"><span class="p">RUN</span><span class="c">4/8</span></div>
+      <div class="hero run">0:51</div>
+      <div class="hrline"><span class="v" style="color:var(--z5)">176</span><span class="u">BPM</span>
+        <span class="arc"><i class="on1"></i><i class="on2"></i><i class="on3"></i><i class="on4"></i><i class="on5"></i></span></div>
+      <div style="font-family:var(--sys);font-size:11px;font-weight:800;color:#ff453a;
+                  border:1px solid #ff453a;border-radius:5px;padding:3px 6px;margin-top:6px">
+        Heart rate high &mdash; ease off</div>
+      <div class="grow"></div>
+      <div class="foot2"><div><div class="k">DIST</div><div class="v">0.61</div></div>
+        <div><div class="k">PACE</div><div class="v">4:52</div></div></div>
+    </div></div></div>
+    <p class="cap"><b>Cardiac-rehab critical.</b> Zone 5 = all 5 ticks + red numeral + worded banner. Three redundant encodings, none colour-only.</p>
+  </div>
+
+  <div class="unit"><span class="tag n">Always-On (luminance reduced)</span>
+    <div class="watch"><div class="scr" style="background:#000"><div class="clock" style="opacity:.5">10:09</div>
+      <div class="pad">
+        <div class="rail" style="opacity:.45"><i class="done"></i><i class="done"></i><i class="now" style="box-shadow:none"></i>
+          <i></i><i></i><i></i><i></i><i></i></div>
+        <div class="phase"><span class="p" style="color:rgba(48,209,88,.62)">RUN</span></div>
+        <div class="hero" style="color:rgba(255,255,255,.66)">1:48</div>
+        <div class="hrline"><span class="v" style="color:rgba(255,212,38,.62)">142</span>
+          <span class="u" style="opacity:.6">BPM</span></div>
+        <div class="grow"></div>
+      </div>
+    </div></div>
+    <p class="cap">3 elements, ≤ 66% luminance, no glow, no per-second redraw. Extends today's <code>aodMinimalView</code> with the phase word + rail.</p>
+  </div>
+
+  <div class="unit"><span class="tag n">Starting / no data</span>
+    <div class="watch"><div class="scr"><div class="clock">10:09</div><div class="pad">
+      <div class="rail"><i class="now"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="phase"><span class="p" style="color:#0a84ff">WARM UP</span><span class="c">1/8</span></div>
+      <div class="hero" style="color:#0a84ff">5:00</div>
+      <div class="nextchip">next &rsaquo; <b style="color:#30d158">RUN</b> 2:00</div>
+      <div class="hrline"><span class="v" style="color:rgba(140,173,204,.55)">&mdash;&mdash;</span>
+        <span class="u">BPM</span>
+        <span class="arc"><i></i><i></i><i></i><i></i><i></i></span></div>
+      <div class="grow"></div>
+      <div class="foot2"><div><div class="k">DIST</div><div class="v">0.00</div></div>
+        <div><div class="k">PACE</div><div class="v">&mdash;</div></div></div>
+    </div></div></div>
+    <p class="cap">Em-dashes, never spinners or zeros-that-look-real. Matches the existing <code>"—"</code> pace guard.</p>
+  </div>
+</div>
+
+<h2>Height budget — 41mm (215pt tall, ~180pt usable)</h2>
+<div class="budget">safe top inset (system clock)        30pt
+step rail                             6pt
+gap                                   9pt
+phase row                            18pt
+HERO countdown                       66pt   ← h * 0.31
+next chip (interval only)            14pt
+HR row                               46pt
+─────────────────────────────────────────
+flexible spacer                    ≥  4pt
+DIST / PACE footer                   34pt
+bottom padding                       13pt
+─────────────────────────────────────────
+TOTAL                               240pt of 215pt visible…
+
+…which is why the NEXT chip and the HR banner share ONE reserved
+slot (max 1 visible at a time), and the footer is `Spacer()`-pushed:
+
+  worst case (banner shown):  30+6+9+18+66+46+16+34+13 = 238  ✗
+  → hero drops to h*0.26 (56pt) when a banner is present   = 228 ✗
+  → AND next-chip suppressed while banner shown            = 214 ✓
+
+Rule: hero size is a function of how many optional rows are live.
+Never let both the banner and the next-chip render together.</div>
+
+<table>
+  <tr><th>Element</th><th>41mm</th><th>45/49mm</th><th>Notes</th></tr>
+  <tr><td>Hero countdown</td><td>66pt (<code>h*.31</code>)</td><td>up to 78pt</td><td>drops to <code>h*.26</code> if a banner is live</td></tr>
+  <tr><td>HR numeral</td><td>46pt (<code>h*.21</code>)</td><td>scales</td><td><code>ShuttlXColor.forHRZone</code></td></tr>
+  <tr><td>Phase word</td><td>18pt/800, tracking .11em</td><td>scales</td><td><code>forStepType</code></td></tr>
+  <tr><td>Footer values</td><td>23pt (<code>h*.107</code>)</td><td>scales</td><td>was 16pt in the two-up</td></tr>
+  <tr><td>Labels</td><td>10pt/700</td><td>10pt</td><td>above value, not beside</td></tr>
+  <tr><td>Step rail</td><td>6pt, full-bleed</td><td>6pt</td><td>ticks ≥ 3pt wide → cap at 12 ticks, then group</td></tr>
+</table>
+
+<div class="foot">
+<b>Performance.</b> Net redraw goes <i>down</i>: the per-second continuous progress bar
+(<code>OverallProgressStrip</code>, <code>.animation(.linear(duration: 1))</code>) and the hero's
+capsule are both replaced by a rail that changes only at step boundaries — roughly 8 updates
+per workout instead of ~1,800. No idle animation. All shapes are static
+<code>RoundedRectangle</code>; no <code>Canvas</code>, no <code>TimelineView</code>, no gradients.
+</div>
+
+</div></body></html>

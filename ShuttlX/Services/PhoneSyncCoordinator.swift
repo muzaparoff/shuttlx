@@ -253,9 +253,42 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Watch Workout Control
 
+    /// Called when the Watch stops its workout — used to stop the paired iPhone workout.
+    var onRemoteWorkoutStopped: (() -> Void)?
+
     func pauseWatchWorkout() { sendWorkoutControl("pause") }
     func resumeWatchWorkout() { sendWorkoutControl("resume") }
     func stopWatchWorkout() { sendWorkoutControl("stop") }
+
+    /// Sends a remote-start command to the Watch so both devices run in sync.
+    /// Uses the same dual-channel pattern as pause/resume/stop but with a 30s
+    /// stale window — a start that arrives late via transferUserInfo is useless.
+    func startWatchWorkout(mode: String, template: WorkoutTemplate? = nil) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            log("workoutControl 'start' skipped — WCSession not activated")
+            return
+        }
+        var message: [String: Any] = [
+            "action": "workoutControl",
+            "command": "start",
+            "mode": mode,
+            "sentAt": Date().timeIntervalSince1970
+        ]
+        if let template, let data = try? JSONEncoder().encode(template) {
+            message["templateData"] = data
+        }
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
+                Task { @MainActor in self?.log("workoutControl 'start' delivered via sendMessage") }
+            }, errorHandler: { [weak self] error in
+                Task { @MainActor in self?.log("workoutControl 'start' sendMessage failed: \(error.localizedDescription)") }
+            })
+        } else {
+            log("workoutControl 'start' — Watch not reachable, relying on transferUserInfo")
+        }
+        WCSession.default.transferUserInfo(message)
+        log("workoutControl 'start' sent — mode=\(mode)")
+    }
 
     /// Sends a pause/resume/stop command to the Watch on two channels:
     ///
@@ -328,6 +361,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         liveMetricsTimeoutTimer = nil
         if wasActive {
             log("Live workout state cleared — Live Activity ended")
+            onRemoteWorkoutStopped?()
         }
     }
 

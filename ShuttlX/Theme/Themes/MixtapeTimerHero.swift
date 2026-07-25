@@ -27,16 +27,17 @@ struct MixtapeTimerHero: View {
 
     // MARK: - Cassette palette (hard-wired — this IS the Mixtape theme definition)
 
-    private let labelPaper       = Color(red: 0.929, green: 0.906, blue: 0.827)
-    private let labelInk         = Color(red: 0.110, green: 0.137, blue: 0.188)
+    private let labelPaper       = Color(red: 0.937, green: 0.906, blue: 0.824) // #EFE7D2 labelCream
+    private let labelInk         = Color(red: 0.137, green: 0.125, blue: 0.102) // #23201A warm ink
     private let feltPad          = Color(red: 0.722, green: 0.271, blue: 0.227)
-    private let lcdGreen         = Color(red: 0.22,  green: 1.0,  blue: 0.08)
-    private let lcdGreenDim      = Color(red: 0.11,  green: 0.50, blue: 0.04)
-    private let accentBlue       = Color(red: 0.29,  green: 0.54, blue: 0.79)
-    private let borderBlue       = Color(red: 0.29,  green: 0.42, blue: 0.60)
-    private let ledRed           = Color(red: 1.0,   green: 0.20, blue: 0.20)
-    private let amberPause       = Color(red: 0.95,  green: 0.65, blue: 0.10)
-    private let textSecondary    = Color(red: 0.55,  green: 0.68, blue: 0.80)
+    private let lcdGreen         = Color(red: 1.0,   green: 0.769, blue: 0.302) // #FFC44D amber LCD
+    private let lcdGreenDim      = Color(red: 0.431, green: 0.353, blue: 0.133) // #6E5A22 dim amber
+    private let vuGreen          = Color(red: 0.243, green: 0.812, blue: 0.427) // #3ECF6D VU bar low-HR green
+    private let accentBlue       = Color(red: 0.29,  green: 0.54, blue: 0.79)   // keep for step rest / pace needle
+    private let borderBlue       = Color(red: 0.082, green: 0.090, blue: 0.102) // #15171A bodyDeep
+    private let ledRed           = Color(red: 1.0,   green: 0.231, blue: 0.188) // #FF3B30
+    private let amberPause       = Color(red: 1.0,   green: 0.639, blue: 0.094) // #FFA318 ledAmber
+    private let textSecondary    = Color(red: 0.557, green: 0.584, blue: 0.616) // #8E959D chrome-dim
 
     // MARK: - State
 
@@ -158,13 +159,13 @@ struct MixtapeTimerHero: View {
                 if isComplete {
                     Text("SIDE A COMPLETE")
                         .font(.system(.caption, design: .monospaced).weight(.heavy))
-                        .foregroundStyle(lcdGreen).italic()
+                        .foregroundStyle(lcdGreen)
                         .lineLimit(1).minimumScaleFactor(0.65)
                 } else {
                     Text(controller.workoutName.uppercased())
                         .font(.system(.caption, design: .monospaced).weight(.heavy))
                         .foregroundStyle(controller.isPaused ? amberPause : labelInk)
-                        .italic().lineLimit(1).minimumScaleFactor(0.65)
+                        .lineLimit(1).minimumScaleFactor(0.65)
                 }
 
                 Spacer()
@@ -209,7 +210,7 @@ struct MixtapeTimerHero: View {
 
         return ZStack {
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(red: 0.01, green: 0.06, blue: 0.01))
+                .fill(Color(red: 0.082, green: 0.094, blue: 0.059)) // #14180F lcdSubstrate
                 .overlay(
                     RoundedRectangle(cornerRadius: 10)
                         .stroke(lcdGreenDim.opacity(0.5), lineWidth: 1.5)
@@ -221,14 +222,16 @@ struct MixtapeTimerHero: View {
                     Text("88:88")
                         .font(.system(size: 56, weight: .bold, design: .monospaced))
                         .monospacedDigit()
-                        .foregroundStyle(lcdGreen.opacity(0.05))
+                        .tracking(-1.0)
+                        .foregroundStyle(lcdGreen.opacity(0.06))
 
                     // Active timer
                     Text(bigTimerText)
                         .font(.system(size: 56, weight: .bold, design: .monospaced))
                         .monospacedDigit()
+                        .tracking(-1.0)
                         .foregroundStyle(activeColor)
-                        .shadow(color: activeColor.opacity(0.55), radius: 8)
+                        .shadow(color: activeColor.opacity(0.45), radius: 10)
                         .contentTransition(.numericText())
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
@@ -458,7 +461,7 @@ struct MixtapeTimerHero: View {
         .background(
             ZStack(alignment: .leading) {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(red: 0.04, green: 0.07, blue: 0.10))
+                    .fill(Color(red: 0.082, green: 0.090, blue: 0.102)) // #15171A bodyDeep
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
                             .stroke(borderBlue.opacity(0.4), lineWidth: 1)
@@ -522,7 +525,7 @@ struct MixtapeTimerHero: View {
                 ForEach(0..<10, id: \.self) { idx in
                     let lit = idx < activeCells
                     let segColor: Color = {
-                        if idx < 6 { return lcdGreen }
+                        if idx < 6 { return vuGreen }   // ctaPlay green for low-HR effort
                         if idx < 8 { return amberPause }
                         return ledRed
                     }()

@@ -36,15 +36,35 @@ extension View {
         case .lcd:
             VStack(spacing: 0) {
                 if let label = headerLabel {
-                    CassetteHeaderView(label: label)
+                    HStack(spacing: 0) {
+                        Rectangle()
+                            .fill(Color(red: 0.690, green: 0.220, blue: 0.180)) // #B0392E labelRule
+                            .frame(width: 2.5)
+                        Text(label.uppercased())
+                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                            .tracking(0.1)
+                            .foregroundStyle(Color(red: 0.137, green: 0.125, blue: 0.102)) // #23201A labelInk
+                            .padding(.leading, 6)
+                            .padding(.trailing, 8)
+                        Spacer()
+                    }
+                    .frame(height: 22)
+                    .background(Color(red: 0.937, green: 0.906, blue: 0.824)) // #EFE7D2 labelCream
                 }
                 self.padding(0)
-                if headerLabel != nil {
-                    ReelCounterView()
-                }
             }
-            .background(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).fill(theme.colors.surface))
-            .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder, lineWidth: 1))
+            .background(
+                RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius)
+                    .fill(LinearGradient(
+                        colors: [
+                            Color(red: 0.227, green: 0.243, blue: 0.263), // #3A3E43 bodyTop
+                            Color(red: 0.141, green: 0.153, blue: 0.169)  // #24272B bodyBase
+                        ],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ))
+            )
+            .overlay(RoundedRectangle(cornerRadius: theme.effects.cardCornerRadius).stroke(theme.colors.surfaceBorder.opacity(0.35), lineWidth: 1))
         }
     }
 
@@ -118,7 +138,7 @@ extension View {
         self
             .background(
                 ZStack {
-                    Color(red: 0.05, green: 0.08, blue: 0.13)
+                    Color(red: 0.141, green: 0.153, blue: 0.169) // #24272B gunmetal body
                     // Subtle horizontal texture lines (plastic body)
                     Canvas { context, size in
                         let lineColor = Color.white.opacity(0.015)
@@ -148,58 +168,6 @@ extension View {
             )
     }
 
-}
-
-// MARK: - Cassette Header (Mixtape)
-
-struct CassetteHeaderView: View {
-    let label: String
-
-    var body: some View {
-        HStack {
-            HStack(spacing: 3) {
-                Text("A")
-                    .font(.system(size: 7, weight: .bold, design: .monospaced))
-                    .padding(.horizontal, 3)
-                    .padding(.vertical, 1)
-                    .background(ThemeManager.shared.colors.surfaceBorder.opacity(0.3))
-                    .cornerRadius(2)
-                Text(label)
-                    .font(.system(size: 7, weight: .semibold, design: .monospaced))
-            }
-            Spacer()
-            Text("IEC TYPE II")
-                .font(.system(size: 6, weight: .regular, design: .monospaced))
-        }
-        .foregroundStyle(ThemeManager.shared.colors.surfaceBorder)
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(ThemeManager.shared.colors.surfaceBorder.opacity(0.08))
-    }
-}
-
-// MARK: - Reel Counter (Mixtape)
-
-struct ReelCounterView: View {
-    var body: some View {
-        HStack {
-            Text("◀◀ REW")
-            Spacer()
-            Text("0000:00")
-                .foregroundStyle(ThemeManager.shared.colors.ctaPrimary)
-            Spacer()
-            Text("FF ▶▶")
-        }
-        .font(.system(size: 7, weight: .medium, design: .monospaced))
-        .foregroundStyle(ThemeManager.shared.colors.surfaceBorder.opacity(0.5))
-        .padding(.horizontal, 8)
-        .padding(.vertical, 3)
-        .overlay(alignment: .top) {
-            Rectangle()
-                .fill(ThemeManager.shared.colors.surfaceBorder.opacity(0.15))
-                .frame(height: 1)
-        }
-    }
 }
 
 

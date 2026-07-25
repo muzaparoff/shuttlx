@@ -105,7 +105,12 @@ struct DashboardView: View {
                     // 5. Week summary
                     WeekSummaryCard(sessions: dataManager.sessions)
 
-                    // 6. Streak badge
+                    // 6. Resting tape deck (Mixtape only — fills dead zone + anchors theme identity)
+                    if ThemeManager.shared.current.id == "mixtape" && !sharedData.isWorkoutActiveOnWatch {
+                        MixtapeDeckWindow(lastSessionDuration: cachedLastSession?.duration)
+                    }
+
+                    // 7. Streak badge
                     if cachedStreak > 1 {
                         StreakBadge(streakDays: cachedStreak)
                     }

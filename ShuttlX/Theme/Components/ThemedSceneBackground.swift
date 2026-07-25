@@ -76,18 +76,20 @@ struct MixtapeCassetteScene: View, ThemedScene {
     }
 
     // MARK: - Cassette palette (hard-wired — this IS the Mixtape theme definition)
+    // Walkman hardware refresh: smoke-blue shell → brushed gunmetal chassis,
+    // blue brand text → chrome, neon LCD green → amber #FFC44D.
 
-    private let shellTop        = Color(red: 0.149, green: 0.188, blue: 0.247) // #26303F
-    private let shellBottom     = Color(red: 0.086, green: 0.118, blue: 0.161) // #161E29
-    private let screwRim        = Color(red: 0.541, green: 0.576, blue: 0.627) // #8A93A0
-    private let screwRecess     = Color(red: 0.227, green: 0.259, blue: 0.314) // #3A4250
-    private let hubWindowBezel  = Color(red: 0.055, green: 0.078, blue: 0.125) // #0E1420
-    private let labelPaper      = Color(red: 0.929, green: 0.906, blue: 0.827) // #EDE7D3
-    private let labelInk        = Color(red: 0.110, green: 0.137, blue: 0.188) // #1C2330
-    private let feltPad         = Color(red: 0.722, green: 0.271, blue: 0.227) // #B8453A
-    private let brandText       = Color(red: 0.541, green: 0.676, blue: 0.800) // #8CADCC
-    private let tabWell         = Color(red: 0.043, green: 0.063, blue: 0.094) // #0B1018
-    private let lcdGreen        = Color(red: 0.22,  green: 1.0,  blue: 0.08)   // #39FF14
+    private let shellTop        = Color(red: 0.227, green: 0.243, blue: 0.263) // #3A3E43 brushed gunmetal (lighter than cards so cards look recessed)
+    private let shellBottom     = Color(red: 0.165, green: 0.180, blue: 0.196) // #2A2E32 chassis floor
+    private let screwRim        = Color(red: 0.784, green: 0.804, blue: 0.827) // #C8CDD3 chrome
+    private let screwRecess     = Color(red: 0.180, green: 0.196, blue: 0.216) // #2E3237 surface
+    private let hubWindowBezel  = Color(red: 0.082, green: 0.090, blue: 0.102) // #15171A bodyDeep
+    private let labelPaper      = Color(red: 0.929, green: 0.906, blue: 0.827) // #EDE7D3 (unchanged)
+    private let labelInk        = Color(red: 0.110, green: 0.137, blue: 0.188) // #1C2330 (unchanged)
+    private let feltPad         = Color(red: 0.722, green: 0.271, blue: 0.227) // #B8453A (unchanged)
+    private let brandText       = Color(red: 0.784, green: 0.804, blue: 0.827) // #C8CDD3 chrome (was blue #8CADCC)
+    private let tabWell         = Color(red: 0.082, green: 0.090, blue: 0.102) // #15171A bodyDeep
+    private let lcdAmber        = Color(red: 1.0,   green: 0.769, blue: 0.302) // #FFC44D amber LCD
 
     var body: some View {
         GeometryReader { geo in
@@ -388,11 +390,12 @@ struct MixtapeCassetteScene: View, ThemedScene {
             let hubRadius  = maxOuter * 0.22
             let tapeRadius = outerRadius * 0.75
 
-            let panelBlue = Color(red: 0.10, green: 0.19, blue: 0.38)
-            let borderBlue = Color(red: 0.29, green: 0.42, blue: 0.60)
-            let reelDark = Color(red: 0.06, green: 0.06, blue: 0.08)
+            let reelWell  = Color(red: 0.082, green: 0.090, blue: 0.102) // #15171A bodyDeep
+            let chrome    = Color(red: 0.784, green: 0.804, blue: 0.827) // #C8CDD3
+            let amber     = Color(red: 1.0,   green: 0.769, blue: 0.302) // #FFC44D
+            let reelDark  = Color(red: 0.06,  green: 0.06,  blue: 0.08)
 
-            // Tape ring
+            // Tape ring (brown oxide)
             ctx.fill(
                 Path { p in
                     p.addEllipse(in: CGRect(x: cx - outerRadius, y: cy - outerRadius,
@@ -405,19 +408,19 @@ struct MixtapeCassetteScene: View, ThemedScene {
                     p.addEllipse(in: CGRect(x: cx - outerRadius, y: cy - outerRadius,
                                             width: outerRadius * 2, height: outerRadius * 2))
                 },
-                with: .color(borderBlue.opacity(0.5)), lineWidth: 1.2
+                with: .color(chrome.opacity(0.3)), lineWidth: 1.2
             )
 
-            // Window ring
+            // Window ring (dark well)
             ctx.fill(
                 Path { p in
                     p.addEllipse(in: CGRect(x: cx - tapeRadius, y: cy - tapeRadius,
                                             width: tapeRadius * 2, height: tapeRadius * 2))
                 },
-                with: .color(panelBlue.opacity(0.90))
+                with: .color(reelWell)
             )
 
-            // 6 spokes
+            // 6 spokes (chrome)
             for i in 0..<6 {
                 let angle = Double(i) * 60.0 * .pi / 180.0
                 var spoke = Path()
@@ -425,33 +428,33 @@ struct MixtapeCassetteScene: View, ThemedScene {
                                        y: cy + CGFloat(sin(angle)) * hubRadius))
                 spoke.addLine(to: CGPoint(x: cx + CGFloat(cos(angle)) * tapeRadius * 0.88,
                                           y: cy + CGFloat(sin(angle)) * tapeRadius * 0.88))
-                ctx.stroke(spoke, with: .color(borderBlue.opacity(0.7)), lineWidth: 2.5)
+                ctx.stroke(spoke, with: .color(chrome.opacity(0.6)), lineWidth: 2.5)
             }
 
-            // Hub
+            // Hub (amber-lit spindle)
             ctx.fill(
                 Path { p in
                     p.addEllipse(in: CGRect(x: cx - hubRadius, y: cy - hubRadius,
                                             width: hubRadius * 2, height: hubRadius * 2))
                 },
-                with: .color(reelDark)
+                with: .color(amber.opacity(0.55))
             )
             ctx.stroke(
                 Path { p in
                     p.addEllipse(in: CGRect(x: cx - hubRadius, y: cy - hubRadius,
                                             width: hubRadius * 2, height: hubRadius * 2))
                 },
-                with: .color(borderBlue.opacity(0.8)), lineWidth: 1.5
+                with: .color(chrome.opacity(0.7)), lineWidth: 1.5
             )
 
-            // Spindle
+            // Spindle hole
             let spindleR: CGFloat = hubRadius * 0.30
             ctx.fill(
                 Path { p in
                     p.addEllipse(in: CGRect(x: cx - spindleR, y: cy - spindleR,
                                             width: spindleR * 2, height: spindleR * 2))
                 },
-                with: .color(borderBlue)
+                with: .color(reelDark)
             )
         }
     }
@@ -461,10 +464,10 @@ struct MixtapeCassetteScene: View, ThemedScene {
     private func tapeWindowStrip(width: CGFloat) -> some View {
         ZStack(alignment: .leading) {
             RoundedRectangle(cornerRadius: 4)
-                .fill(Color(red: 0.04, green: 0.07, blue: 0.10).opacity(0.85))
+                .fill(Color(red: 0.082, green: 0.090, blue: 0.102).opacity(0.85))
                 .overlay(
                     RoundedRectangle(cornerRadius: 4)
-                        .stroke(Color(red: 0.29, green: 0.42, blue: 0.60).opacity(0.4), lineWidth: 1)
+                        .stroke(Color(red: 0.784, green: 0.804, blue: 0.827).opacity(0.3), lineWidth: 1)
                 )
 
             // Felt pad accent on leading edge
@@ -496,6 +499,157 @@ struct MixtapeCassetteScene: View, ThemedScene {
                 .tracking(1.5)
         }
         .allowsHitTesting(false)
+    }
+}
+
+// MARK: - MixtapeDeckWindow
+//
+// Resting tape deck — fills the dead zone below WeekSummaryCard on DashboardView.
+// Shows two static amber-lit spools + a tape counter when idle. This is the
+// at-rest twin of the workout timer's spinning deck: same spool anatomy, zero RPM.
+// Gated in DashboardView on `ThemeManager.shared.current.id == "mixtape"`.
+struct MixtapeDeckWindow: View {
+    /// Optional last-session duration to show as a "cued up" counter instead of 00:00.
+    var lastSessionDuration: TimeInterval? = nil
+
+    private let gunmetal   = Color(red: 0.141, green: 0.153, blue: 0.169) // #24272B
+    private let bodyTop    = Color(red: 0.227, green: 0.243, blue: 0.263) // #3A3E43
+    private let amber      = Color(red: 1.0,   green: 0.769, blue: 0.302) // #FFC44D
+    private let chrome     = Color(red: 0.784, green: 0.804, blue: 0.827) // #C8CDD3
+    private let chromeDim  = Color(red: 0.557, green: 0.584, blue: 0.616) // #8E959D
+    private let bodyDeep   = Color(red: 0.082, green: 0.090, blue: 0.102) // #15171A
+    private let labelCream = Color(red: 0.937, green: 0.906, blue: 0.824) // #EFE7D2
+    private let labelInk   = Color(red: 0.137, green: 0.125, blue: 0.102) // #23201A
+    private let labelRule  = Color(red: 0.690, green: 0.220, blue: 0.180) // #B0392E
+
+    private var counterText: String {
+        guard let dur = lastSessionDuration, dur > 0 else { return "00:00" }
+        let mins = Int(dur) / 60
+        let secs = Int(dur) % 60
+        return String(format: "%02d:%02d", mins, secs)
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Cream tape-label header
+            HStack(spacing: 0) {
+                Rectangle()
+                    .fill(labelRule)
+                    .frame(width: 2.5)
+                Text("TAPE DECK")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .tracking(0.1)
+                    .foregroundStyle(labelInk)
+                    .padding(.leading, 6)
+                Spacer()
+                Text("SIDE A  ▶")
+                    .font(.system(size: 8, weight: .bold, design: .monospaced))
+                    .foregroundStyle(labelInk.opacity(0.55))
+                    .padding(.trailing, 8)
+            }
+            .frame(height: 22)
+            .background(labelCream)
+
+            // Deck body
+            VStack(spacing: 10) {
+                // Spool pair
+                HStack(spacing: 0) {
+                    reelCanvas(isSupply: true)
+                        .frame(width: 80, height: 80)
+                    Spacer()
+                    reelCanvas(isSupply: false)
+                        .frame(width: 80, height: 80)
+                }
+                .padding(.horizontal, 28)
+
+                // Tape counter
+                Text(counterText)
+                    .font(.system(size: 30, weight: .bold, design: .monospaced))
+                    .monospacedDigit()
+                    .tracking(-0.5)
+                    .foregroundStyle(amber.opacity(lastSessionDuration != nil ? 0.75 : 0.5))
+                    .shadow(color: amber.opacity(0.18), radius: 6)
+
+                // Brand micro-label
+                Text("STEREO  ·  IEC TYPE II")
+                    .font(.system(size: 8, weight: .semibold, design: .monospaced))
+                    .tracking(1.5)
+                    .foregroundStyle(chrome.opacity(0.4))
+
+                // CTA hint
+                Text("▸  start on watch to roll tape")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(chromeDim)
+                    .padding(.top, 2)
+            }
+            .padding(.vertical, 20)
+            .frame(maxWidth: .infinity)
+            .background(
+                LinearGradient(
+                    colors: [bodyTop, gunmetal],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
+        }
+        .background(RoundedRectangle(cornerRadius: 12).fill(gunmetal))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(chrome.opacity(0.22), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(counterText == "00:00"
+            ? "Tape deck, stopped"
+            : "Tape deck, last session \(counterText)")
+    }
+
+    @ViewBuilder
+    private func reelCanvas(isSupply: Bool) -> some View {
+        Canvas { ctx, size in
+            let cx = size.width / 2
+            let cy = size.height / 2
+            let maxOuter: CGFloat = min(size.width, size.height) * 0.46
+            // Supply reel partially wound out, take-up reel full
+            let outerRadius: CGFloat = isSupply ? maxOuter * 0.72 : maxOuter
+            let hubRadius  = maxOuter * 0.22
+            let tapeRadius = outerRadius * 0.75
+
+            let brown    = Color(red: 0.20, green: 0.14, blue: 0.06)
+            let chromeC  = Color(red: 0.784, green: 0.804, blue: 0.827)
+            let amberC   = Color(red: 1.0,   green: 0.769, blue: 0.302)
+            let deepC    = Color(red: 0.082, green: 0.090, blue: 0.102)
+            let darkHub  = Color(red: 0.06,  green: 0.06,  blue: 0.08)
+
+            // Tape ring
+            ctx.fill(Path { p in p.addEllipse(in: CGRect(x: cx - outerRadius, y: cy - outerRadius,
+                width: outerRadius * 2, height: outerRadius * 2)) }, with: .color(brown.opacity(0.9)))
+            ctx.stroke(Path { p in p.addEllipse(in: CGRect(x: cx - outerRadius, y: cy - outerRadius,
+                width: outerRadius * 2, height: outerRadius * 2)) }, with: .color(chromeC.opacity(0.25)), lineWidth: 1)
+
+            // Window well
+            ctx.fill(Path { p in p.addEllipse(in: CGRect(x: cx - tapeRadius, y: cy - tapeRadius,
+                width: tapeRadius * 2, height: tapeRadius * 2)) }, with: .color(deepC))
+
+            // 6 chrome spokes
+            for i in 0..<6 {
+                let angle = Double(i) * 60.0 * .pi / 180.0
+                var spoke = Path()
+                spoke.move(to: CGPoint(x: cx + CGFloat(cos(angle)) * hubRadius,
+                                       y: cy + CGFloat(sin(angle)) * hubRadius))
+                spoke.addLine(to: CGPoint(x: cx + CGFloat(cos(angle)) * tapeRadius * 0.88,
+                                          y: cy + CGFloat(sin(angle)) * tapeRadius * 0.88))
+                ctx.stroke(spoke, with: .color(chromeC.opacity(0.55)), lineWidth: 2)
+            }
+
+            // Amber hub
+            ctx.fill(Path { p in p.addEllipse(in: CGRect(x: cx - hubRadius, y: cy - hubRadius,
+                width: hubRadius * 2, height: hubRadius * 2)) }, with: .color(amberC.opacity(0.55)))
+            ctx.stroke(Path { p in p.addEllipse(in: CGRect(x: cx - hubRadius, y: cy - hubRadius,
+                width: hubRadius * 2, height: hubRadius * 2)) }, with: .color(chromeC.opacity(0.65)), lineWidth: 1.2)
+
+            // Spindle hole
+            let spindleR: CGFloat = hubRadius * 0.30
+            ctx.fill(Path { p in p.addEllipse(in: CGRect(x: cx - spindleR, y: cy - spindleR,
+                width: spindleR * 2, height: spindleR * 2)) }, with: .color(darkHub))
+        }
     }
 }
 

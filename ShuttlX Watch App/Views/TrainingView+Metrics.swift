@@ -176,20 +176,21 @@ extension TrainingView {
                         }
                     }
                 } else {
-                    // Free-run: collapse DIST / PACE / CAL to a single compact
-                    // strip. The timer hero (now at heroSize) and HR row dominate;
-                    // these three are context metrics, not command metrics.
-                    HStack(spacing: 0) {
-                        compactMetric("DIST", distanceText, secondarySize, labelSize)
-                            .background(kmSplitHighlight)
-                        compactMetric("PACE", paceText, secondarySize, labelSize)
+                    // Free-run: DIST on its own full-width row so "10.00 km"
+                    // never overflows; PACE + CAL share the compact row below.
+                    metricRow("DIST", distanceText, ShuttlXColor.running,
+                              secondarySize, labelSize, labelWidth,
+                              accessibilityText: accessibleDistance)
+                        .background(kmSplitHighlight)
+
+                    HStack(spacing: 8) {
+                        compactMetric("PACE", paceText, tertiarySize, labelSize)
                         if workoutManager.calories > 0 {
-                            compactMetric("CAL", "\(workoutManager.calories)", secondarySize, labelSize)
+                            compactMetric("CAL", "\(workoutManager.calories)", tertiarySize, labelSize)
                         }
                     }
-                    .padding(.top, 2)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Distance \(distanceText), pace \(paceText)\(workoutManager.calories > 0 ? ", calories \(workoutManager.calories)" : "")")
+                    .accessibilityLabel("Pace \(accessiblePace)\(workoutManager.calories > 0 ? ", calories \(workoutManager.calories)" : "")")
                     .accessibilityAddTraits(.updatesFrequently)
                 }
 

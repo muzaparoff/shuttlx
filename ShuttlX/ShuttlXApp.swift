@@ -103,6 +103,11 @@ struct ShuttlXApp: App {
                 // DataManager.handleReceivedSessions(_:) — same store the
                 // watch writes to.
                 workoutController.dataManager = dataManager
+                // Mirror watch stops back to the iPhone: when the user stops
+                // on the Watch, the paired iPhone workout stops and saves too.
+                PhoneSyncCoordinator.shared.onRemoteWorkoutStopped = { [weak workoutController] in
+                    workoutController?.remoteStop()
+                }
             }
             .onOpenURL { url in
                 guard url.scheme == "shuttlx" else { return }

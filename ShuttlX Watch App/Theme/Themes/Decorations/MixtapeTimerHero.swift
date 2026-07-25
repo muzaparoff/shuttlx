@@ -131,14 +131,14 @@ struct MixtapeWatchDeck: View {
     private let hrCalc = HeartRateZoneCalculator.fromSharedDefaults()
 
     // MARK: LCD palette
-    private let labelInk      = Color(red: 0.110, green: 0.137, blue: 0.188) // #1C2330
-    private let lcdGreen      = Color(red: 0.22,  green: 1.0,   blue: 0.08)  // #39FF14
-    private let lcdGreenDim   = Color(red: 0.11,  green: 0.50,  blue: 0.04)
-    private let lcdWell       = Color(red: 0.02,  green: 0.08,  blue: 0.02)  // LCD black-green
-    private let amberPause    = Color(red: 0.95,  green: 0.65,  blue: 0.10)  // #F2A61A
-    private let ledRed        = Color(red: 1.0,   green: 0.20,  blue: 0.20)  // #FF3333
-    private let textSecondary = Color(red: 0.55,  green: 0.68,  blue: 0.80)  // #8CADCC
-    private let lcdAmber      = Color(red: 1.0,   green: 0.690, blue: 0.180) // #FFB02E
+    private let labelInk      = Color(red: 0.137, green: 0.125, blue: 0.102) // #23201A warm ink
+    private let lcdGreen      = Color(red: 1.0,   green: 0.769, blue: 0.302) // #FFC44D amber LCD
+    private let lcdGreenDim   = Color(red: 0.431, green: 0.353, blue: 0.133) // #6E5A22 dim amber
+    private let lcdWell       = Color(red: 0.082, green: 0.094, blue: 0.059) // #14180F lcdSubstrate
+    private let amberPause    = Color(red: 1.0,   green: 0.639, blue: 0.094) // #FFA318 ledAmber
+    private let ledRed        = Color(red: 1.0,   green: 0.231, blue: 0.188) // #FF3B30
+    private let textSecondary = Color(red: 0.557, green: 0.584, blue: 0.616) // #8E959D chrome-dim
+    private let labelCream    = Color(red: 0.937, green: 0.906, blue: 0.824) // #EFE7D2 tape label
 
     // MARK: Derived sizes (proportional to physical screen height) — the timer is
     // the hero, so it gets the lion's share now that the reel band is gone.
@@ -157,10 +157,7 @@ struct MixtapeWatchDeck: View {
             nowPlayingRow   // SIDE A ▶ ELAPSED — top line, aligns with system clock
             heroTimerRow    // 68:45 — full-width hero timer below
             hrLine
-            metricLine("DIST", FormattingUtils.formatDistance(workoutManager.totalDistance),
-                       a11y: "Distance \(FormattingUtils.formatDistance(workoutManager.totalDistance))")
-            metricLine("PACE", workoutManager.currentPace.map { FormattingUtils.formatPace($0) } ?? "\u{2014}",
-                       a11y: "Pace \(workoutManager.currentPace == nil ? "no data" : FormattingUtils.formatPace(workoutManager.currentPace))")
+            twoUpMetrics
         }
         .padding(.horizontal, 10)
         .padding(.bottom, 12)
@@ -180,7 +177,7 @@ struct MixtapeWatchDeck: View {
                 .foregroundStyle(labelInk)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(Capsule().fill(lcdAmber.opacity(0.88)))
+                .background(Capsule().fill(labelCream))
             Image(systemName: isPaused ? "pause.fill" : "play.fill")
                 .font(.system(size: tagSize * 1.1, weight: .heavy))
                 .foregroundStyle(isPaused ? amberPause : lcdGreen)
@@ -198,18 +195,28 @@ struct MixtapeWatchDeck: View {
     // MARK: 2. Hero timer — full-width elapsed or step countdown
 
     private var heroTimerRow: some View {
-        Text(heroText)
-            .font(.system(size: heroSize, weight: .bold, design: .monospaced))
-            .monospacedDigit()
-            .foregroundStyle(isPaused ? amberPause : heroTint)
-            .shadow(color: lcdAmber.opacity(isPaused ? 0 : 0.55), radius: heroSize * 0.05)
-            .contentTransition(.numericText())
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(heroA11yLabel)
-            .accessibilityAddTraits(.updatesFrequently)
+        ZStack(alignment: .leading) {
+            // Ghost dead-pixel layer — matches the iOS timer hero
+            Text("88:88")
+                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .tracking(-0.5)
+                .foregroundStyle(lcdGreen.opacity(0.06))
+                .accessibilityHidden(true)
+            Text(heroText)
+                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .tracking(-0.5)
+                .foregroundStyle(isPaused ? amberPause : heroTint)
+                .shadow(color: lcdGreen.opacity(isPaused ? 0 : 0.45), radius: heroSize * 0.05)
+                .contentTransition(.numericText())
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(heroA11yLabel)
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     /// Phase label, Mixtape-only walk-run wording. The shared
@@ -228,25 +235,34 @@ struct MixtapeWatchDeck: View {
         }
     }
 
-    // MARK: 3. HR line — VU bar + zone-tinted BPM + "BPM" (all one row)
+    // MARK: 3. HR line — 5 LED zone dots + zone-tinted BPM + "BPM"
+    //
+    // Replaces the 12-segment VU bar with 5 discrete zone dots (lit count = zone
+    // number). More authentic to real Walkman hardware and color-blind safe — each
+    // dot uses the zone ramp color, unlit dots are outline rings.
 
     private var hrLine: some View {
         let bpm = workoutManager.heartRate
         let zone = hrCalc.zone(for: Double(bpm))
         let zoneColor = ShuttlXColor.forHRZone(bpm)
+        let colors = ThemeManager.shared.colors
+        let zoneColors = [colors.hrZone1, colors.hrZone2, colors.hrZone3,
+                          colors.hrZone4, colors.hrZone5]
         return HStack(alignment: .firstTextBaseline, spacing: 6) {
-            MixtapeVUMeter(level: vuLevel(bpm: bpm),
-                           paused: isPaused,
-                           reduceMotion: reduceMotion,
-                           height: vuHeight,
-                           litGreen: lcdGreen,
-                           litAmber: lcdAmber,
-                           litRed: ledRed,
-                           unlit: lcdGreenDim.opacity(0.25),
-                           pausedColor: amberPause)
-                .frame(maxWidth: .infinity)
-                .alignmentGuide(.firstTextBaseline) { $0[.bottom] }
-                .accessibilityHidden(true)
+            HStack(spacing: 3) {
+                ForEach(1...5, id: \.self) { z in
+                    let isLit = !isPaused && z <= zone
+                    let dotColor = isLit ? zoneColors[z - 1] : Color.clear
+                    let ringColor = isLit ? zoneColors[z - 1] : lcdGreenDim.opacity(0.5)
+                    Circle()
+                        .fill(dotColor)
+                        .overlay(Circle().strokeBorder(ringColor, lineWidth: 1))
+                        .frame(width: vuHeight, height: vuHeight)
+                }
+            }
+            .alignmentGuide(.firstTextBaseline) { $0[.bottom] }
+            .accessibilityHidden(true)
+            .animation(.easeOut(duration: 0.4), value: zone)
             Text(bpm > 0 ? "\(bpm)" : "\u{2014}")
                 .font(.system(size: hrSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
@@ -263,15 +279,25 @@ struct MixtapeWatchDeck: View {
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    // MARK: 4. DIST / PACE — one readout per line (label left, value right)
+    // MARK: 4. DIST / PACE — two-up side-by-side (saves vertical space on small watch)
 
-    private func metricLine(_ label: String, _ value: String, a11y: String) -> some View {
-        HStack(spacing: 6) {
+    private var twoUpMetrics: some View {
+        let distVal = FormattingUtils.formatDistance(workoutManager.totalDistance)
+        let paceVal = workoutManager.currentPace.map { FormattingUtils.formatPace($0) } ?? "\u{2014}"
+        return HStack(alignment: .top, spacing: 16) {
+            twoUpMetric("DIST", distVal, a11y: "Distance \(distVal)")
+            twoUpMetric("PACE", paceVal,
+                        a11y: "Pace \(workoutManager.currentPace == nil ? "no data" : paceVal)")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func twoUpMetric(_ label: String, _ value: String, a11y: String) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
             Text(label)
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(textSecondary)
-                .fixedSize()
-            Spacer(minLength: 6)
             Text(value)
                 .font(.system(size: metricSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
@@ -279,8 +305,7 @@ struct MixtapeWatchDeck: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
         }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityLabel(a11y)
     }
 
@@ -300,17 +325,6 @@ struct MixtapeWatchDeck: View {
             WKInterfaceDevice.current().play(.directionUp)
         }
         lastHapticZone = zone
-    }
-
-    /// VU drive level: normalized HR fraction with a floor at 40% of max HR.
-    private func vuLevel(bpm: Int) -> Double {
-        guard bpm > 0 else { return 0 }
-        let maxHR = hrCalc.estimatedMaxHR
-        guard maxHR > 0 else { return 0 }
-        let restApprox = maxHR * 0.40
-        let denom = maxHR - restApprox
-        guard denom > 0 else { return 0 }
-        return min(1.0, max(0.0, (Double(bpm) - restApprox) / denom))
     }
 
     // MARK: Hero value plumbing
@@ -355,50 +369,3 @@ struct MixtapeWatchDeck: View {
     }
 }
 
-// MARK: - VU meter (§4)
-//
-// 12-segment horizontal peak meter mapping HR effort cold-green → hot-red.
-// Lit count = round(level * 12); per-segment color by index band. Paused freezes
-// the count and recolors all lit segments amber. The only data-driven motion is a
-// 0.5s ease on litN changes (event-driven off HR ticks, halts when steady / paused
-// / Reduce Motion). Decorative — accessibilityHidden upstream.
-private struct MixtapeVUMeter: View {
-    let level: Double            // 0…1 HR effort
-    let paused: Bool
-    let reduceMotion: Bool
-    let height: CGFloat
-    let litGreen: Color
-    let litAmber: Color
-    let litRed: Color
-    let unlit: Color
-    let pausedColor: Color
-
-    private let segments = 12
-
-    private var litN: Int { Int((level * Double(segments)).rounded()) }
-
-    var body: some View {
-        GeometryReader { proxy in
-            let spacing: CGFloat = 2
-            let segW = max(1, (proxy.size.width - spacing * CGFloat(segments - 1)) / CGFloat(segments))
-            HStack(spacing: spacing) {
-                ForEach(0..<segments, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: height * 0.3)
-                        .fill(color(for: i))
-                        .frame(width: segW, height: height)
-                }
-            }
-            .frame(maxHeight: .infinity, alignment: .center)
-        }
-        .frame(height: height)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.5), value: litN)
-    }
-
-    private func color(for i: Int) -> Color {
-        guard i < litN else { return unlit }
-        if paused { return pausedColor }
-        if i >= 10 { return litRed }       // peak / clip
-        if i >= 7  { return litAmber }     // working
-        return litGreen                    // cool
-    }
-}

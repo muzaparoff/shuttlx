@@ -42,7 +42,7 @@ struct LastWorkoutCard: View {
 
                 HStack(spacing: 0) {
                     if let distance = session.distance, distance > 0 {
-                        metricColumn(value: FormattingUtils.formatDistance(distance), label: "km", color: ShuttlXColor.running)
+                        metricColumn(value: FormattingUtils.formatDistance(distance), label: "dist", color: ShuttlXColor.running)
                     }
                     if let hr = session.averageHeartRate {
                         if (session.distance ?? 0) > 0 { metricDivider() }

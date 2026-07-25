@@ -147,11 +147,20 @@ final class iPhoneWorkoutController: ObservableObject {
 
     // MARK: - Lifecycle
 
+    /// Stops the iPhone workout in response to the Watch stopping first.
+    /// Saves and dismisses the timer, mirroring what the user would do manually.
+    func remoteStop() {
+        guard isActive else { return }
+        _ = finish()
+        isPresentingTimer = false
+    }
+
     func startFreeRun() {
         guard !isActive else { return }
         mode = .freeRun
         workoutName = "Free Run"
         beginCommonStart()
+        PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun")
     }
 
     func startInterval(template: WorkoutTemplate) {
@@ -179,6 +188,7 @@ final class iPhoneWorkoutController: ObservableObject {
             .store(in: &intervalEngineCancellables)
 
         beginCommonStart()
+        PhoneSyncCoordinator.shared.startWatchWorkout(mode: "interval", template: template)
     }
 
     func startGymRecovery() {
@@ -201,6 +211,7 @@ final class iPhoneWorkoutController: ObservableObject {
         completedCaptures = []
         startMotionUpdates()
         beginCommonStart()
+        PhoneSyncCoordinator.shared.startWatchWorkout(mode: "gymRecovery")
     }
 
     private func beginCommonStart() {

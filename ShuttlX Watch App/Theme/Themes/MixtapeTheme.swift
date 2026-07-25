@@ -6,65 +6,65 @@ extension AppTheme {
         displayName: "Mixtape",
         icon: "cassette.fill",
         colors: ThemeColors(
-            background: Color(red: 0.05, green: 0.08, blue: 0.13),       // #0E1420 dark blue body
-            surface: Color(red: 0.10, green: 0.19, blue: 0.38),          // #1A3060 blue panel
-            surfaceBorder: Color(red: 0.29, green: 0.42, blue: 0.60),    // #4A6A9A blue-steel border
-            running: Color(red: 0.22, green: 1.0, blue: 0.08),           // #39FF14 green LCD
-            walking: Color(red: 0.29, green: 0.54, blue: 0.79),          // #4A8ACA blue accent
-            heartRate: Color(red: 1.0, green: 0.20, blue: 0.20),         // #FF3333 LED red
-            steps: Color(red: 0.22, green: 1.0, blue: 0.08),             // green LCD
-            calories: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue accent
-            stationary: Color(red: 0.42, green: 0.54, blue: 0.67),       // #6A8AAA muted blue
-            cycling: Color(red: 0.22, green: 1.0, blue: 0.08),           // green
-            swimming: Color(red: 0.0, green: 0.80, blue: 0.80),          // teal
-            hiking: Color(red: 0.29, green: 0.54, blue: 0.79),           // blue accent
-            elliptical: Color(red: 0.22, green: 1.0, blue: 0.08),        // green
-            crossTraining: Color(red: 0.29, green: 0.54, blue: 0.79),    // blue accent
-            ctaPrimary: Color(red: 0.29, green: 0.54, blue: 0.79),       // #4A8ACA blue
-            ctaDestructive: Color(red: 1.0, green: 0.20, blue: 0.20),    // LED red
-            ctaWarning: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue
-            ctaPause: Color(red: 0.95, green: 0.65, blue: 0.10),         // #F2A61A cassette-amber (distinguishable from ctaPrimary blue)
-            iconOnCTA: Color(red: 0.05, green: 0.08, blue: 0.13),        // dark blue
-            hrZone1: Color(red: 0.11, green: 0.50, blue: 0.04),          // #1C8009 dim green — base, calm (distinct from Z2)
-            hrZone2: Color(red: 0.22, green: 1.0, blue: 0.08),           // #39FF14 bright green — target, clearly > Z1
-            hrZone3: Color(red: 0.95, green: 0.65, blue: 0.10),          // #F2A61A amber — working
-            hrZone4: Color(red: 1.0, green: 0.42, blue: 0.10),           // #FF6A1A orange-red — ceiling (distinct from amber AND red)
-            hrZone5: Color(red: 1.0, green: 0.20, blue: 0.20),           // #FF3333 LED red — max
-            stepWork: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
-            stepRest: Color(red: 0.29, green: 0.54, blue: 0.79),         // blue
-            stepWarmup: Color(red: 0.29, green: 0.54, blue: 0.79),       // blue
-            stepCooldown: Color(red: 0.22, green: 1.0, blue: 0.08),      // green
-            pace: Color(red: 0.29, green: 0.54, blue: 0.79),             // blue
-            positive: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
-            negative: Color(red: 1.0, green: 0.20, blue: 0.20),          // red
-            recoveryFresh: Color(red: 0.22, green: 1.0, blue: 0.08),     // green
-            recoveryNormal: Color(red: 0.29, green: 0.54, blue: 0.79),   // blue
-            recoveryFatigued: Color(red: 0.54, green: 0.40, blue: 0.79), // purple-blue
-            recoveryOverreaching: Color(red: 1.0, green: 0.20, blue: 0.20), // red
-            paceInterval: Color(red: 1.0, green: 0.20, blue: 0.20),      // red
-            paceThreshold: Color(red: 0.54, green: 0.40, blue: 0.79),    // purple-blue
-            paceTempo: Color(red: 0.29, green: 0.54, blue: 0.79),        // blue
-            paceModerate: Color(red: 0.22, green: 1.0, blue: 0.08),      // green
-            paceEasy: Color(red: 0.22, green: 1.0, blue: 0.08),          // green
-            textPrimary: Color(red: 0.70, green: 0.82, blue: 0.93),      // #B3D1ED cool blue-gray (4.5:1 vs #0E1420)
-            textSecondary: Color(red: 0.55, green: 0.68, blue: 0.80),    // #8CADCC muted blue (4.5:1 vs #0E1420)
-            cardBackground: Color(red: 0.10, green: 0.19, blue: 0.38),
-            watchCardBackground: Color(red: 0.10, green: 0.19, blue: 0.38),
-            watchButtonBackground: Color(red: 0.15, green: 0.24, blue: 0.43)
+            background: Color(red: 0.141, green: 0.153, blue: 0.169),         // #24272B gunmetal body
+            surface: Color(red: 0.180, green: 0.196, blue: 0.216),             // #2E3237 body panel
+            surfaceBorder: Color(red: 0.784, green: 0.804, blue: 0.827),       // #C8CDD3 brushed chrome
+            running: Color(red: 1.0, green: 0.769, blue: 0.302),               // #FFC44D amber LCD
+            walking: Color(red: 0.557, green: 0.584, blue: 0.616),             // #8E959D chrome-dim
+            heartRate: Color(red: 1.0, green: 0.231, blue: 0.188),             // #FF3B30 LED red
+            steps: Color(red: 1.0, green: 0.769, blue: 0.302),                 // #FFC44D amber LCD
+            calories: Color(red: 0.557, green: 0.584, blue: 0.616),            // chrome-dim
+            stationary: Color(red: 0.420, green: 0.443, blue: 0.471),          // muted chrome
+            cycling: Color(red: 1.0, green: 0.769, blue: 0.302),               // amber LCD
+            swimming: Color(red: 0.0, green: 0.80, blue: 0.80),                // teal (keep)
+            hiking: Color(red: 0.557, green: 0.584, blue: 0.616),              // chrome-dim
+            elliptical: Color(red: 1.0, green: 0.769, blue: 0.302),            // amber LCD
+            crossTraining: Color(red: 0.557, green: 0.584, blue: 0.616),       // chrome-dim
+            ctaPrimary: Color(red: 0.243, green: 0.812, blue: 0.427),          // #3ECF6D ctaPlay green
+            ctaDestructive: Color(red: 1.0, green: 0.231, blue: 0.188),        // #FF3B30 LED red
+            ctaWarning: Color(red: 1.0, green: 0.639, blue: 0.094),            // #FFA318 ledAmber
+            ctaPause: Color(red: 1.0, green: 0.639, blue: 0.094),              // #FFA318 ledAmber pause
+            iconOnCTA: Color(red: 0.082, green: 0.090, blue: 0.102),           // #15171A bodyDeep
+            hrZone1: Color(red: 0.498, green: 0.796, blue: 0.643),             // #7FCBA4 pale green
+            hrZone2: Color(red: 0.216, green: 0.769, blue: 0.388),             // #37C463 green
+            hrZone3: Color(red: 1.0, green: 0.541, blue: 0.239),               // #FF8A3D orange
+            hrZone4: Color(red: 1.0, green: 0.353, blue: 0.169),               // #FF5A2B deep orange
+            hrZone5: Color(red: 1.0, green: 0.176, blue: 0.125),               // #FF2D20 red
+            stepWork: Color(red: 1.0, green: 0.769, blue: 0.302),              // amber — work
+            stepRest: Color(red: 0.557, green: 0.584, blue: 0.616),            // chrome-dim — rest
+            stepWarmup: Color(red: 0.498, green: 0.796, blue: 0.643),          // pale green — warmup
+            stepCooldown: Color(red: 0.216, green: 0.769, blue: 0.388),        // green — cooldown
+            pace: Color(red: 0.557, green: 0.584, blue: 0.616),                // chrome-dim
+            positive: Color(red: 0.243, green: 0.812, blue: 0.427),            // ctaPlay green
+            negative: Color(red: 1.0, green: 0.231, blue: 0.188),              // LED red
+            recoveryFresh: Color(red: 0.243, green: 0.812, blue: 0.427),       // ctaPlay green
+            recoveryNormal: Color(red: 0.498, green: 0.796, blue: 0.643),      // pale green
+            recoveryFatigued: Color(red: 1.0, green: 0.639, blue: 0.094),      // ledAmber
+            recoveryOverreaching: Color(red: 1.0, green: 0.231, blue: 0.188),  // LED red
+            paceInterval: Color(red: 1.0, green: 0.231, blue: 0.188),          // LED red
+            paceThreshold: Color(red: 1.0, green: 0.353, blue: 0.169),         // deep orange
+            paceTempo: Color(red: 1.0, green: 0.541, blue: 0.239),             // orange
+            paceModerate: Color(red: 0.216, green: 0.769, blue: 0.388),        // green
+            paceEasy: Color(red: 0.498, green: 0.796, blue: 0.643),            // pale green
+            textPrimary: Color(red: 0.937, green: 0.906, blue: 0.824),         // #EFE7D2 cream label
+            textSecondary: Color(red: 0.557, green: 0.584, blue: 0.616),       // #8E959D chrome-dim
+            cardBackground: Color(red: 0.141, green: 0.153, blue: 0.169),      // #24272B
+            watchCardBackground: Color(red: 0.180, green: 0.196, blue: 0.216), // #2E3237
+            watchButtonBackground: Color(red: 0.212, green: 0.231, blue: 0.255)  // #363B41
         ),
         fonts: ThemeFonts(
             timerDisplay: .system(.largeTitle, design: .monospaced).weight(.bold),
             metricLarge: .system(.title2, design: .monospaced).weight(.bold),
             metricMedium: .system(.body, design: .monospaced).weight(.semibold),
             metricSmall: .system(.callout, design: .monospaced).weight(.medium),
-            cardTitle: .system(.headline, design: .monospaced).weight(.bold),
+            cardTitle: .system(.headline, design: .monospaced).weight(.semibold),
             cardSubtitle: .system(.subheadline, design: .monospaced),
             cardCaption: .system(.caption, design: .monospaced),
             sectionHeader: .system(.headline, design: .monospaced).weight(.bold),
             heroIcon: .system(size: 32, weight: .medium),
             onboardingIcon: .system(size: 48),
             prValue: .system(.title3, design: .monospaced).weight(.bold),
-            microLabel: .system(size: 9, design: .monospaced),
+            microLabel: .system(size: 9, design: .monospaced).weight(.heavy),
             debugMono: .system(.caption, design: .monospaced),
             watchTimerDisplay: .system(size: 36, weight: .bold, design: .monospaced),
             watchMetricDisplay: .system(size: 40, weight: .bold, design: .monospaced),
