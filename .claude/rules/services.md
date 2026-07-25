@@ -36,3 +36,12 @@ globs:
 - `requestAuthorization()` must handle denial gracefully (no force unwraps on types)
 - Background delivery requires `com.apple.developer.healthkit.background-delivery` entitlement
 - Workout sessions: save on pause/stop, implement crash recovery
+
+## Deep Links
+
+Deep links route widgets/controls/external URLs into the app to start workouts or navigate. **Widget processes cannot run WatchConnectivity** — iOS widgets must deep-link to the host app, which then calls `PhoneSyncCoordinator.startWatchWorkout()`.
+
+- **iOS schemes**: `shuttlx://start-template/{uuid}`, `shuttlx://start-freerun`, `shuttlx://dashboard`, `shuttlx://session/{id}`, `shuttlx://plan`, `shuttlx://last-workout`.
+- **watchOS schemes**: `shuttlx://start-workout` (free run, direct call to `workoutManager.startWorkout()`), `shuttlx://start-template/{uuid}` (resolve template → `startIntervalWorkout(template:)`), `shuttlx://home` (navigate to home), `shuttlx://last-workout`.
+- **DeepLinkRouter** (iOS): `ShuttlXApp.onOpenURL` parses and writes into the `DeepLinkRouter` environment object's pending properties. Consumers MUST read the pending value both on mount (`.task`/`.onAppear`) AND via `.onChange` — onChange alone never fires for a value set before the view mounted (cold-launch widget taps), which was a real shipped bug. If the target data isn't loaded yet, keep the pending value and retry when the data source changes (consume-on-load); clear it only after successful consumption.
+- **New link registration**: use hyphenated hosts (e.g., `start-template`, not `startTemplate` or `start/template`).

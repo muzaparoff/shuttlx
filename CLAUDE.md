@@ -13,18 +13,19 @@ The watchOS target remains Apple-frameworks-only.
 - **Team**: `83HPSY452Y`
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
-- **Codebase**: ~13,200 LOC across 117 Swift files
+- **Codebase**: ~13,500 LOC across 145 Swift files
 - **CI**: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | ~60 | PhoneSyncCoordinator (~875), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files |
-| watchOS | `ShuttlX Watch App` | ~45 | WatchWorkoutManager (~1,450, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator, TrainingView (137 + 4 extension files), ThemeManager + theme files |
+| iOS | `ShuttlX` | ~74 | PhoneSyncCoordinator (~875), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files |
+| watchOS | `ShuttlX Watch App` | ~38 | WatchWorkoutManager (~1,450, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator, TrainingView (137 + 4 extension files), ThemeManager + theme files |
 | Shared (SPM) | `ShuttlXShared` | 13 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
-| Widgets | `ShuttlXWidgets` | 3 | SmallWidget, MediumWidget |
+| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
+| watchOS Widgets | `ShuttlXWatchWidgets` | 6 | QuickStartComplication (now with accessoryCorner), LastWorkoutComplication, WeeklyProgressComplication, TodayWorkoutComplication, WatchWidgetDataProvider |
 
 ## Build Commands
 
@@ -55,6 +56,16 @@ Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
   → On complete: saveWorkoutData() → TrainingSession sent via WCSession
 
 iPhone receives session → SharedDataManager → DataManager → UI updates
+
+Widget/Control deep-link flow (iOS):
+  Widget → widgetURL "shuttlx://start-template/{id}" or "shuttlx://start-freerun"
+  → ShuttlXApp.onOpenURL → DeepLinkRouter
+  → PhoneSyncCoordinator.startWatchWorkout(...) via WCSession
+  → watch receives, starts workout via WorkoutManager
+
+Watch complication deep-link flow:
+  Complication → widgetURL "shuttlx://start-workout" or "shuttlx://start-template/{id}"
+  → ShuttlXWatchApp.onOpenURL → workoutManager.startWorkout/startIntervalWorkout
 
 Theme sync:
   iPhone: Settings → ThemeManager.selectedThemeID → UserDefaults (App Group)
