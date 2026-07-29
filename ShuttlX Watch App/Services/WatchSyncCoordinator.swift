@@ -109,6 +109,49 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    // MARK: - Session Send Routing (pure, testable)
+
+    /// Channel a session payload must travel on. `transferFile` has no practical
+    /// size cap; the dictionary channels are hard-capped by WatchConnectivity.
+    enum SessionSendChannel: Equatable {
+        /// transferUserInfo + sendMessage — only for payloads provably under the cap.
+        case dualChannel
+        /// transferFile (+ a lightweight lastSessionID tap) — the only channel that
+        /// can carry a long GPS workout.
+        case fileTransfer
+    }
+
+    /// WatchConnectivity rejects any `sendMessage` / `transferUserInfo` dictionary
+    /// larger than this with WCError.payloadTooLarge. Applies to BOTH channels —
+    /// the pre-2026-07 code assumed transferUserInfo allowed 200 KB, which created
+    /// a 65.5 KB–200 KB dead zone where the only channel attempted was guaranteed
+    /// to fail (an 80-minute GPS run lands squarely in it). See
+    /// docs/incidents/ + scratchpad measurement: 600 route points = 174,892 B base64.
+    nonisolated static let wcDictionaryCapBytes = 65_536
+
+    /// Bytes reserved for the other dictionary keys ("action", "sessionID",
+    /// "timestamp") plus WCSession's own plist framing. Generous on purpose —
+    /// overshooting only sends a borderline session via file transfer, which is
+    /// always correct; undershooting loses the workout.
+    nonisolated static let wcDictionaryOverheadBytes = 5_536
+
+    /// Largest base64 body we will put inside a WC dictionary (60,000 B).
+    nonisolated static let maxInlinePayloadBytes = wcDictionaryCapBytes - wcDictionaryOverheadBytes
+
+    /// Exact base64 length for `n` raw bytes — `((n + 2) / 3) * 4`, padding included.
+    /// Replaces the old `Double(n) * 1.34` estimate, which was both inexact and
+    /// compared against the wrong ceiling.
+    nonisolated static func base64Length(forRawBytes n: Int) -> Int {
+        ((n + 2) / 3) * 4
+    }
+
+    /// Routing decision for an encoded session. Pure — depends only on byte count,
+    /// so every entry point (fresh save, retryPendingSessions, sendAllStoredSessions,
+    /// requestAllSessions overflow, payloadTooLarge escalation) gets the same answer.
+    nonisolated static func channel(forRawJSONBytes n: Int) -> SessionSendChannel {
+        base64Length(forRawBytes: n) > maxInlinePayloadBytes ? .fileTransfer : .dualChannel
+    }
+
     // MARK: - Session Sending
 
     func sendSessionToiOS(_ session: TrainingSession) {
@@ -123,26 +166,27 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             guard let self = self else { return }
             do {
                 let sessionData = try JSONEncoder().encode(session)
-                // Approximate base64 size without allocating the string yet.
-                let payloadSize = Int(Double(sessionData.count) * 1.34)
+                // Exact base64 size — no allocation of the string needed.
+                let payloadSize = Self.base64Length(forRawBytes: sessionData.count)
+                let channel = Self.channel(forRawJSONBytes: sessionData.count)
                 await MainActor.run { [weak self] in
                     guard let self = self else { return }
-                    self.logger.info("Session payload: ~\(payloadSize) bytes (\(session.route?.count ?? 0) route points)")
-                    if payloadSize > 200_000 {
+                    // Field-evidence hook: this line identifies the payload size and the
+                    // channel actually chosen. Grep "Session payload:" in a watch sysdiagnose.
+                    self.logger.info("Session payload: \(payloadSize) bytes base64 (\(sessionData.count) B raw, \(session.route?.count ?? 0) route points) → \(channel == .fileTransfer ? "transferFile" : "userInfo+message")")
+                    switch channel {
+                    case .fileTransfer:
                         self.sendSessionViaFileTransfer(session, sessionData: sessionData)
-                    } else if payloadSize > 50_000 {
-                        self.queuePendingSession(session)
-                        self.sendSessionViaUserInfo(session, sessionData: sessionData)
-                    } else {
+                    case .dualChannel:
                         let base64 = sessionData.base64EncodedString()
                         self.sendSessionViaUserInfo(session, sessionData: sessionData)
                         self.sendSessionViaMessage(session, base64: base64)
                     }
-                    // lastSessionID tap-on-shoulder is sent only for file-transfer sessions
-                    // (>200KB). For userInfo/message paths the full session payload travels
-                    // the same FIFO channel and carries the ID itself — the tap is redundant
-                    // there, and placing it here (called from 8+ retry/burst sites) would
-                    // flood the persistent transferUserInfo queue during offline periods.
+                    // lastSessionID tap-on-shoulder is sent only for file-transfer sessions.
+                    // For the dual-channel path the full session payload travels the same
+                    // FIFO channel and carries the ID itself — the tap is redundant there,
+                    // and placing it here (called from 8+ retry/burst sites) would flood
+                    // the persistent transferUserInfo queue during offline periods.
                     // See sendSessionViaFileTransfer for where the tap is actually queued.
                     self.scheduleFinishRetryBurst()
                 }
@@ -207,6 +251,37 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 }
             } catch {
                 logger.error("Failed to write temp file for transfer: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// True when WatchConnectivity rejected the payload for exceeding the dictionary
+    /// cap. This is permanent for a given payload — retrying the same channel with the
+    /// same bytes can never succeed, so callers must switch channels, not re-queue.
+    /// Checked via both the bridged WCError and the raw NSError domain/code so a
+    /// bridging change can't silently disable the escalation.
+    nonisolated static func isPayloadTooLarge(_ error: Error) -> Bool {
+        if let wcError = error as? WCError, wcError.code == .payloadTooLarge { return true }
+        let nsError = error as NSError
+        return nsError.domain == WCErrorDomain && nsError.code == WCError.Code.payloadTooLarge.rawValue
+    }
+
+    /// Re-encode off the main actor and hand the session to the uncapped file channel.
+    /// Used when a dictionary-channel transfer came back as payloadTooLarge.
+    private func escalateToFileTransfer(_ session: TrainingSession) {
+        Task.detached(priority: .utility) { [weak self] in
+            guard let self = self else { return }
+            do {
+                let sessionData = try JSONEncoder().encode(session)
+                await MainActor.run { [weak self] in
+                    self?.sendSessionViaFileTransfer(session, sessionData: sessionData)
+                }
+            } catch {
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
+                    self.logger.error("Failed to re-encode session for file-transfer escalation: \(error.localizedDescription)")
+                    self.queuePendingSession(session)
+                }
             }
         }
     }
@@ -510,19 +585,21 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         replyHandler(["status": "empty", "count": 0])
                     } else {
                         // Hybrid reply: inline sessions up to a CUMULATIVE byte budget;
-                        // per-session oversized AND over-budget sessions route via the
-                        // durable channel instead. sendMessage replies are capped at
-                        // ~65KB for the whole dictionary and base64 inflates by 4/3,
-                        // so 36KB of raw JSON keeps the reply safely under the ceiling
-                        // no matter how many sessions are stored.
-                        let perSessionLimit = 200_000
+                        // anything that doesn't fit routes through sendSessionToiOS, which
+                        // applies the authoritative size routing (dual-channel vs file).
+                        // sendMessage replies are capped at ~65KB for the whole dictionary
+                        // and base64 inflates by 4/3, so 36KB of raw JSON keeps the reply
+                        // safely under the ceiling no matter how many sessions are stored.
+                        // NOTE: no separate per-session ceiling here — the cumulative budget
+                        // already diverts every oversized session, and a second, larger
+                        // threshold is exactly what created the old 65KB–200KB dead zone.
                         let inlineBudget = 36_000
                         var inlineSessions: [TrainingSession] = []
                         var inlineBytes = 0
                         var routedCount = 0
                         for s in sessions {
                             let size = (try? JSONEncoder().encode(s))?.count ?? 0
-                            if size > perSessionLimit || inlineBytes + size > inlineBudget {
+                            if inlineBytes + size > inlineBudget {
                                 self.sendSessionToiOS(s)
                                 routedCount += 1
                             } else {
@@ -596,7 +673,17 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                    let uuid = UUID(uuidString: sessionID) {
                     let allSessions = await self.loadAllLocalSessions()
                     if let session = allSessions.first(where: { $0.id == uuid }) {
-                        self.queuePendingSession(session)
+                        if Self.isPayloadTooLarge(error) {
+                            // PERMANENT error — re-queueing for an identical retry would
+                            // loop forever (every 15s, never delivering). Escalate to the
+                            // uncapped file channel instead. This is the self-healing net
+                            // for any payload that slips past the size routing above.
+                            self.logger.error("UserInfo transfer rejected as payloadTooLarge — escalating session \(uuid) to file transfer")
+                            self.escalateToFileTransfer(session)
+                        } else {
+                            // Transient (unreachable phone, etc.) — normal retry path.
+                            self.queuePendingSession(session)
+                        }
                     }
                 }
             } else {
