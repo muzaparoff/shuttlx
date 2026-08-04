@@ -27,13 +27,24 @@ struct ShuttlXWatchApp: App {
         WindowGroup {
             #if DEBUG
             if let snapshot = ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT"] {
+                // SHUTTLX_SNAPSHOT_ELAPSED (seconds) seeds a RUNNING free-run state
+                // instead of the interval snapshot — used to capture the wall-clock
+                // timer at 1h+ without waiting. SHUTTLX_SNAPSHOT_AOD=1 forces the
+                // Always-On (reduced luminance) variant.
+                let env = ProcessInfo.processInfo.environment
+                let freeRunElapsed = env["SHUTTLX_SNAPSHOT_ELAPSED"].flatMap(Double.init)
                 TrainingView()
                     .environment(ThemeManager.shared)
+                    .environment(\.isLuminanceReduced, env["SHUTTLX_SNAPSHOT_AOD"] == "1")
                     .environmentObject(sharedDataManager)
                     .environmentObject(workoutManager)
                     .task {
                         ThemeManager.shared.selectTheme(snapshot)
-                        workoutManager.applyPreviewSnapshot()
+                        if let freeRunElapsed {
+                            workoutManager.applyFreeRunPreviewSnapshot(elapsed: freeRunElapsed)
+                        } else {
+                            workoutManager.applyPreviewSnapshot()
+                        }
                     }
             } else {
                 appRoot
@@ -55,6 +66,11 @@ struct ShuttlXWatchApp: App {
                     switch url.host {
                     case "start-workout":
                         logger.info("Deep link received — starting free-form workout")
+                        // onOpenURL can be delivered before onAppear on a cold launch.
+                        // beginLaunchRecovery() is idempotent, and startWorkout() awaits
+                        // the task it creates — calling it here guarantees the deep-link
+                        // start is serialized behind orphan recovery either way.
+                        workoutManager.beginLaunchRecovery()
                         if !workoutManager.isWorkoutActive {
                             workoutManager.startWorkout()
                         }
@@ -66,16 +82,13 @@ struct ShuttlXWatchApp: App {
                     logger.info("ContentView appeared")
                     // Request HealthKit permissions early (must be after window exists)
                     workoutManager.requestHealthKitPermissionsIfNeeded()
-                    // Crash recovery: deferred off first render to avoid blocking the UI
-                    Task {
-                        // Finalize any HKWorkoutSession orphaned by a crash/kill so
-                        // the workout still reaches HealthKit.
-                        workoutManager.recoverOrphanedHKSession()
-                        if !workoutManager.isWorkoutActive, let recovered = workoutManager.recoverCrashedWorkout() {
-                            logger.info("Recovering crashed workout session")
-                            workoutManager.saveRecoveredSession(recovered)
-                        }
-                    }
+                    // Crash recovery (orphaned HK session + crashed-workout backup)
+                    // runs off first render. It is owned by the workout manager as a
+                    // Task so that a workout started before it finishes — e.g. a
+                    // complication deep link on a cold launch — awaits it instead of
+                    // racing it (which left two live HK sessions and auto-stopped the
+                    // new workout ~1 minute in).
+                    workoutManager.beginLaunchRecovery()
                 }
     }
 }

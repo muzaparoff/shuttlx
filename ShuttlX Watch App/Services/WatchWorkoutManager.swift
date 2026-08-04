@@ -24,6 +24,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var isPaused = false
     @Published var currentActivity: DetectedActivity = .unknown
     @Published var elapsedTime: TimeInterval = 0
+    /// Wall-clock basis for SwiftUI's system-rendered timer text
+    /// (`Text(timerInterval:)`), which ticks in the render server and therefore
+    /// keeps counting even when the main actor is backlogged or the app is in
+    /// Always-On (reduced luminance) state.
+    ///
+    /// Invariant while RUNNING: `timerReferenceDate == Date() - elapsedTime`,
+    /// i.e. `workoutStartTime + accumulatedPauseTime`. `nil` while paused and
+    /// after stop, so views fall back to static `elapsedTime` text.
+    /// `elapsedTime` itself is unchanged — metrics, the interval engine and the
+    /// crash checkpoints all still derive from it.
+    @Published private(set) var timerReferenceDate: Date?
     @Published var currentSegmentTime: TimeInterval = 0
     @Published var heartRate: Int = 0
     @Published var calories: Int = 0
@@ -131,7 +142,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // Rolling pace window — replaces cumulative-average `elapsedTime / distanceKm`
     // which was pinned at ~10:00/km by the pedometer warmup spike (first sample
     // arrived at ~30s elapsed with ~0.05km distance = exactly 600s/km = 10:00).
-    private var paceWindowSamples: [(time: TimeInterval, distance: Double)] = []
+    // Samples are keyed on WALL CLOCK, not `elapsedTime`. Keying on elapsedTime
+    // created a feedback loop: if the display tick stalls, elapsedTime stops
+    // advancing, the 30s cutoff stops moving, and every pedometer callback appends
+    // a sample that is never pruned — an unbounded array with an O(n) removeAll per
+    // callback, which deepens the very main-actor backlog that stalled the tick.
+    private var paceWindowSamples: [(time: Date, distance: Double)] = []
     private let paceWindowSec: TimeInterval = 30
 
     // Pace & split tracking
@@ -253,6 +269,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// Async core of workout startup — awaits HealthKit authorization, then
     /// initialises state and starts all sensors/queries.
     private func startWorkoutAfterAuth() async {
+        // Serialize behind launch recovery. On a cold launch a fast start (e.g. a
+        // complication deep link) used to race recoverOrphanedHKSession(): the RC-2
+        // guard made recovery bail out, leaving an orphaned HKWorkoutSession live
+        // alongside the brand-new one, and the system then ended one of them —
+        // the "workout auto-stops within a minute of first launch" bug. Near-instant
+        // when there is nothing to recover.
+        if let recovery = launchRecoveryTask {
+            await recovery.value
+        }
+
         // Abort if another workout snuck in while we were waiting.
         guard !isWorkoutActive else {
             logger.warning("Workout became active while awaiting authorization")
@@ -262,7 +288,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let authorized = await requestHealthAuthorizationAsync()
         guard authorized else {
             logger.warning("Workout start aborted — HealthKit not authorized")
-            // authorizationDenied is already set by requestHealthAuthorizationAsync
+            // authorizationDenied is set by requestHealthAuthorizationAsync when the
+            // user (or the system) actually refused. When it is false we got here via
+            // the authorization TIMEOUT, which is a different user story: nothing was
+            // denied, the grant sheet just never resolved. Surface a retry prompt via
+            // startupError — ProgramSelectionView shows it in an ErrorBanner — instead
+            // of silently doing nothing.
+            if !authorizationDenied {
+                startupError = "Health access didn't finish setting up. Please try again."
+            }
             return
         }
 
@@ -278,6 +312,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // workout with no background runtime if the session fails — killed at wrist-down.
         isPaused = false
         elapsedTime = 0
+        // Running invariant: start time + accumulated pause (zero at start).
+        timerReferenceDate = now
         currentSegmentTime = 0
         heartRate = 0
         calories = 0
@@ -321,6 +357,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // a zero-duration session, and return without starting sensors.
         guard startWorkoutSession() else {
             workoutStartTime = nil
+            timerReferenceDate = nil
             segments = []
             return
         }
@@ -437,6 +474,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     func applyPauseState() {
         isPaused = true
         pauseStartDate = Date()
+        // Freeze the system-rendered timer: views fall back to static elapsedTime text.
+        timerReferenceDate = nil
 
         // Push isPaused:true to iPhone before stopping the timer so the
         // 10-second timeout on the phone side doesn't clear live state.
@@ -472,6 +511,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             accumulatedPauseTime += Date().timeIntervalSince(pauseStart)
             pauseStartDate = nil
         }
+
+        // Re-anchor the system-rendered timer past the pause we just closed:
+        // start + total pause == Date() - elapsedTime.
+        timerReferenceDate = workoutStartTime?.addingTimeInterval(accumulatedPauseTime)
 
         // Close the current segment and start a new one
         closeCurrentSegment()
@@ -518,6 +561,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         isPaused = false
         currentActivity = .unknown
         elapsedTime = 0
+        timerReferenceDate = nil
         currentSegmentTime = 0
         heartRate = 0
         calories = 0
@@ -644,10 +688,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Use a background queue for the timer source so the 1-second tick does not
         // compete with SwiftUI rendering on the main queue. State updates inside
         // updateElapsedTime() hop back to @MainActor via the class isolation.
-        // S-6: .utility (not .userInteractive) — 1 Hz display tick doesn't need
-        // the highest-priority QoS bucket. On Apple Watch this directly reduces
-        // CPU frequency and battery draw during long workouts.
-        let newTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .utility))
+        //
+        // QoS: .userInitiated. S-6 downgraded this to .utility as a battery
+        // optimisation, but .utility is subject to aggressive CPU-bandwidth
+        // throttling — under a WatchConnectivity sync storm the tick source was
+        // scheduled late, the tickPending guard then DROPPED the late tick, and the
+        // on-screen clock stalled for minutes. A 1 Hz timer costs effectively
+        // nothing; the correct backpressure mechanism is the drop-guard below, not
+        // a starved QoS bucket.
+        let newTimer = DispatchSource.makeTimerSource(queue: DispatchQueue.global(qos: .userInitiated))
         newTimer.schedule(deadline: .now() + 1.0, repeating: 1.0, leeway: .milliseconds(50))
 
         newTimer.setEventHandler { [weak self] in
@@ -1006,18 +1055,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        // Rolling pace from a sliding 30s window of (elapsedTime, distance)
+        // Rolling pace from a sliding 30s window of (wall clock, distance)
         // samples. Guards: workout >= 20s old, distance >= 0.05km, window
         // spans >= 5s and >= 5m. When guards fail before publishing, keep
         // currentPace nil; when they fail after publishing, keep last value.
-        let now = elapsedTime
+        let now = Date()
+        // Pause-corrected wall-clock workout age — same formula updateElapsedTime()
+        // uses, but computed here so a stalled tick can't affect the guard.
+        let workoutAge = workoutStartTime.map { now.timeIntervalSince($0) - accumulatedPauseTime } ?? elapsedTime
         paceWindowSamples.append((time: now, distance: distanceKm))
-        let cutoff = now - paceWindowSec
+        let cutoff = now.addingTimeInterval(-paceWindowSec)
         paceWindowSamples.removeAll { $0.time < cutoff }
-        if now < 20 || distanceKm < 0.05 {
+        if workoutAge < 20 || distanceKm < 0.05 {
             currentPace = nil
         } else if let oldest = paceWindowSamples.first {
-            let dt = now - oldest.time
+            let dt = now.timeIntervalSince(oldest.time)
             let dDist = distanceKm - oldest.distance
             if dt >= 5, dDist >= 0.005 {
                 currentPace = dt / dDist
@@ -1298,54 +1350,98 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         logger.info("Recovered session sent to iOS and backup cleared")
     }
 
+    // MARK: - Launch Recovery
+
+    /// Launch-time recovery work (orphaned HKWorkoutSession + crashed-workout
+    /// backup), kept as a Task so `startWorkoutAfterAuth()` can await it. Without
+    /// this serialization a cold-launch start races the recovery and both sessions
+    /// end up live in HealthKit.
+    private(set) var launchRecoveryTask: Task<Void, Never>?
+
+    /// Starts launch recovery exactly once. Called from the app root's onAppear.
+    func beginLaunchRecovery() {
+        guard launchRecoveryTask == nil else { return }
+        logger.info("Launch recovery starting")
+        launchRecoveryTask = Task { @MainActor [weak self] in
+            guard let self = self else { return }
+            await self.recoverOrphanedHKSession()
+            if !self.isWorkoutActive, let recovered = self.recoverCrashedWorkout() {
+                self.logger.info("Recovering crashed workout session")
+                self.saveRecoveredSession(recovered)
+            }
+            self.logger.info("Launch recovery complete")
+        }
+    }
+
     /// Finalize an HKWorkoutSession orphaned by a crash or watchdog kill so its
     /// collected data still reaches HealthKit. Without this, a workout whose
     /// process died mid-run never writes an HKWorkout at all — the session stays
-    /// live inside HealthKit with no owner. Called once at app launch.
-    func recoverOrphanedHKSession() {
+    /// live inside HealthKit with no owner. Called once at app launch, and awaited
+    /// by any workout start that happens before it finishes.
+    func recoverOrphanedHKSession() async {
         #if os(watchOS)
-        healthStore.recoverActiveWorkoutSession { [weak self] session, error in
-            Task { @MainActor [weak self] in
-                guard let self = self else { return }
-                if let error = error {
-                    self.logger.error("recoverActiveWorkoutSession failed: \(error.localizedDescription)")
-                    return
-                }
-                guard let session = session else { return }
-                // RC-2: Also guard !isStarting — the 8s HealthKit auth await creates a
-                // window where isWorkoutActive is still false but a new session is mid-start.
-                // Without this guard, the orphan recovery can end() the session we just created,
-                // silently stopping a brand-new workout.
-                guard !self.isWorkoutActive, !self.isStarting else {
-                    self.logger.warning("Orphaned HK session found while a workout is active or starting — ignoring")
-                    return
-                }
-                self.logger.warning("Recovered orphaned HKWorkoutSession (state \(session.state.rawValue)) — finalizing so the workout reaches Health")
-                let builder = session.associatedWorkoutBuilder()
-                if session.state == .running || session.state == .paused {
-                    session.end()
-                }
-                builder.endCollection(withEnd: Date()) { _, endError in
-                    if let endError = endError {
-                        Task { @MainActor [weak self] in
-                            self?.logger.error("endCollection on recovered session failed: \(endError.localizedDescription)")
-                        }
-                    }
-                    builder.finishWorkout { workout, finishError in
-                        Task { @MainActor [weak self] in
-                            guard let self = self else { return }
-                            if let finishError = finishError {
-                                self.logger.error("finishWorkout on recovered session failed: \(finishError.localizedDescription)")
-                            } else {
-                                self.logger.info("Orphaned workout finalized to HealthKit: \(workout?.uuid.uuidString ?? "unknown")")
-                            }
-                        }
-                    }
-                }
-            }
+        guard let session = await recoverActiveWorkoutSession(timeout: 5) else { return }
+        // RC-2 safety net, tightened: the precise question is "have WE created a
+        // session yet?", which `workoutSession == nil` answers exactly. The old
+        // `!isStarting` clause made recovery bail out precisely when it mattered —
+        // the deep-link start path sets isStarting BEFORE awaiting us, so a genuine
+        // orphan was left un-finalized next to the new session.
+        guard !isWorkoutActive, workoutSession == nil else {
+            logger.warning("Orphaned HK session found while a workout is active — ignoring")
+            return
+        }
+        logger.warning("Recovered orphaned HKWorkoutSession (state \(session.state.rawValue)) — finalizing so the workout reaches Health")
+        let builder = session.associatedWorkoutBuilder()
+        if session.state == .running || session.state == .paused {
+            session.end()
+        }
+        do {
+            try await builder.endCollection(at: Date())
+            let workout = try await builder.finishWorkout()
+            logger.info("Orphaned workout finalized to HealthKit: \(workout?.uuid.uuidString ?? "unknown")")
+        } catch {
+            logger.error("Failed to finalize recovered HK session: \(error.localizedDescription)")
         }
         #endif
     }
+
+    #if os(watchOS)
+    /// `recoverActiveWorkoutSession` with a hard deadline. A workout start now
+    /// awaits launch recovery, so a HealthKit daemon that never calls back must not
+    /// be able to block the start button forever.
+    private func recoverActiveWorkoutSession(timeout: TimeInterval) async -> HKWorkoutSession? {
+        let store = healthStore
+        let logger = self.logger
+        return await withCheckedContinuation { (continuation: CheckedContinuation<HKWorkoutSession?, Never>) in
+            // The HK callback and the timeout can race; the lock guarantees exactly
+            // one resume (a double resume traps).
+            let hasResumed = OSAllocatedUnfairLock(initialState: false)
+            let resumeOnce: (HKWorkoutSession?) -> Bool = { session in
+                let already = hasResumed.withLock { done -> Bool in
+                    if done { return true }
+                    done = true
+                    return false
+                }
+                guard !already else { return false }
+                continuation.resume(returning: session)
+                return true
+            }
+            store.recoverActiveWorkoutSession { session, error in
+                if let error = error {
+                    logger.error("recoverActiveWorkoutSession failed: \(error.localizedDescription)")
+                    _ = resumeOnce(nil)
+                    return
+                }
+                _ = resumeOnce(session)
+            }
+            DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout) {
+                if resumeOnce(nil) {
+                    logger.warning("recoverActiveWorkoutSession did not call back within \(Int(timeout))s — continuing without orphan recovery")
+                }
+            }
+        }
+    }
+    #endif
 
 
     /// Snapshot current metrics into a WorkoutSummary BEFORE calling stopWorkout().
@@ -1515,6 +1611,26 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// only. Never called in production paths. Mirrors the iOS
     /// `applyPreviewSnapshot` so the Arcade chrome can be captured at true
     /// device size: stage 3/8, 01:48 countdown, HR 142, live SPM/distance.
+    /// Seeds a RUNNING free-run state at an arbitrary elapsed time so the
+    /// wall-clock timer branch (`timerReferenceDate != nil`) can be captured in the
+    /// simulator without waiting an hour. Snapshot/QA only.
+    func applyFreeRunPreviewSnapshot(elapsed: TimeInterval) {
+        workoutMode = .freeRun
+        workoutName = "Free Run"
+        intervalEngine = nil
+        isWorkoutActive = true
+        isPaused = false
+        elapsedTime = elapsed
+        // The running invariant: reference = now - elapsed.
+        timerReferenceDate = Date().addingTimeInterval(-elapsed)
+        totalDistance = 12.84
+        totalSteps = 15_402
+        currentPace = 6 * 60 + 47
+        currentCadence = 162
+        heartRate = 138
+        calories = 812
+    }
+
     func applyPreviewSnapshot() {
         workoutMode = .interval
         workoutName = "5K Interval"

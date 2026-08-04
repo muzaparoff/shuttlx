@@ -24,13 +24,22 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     func setWorkoutManager(_ manager: WatchWorkoutManager) {
         workoutManager = manager
     }
-    private let appGroupIdentifier = "group.com.shuttlx.shared"
+    private nonisolated static let appGroupIdentifier = "group.com.shuttlx.shared"
 
     private var pendingSessions: [TrainingSession] = []
     private var consecutiveFailures = 0
     private var backgroundSyncTimer: Timer?
     private let pendingSessionsFileName = "pending_sync_sessions.json"
     private var lastFullResendTime: Date?
+    /// Sessions with a WatchConnectivity transfer the daemon has NOT reported as
+    /// finished yet. Without this, every retry tick (15s) plus every 1/3/8s burst
+    /// re-enqueued a fresh copy of the same payload into wcd's outbox, so a cold
+    /// launch with a few pending sessions produced a transfer storm that saturates
+    /// the WC daemon and, through it, the main actor. Populated on enqueue, cleared
+    /// in the didFinish callbacks (success AND failure — a failure simply lets the
+    /// next retry tick resend), and reconciled from the daemon's own outstanding
+    /// queues at activation so a relaunch doesn't double-queue what it already holds.
+    private var inFlightSessionIDs: Set<UUID> = []
     // Gates scheduleFinishRetryBurst — without this, each pending session in a
     // retry cycle would schedule another 3 retries (1s/3s/8s), creating an
     // O(3^k × N) closure explosion that can kill the watch extension under
@@ -81,6 +90,32 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         for session in pendingSessions {
             sendSessionToiOS(session)
         }
+    }
+
+    /// Rebuilds `inFlightSessionIDs` from the transfers the WatchConnectivity daemon
+    /// is still holding. The daemon's queues survive an app relaunch; our in-memory
+    /// set does not — without this, the first retry tick after a cold launch would
+    /// enqueue a duplicate of every transfer already waiting to go out.
+    /// Only valid once the session is activated.
+    private func reconcileInFlightTransfers() {
+        guard WCSession.default.activationState == .activated else { return }
+        var adopted = Set<UUID>()
+        for transfer in WCSession.default.outstandingFileTransfers {
+            if let id = transfer.file.metadata?["sessionID"] as? String,
+               let uuid = UUID(uuidString: id) {
+                adopted.insert(uuid)
+            }
+        }
+        for transfer in WCSession.default.outstandingUserInfoTransfers {
+            guard (transfer.userInfo["action"] as? String) == "saveSession" else { continue }
+            if let id = transfer.userInfo["sessionID"] as? String,
+               let uuid = UUID(uuidString: id) {
+                adopted.insert(uuid)
+            }
+        }
+        guard !adopted.isEmpty else { return }
+        inFlightSessionIDs.formUnion(adopted)
+        logger.info("Adopted \(adopted.count) outstanding WC transfer(s) from the daemon")
     }
 
     private func updateConnectivityHealth() {
@@ -155,7 +190,21 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Session Sending
 
     func sendSessionToiOS(_ session: TrainingSession) {
+        // Anti-stacking guard: a transfer for this session is still sitting in the
+        // WC daemon's outbox. Re-sending it now would add a duplicate payload to a
+        // queue that is already backed up — the exact behaviour that turned a cold
+        // launch into a multi-minute sync storm. The session stays in
+        // `pendingSessions`, so the next retry tick after didFinish resends it.
+        guard !inFlightSessionIDs.contains(session.id) else {
+            logger.info("Send skipped for session \(session.id) — transfer still in flight")
+            return
+        }
         logger.info("Sending training session to iOS...")
+        // Claim the session NOW, synchronously on the main actor — not after the
+        // encode. The encode below takes 150–500ms for a GPS session, and the retry
+        // tick / burst fire on that same timescale; claiming late leaves a window
+        // where two sends both pass the guard.
+        inFlightSessionIDs.insert(session.id)
         // App Group write is already on sessionStoreQueue (background).
         saveSessionToAppGroup(session)
 
@@ -194,6 +243,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 await MainActor.run { [weak self] in
                     guard let self = self else { return }
                     self.logger.error("Failed to encode session: \(error.localizedDescription)")
+                    // Nothing was enqueued — release the claim so the retry tick
+                    // can try again.
+                    self.inFlightSessionIDs.remove(session.id)
                     self.queuePendingSession(session)
                 }
             }
@@ -220,6 +272,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         // File write of large data (>200KB) must not run on main — it can take 50–200ms.
         // queuePendingSession happens immediately on main (fast), file write is background.
         queuePendingSession(session)
+        // Mark in-flight synchronously (before the background write) so a retry
+        // tick landing during the write can't enqueue a second transfer.
+        inFlightSessionIDs.insert(session.id)
         let tempDir = FileManager.default.temporaryDirectory
         let fileName = "session_\(session.id.uuidString).json"
         let fileURL = tempDir.appendingPathComponent(fileName)
@@ -251,6 +306,12 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 }
             } catch {
                 logger.error("Failed to write temp file for transfer: \(error.localizedDescription)")
+                // No transfer was enqueued, so no didFinish will ever arrive —
+                // release the in-flight marker or this session is stuck forever.
+                await MainActor.run { [weak self] in
+                    guard let self = self else { return }
+                    self.inFlightSessionIDs.remove(session.id)
+                }
             }
         }
     }
@@ -269,6 +330,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// Re-encode off the main actor and hand the session to the uncapped file channel.
     /// Used when a dictionary-channel transfer came back as payloadTooLarge.
     private func escalateToFileTransfer(_ session: TrainingSession) {
+        // Same reasoning as sendSessionToiOS: claim before the async re-encode so a
+        // retry tick can't slip a duplicate through the window.
+        inFlightSessionIDs.insert(session.id)
         Task.detached(priority: .utility) { [weak self] in
             guard let self = self else { return }
             do {
@@ -280,6 +344,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 await MainActor.run { [weak self] in
                     guard let self = self else { return }
                     self.logger.error("Failed to re-encode session for file-transfer escalation: \(error.localizedDescription)")
+                    self.inFlightSessionIDs.remove(session.id)
                     self.queuePendingSession(session)
                 }
             }
@@ -294,6 +359,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             "sessionID": session.id.uuidString
         ]
 
+        inFlightSessionIDs.insert(session.id)
         WCSession.default.transferUserInfo(userInfo)
         logger.info("Session queued via transferUserInfo")
         updateSyncStatus("Session queued for background sync")
@@ -347,7 +413,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func savePendingSessionsToDisk() {
-        guard let containerURL = getWorkingContainer() else { return }
+        guard let containerURL = Self.getWorkingContainer() else { return }
         // Capture value types on @MainActor; encode + write on background.
         let sessions = pendingSessions
         let url = containerURL.appendingPathComponent(pendingSessionsFileName)
@@ -370,7 +436,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// Both files are read concurrently on a background task; results are assigned
     /// on @MainActor after the await.
     private func loadPendingSessionsAndTemplates() async {
-        guard let containerURL = getWorkingContainer() else {
+        guard let containerURL = Self.getWorkingContainer() else {
             loadFallbackTemplates()
             return
         }
@@ -414,7 +480,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     private nonisolated static let sessionStoreQueue = DispatchQueue(label: "com.shuttlx.watch-session-store", qos: .utility)
 
     private func saveSessionToAppGroup(_ session: TrainingSession) {
-        guard let containerURL = getWorkingContainer() else {
+        guard let containerURL = Self.getWorkingContainer() else {
             logger.error("Failed to get App Group container URL")
             return
         }
@@ -428,6 +494,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         let sessionsURL = containerURL.appendingPathComponent("sessions.json")
         let coordinator = NSFileCoordinator()
         var coordinatorError: NSError?
+        // Set only when a genuinely new session lands on disk. Every retry path
+        // funnels through here, so reloading timelines unconditionally fired
+        // widget-extension IPC dozens of times per sync cycle for no change at all.
+        var didInsert = false
 
         // Read-then-write under a single write coordination to prevent races
         coordinator.coordinate(writingItemAt: sessionsURL, options: .forReplacing, error: &coordinatorError) { writeURL in
@@ -456,6 +526,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             do {
                 let data = try JSONEncoder().encode(sessions)
                 try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
+                didInsert = true
                 logger.info("Session saved to App Group")
             } catch {
                 logger.error("Failed to save session to App Group: \(error.localizedDescription)")
@@ -463,9 +534,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
         if let coordinatorError {
             logger.error("File coordination error saving session to App Group: \(coordinatorError.localizedDescription)")
-        } else {
+        } else if didInsert {
             // Called outside the coordinator block — IPC to widget extension
-            // must not hold the file coordination lock.
+            // must not hold the file coordination lock. Only fired when the store
+            // actually changed (dedup hit / encode failure ⇒ nothing to reload).
             WidgetCenter.shared.reloadAllTimelines()
         }
     }
@@ -485,10 +557,21 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 self.updateSyncStatus("Connected to iPhone")
                 self.consecutiveFailures = 0
 
+                // Adopt whatever the WC daemon still holds from the previous launch
+                // so we don't enqueue a second copy of it below.
+                self.reconcileInFlightTransfers()
+
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                     Task { @MainActor in
+                        // NOTE: sendAllStoredSessions() used to run here, re-sending
+                        // EVERY session from the last 24h on every single cold launch.
+                        // That is the cold-launch sync storm: dozens of redundant
+                        // transfers saturating wcd (and, through the main-actor
+                        // delegate hops, the display tick) for minutes. Reconciliation
+                        // is already covered by the phone-side "requestAllSessions"
+                        // pull and "reconcileSessions" diff, both of which only move
+                        // sessions the phone is actually missing.
                         self?.retryPendingSessions()
-                        await self?.sendAllStoredSessions()
                     }
                 }
             }
@@ -571,6 +654,34 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             return
         }
 
+        // Session-bulk requests never touch the main actor for their heavy work:
+        // reading sessions.json and JSON-encoding every session (GPS routes
+        // included) costs hundreds of ms and used to run inside a @MainActor Task,
+        // stalling the 1 Hz display tick. WCSession's reply/transfer APIs are
+        // thread-safe, so only the @Published status mutations hop back to main.
+        if let action = message["action"] as? String, action == "requestAllSessions" {
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else {
+                    replyHandler(["status": "empty", "count": 0])
+                    return
+                }
+                await self.handleRequestAllSessions(replyHandler: replyHandler)
+            }
+            return
+        }
+
+        if let action = message["action"] as? String, action == "reconcileSessions" {
+            let knownIDs = Set((message["knownSessionIDs"] as? [String]) ?? [])
+            Task.detached(priority: .utility) { [weak self] in
+                guard let self = self else {
+                    replyHandler(["status": "in_sync", "missingCount": 0])
+                    return
+                }
+                await self.handleReconcileSessions(knownIDs: knownIDs, replyHandler: replyHandler)
+            }
+            return
+        }
+
         Task { @MainActor in
             if let action = message["action"] as? String {
                 switch action {
@@ -579,62 +690,6 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
                     self.updateSyncStatus("Connection verified")
                     self.consecutiveFailures = 0
-                case "requestAllSessions":
-                    let sessions = await self.loadAllLocalSessions()
-                    if sessions.isEmpty {
-                        replyHandler(["status": "empty", "count": 0])
-                    } else {
-                        // Hybrid reply: inline sessions up to a CUMULATIVE byte budget;
-                        // anything that doesn't fit routes through sendSessionToiOS, which
-                        // applies the authoritative size routing (dual-channel vs file).
-                        // sendMessage replies are capped at ~65KB for the whole dictionary
-                        // and base64 inflates by 4/3, so 36KB of raw JSON keeps the reply
-                        // safely under the ceiling no matter how many sessions are stored.
-                        // NOTE: no separate per-session ceiling here — the cumulative budget
-                        // already diverts every oversized session, and a second, larger
-                        // threshold is exactly what created the old 65KB–200KB dead zone.
-                        let inlineBudget = 36_000
-                        var inlineSessions: [TrainingSession] = []
-                        var inlineBytes = 0
-                        var routedCount = 0
-                        for s in sessions {
-                            let size = (try? JSONEncoder().encode(s))?.count ?? 0
-                            if inlineBytes + size > inlineBudget {
-                                self.sendSessionToiOS(s)
-                                routedCount += 1
-                            } else {
-                                inlineSessions.append(s)
-                                inlineBytes += size
-                            }
-                        }
-                        if let encoded = try? JSONEncoder().encode(inlineSessions) {
-                            replyHandler([
-                                "status": "ok",
-                                "count": sessions.count,
-                                "sessionsData": encoded.base64EncodedString(),
-                                "oversizedCount": routedCount
-                            ])
-                        } else {
-                            // Encoding failed — fall back to individual routing
-                            for s in inlineSessions { self.sendSessionToiOS(s) }
-                            replyHandler(["status": "ok", "count": sessions.count, "oversizedCount": sessions.count])
-                        }
-                        self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone (requested)")
-                    }
-                case "reconcileSessions":
-                    let knownIDs = Set((message["knownSessionIDs"] as? [String]) ?? [])
-                    let allSessions = await self.loadAllLocalSessions()
-                    let missingSessions = allSessions.filter { !knownIDs.contains($0.id.uuidString) }
-
-                    if missingSessions.isEmpty {
-                        replyHandler(["status": "in_sync", "missingCount": 0])
-                    } else {
-                        self.logger.info("iPhone missing \(missingSessions.count) session(s) — resending")
-                        for session in missingSessions {
-                            self.sendSessionToiOS(session)
-                        }
-                        replyHandler(["status": "resending", "missingCount": missingSessions.count])
-                    }
                 case "workoutControl":
                     let command = message["command"] as? String ?? ""
                     switch command {
@@ -666,6 +721,17 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didFinish userInfoTransfer: WCSessionUserInfoTransfer, error: Error?) {
         Task { @MainActor in
+            // Release the in-flight marker first — on BOTH success and failure.
+            // On failure the session stays in pendingSessions, so the next retry
+            // tick resends it; keeping the marker set would strand it forever.
+            // Only "saveSession" transfers own the marker: the lightweight
+            // "lastSessionID" tap carries the same sessionID but must not release
+            // the marker held by an in-flight file transfer.
+            if (userInfoTransfer.userInfo["action"] as? String) == "saveSession",
+               let sessionID = userInfoTransfer.userInfo["sessionID"] as? String,
+               let uuid = UUID(uuidString: sessionID) {
+                self.inFlightSessionIDs.remove(uuid)
+            }
             if let error = error {
                 self.logger.error("UserInfo transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
@@ -702,6 +768,12 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     nonisolated func session(_ session: WCSession, didFinish fileTransfer: WCSessionFileTransfer, error: Error?) {
         Task { @MainActor in
+            // Release the in-flight marker on both success and failure (see the
+            // userInfo didFinish above for the rationale).
+            if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String,
+               let uuid = UUID(uuidString: sessionID) {
+                self.inFlightSessionIDs.remove(uuid)
+            }
             if let error = error {
                 self.logger.error("File transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
@@ -854,32 +926,117 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// blocking — calling it on @MainActor causes visible freezes when iPhone
     /// reconnects during or after a workout.
     private func loadAllLocalSessions() async -> [TrainingSession] {
+        let logger = self.logger
+        return await Task.detached(priority: .utility) {
+            Self.loadSessionsFromStore(logger: logger)
+        }.value
+    }
+
+    /// Synchronous, nonisolated read of sessions.json. MUST be called off the main
+    /// actor (NSFileCoordinator.coordinate blocks). Shared by the @MainActor
+    /// `loadAllLocalSessions()` wrapper and the off-main WC request handlers.
+    private nonisolated static func loadSessionsFromStore(logger: Logger) -> [TrainingSession] {
         guard let containerURL = getWorkingContainer() else { return [] }
         let url = containerURL.appendingPathComponent("sessions.json")
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-        let logger = self.logger
-        return await Task.detached(priority: .utility) {
-            var result: [TrainingSession] = []
-            let coordinator = NSFileCoordinator()
-            var coordinatorError: NSError?
-            coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
-                do {
-                    let data = try Data(contentsOf: readURL)
-                    result = try JSONDecoder().decode([TrainingSession].self, from: data)
-                } catch {
-                    logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
-                    let backupURL = url.deletingLastPathComponent()
-                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                    try? FileManager.default.copyItem(at: readURL, to: backupURL)
-                    logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                    Self.purgeOldCorruptBackups(in: url.deletingLastPathComponent(), logger: logger)
-                }
+        var result: [TrainingSession] = []
+        let coordinator = NSFileCoordinator()
+        var coordinatorError: NSError?
+        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
+            do {
+                let data = try Data(contentsOf: readURL)
+                result = try JSONDecoder().decode([TrainingSession].self, from: data)
+            } catch {
+                logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
+                let backupURL = url.deletingLastPathComponent()
+                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+                try? FileManager.default.copyItem(at: readURL, to: backupURL)
+                logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
+                purgeOldCorruptBackups(in: url.deletingLastPathComponent(), logger: logger)
             }
-            if let coordinatorError {
-                logger.error("File coordination error loading sessions on watch: \(coordinatorError.localizedDescription)")
+        }
+        if let coordinatorError {
+            logger.error("File coordination error loading sessions on watch: \(coordinatorError.localizedDescription)")
+        }
+        return result
+    }
+
+    // MARK: - Bulk Session Requests (executed off the main actor)
+
+    /// Packs a "requestAllSessions" reply: inline sessions up to a CUMULATIVE byte
+    /// budget; anything that doesn't fit is returned in `routed` for
+    /// `sendSessionToiOS`, which applies the authoritative size routing
+    /// (dual-channel vs file). sendMessage replies are capped at ~65KB for the whole
+    /// dictionary and base64 inflates by 4/3, so 36KB of raw JSON keeps the reply
+    /// safely under the ceiling no matter how many sessions are stored.
+    /// NOTE: no separate per-session ceiling here — the cumulative budget already
+    /// diverts every oversized session, and a second, larger threshold is exactly
+    /// what created the old 65KB–200KB dead zone.
+    /// Pure + nonisolated: every JSONEncoder pass (GPS routes included) runs off main.
+    nonisolated static func planSessionsReply(_ sessions: [TrainingSession],
+                                              inlineBudget: Int = 36_000)
+    -> (reply: [String: Any], routed: [TrainingSession]) {
+        var inlineSessions: [TrainingSession] = []
+        var routed: [TrainingSession] = []
+        var inlineBytes = 0
+        let encoder = JSONEncoder()
+        for s in sessions {
+            let size = (try? encoder.encode(s))?.count ?? 0
+            if inlineBytes + size > inlineBudget {
+                routed.append(s)
+            } else {
+                inlineSessions.append(s)
+                inlineBytes += size
             }
-            return result
-        }.value
+        }
+        if let encoded = try? encoder.encode(inlineSessions) {
+            return ([
+                "status": "ok",
+                "count": sessions.count,
+                "sessionsData": encoded.base64EncodedString(),
+                "oversizedCount": routed.count
+            ], routed)
+        }
+        // Encoding failed — fall back to individual routing for everything.
+        return (["status": "ok", "count": sessions.count, "oversizedCount": sessions.count],
+                inlineSessions + routed)
+    }
+
+    /// Off-main handler for the iPhone's "requestAllSessions" pull.
+    private nonisolated func handleRequestAllSessions(replyHandler: @escaping ([String: Any]) -> Void) async {
+        let sessions = Self.loadSessionsFromStore(logger: logger)
+        guard !sessions.isEmpty else {
+            replyHandler(["status": "empty", "count": 0])
+            await MainActor.run { self.updateConnectivityHealth() }
+            return
+        }
+        let plan = Self.planSessionsReply(sessions)
+        replyHandler(plan.reply)
+        await MainActor.run {
+            for s in plan.routed { self.sendSessionToiOS(s) }
+            self.updateSyncStatus("Sent \(sessions.count) session(s) to iPhone (requested)")
+            self.updateConnectivityHealth()
+        }
+    }
+
+    /// Off-main handler for the iPhone's "reconcileSessions" diff.
+    private nonisolated func handleReconcileSessions(knownIDs: Set<String>,
+                                                     replyHandler: @escaping ([String: Any]) -> Void) async {
+        let allSessions = Self.loadSessionsFromStore(logger: logger)
+        let missingSessions = allSessions.filter { !knownIDs.contains($0.id.uuidString) }
+        guard !missingSessions.isEmpty else {
+            replyHandler(["status": "in_sync", "missingCount": 0])
+            await MainActor.run { self.updateConnectivityHealth() }
+            return
+        }
+        replyHandler(["status": "resending", "missingCount": missingSessions.count])
+        await MainActor.run {
+            self.logger.info("iPhone missing \(missingSessions.count) session(s) — resending")
+            for session in missingSessions {
+                self.sendSessionToiOS(session)
+            }
+            self.updateConnectivityHealth()
+        }
     }
 
     // MARK: - Template Sync
@@ -926,7 +1083,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     private func saveTemplatesToDisk(_ templates: [WorkoutTemplate]) {
-        guard let containerURL = getWorkingContainer() else { return }
+        guard let containerURL = Self.getWorkingContainer() else { return }
         let url = containerURL.appendingPathComponent("workout_templates.json")
         do {
             let data = try JSONEncoder().encode(templates)
@@ -968,7 +1125,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
-    private func getWorkingContainer() -> URL? {
+    /// nonisolated so the off-main session loaders can resolve the container
+    /// without a main-actor hop (it only reads a static constant).
+    private nonisolated static func getWorkingContainer() -> URL? {
         if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) {
             return container
         }

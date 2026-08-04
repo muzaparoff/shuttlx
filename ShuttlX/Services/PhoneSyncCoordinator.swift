@@ -41,6 +41,16 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     private var lastStopResendAt: Date? = nil
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "PhoneSyncCoordinator")
 
+    /// Timestamp of the last automatic (non-user-initiated) session pull
+    /// triggered by WCSessionDelegate activation/reachability callbacks.
+    /// Watch reachability flaps repeatedly during the first 5-7 minutes of a
+    /// workout (screen on/off, wrist-down transitions, background app
+    /// refresh), and each flap previously re-fired requestSessionsFromWatch —
+    /// saturating the watch's main actor while it's trying to run the
+    /// workout loop and broadcast live metrics. See autoPullSessionsFromWatch.
+    private var lastAutoPullDate: Date?
+    private let autoPullDebounceInterval: TimeInterval = 300
+
     private let sessionsKey = "sessions.json"
     private let appGroupIdentifier = "group.com.shuttlx.shared"
     private var sharedContainer: URL? {
@@ -593,6 +603,32 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         attemptSessionRequest(retriesLeft: 3, completion: completion)
     }
 
+    /// Debounced + workout-aware wrapper around `requestSessionsFromWatch`,
+    /// used only by the WCSessionDelegate auto-triggers (activation,
+    /// reachability changes). At most one auto-pull is allowed per
+    /// `autoPullDebounceInterval` (5 min), and the pull is skipped entirely
+    /// while a Watch workout is in progress — the watch's main actor is busy
+    /// running the workout loop, and the bulk session pull can wait until the
+    /// workout ends. User-initiated refreshes (e.g. Settings "Sync Now") call
+    /// `requestSessionsFromWatch` directly and are NOT subject to this debounce.
+    private func autoPullSessionsFromWatch(reason: String) {
+        if isWorkoutActiveOnWatch {
+            log("Auto-pull (\(reason)) skipped — workout active on Watch")
+            return
+        }
+        if let last = lastAutoPullDate, Date().timeIntervalSince(last) < autoPullDebounceInterval {
+            log("Auto-pull (\(reason)) skipped — debounced (\(Int(Date().timeIntervalSince(last)))s since last pull)")
+            return
+        }
+        lastAutoPullDate = Date()
+        requestSessionsFromWatch { [weak self] count in
+            if count > 0 {
+                self?.log("Auto-pull (\(reason)) pulled \(count) session(s)")
+            }
+            self?.reconcileSessionIDs()
+        }
+    }
+
     private func attemptSessionRequest(retriesLeft: Int, completion: @escaping (Int) -> Void) {
         WCSession.default.sendMessage(
             ["action": "requestAllSessions"],
@@ -850,15 +886,11 @@ extension PhoneSyncCoordinator {
 
                 // After activation, try pulling sessions if Watch is reachable,
                 // then reconcile to catch any sessions that overflowed the inline
-                // byte budget and were routed via transferUserInfo.
+                // byte budget and were routed via transferUserInfo. Debounced +
+                // workout-aware — see autoPullSessionsFromWatch.
                 if session.isReachable {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
-                        self?.requestSessionsFromWatch { count in
-                            if count > 0 {
-                                self?.log("Post-activation sync pulled \(count) session(s)")
-                            }
-                            self?.reconcileSessionIDs()
-                        }
+                        self?.autoPullSessionsFromWatch(reason: "activation")
                     }
                 }
             }
@@ -886,13 +918,8 @@ extension PhoneSyncCoordinator {
                         self.pendingStopSentAt = nil
                     }
                 }
-                self.log("Watch became reachable — auto-pulling sessions")
-                self.requestSessionsFromWatch { [weak self] count in
-                    if count > 0 {
-                        self?.log("Auto-sync pulled \(count) session(s)")
-                    }
-                    self?.reconcileSessionIDs()
-                }
+                // Debounced + workout-aware — see autoPullSessionsFromWatch.
+                self.autoPullSessionsFromWatch(reason: "reachability")
             }
         }
     }

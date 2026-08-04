@@ -21,9 +21,8 @@ struct LockScreenView: View {
                     .foregroundStyle(activityColor(context.state.currentActivity))
             }
 
-            Text(formatTimer(context.state.elapsedTime))
+            timerText
                 .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
-                .contentTransition(.numericText())
 
             HStack(spacing: 16) {
                 if context.state.heartRate > 0 {
@@ -52,6 +51,24 @@ struct LockScreenView: View {
         // the app to the foreground for a watch-driven workout. See
         // ShuttlX/ShuttlXApp.swift for the URL handler.
         .widgetURL(URL(string: "shuttlx://workout/active"))
+    }
+
+    // MARK: - Timer
+
+    /// System-rendered ticking timer while the workout is running — the OS
+    /// advances this itself between our updates (roughly every 3s from the
+    /// Watch), instead of the old pre-formatted string that only moved when
+    /// an `activity.update()` call landed. Falls back to a static formatted
+    /// string while paused, since `timerReferenceDate` isn't meaningful once
+    /// the Watch stops broadcasting.
+    @ViewBuilder
+    private var timerText: some View {
+        if context.state.isPaused {
+            Text(formatTimer(context.state.elapsedTime))
+                .contentTransition(.numericText())
+        } else {
+            Text(timerInterval: context.state.timerReferenceDate...Date.distantFuture, countsDown: false)
+        }
     }
 
     // MARK: - Formatting Helpers

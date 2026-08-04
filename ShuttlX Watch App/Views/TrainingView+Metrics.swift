@@ -9,10 +9,14 @@ extension TrainingView {
     var aodMinimalView: some View {
         VStack(spacing: 12) {
             Spacer()
-            Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                .font(.system(size: 36, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(ShuttlXColor.textPrimary.opacity(0.7))
+            // AOD: full screen width minus a small margin. At 1h+ the h:mm:ss form
+            // is 7 glyphs — on a 40mm screen that overflows 36pt, so the component
+            // shrinks it to fit rather than truncating.
+            ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
+                             elapsed: workoutManager.elapsedTime,
+                             baseSize: 36,
+                             availableWidth: screenWidth - 16,
+                             color: ShuttlXColor.textPrimary.opacity(0.7))
             if workoutManager.heartRate > 0 {
                 Text("\(workoutManager.heartRate) BPM")
                     .font(.system(size: 22, weight: .semibold, design: .monospaced))
@@ -41,6 +45,13 @@ extension TrainingView {
         let labelSize = max(10, h * 0.08)
         let labelWidth = h * 0.20
         let rowSpacing = h * 0.025
+        // HR digits are the only element in their row that yields. The unit and the
+        // 34pt zone arc keep their size; the number is solved against whatever
+        // horizontal space is left. Without this the 40pt floor on `valueSize`
+        // overflowed a 40mm row and SwiftUI truncated the BPM value to "1…".
+        let hrValueSize = fittedHRValueSize(valueSize: valueSize,
+                                            labelSize: labelSize,
+                                            labelWidth: labelWidth)
 
         let isInterval = workoutManager.workoutMode == .interval
 
@@ -116,11 +127,12 @@ extension TrainingView {
                         // to "132 B…"; splitting the unit off keeps the wide element
                         // to just the digits, which always fit.
                         Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "\u{2014}")
-                            .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                            .font(.system(size: hrValueSize, weight: .bold, design: .monospaced))
                             .monospacedDigit()
                             .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
+                            .layoutPriority(1)   // digits claim their (already fitted) width first
                         Text("BPM")
                             .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                             .foregroundColor(ShuttlXColor.textSecondary)
@@ -161,7 +173,8 @@ extension TrainingView {
                 // in interval mode, where the hero is the step countdown).
                 if isInterval {
                     HStack(spacing: 8) {
-                        compactMetric("DIST", distanceText, tertiarySize, labelSize)
+                        compactMetric("DIST", compactDistanceText, tertiarySize, labelSize,
+                                      a11y: "Distance \(accessibleDistance)")
                             .background(kmSplitHighlight)
                         compactMetric("PACE", paceText, tertiarySize, labelSize)
                     }
@@ -237,6 +250,34 @@ extension TrainingView {
     }
 
     // Compact two-up metric (used in interval mode's tertiary rows).
+    // MARK: - HR Value Sizing
+
+    /// Point size for the BPM number, solved so three digits always render in full.
+    ///
+    /// The HR row is `[HR label][spacer][digits][BPM unit][zone arc]`. Everything
+    /// except the digits is fixed, so the digits get whatever is left. On a 40mm
+    /// screen the previous fixed `valueSize` (floor 40pt) needed ~72pt for "138"
+    /// while the row could only offer ~36pt; `minimumScaleFactor(0.6)` bottomed out
+    /// above that and SwiftUI truncated to "1…". Sizing up front removes the
+    /// dependency on scale-to-fit entirely.
+    ///
+    /// `glyphAdvanceRatio` was measured from a rendered 46mm frame ("138" at 47pt
+    /// spans ~66pt ⇒ 0.47em) and rounded up for margin.
+    func fittedHRValueSize(valueSize: CGFloat, labelSize: CGFloat, labelWidth: CGFloat) -> CGFloat {
+        let glyphAdvanceRatio: CGFloat = 0.52
+        let unitWidth = 3 * glyphAdvanceRatio * labelSize      // "BPM"
+        let arcWidth: CGFloat = 34                             // HRZoneArc, fixed
+        let gaps: CGFloat = 4 * 2 + 2                          // inner HStack spacing + slack
+        let available = screenWidth
+            - (ShuttlXSpacing.xs * 2)
+            - labelWidth
+            - unitWidth
+            - arcWidth
+            - gaps
+        let cap = available / (3 * glyphAdvanceRatio)          // always size for 3 digits
+        return max(16, min(valueSize, cap))
+    }
+
     // MARK: - Theme Padding Helpers
 
     /// Top padding for the metrics VStack in `fullWorkoutDisplayTab`, keyed by theme id.
@@ -250,13 +291,20 @@ extension TrainingView {
     }
 
     func compactMetric(_ label: String, _ value: String,
-                               _ valueSize: CGFloat, _ labelSize: CGFloat) -> some View {
+                               _ valueSize: CGFloat, _ labelSize: CGFloat,
+                               a11y: String? = nil) -> some View {
         HStack(spacing: 4) {
             Text(label)
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
+                // fixedSize + layoutPriority(0): the label is granted exactly its
+                // ideal width and never compressed. This is what makes the value's
+                // layoutPriority(1) safe — an earlier attempt at priority alone
+                // starved the label to "‥" because the label was still compressible.
+                .fixedSize(horizontal: true, vertical: false)
+                .layoutPriority(0)
             Text(value)
                 .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
@@ -264,12 +312,15 @@ extension TrainingView {
                 .lineLimit(1)
                 // 0.4 floor: "2.15 km" needs ~0.48 to fit the half-width slot on
                 // 46mm; at the old 0.5 floor it clipped the " km" unit to "2.15…".
-                // (No layoutPriority — that starved the label to "‥".)
+                // On 40mm interval mode the slot is narrower still and the value was
+                // clipping to "3.42…" — the priority below lets it claim the space
+                // left by the (now incompressible) label and scale into it instead.
                 .minimumScaleFactor(0.4)
+                .layoutPriority(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(label) \(value)")
+        .accessibilityLabel(a11y ?? "\(label) \(value)")
     }
 
     // MARK: - Metric Row (unified for all metrics including timer)
@@ -305,9 +356,29 @@ extension TrainingView {
         } else {
             // Free-run: timer is the sole hero — use heroSize so it dominates
             // over the HR row below (which uses valueSize).
-            metricRow("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
-                      ShuttlXColor.textPrimary, heroSize, labelSize, labelWidth,
-                      accessibilityText: "Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+            // Inlined rather than routed through metricRow() because the value is a
+            // system-rendered ticking Text, not a String. Same layout/modifiers.
+            HStack(spacing: 4) {
+                Text("TIME")
+                    .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                    .foregroundColor(ShuttlXColor.textSecondary)
+                    .frame(width: labelWidth, alignment: .leading)
+                    .layoutPriority(0)   // the label yields; the digits never do
+                Spacer(minLength: 0)
+                // Width budget: screen minus the label column, the row's own
+                // horizontal padding (ShuttlXSpacing.xs on each side) and the 4pt
+                // gap. Feeding this to the component is what stops the 1h+ form
+                // ("1:27:23", 7 glyphs) from truncating to "1:27…".
+                ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
+                                 elapsed: workoutManager.elapsedTime,
+                                 baseSize: heroSize,
+                                 availableWidth: screenWidth - labelWidth - (ShuttlXSpacing.xs * 2) - 4)
+                    .layoutPriority(1)
+            }
+            .frame(maxWidth: .infinity)
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+            .accessibilityAddTraits(.updatesFrequently)
         }
     }
 
@@ -428,13 +499,37 @@ extension TrainingView {
         hrCalculator.isHighIntensityWarning(heartRate: Double(workoutManager.heartRate))
     }
 
+    /// Safety-relevant warning — it must be fully readable, never elided.
+    ///
+    /// It used to sit in `HStack { Spacer(); Text }`, which handed the text only the
+    /// leftover width, and the tight vertical budget of the metrics stack meant
+    /// SwiftUI proposed a single line's height and truncated to "Heart rate high…"
+    /// on BOTH 40mm and 46mm. Now the banner spans the full row width, is allowed
+    /// two lines, and `fixedSize(vertical:)` guarantees it is granted the height
+    /// those lines need instead of being compressed into an ellipsis.
     @ViewBuilder
     func highIntensityWarningView(labelSize: CGFloat) -> some View {
         HStack {
-            Spacer()
-            Text("Heart rate high — ease off")
+            // Copy is deliberately tight, and the banner is pinned to ONE line.
+            //
+            // Two measured constraints drove this. (1) The original sentence
+            // ("Heart rate high — ease off") truncated to "Heart rate high…" on both
+            // 40mm and 46mm because the row's vertical budget only ever offered a
+            // single line's height. (2) Letting it wrap to two lines fixed the
+            // banner but pushed the bottom metric row off-screen in interval mode on
+            // 40mm — one truncation traded for another. So: shorter copy, one line,
+            // and scale-to-fit (which DOES work here — unlike Text(timerInterval:),
+            // this is ordinary static text) as the fallback instead of wrapping.
+            // At the 0.6 floor this fits with ~50% headroom on the narrowest screen,
+            // so it cannot elide. Action first, since that is what matters
+            // mid-effort; the full sentence lives in the accessibility label below.
+            Text("Ease off — HR high")
                 .font(.system(size: max(9, labelSize * 0.85), weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.ctaDestructive)
+                .multilineTextAlignment(.center)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(maxWidth: .infinity)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
                 .overlay(
@@ -480,6 +575,18 @@ extension TrainingView {
         FormattingUtils.formatDistance(workoutManager.totalDistance)
     }
 
+    /// Distance for the compact two-up slot in interval mode, which is roughly half
+    /// the width of the free-run row. "12.84 km" cannot fit there on 40mm — even at
+    /// the 0.4 scale floor it elided to "3.42…". The unit is dropped in the km form
+    /// exactly as `paceText` drops "/KM" for the same reason; the "DIST" label and
+    /// the VoiceOver string (which keeps full units) carry the meaning. The sub-km
+    /// form keeps its "m" because "450" alone would be ambiguous.
+    var compactDistanceText: String {
+        let km = workoutManager.totalDistance
+        if km < 1.0 { return "\(Int(km * 1000))m" }
+        return String(format: "%.2f", km)
+    }
+
     var accessibleDistance: String {
         let dist = workoutManager.totalDistance
         if dist < 1.0 {
@@ -502,6 +609,83 @@ extension TrainingView {
         let minutes = Int(pace) / 60
         let seconds = Int(pace) % 60
         return "Average pace \(minutes) minutes \(seconds) seconds per kilometer"
+    }
+}
+
+// MARK: - Elapsed Timer Text
+
+/// Elapsed-workout clock that ticks WITHOUT a SwiftUI invalidation.
+///
+/// While the workout is running we hand SwiftUI a wall-clock anchor and let the
+/// render server advance the digits (`Text(timerInterval:)`). That decouples the
+/// on-screen seconds from `WatchWorkoutManager.elapsedTime`, which is published
+/// from the 1 Hz main-actor tick and therefore stalls whenever the main actor is
+/// backlogged (cold-launch WatchConnectivity storm). It is also the Always-On-safe
+/// form: the system keeps a timerInterval text updating in reduced-luminance state.
+///
+/// When `referenceDate` is nil (paused / stopped) it falls back to static text so a
+/// paused clock does not keep counting.
+///
+/// Format note: `Text(timerInterval:)` renders `m:ss` / `h:mm:ss` — no leading zero
+/// on the minutes field, unlike `FormattingUtils.formatTimer`'s `mm:ss`.
+///
+/// SIZING — verified on Apple Watch Series 11 46mm, watchOS 26.5:
+/// `Text(timerInterval:)` does **not** honour `minimumScaleFactor`. Its content is
+/// advanced by the render server, so SwiftUI never measures a candidate string to
+/// scale against; at 1h27m the row rendered "1:27…" at full point size instead of
+/// shrinking. The view therefore picks its own point size from the glyph count the
+/// current elapsed magnitude implies (5 for `mm:ss`, 7 for `h:mm:ss`, 8 past 10h)
+/// and the horizontal budget the call site passes in. `minimumScaleFactor` is still
+/// applied for the static (paused) branch, where it does work.
+struct ElapsedTimerText: View {
+    let referenceDate: Date?
+    let elapsed: TimeInterval
+    /// Point size used when the value fits `mm:ss`. Never exceeded.
+    let baseSize: CGFloat
+    /// Horizontal space the digits may occupy, in points.
+    let availableWidth: CGFloat
+    var weight: Font.Weight = .bold
+    var color: Color = ShuttlXColor.textPrimary
+
+    /// Per-glyph advance of SF's monospaced design as a fraction of point size
+    /// (~0.6em) plus a small safety margin.
+    private static let advanceRatio: CGFloat = 0.62
+
+    /// Prefer the wall clock over the published `elapsed`: the whole point of this
+    /// view is to keep rendering when `elapsed` publishes late, so the size decision
+    /// must not lag either. Switches a hair BEFORE the hour boundary (3590s) so the
+    /// wider form is already sized for when the render server rolls over to it.
+    private var effectiveElapsed: TimeInterval {
+        guard let referenceDate else { return max(0, elapsed) }
+        return max(max(0, elapsed), Date().timeIntervalSince(referenceDate))
+    }
+
+    private var glyphCount: Int {
+        let s = effectiveElapsed
+        if s >= 35_990 { return 8 }   // 10:00:00
+        if s >= 3_590 { return 7 }    // 1:00:00
+        return 5                      // 59:59
+    }
+
+    private var fittedSize: CGFloat {
+        let widthCap = availableWidth / (CGFloat(glyphCount) * Self.advanceRatio)
+        return max(12, min(baseSize, widthCap))
+    }
+
+    var body: some View {
+        Group {
+            if let referenceDate {
+                Text(timerInterval: referenceDate...Date.distantFuture, countsDown: false)
+            } else {
+                Text(FormattingUtils.formatTimer(elapsed))
+            }
+        }
+        .font(.system(size: fittedSize, weight: weight, design: .monospaced))
+        .monospacedDigit()
+        .foregroundColor(color)
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
+        .fixedSize(horizontal: true, vertical: false)
     }
 }
 

@@ -195,20 +195,24 @@ struct MixtapeWatchDeck: View {
     // MARK: 2. Hero timer — full-width elapsed or step countdown
 
     private var heroTimerRow: some View {
-        ZStack(alignment: .leading) {
-            // Ghost dead-pixel layer — matches the iOS timer hero
-            Text("88:88")
-                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+        let size = fittedHeroSize
+        return ZStack(alignment: .leading) {
+            // Ghost dead-pixel layer. It must carry the SAME glyph count as the live
+            // value, otherwise at 1h+ ("1:27:23", 7 glyphs) the 5-glyph "88:88"
+            // ghost pokes out from behind the digits — visible in the pre-fix
+            // screenshot as stray 8s between the minute and second fields.
+            Text(ghostText)
+                .font(.system(size: size, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .tracking(-0.5)
                 .foregroundStyle(lcdGreen.opacity(0.06))
                 .accessibilityHidden(true)
-            Text(heroText)
-                .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+            heroValue
+                .font(.system(size: size, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .tracking(-0.5)
                 .foregroundStyle(isPaused ? amberPause : heroTint)
-                .shadow(color: lcdGreen.opacity(isPaused ? 0 : 0.45), radius: heroSize * 0.05)
+                .shadow(color: lcdGreen.opacity(isPaused ? 0 : 0.45), radius: size * 0.05)
                 .contentTransition(.numericText())
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -273,6 +277,10 @@ struct MixtapeWatchDeck: View {
             Text("BPM")
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundStyle(textSecondary)
+                // Never let the unit wrap into a vertical "B/P/M" stack when the
+                // row is tight (observed on 40mm).
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(bpm > 0 ? "\(bpm) beats per minute, Zone \(zone)" : "Heart rate, no data")
@@ -328,6 +336,70 @@ struct MixtapeWatchDeck: View {
     }
 
     // MARK: Hero value plumbing
+
+    /// Free-run elapsed is rendered by the system (`Text(timerInterval:)`) so the
+    /// digits keep ticking even when the main actor is backlogged and
+    /// `elapsedTime` publishes late — and so the face stays live in Always-On.
+    /// timerInterval's own format drops the leading zero ("1:48"), which is exactly
+    /// what this deck wants. The interval countdown is NOT switched: it counts
+    /// DOWN inside an engine-driven step, not up from a wall-clock anchor.
+    @ViewBuilder
+    private var heroValue: some View {
+        if !isInterval, let ref = workoutManager.timerReferenceDate {
+            Text(timerInterval: ref...Date.distantFuture, countsDown: false)
+        } else {
+            Text(heroText)
+        }
+    }
+
+    /// Glyphs the hero must fit right now.
+    ///
+    /// Free-run reads the WALL CLOCK, not `elapsedTime`: the ticking branch is
+    /// rendered by the system, so the size decision must not wait for a @Published
+    /// update either. Switches 10s early so the wider form is already sized for
+    /// when the render server rolls past the hour.
+    private var heroGlyphCount: Int {
+        if !isInterval, let ref = workoutManager.timerReferenceDate {
+            let s = max(Date().timeIntervalSince(ref), workoutManager.elapsedTime)
+            if s >= 35_990 { return 8 }   // 10:00:00
+            if s >= 3_590 { return 7 }    // 1:00:00
+            return 5                      // 59:59
+        }
+        return max(4, heroText.count)
+    }
+
+    /// Hero point size, capped so `heroGlyphCount` glyphs fit the deck's content
+    /// width. `Text(timerInterval:)` ignores `minimumScaleFactor` (verified on
+    /// Series 11 46mm / watchOS 26.5 — it truncated to "1:27…" instead of scaling),
+    /// so the width has to be solved for up front. Applies to the interval branch
+    /// too, which keeps the ghost layer aligned in both modes.
+    private var fittedHeroSize: CGFloat {
+        // SF monospaced advance ≈ 0.6em; 0.65 + a 6pt reserve keeps the hero
+        // strictly NARROWER than the deck column. Measured necessity: at exactly
+        // the column width the hero's intrinsic width stretched the VStack and
+        // squeezed the HR line until "BPM" wrapped to three lines on 40mm.
+        // Deck padding is 10pt per side.
+        let available = Self.deckWidth - 20 - 6
+        let widthCap = available / (CGFloat(heroGlyphCount) * 0.65)
+        return max(12, min(heroSize, widthCap))
+    }
+
+    /// Dead-pixel ghost with the same glyph layout as the live value.
+    private var ghostText: String {
+        switch heroGlyphCount {
+        case ...4: return "8:88"
+        case 5:    return "88:88"
+        case 6:    return "888:88"
+        case 7:    return "8:88:88"
+        default:   return "88:88:88"
+        }
+    }
+
+    #if os(watchOS)
+    private static let deckWidth = WKInterfaceDevice.current().screenBounds.width
+    #else
+    private static let deckWidth: CGFloat = 198
+    #endif
 
     private var heroText: String {
         if isInterval, let engine = workoutManager.intervalEngine {

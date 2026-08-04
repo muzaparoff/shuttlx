@@ -41,7 +41,8 @@ class LiveActivityManager {
             calories: 0,
             currentActivity: activityType,
             isPaused: false,
-            pace: 0
+            pace: 0,
+            timerReferenceDate: Date()
         )
 
         let content = ActivityContent(state: initialState, staleDate: Date().addingTimeInterval(60))
@@ -84,6 +85,13 @@ class LiveActivityManager {
 
         guard let activity = currentActivity else { return }
 
+        // Recomputed every update from the elapsed time the Watch just
+        // reported: reference = now - elapsedTime. This self-corrects each
+        // broadcast (~3s) rather than accumulating drift, and automatically
+        // "resets" the countable window across a pause/resume since the next
+        // post-resume update's elapsedTime already reflects the paused gap.
+        let timerReferenceDate = Date().addingTimeInterval(-elapsedTime)
+
         let state = WorkoutActivityAttributes.ContentState(
             elapsedTime: elapsedTime,
             heartRate: heartRate,
@@ -91,7 +99,8 @@ class LiveActivityManager {
             calories: calories,
             currentActivity: activityType,
             isPaused: isPaused,
-            pace: pace
+            pace: pace,
+            timerReferenceDate: timerReferenceDate
         )
 
         // While active: 15s staleDate (watch broadcasts every 3s).
@@ -116,7 +125,8 @@ class LiveActivityManager {
             calories: 0,
             currentActivity: "unknown",
             isPaused: false,
-            pace: 0
+            pace: 0,
+            timerReferenceDate: Date()
         )
 
         let content = ActivityContent(state: finalState, staleDate: nil)

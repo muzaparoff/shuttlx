@@ -34,12 +34,31 @@ final class LiveMetricsBroadcaster {
     private var lastLiveUpdateTime: Date?
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "LiveMetrics")
 
+    /// Dedicated serial queue for the WatchConnectivity IPC. `sendMessage` and
+    /// `updateApplicationContext` both cross into the WC daemon (wcd); when wcd's
+    /// outbox is saturated — e.g. a cold-launch sync storm — those calls block the
+    /// caller for hundreds of ms. This broadcaster is driven from
+    /// `WatchWorkoutManager.updateElapsedTime()`, i.e. the 1 Hz display tick, so
+    /// blocking here stalls the on-screen clock. Serial (not concurrent) so live
+    /// snapshots keep FIFO order; fire-and-forget from the tick's point of view.
+    private nonisolated static let wcQueue = DispatchQueue(
+        label: "com.shuttlx.live-metrics-wc",
+        qos: .utility
+    )
+
+    /// A single `updateApplicationContext` slower than this means wcd is backed up.
+    /// Confirmation instrumentation for the "timer stale for the first 5–7 minutes"
+    /// diagnosis — grep "Live metrics applicationContext slow".
+    private nonisolated static let contextSlowThreshold: TimeInterval = 0.25
+
     /// Clears the throttle window (call when a workout stops).
     func reset() {
         lastLiveUpdateTime = nil
     }
 
     func broadcastIfNeeded(_ snapshot: Snapshot) {
+        // Throttle is evaluated before any WC work — two Date comparisons on the
+        // main actor, nothing more.
         let now = Date()
         if let lastUpdate = lastLiveUpdateTime, now.timeIntervalSince(lastUpdate) < 3.0 {
             return
@@ -69,18 +88,31 @@ final class LiveMetricsBroadcaster {
             payload["longitude"] = lon
         }
 
-        // Channel 1: real-time when reachable
-        if WCSession.default.isReachable {
-            WCSession.default.sendMessage(payload, replyHandler: nil) { [logger] error in
-                logger.debug("Live metrics sendMessage failed: \(error.localizedDescription)")
+        // Hand the finished payload (a value copy) to the background queue and
+        // return immediately — the display tick must never wait on wcd.
+        let logger = self.logger
+        let outgoing = payload
+        Self.wcQueue.async {
+            // Channel 1: real-time when reachable
+            if WCSession.default.isReachable {
+                WCSession.default.sendMessage(outgoing, replyHandler: nil) { error in
+                    logger.debug("Live metrics sendMessage failed: \(error.localizedDescription)")
+                }
             }
-        }
 
-        // Channel 2: applicationContext — always delivered when iPhone next wakes
-        do {
-            try WCSession.default.updateApplicationContext(payload)
-        } catch {
-            logger.debug("Live metrics applicationContext failed: \(error.localizedDescription)")
+            // Channel 2: applicationContext — always delivered when iPhone next wakes
+            let started = Date()
+            do {
+                try WCSession.default.updateApplicationContext(outgoing)
+            } catch {
+                // Raised from .debug: a failing context write means the iPhone is
+                // not receiving live metrics at all, which is user-visible.
+                logger.warning("Live metrics applicationContext failed: \(error.localizedDescription)")
+            }
+            let elapsed = Date().timeIntervalSince(started)
+            if elapsed > Self.contextSlowThreshold {
+                logger.warning("Live metrics applicationContext slow: \(Int(elapsed * 1000))ms — WC daemon backed up")
+            }
         }
     }
 

@@ -12,9 +12,7 @@ struct ShuttlXLiveActivity: Widget {
                     HStack(spacing: 6) {
                         Image(systemName: activityIcon(context.state.currentActivity))
                             .foregroundStyle(activityColor(context.state.currentActivity))
-                        Text(formatTimer(context.state.elapsedTime))
-                            .font(.system(.title2, design: .monospaced).weight(.semibold))
-                            .contentTransition(.numericText())
+                        timerText(for: context, font: .system(.title2, design: .monospaced).weight(.semibold))
                     }
                     .widgetURL(URL(string: "shuttlx://workout/active"))
                 }
@@ -53,14 +51,40 @@ struct ShuttlXLiveActivity: Widget {
                 Image(systemName: activityIcon(context.state.currentActivity))
                     .foregroundStyle(context.state.isPaused ? .secondary : activityColor(context.state.currentActivity))
             } compactTrailing: {
-                Text(formatTimer(context.state.elapsedTime))
-                    .font(.system(.body, design: .monospaced))
+                // Constrained width: `Text(timerInterval:)` renders wider than
+                // a fixed "MM:SS" string once the workout crosses an hour, and
+                // the Dynamic Island compact region is tight — clamp with a
+                // fixed frame + minimumScaleFactor so it never gets truncated
+                // or pushes the compactLeading icon out.
+                timerText(for: context, font: .system(.body, design: .monospaced))
                     .foregroundStyle(context.state.isPaused ? .secondary : .primary)
-                    .contentTransition(.numericText())
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: 56, alignment: .trailing)
             } minimal: {
                 Image(systemName: activityIcon(context.state.currentActivity))
                     .foregroundStyle(.green)
             }
+        }
+    }
+
+    // MARK: - Timer
+
+    /// System-rendered ticking timer while the workout is running — the OS
+    /// advances this itself between our updates (roughly every 3s from the
+    /// Watch), instead of the old pre-formatted string that only moved when
+    /// an `activity.update()` call landed. Falls back to a static formatted
+    /// string while paused, since `timerReferenceDate` isn't meaningful once
+    /// the Watch stops broadcasting.
+    @ViewBuilder
+    private func timerText(for context: ActivityViewContext<WorkoutActivityAttributes>, font: Font) -> some View {
+        if context.state.isPaused {
+            Text(formatTimer(context.state.elapsedTime))
+                .font(font)
+                .contentTransition(.numericText())
+        } else {
+            Text(timerInterval: context.state.timerReferenceDate...Date.distantFuture, countsDown: false)
+                .font(font)
         }
     }
 

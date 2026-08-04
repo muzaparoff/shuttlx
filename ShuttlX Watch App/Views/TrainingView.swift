@@ -23,8 +23,10 @@ struct TrainingView: View {
     @State var kmSplitFlash = false
     #if os(watchOS)
     let screenHeight = WKInterfaceDevice.current().screenBounds.height
+    let screenWidth = WKInterfaceDevice.current().screenBounds.width
     #else
     let screenHeight: CGFloat = 224
+    let screenWidth: CGFloat = 198
     #endif
 
     var body: some View {

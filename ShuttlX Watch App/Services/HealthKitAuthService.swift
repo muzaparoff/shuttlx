@@ -18,6 +18,11 @@ final class HealthKitAuthService {
     private let healthStore: HKHealthStore
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "HealthKitAuth")
 
+    /// Deadline for `HKHealthStore.requestAuthorization`. Sized for a first-ever
+    /// launch, where the call blocks on the user reading the multi-toggle grant sheet.
+    static let authTimeoutSeconds: TimeInterval = 30
+    private static var authTimeoutNanoseconds: UInt64 { UInt64(authTimeoutSeconds * 1_000_000_000) }
+
     init(healthStore: HKHealthStore) {
         self.healthStore = healthStore
     }
@@ -41,16 +46,20 @@ final class HealthKitAuthService {
             return AuthResult(authorized: false, denied: true)
         }
 
-        // 8-second timeout guards against HKHealthStore.requestAuthorization hanging
+        // Timeout guards against HKHealthStore.requestAuthorization hanging
         // indefinitely (observed when the HealthKit daemon is in a bad state on watch).
         // Without this, isStarting stays true and the UI appears completely frozen.
+        //
+        // 30s, not 8s: on a first-ever launch this call presents the multi-toggle
+        // grant sheet, and the user reads it. Eight seconds routinely expired while
+        // the sheet was still on screen.
         do {
             try await withThrowingTaskGroup(of: Void.self) { group in
                 group.addTask {
                     try await self.healthStore.requestAuthorization(toShare: writeTypes, read: allReadTypes)
                 }
                 group.addTask {
-                    try await Task.sleep(nanoseconds: 8_000_000_000)
+                    try await Task.sleep(nanoseconds: Self.authTimeoutNanoseconds)
                     throw CancellationError()
                 }
                 try await group.next()
@@ -61,9 +70,14 @@ final class HealthKitAuthService {
             return AuthResult(authorized: true, denied: false)
         } catch {
             if error is CancellationError {
-                logger.error("HealthKit authorization timed out after 8s — proceeding without full auth")
-                // Allow workout to proceed; individual queries will surface permission errors
-                return AuthResult(authorized: true, denied: false)
+                // NOT authorized. This previously returned authorized:true ("proceed
+                // without full auth"), which let a workout start with no confirmed
+                // HealthKit grant: the HKWorkoutSession then behaves unpredictably —
+                // it can be torn down by the system moments later. denied stays false
+                // because nothing was actually refused; the caller distinguishes the
+                // two and surfaces a retry prompt.
+                logger.error("HealthKit authorization timed out after \(Int(Self.authTimeoutSeconds))s — treating as NOT authorized")
+                return AuthResult(authorized: false, denied: false)
             } else {
                 logger.error("HealthKit authorization error: \(error.localizedDescription)")
                 return AuthResult(authorized: false, denied: true)
