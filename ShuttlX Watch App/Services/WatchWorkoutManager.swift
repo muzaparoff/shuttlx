@@ -1631,6 +1631,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         calories = 812
     }
 
+    /// Freezes an already-seeded snapshot the way `pauseWorkout()` does, without
+    /// touching HealthKit or the tick timer: `isPaused` + a nil
+    /// `timerReferenceDate` (which is what makes the views fall back to static
+    /// elapsed text). Snapshot/QA only — `timerReferenceDate` is `private(set)`
+    /// in production, and it stays that way.
+    func applyPausedPreviewState() {
+        isPaused = true
+        timerReferenceDate = nil
+    }
+
     func applyPreviewSnapshot() {
         workoutMode = .interval
         workoutName = "5K Interval"

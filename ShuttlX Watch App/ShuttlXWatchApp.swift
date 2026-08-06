@@ -31,8 +31,21 @@ struct ShuttlXWatchApp: App {
                 // instead of the interval snapshot — used to capture the wall-clock
                 // timer at 1h+ without waiting. SHUTTLX_SNAPSHOT_AOD=1 forces the
                 // Always-On (reduced luminance) variant.
+                // SHUTTLX_SNAPSHOT_HR overrides the seeded heart rate (the seed of
+                // 138 is above 70% of the 190 fallback max, so it always shows the
+                // "Ease off" banner — pass e.g. 118 to capture the banner-free
+                // layout). SHUTTLX_SNAPSHOT_PACE overrides pace in sec/km, or
+                // "none" for the nil case that renders "—".
+                // SHUTTLX_SNAPSHOT_PAUSED=1 freezes the seeded workout the way
+                // pauseWorkout() does (isPaused + nil timerReferenceDate) so the
+                // paused presentation can be captured — it is the only state
+                // signal on the free-run screen now that the FREE RUN header,
+                // which used to blink amber, is interval-only.
                 let env = ProcessInfo.processInfo.environment
                 let freeRunElapsed = env["SHUTTLX_SNAPSHOT_ELAPSED"].flatMap(Double.init)
+                let hrOverride = env["SHUTTLX_SNAPSHOT_HR"].flatMap(Int.init)
+                let paceOverride = env["SHUTTLX_SNAPSHOT_PACE"]
+                let pausedOverride = env["SHUTTLX_SNAPSHOT_PAUSED"] == "1"
                 TrainingView()
                     .environment(ThemeManager.shared)
                     .environment(\.isLuminanceReduced, env["SHUTTLX_SNAPSHOT_AOD"] == "1")
@@ -45,6 +58,13 @@ struct ShuttlXWatchApp: App {
                         } else {
                             workoutManager.applyPreviewSnapshot()
                         }
+                        if let hrOverride { workoutManager.heartRate = hrOverride }
+                        if let paceOverride {
+                            workoutManager.currentPace = paceOverride == "none"
+                                ? nil
+                                : Double(paceOverride)
+                        }
+                        if pausedOverride { workoutManager.applyPausedPreviewState() }
                     }
             } else {
                 appRoot

@@ -23,6 +23,13 @@ struct LockScreenView: View {
 
             timerText
                 .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
+                // `Text(timerInterval:)` is greedy — it claims the full width
+                // proposed by the VStack (which stretches to match the header
+                // row above) and lays its digits out leading-aligned by
+                // default. Explicitly center both the frame and the glyphs
+                // inside it so running/paused states render identically.
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
 
             HStack(spacing: 16) {
                 if context.state.heartRate > 0 {

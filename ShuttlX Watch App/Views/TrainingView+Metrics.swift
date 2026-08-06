@@ -40,8 +40,7 @@ extension TrainingView {
         let h = screenHeight
         let heroSize = max(44, h * 0.26)              // countdown hero — only used in interval mode
         let valueSize = max(40, h * 0.19)             // HR (still large, second-tier)
-        let tertiarySize = max(16, h * 0.10)          // DIST / PACE / TIME — interval compact two-up
-        let secondarySize = max(24, h * 0.14)         // DIST / PACE — free-run full-width rows
+        let tertiarySize = max(16, h * 0.10)          // DIST / CAL / TIME — compact two-up
         let labelSize = max(10, h * 0.08)
         let labelWidth = h * 0.20
         let rowSpacing = h * 0.025
@@ -54,6 +53,54 @@ extension TrainingView {
                                             labelWidth: labelWidth)
 
         let isInterval = workoutManager.workoutMode == .interval
+
+        // MARK: Free-run type scale (Apple Workout–style label-less metric column)
+        //
+        // The free-run screen no longer renders a `[LABEL][value]` two-column row.
+        // The leading label ate ~labelWidth (0.20h ≈ 39pt on 40mm) of every row and
+        // forced `fittedHRValueSize` down to ~29pt; the unit is now a small suffix
+        // riding the number's baseline, exactly like Apple's Outdoor Run metrics
+        // page, and every number is left-aligned on one column edge.
+        //
+        // Sizes are solved, not guessed. The measured vertical budget of the
+        // free-run stack (screen height − top safe area − page-dot inset) is
+        // ~164pt on 40mm and ~206pt on 46mm; a text line occupies ~1.2 × its point
+        // size, so the sum of the four row point sizes must stay under
+        // budget / 1.2 (minus ~21pt for the banner when it is showing). Exceeding
+        // it does NOT overflow visibly — SwiftUI silently scale-to-fits every row,
+        // which is what made the old layout render at 50–70% of its nominal sizes.
+        let bannerShown = freeRunBannerShown
+        // Bonus tier: the banner's ~21pt (25pt on 46mm) is real estate that is
+        // otherwise wasted as slack, so every number steps up 13% while it is
+        // hidden and steps back down when the safety banner claims the row.
+        let tier: CGFloat = bannerShown ? 1.0 : 1.13
+        let rowWidth = screenWidth - ShuttlXSpacing.xs * 2
+        let unitSize = max(11, h * 0.062)             // "BPM" / "/KM" suffix
+        let compactUnitSize = max(9, h * 0.052)       // "KM" / "CAL" suffix
+        let zoneArcWidth = max(30, h * 0.145)
+        let frHeroSize = h * 0.20 * tier
+        let frHRSize = fittedMetricSize(glyphs: 3, unit: "BPM", unitSize: unitSize,
+                                        accessoryWidth: zoneArcWidth,
+                                        available: rowWidth, cap: h * 0.16 * tier)
+        let frPaceSize = fittedMetricSize(glyphs: paceValueText.count, unit: "/KM",
+                                          unitSize: unitSize, accessoryWidth: 0,
+                                          available: rowWidth, cap: h * 0.15 * tier)
+        // The two-up slot is solved for BOTH values and takes the smaller result so
+        // DIST and CAL share one point size (mismatched sizes on a shared line read
+        // as a bug). "12.84" is the wide case; it is why this row stays the small
+        // tier even when the banner is hidden.
+        let frSlotWidth = (rowWidth - 8) / 2
+        let frCompactCap = h * 0.085 * tier
+        let frCompactSize = min(
+            fittedMetricSize(glyphs: compactDistanceValue.count, unit: compactDistanceUnit,
+                             unitSize: compactUnitSize, accessoryWidth: 0,
+                             available: frSlotWidth, cap: frCompactCap),
+            workoutManager.calories > 0
+                ? fittedMetricSize(glyphs: max(3, "\(workoutManager.calories)".count), unit: "CAL",
+                                   unitSize: compactUnitSize, accessoryWidth: 0,
+                                   available: frSlotWidth, cap: frCompactCap)
+                : frCompactCap
+        )
 
         return ZStack {
             // Subtle step-type wash so the user can read state pre-attentively.
@@ -86,91 +133,142 @@ extension TrainingView {
             }
 
             if themeManager.current.id != "mixtape" {
-            VStack(spacing: rowSpacing) {
-                // Workout name + step pill (interval only).
+            // Free run runs at spacing 0 and lets `flexGap` do ALL the distribution.
+            // A `Spacer(minLength: 0)` does not cost 0 inside a spaced VStack — the
+            // stack still inserts its spacing on BOTH sides of it. With four
+            // flexGaps that was 8 × rowSpacing ≈ 39pt of forced whitespace on a
+            // 40mm screen (a quarter of the usable height), which is what pushed
+            // the stack over budget and triggered the global scale-to-fit.
+            // Interval mode keeps its fixed rhythm — it has no flexGaps.
+            VStack(alignment: isInterval ? .center : .leading,
+                   spacing: isInterval ? rowSpacing : 0) {
+                // Workout-name header — INTERVAL ONLY.
                 // (Mixtape renders its own J-card label strip in MixtapeWatchDeck.)
-                HStack(spacing: 6) {
-                    Text(workoutManager.workoutName.uppercased())
-                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
-                        .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.3 : 1.0)
-                        .animation(
-                            reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                            value: pausePulse
-                        )
-                    Spacer()
-                    // Step pill moved to the same line as the countdown hero below
-                    // (intervalCountdownHero) — the workout name keeps the header
-                    // to itself so the two decision-critical pieces (remaining
-                    // time + phase) read together.
+                //
+                // In interval mode the name identifies the running program
+                // ("5K INTERVAL") and is genuinely informative. In free run it is
+                // the constant string "FREE RUN": it tells the user nothing they
+                // did not already know when they started, yet it consumed a full
+                // label row (~labelSize * 1.2 + rowSpacing ≈ 24pt on 40mm) at the
+                // top of the tightest layout in the app. Removing it in free run
+                // hands that height back to the flexGap distribution and lets the
+                // hero clock grow (see freeRunHeroSize).
+                //
+                // Two things the header carried are preserved elsewhere in the
+                // free-run branch: the paused pulse (now on the hero clock itself
+                // in `timerRow`, at zero vertical cost) and the VoiceOver
+                // announcement of the workout type (folded into the hero's
+                // accessibility label).
+                if isInterval {
+                    HStack(spacing: 6) {
+                        Text(workoutManager.workoutName.uppercased())
+                            .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                            .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.3 : 1.0)
+                            .animation(
+                                reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                                value: pausePulse
+                            )
+                        Spacer()
+                        // Step pill moved to the same line as the countdown hero
+                        // below (intervalCountdownHero) — the workout name keeps
+                        // the header to itself so the two decision-critical pieces
+                        // (remaining time + phase) read together.
+                    }
                 }
-                .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
+
+                // Free run distributes leftover height evenly between the rows
+                // instead of pooling it under the last row (the user-reported
+                // dead zone). `minLength: 0` means the gaps collapse first when
+                // the banner appears, so nothing is ever pushed off-screen.
+                // Interval mode keeps its fixed rhythm — it has more rows and no
+                // slack to distribute.
+                flexGap(!isInterval)
 
                 // Hero: interval countdown (interval) or elapsed time (free run).
                 // (Mixtape renders its own cassette-deck hero in MixtapeWatchDeck.)
                 timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth,
-                         heroSize: heroSize)
+                         heroSize: isInterval ? heroSize : frHeroSize)
 
-                // HR row — second tier
-                HStack {
-                    Text("HR")
-                        .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                        .foregroundColor(ShuttlXColor.textSecondary)
-                        .frame(width: labelWidth, alignment: .leading)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        // Number big, "BPM" as a small trailing unit. Rendering the
-                        // whole "132 BPM" string at valueSize (~42pt) overflowed the
-                        // HR row once the Z2 zone badge claimed its slot and clipped
-                        // to "132 B…"; splitting the unit off keeps the wide element
-                        // to just the digits, which always fit.
-                        Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "\u{2014}")
-                            .font(.system(size: hrValueSize, weight: .bold, design: .monospaced))
-                            .monospacedDigit()
-                            .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                            .layoutPriority(1)   // digits claim their (already fitted) width first
-                        Text("BPM")
+                flexGap(!isInterval)
+
+                // HR row — second tier.
+                if isInterval {
+                    HStack {
+                        Text("HR")
                             .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                             .foregroundColor(ShuttlXColor.textSecondary)
+                            .frame(width: labelWidth, alignment: .leading)
+                        Spacer()
+                        HStack(spacing: 4) {
+                            // Number big, "BPM" as a small trailing unit. Rendering the
+                            // whole "132 BPM" string at valueSize (~42pt) overflowed the
+                            // HR row once the Z2 zone badge claimed its slot and clipped
+                            // to "132 B…"; splitting the unit off keeps the wide element
+                            // to just the digits, which always fit.
+                            Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "\u{2014}")
+                                .font(.system(size: hrValueSize, weight: .bold, design: .monospaced))
+                                .monospacedDigit()
+                                .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                                .layoutPriority(1)   // digits claim their (already fitted) width first
+                            Text("BPM")
+                                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                                .foregroundColor(ShuttlXColor.textSecondary)
+                            HRZoneArc(zone: heartRateZoneNumber)
+                                .frame(width: 34, height: 17)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
+                    .accessibilityValue(heartRateZoneNumber > 0 ? "Zone \(heartRateZoneNumber)" : "")
+                    .accessibilityAddTraits(.updatesFrequently)
+                } else {
+                    // Free run: label-less Apple-style line — big zone-tinted digits,
+                    // small "BPM" on the same baseline, zone arc parked after the
+                    // unit. The arc stays on BOTH sizes: solved against the row it
+                    // costs `zoneArcWidth` (30pt on 40mm), which still leaves the
+                    // digits ~91pt — more than the 0.16h cap needs — so it is free.
+                    unitNumber(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "\u{2014}",
+                               "BPM",
+                               ShuttlXColor.forHRZone(workoutManager.heartRate),
+                               frHRSize, unitSize) {
                         HRZoneArc(zone: heartRateZoneNumber)
-                            .frame(width: 34, height: 17)
+                            .frame(width: zoneArcWidth, height: zoneArcWidth / 2)
+                            .padding(.leading, 4)
                     }
-                }
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
-                .accessibilityValue(heartRateZoneNumber > 0 ? "Zone \(heartRateZoneNumber)" : "")
-                .accessibilityAddTraits(.updatesFrequently)
-                .onChange(of: workoutManager.heartRate) { _, newHR in
-                    let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
-                    if isHigh && !highIntensityHapticFired {
-                        highIntensityHapticFired = true
-                        #if os(watchOS)
-                        WKInterfaceDevice.current().play(.notification)
-                        #endif
-                    } else if !isHigh {
-                        highIntensityHapticFired = false
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(workoutManager.heartRate > 0 ? "Heart rate \(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
+                    .accessibilityAddTraits(.updatesFrequently)
                 }
 
                 if isHighIntensityWarning {
                     highIntensityWarningView(labelSize: labelSize)
+                        // Free run runs at VStack spacing 0, so the banner supplies
+                        // its own separation from the HR digits above it.
+                        .padding(.vertical, isInterval ? 0 : 2)
                 }
 
                 if workoutManager.noHeartRateDetected {
                     noHeartRateBanner(labelSize: labelSize)
+                        .padding(.vertical, isInterval ? 0 : 2)
                 }
+
+                flexGap(!isInterval)
 
                 // Tertiary two-up rows. SPM (cadence) was removed from the live
                 // timer — it carried little decision value mid-run and the
                 // CMPedometer-derived value is warmup-laggy/unreliable (see
-                // cadence-derivation notes); PACE is the metric runners actually
-                // steer by, so the tertiary area is DIST / PACE (+ elapsed TIME
-                // in interval mode, where the hero is the step countdown).
+                // cadence-derivation notes).
+                // Interval: DIST / PACE + elapsed TIME / CAL (the hero is the step
+                // countdown, so elapsed time is demoted here).
+                // Free run: DIST / CAL only — PACE was promoted to a full-width row
+                // above and the elapsed clock is the hero.
                 if isInterval {
                     HStack(spacing: 8) {
                         compactMetric("DIST", compactDistanceText, tertiarySize, labelSize,
@@ -189,30 +287,85 @@ extension TrainingView {
                         }
                     }
                 } else {
-                    // Free-run: DIST on its own full-width row so "10.00 km"
-                    // never overflows; PACE + CAL share the compact row below.
-                    metricRow("DIST", distanceText, ShuttlXColor.running,
-                              secondarySize, labelSize, labelWidth,
-                              accessibilityText: accessibleDistance)
-                        .background(kmSplitHighlight)
+                    // Free run: PACE owns a full-width row. It is the metric a
+                    // runner actually steers by, and it now carries its unit as a
+                    // "/KM" suffix instead of a "PACE" label column — the row width
+                    // that column used to hold is what lets the digits reach
+                    // 0.15h–0.17h instead of the old 0.155h-nominal that was then
+                    // scale-to-fit down to ~21pt on 40mm.
+                    //
+                    // Width is solved from the ACTUAL glyph count of the value:
+                    // "6'47\"" is 5 glyphs, a walking "12'34\"" is 6, and the
+                    // no-data case is the single "—". Sizing per-value means the
+                    // common case is never penalised by the widest one.
+                    unitNumber(paceValueText, "/KM", ShuttlXColor.running,
+                               frPaceSize, unitSize) { EmptyView() }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel(accessiblePace)
+                        .accessibilityAddTraits(.updatesFrequently)
+
+                    flexGap(true)
 
                     HStack(spacing: 8) {
-                        compactMetric("PACE", paceText, tertiarySize, labelSize)
+                        // Unit-less km VALUE + a small "KM"/"M" suffix — the
+                        // half-width slot cannot hold "12.84 km" as one string on
+                        // 40mm, but as value + suffix the suffix is small enough to
+                        // pay for itself. VoiceOver keeps the full units.
+                        unitNumber(compactDistanceValue, compactDistanceUnit,
+                                   ShuttlXColor.textPrimary, frCompactSize, compactUnitSize) { EmptyView() }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(kmSplitHighlight)
+                            .accessibilityElement(children: .combine)
+                            .accessibilityLabel("Distance \(accessibleDistance)")
                         if workoutManager.calories > 0 {
-                            compactMetric("CAL", "\(workoutManager.calories)", tertiarySize, labelSize)
+                            unitNumber("\(workoutManager.calories)", "CAL",
+                                       ShuttlXColor.textPrimary, frCompactSize, compactUnitSize) { EmptyView() }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityElement(children: .combine)
+                                .accessibilityLabel("\(workoutManager.calories) calories")
+                        } else {
+                            Color.clear.frame(maxWidth: .infinity)
                         }
                     }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Pace \(accessiblePace)\(workoutManager.calories > 0 ? ", calories \(workoutManager.calories)" : "")")
-                    .accessibilityAddTraits(.updatesFrequently)
                 }
 
                 Spacer(minLength: 0)
             }
+            // HR haptic lives on the stack, not on the HR row: the row is now
+            // branch-specific (label column in interval, label-less in free run)
+            // and both branches need the high-intensity notification.
+            .onChange(of: workoutManager.heartRate) { _, newHR in
+                let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
+                if isHigh && !highIntensityHapticFired {
+                    highIntensityHapticFired = true
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.notification)
+                    #endif
+                } else if !isHigh {
+                    highIntensityHapticFired = false
+                }
+            }
+            // The banner inserting/removing a row reflows the stack anyway; the
+            // size tier rides along with that same reflow.
+            .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: bannerShown)
+            // Pause-pulse driver lives on the stack, not on the header row: the
+            // header is interval-only now, and free run needs the same pulse for
+            // its hero clock.
+            .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
             .padding(.horizontal, ShuttlXSpacing.xs)
             .padding(.trailing, 0)
             .padding(.top, watchTimerTopPadding(themeManager.current.id))
             .padding(.bottom, watchTimerBottomPadding(themeManager.current.id))
+            // Free run only: reserve the strip the TabView page dots live in.
+            // Without it the flexible gaps push the DIST/CAL row down until it
+            // sits under the dots. Measured dot band: y193–195.5 of 197 on 40mm,
+            // y240–245.5 of 248 on 46mm, so the content must stop by ~190 / ~237.
+            // 0.085h (16.7 / 21.1) was more clearance than that needs; 0.055h
+            // (10.8 / 13.6) still clears both — plus the last line box carries
+            // ~0.25em of descender space no digit uses — and hands the ~6pt it
+            // frees to the type scale.
+            .padding(.bottom, isInterval ? 0 : max(10, h * 0.055))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             }   // end: standard stacked-metrics layout (non-mixtape themes)
 
@@ -247,6 +400,72 @@ extension TrainingView {
                     : .easeOut(duration: 0.55),
                 value: kmSplitFlash
             )
+    }
+
+    // MARK: - Apple-style Metric Line (free run)
+
+    /// One free-run metric line: a big monospaced number with a SMALL unit suffix
+    /// riding the same baseline, plus an optional trailing accessory.
+    ///
+    /// This replaces the `[LABEL][spacer][value]` two-column `metricRow` on the
+    /// free-run screen. The label column was pure overhead — it consumed
+    /// `labelWidth` (0.20h ≈ 39pt on 40mm, 50pt on 46mm) of every row and forced
+    /// the numbers down to fit what was left. Attaching the unit to the number
+    /// instead (Apple Workout's Outdoor Run pattern) says the same thing in ~24pt
+    /// and lets the digits claim the rest.
+    ///
+    /// `firstTextBaseline` alignment is what makes the suffix read as part of the
+    /// number rather than as a second, smaller metric; it also means the suffix
+    /// contributes no line height of its own.
+    @ViewBuilder
+    func unitNumber<Accessory: View>(_ value: String, _ unit: String, _ color: Color,
+                                     _ valueSize: CGFloat, _ unitSize: CGFloat,
+                                     @ViewBuilder accessory: () -> Accessory) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: max(1, unitSize * 0.18)) {
+            Text(value)
+                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(color)
+                .lineLimit(1)
+                // NO `minimumScaleFactor`, and `fixedSize` on BOTH axes. Measured
+                // 2026-08-06: with `vertical: false` and a 0.6 floor, HR and PACE
+                // rendered at exactly 0.67 × their solved size on both watches even
+                // though the row had horizontal room to spare — the VStack proposes
+                // each child a share of the height, and an unfixed-vertical Text
+                // answers a tight proposal by scaling itself (and its width) down.
+                // That is the same silent shrink that made the old layout render a
+                // 49.7pt hero at 25pt. Sizes are solved by `fittedMetricSize`, so
+                // the row must render them as asked or the solve is meaningless.
+                .fixedSize()
+                .layoutPriority(1)
+            Text(unit)
+                .font(.system(size: unitSize, weight: .bold, design: .monospaced))
+                .foregroundColor(ShuttlXColor.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+            accessory()
+        }
+    }
+
+    /// Largest point size at which `glyphs` monospaced characters, a fixed-size unit
+    /// suffix and an optional accessory all fit `available` points of row width.
+    ///
+    /// Solving the size up front is the whole trick: SwiftUI does NOT report an
+    /// overflowing metrics stack — it quietly scale-to-fits every row, which is how
+    /// the previous layout ended up rendering its 49.7pt hero at 25pt and its 30.5pt
+    /// PACE at 21pt on a 40mm screen while the source still said "0.26h" and
+    /// "0.155h". Every free-run number is now sized, not scaled.
+    ///
+    /// `advance` is SF's monospaced per-glyph advance (0.6em) with ~3% safety margin.
+    func fittedMetricSize(glyphs: Int, unit: String, unitSize: CGFloat,
+                          accessoryWidth: CGFloat, available: CGFloat,
+                          cap: CGFloat) -> CGFloat {
+        guard glyphs > 0 else { return cap }
+        let advance: CGFloat = 0.62
+        let unitWidth = CGFloat(unit.count) * advance * unitSize
+        let gaps = max(1, unitSize * 0.18) + (accessoryWidth > 0 ? 4 : 0) + 2
+        let budget = available - unitWidth - accessoryWidth - gaps
+        return max(10, min(cap, budget / (CGFloat(glyphs) * advance)))
     }
 
     // Compact two-up metric (used in interval mode's tertiary rows).
@@ -323,29 +542,13 @@ extension TrainingView {
         .accessibilityLabel(a11y ?? "\(label) \(value)")
     }
 
-    // MARK: - Metric Row (unified for all metrics including timer)
-
-    func metricRow(_ label: String, _ value: String, _ color: Color,
-                           _ valueSize: CGFloat, _ labelSize: CGFloat, _ labelWidth: CGFloat,
-                           accessibilityText: String) -> some View {
-        HStack {
-            Text(label)
-                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                .foregroundColor(ShuttlXColor.textSecondary)
-                .frame(width: labelWidth, alignment: .leading)
-            Spacer()
-            Text(value)
-                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundColor(color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(accessibilityText)
-        .accessibilityAddTraits(.updatesFrequently)
-    }
+    // MARK: - Metric Row
+    //
+    // The `[LABEL][spacer][value]` two-column row is GONE. Its only remaining
+    // caller was the free-run PACE line, which now uses `unitNumber` — the label
+    // column cost `labelWidth` (0.20h) of row width for a word the unit suffix says
+    // in a third of the space. Interval mode never used it (it composes its rows
+    // inline and via `compactMetric`). Do not reintroduce it on the free-run stack.
 
     // MARK: - Timer Line
 
@@ -354,32 +557,51 @@ extension TrainingView {
         if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
             intervalCountdownHero(engine: engine, heroSize: heroSize, labelSize: labelSize)
         } else {
-            // Free-run: timer is the sole hero — use heroSize so it dominates
-            // over the HR row below (which uses valueSize).
-            // Inlined rather than routed through metricRow() because the value is a
-            // system-rendered ticking Text, not a String. Same layout/modifiers.
-            HStack(spacing: 4) {
-                Text("TIME")
-                    .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                    .foregroundColor(ShuttlXColor.textSecondary)
-                    .frame(width: labelWidth, alignment: .leading)
-                    .layoutPriority(0)   // the label yields; the digits never do
-                Spacer(minLength: 0)
-                // Width budget: screen minus the label column, the row's own
-                // horizontal padding (ShuttlXSpacing.xs on each side) and the 4pt
-                // gap. Feeding this to the component is what stops the 1h+ form
-                // ("1:27:23", 7 glyphs) from truncating to "1:27…".
-                ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
-                                 elapsed: workoutManager.elapsedTime,
-                                 baseSize: heroSize,
-                                 availableWidth: screenWidth - labelWidth - (ShuttlXSpacing.xs * 2) - 4)
-                    .layoutPriority(1)
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
-            .accessibilityAddTraits(.updatesFrequently)
+            // Free-run: the elapsed clock is the sole hero and gets the ENTIRE row
+            // width — no "TIME" label column.
+            //
+            // The label was the binding constraint on digit size, not the vertical
+            // budget: `ElapsedTimerText` solves its point size from the width it is
+            // given, and the ~40pt label column pushed the 1h+ form (7 glyphs) down
+            // to ~25pt on 40mm — smaller than the HR digits sitting right below it.
+            // Reclaiming that column buys ~35% more digit height at every duration.
+            // Nothing is lost: this is the only clock on screen, and VoiceOver
+            // announces the workout type + elapsed time from the label below.
+            //
+            // The clock also carries the PAUSED signal now that the free-run header
+            // (which used to blink amber) is gone: amber tint + the same 0.8s
+            // pulse, at zero vertical cost. A frozen clock alone is too slow to
+            // read — a runner glancing down needs the state in one look.
+            ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
+                             elapsed: workoutManager.elapsedTime,
+                             baseSize: heroSize,
+                             availableWidth: screenWidth - (ShuttlXSpacing.xs * 2),
+                             color: workoutManager.isPaused
+                                 ? ShuttlXColor.ctaWarning
+                                 : ShuttlXColor.textPrimary)
+                // Left-aligned, like every number below it: Apple's metrics page
+                // shares one column edge so the eye drops straight down the stack
+                // instead of re-acquiring a new centre for each row.
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.35 : 1.0)
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                    value: pausePulse
+                )
+                .accessibilityElement(children: .combine)
+                // Replaces the VoiceOver announcement the removed "FREE RUN"
+                // header used to provide — the workout type is spoken with the
+                // clock instead of as a separate, silent-to-sighted-users row.
+                .accessibilityLabel("\(workoutManager.workoutName)\(workoutManager.isPaused ? ", paused" : ""), elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+                .accessibilityAddTraits(.updatesFrequently)
         }
+    }
+
+    /// Flexible, fully collapsible gap used to spread the free-run stack over the
+    /// whole screen height. Emitted only for the modes that have slack to give.
+    @ViewBuilder
+    func flexGap(_ active: Bool) -> some View {
+        if active { Spacer(minLength: 0) }
     }
 
     // MARK: - Interval Countdown Hero (replaces the old 56pt progress ring)
@@ -499,6 +721,16 @@ extension TrainingView {
         hrCalculator.isHighIntensityWarning(heartRate: Double(workoutManager.heartRate))
     }
 
+    /// True when a safety banner is claiming a row in the free-run stack.
+    ///
+    /// Drives the two-tier type scale: with no banner the ~21pt (25pt on 46mm) it
+    /// would occupy is spare height that used to drain into the `flexGap` spacers,
+    /// so every number steps up 13% instead. The banner always wins when it
+    /// appears — it is cardiac-safety UI and must be fully visible.
+    var freeRunBannerShown: Bool {
+        isHighIntensityWarning || workoutManager.noHeartRateDetected
+    }
+
     /// Safety-relevant warning — it must be fully readable, never elided.
     ///
     /// It used to sit in `HStack { Spacer(); Text }`, which handed the text only the
@@ -571,12 +803,15 @@ extension TrainingView {
         .accessibilityLabel("No heart rate detected. Check that the watch is snug on your wrist and that ShuttlX has heart rate access in the Health app.")
     }
 
+    /// Full "12.84 km" form. No longer used by the live timer (both modes now show
+    /// distance in the compact slot, see `compactDistanceText`) — kept as the
+    /// unit-bearing formatting entry point for any full-width distance surface.
     var distanceText: String {
         FormattingUtils.formatDistance(workoutManager.totalDistance)
     }
 
-    /// Distance for the compact two-up slot in interval mode, which is roughly half
-    /// the width of the free-run row. "12.84 km" cannot fit there on 40mm — even at
+    /// Distance for the compact two-up slot, which is roughly half the width of a
+    /// full-width row. "12.84 km" cannot fit there on 40mm — even at
     /// the 0.4 scale floor it elided to "3.42…". The unit is dropped in the km form
     /// exactly as `paceText` drops "/KM" for the same reason; the "DIST" label and
     /// the VoiceOver string (which keeps full units) carry the meaning. The sub-km
@@ -585,6 +820,19 @@ extension TrainingView {
         let km = workoutManager.totalDistance
         if km < 1.0 { return "\(Int(km * 1000))m" }
         return String(format: "%.2f", km)
+    }
+
+    /// Free-run distance split into number and unit so the unit can be rendered as a
+    /// small baseline suffix (see `unitNumber`). Sub-km keeps metres because "0.45"
+    /// reads worse than "450 M" at a glance.
+    var compactDistanceValue: String {
+        let km = workoutManager.totalDistance
+        if km < 1.0 { return "\(Int(km * 1000))" }
+        return String(format: "%.2f", km)
+    }
+
+    var compactDistanceUnit: String {
+        workoutManager.totalDistance < 1.0 ? "M" : "KM"
     }
 
     var accessibleDistance: String {
@@ -603,6 +851,11 @@ extension TrainingView {
         guard let pace = workoutManager.currentPace else { return "—" }
         return FormattingUtils.formatPace(pace)
     }
+
+    /// Free-run PACE value without its unit — "/KM" is rendered as a small baseline
+    /// suffix by `unitNumber`. Identical to `paceText`; named separately because the
+    /// free-run row sizes itself from `.count` and the intent (a bare value) matters.
+    var paceValueText: String { paceText }
 
     var accessiblePace: String {
         guard let pace = workoutManager.currentPace else { return "Average pace no data" }
@@ -684,8 +937,26 @@ struct ElapsedTimerText: View {
         .monospacedDigit()
         .foregroundColor(color)
         .lineLimit(1)
-        .minimumScaleFactor(0.5)
-        .fixedSize(horizontal: true, vertical: false)
+        // MEASURED 2026-08-06 (SE 3 40mm + Series 11 46mm, watchOS 26.5): a
+        // `minimumScaleFactor` on the RUNNING branch does not act as a safety net
+        // here — it fires unconditionally and pins the clock to the floor. Snapshot
+        // measurements of the digits: 25.7pt rendered against a 49.7pt `fittedSize`
+        // on 40mm, 33.0pt against 64.5pt on 46mm, and 17.7pt against 35.5pt at
+        // 1h27m — 0.49–0.51× in every single case, i.e. exactly the old 0.5 floor.
+        // `Text(timerInterval:)` is advanced by the render server, so SwiftUI sizes
+        // it from an internal worst-case template rather than the string on screen,
+        // decides that template overflows, and scales all the way down. The result
+        // was a hero clock rendering at HALF the size the code asked for.
+        //
+        // `fittedSize` already solves the point size against `availableWidth`, so
+        // no scale-to-fit is wanted on EITHER branch. The paused/static branch has
+        // the same failure in a different guise: `fixedSize(vertical: false)` let
+        // the VStack's height proposal shrink it, and the paused clock rendered at
+        // ~22pt next to a 35.6pt BPM row. `fixedSize()` on both axes is what makes
+        // the solved size the rendered size. Both `Text(timerInterval:)` and
+        // `FormattingUtils.formatTimer` produce the same glyph counts `glyphCount`
+        // solves for (5 for mm:ss, 7 for h:mm:ss), so the two branches stay in sync.
+        .fixedSize()
     }
 }
 

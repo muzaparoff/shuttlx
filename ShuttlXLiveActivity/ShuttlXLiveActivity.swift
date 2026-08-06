@@ -78,14 +78,23 @@ struct ShuttlXLiveActivity: Widget {
     /// the Watch stops broadcasting.
     @ViewBuilder
     private func timerText(for context: ActivityViewContext<WorkoutActivityAttributes>, font: Font) -> some View {
-        if context.state.isPaused {
-            Text(formatTimer(context.state.elapsedTime))
-                .font(font)
-                .contentTransition(.numericText())
-        } else {
-            Text(timerInterval: context.state.timerReferenceDate...Date.distantFuture, countsDown: false)
-                .font(font)
+        // `Text(timerInterval:)` is greedy — it claims the full width
+        // proposed by its container and lays its digits out leading-aligned
+        // by default, which visibly shifts the expanded-leading Dynamic
+        // Island timer left. Center the glyphs explicitly; the paused-state
+        // static text gets the same treatment so pause/resume doesn't shift
+        // the digits. `compactTrailing` layers its own trailing frame on top
+        // of this at the call site and is unaffected.
+        Group {
+            if context.state.isPaused {
+                Text(formatTimer(context.state.elapsedTime))
+                    .contentTransition(.numericText())
+            } else {
+                Text(timerInterval: context.state.timerReferenceDate...Date.distantFuture, countsDown: false)
+            }
         }
+        .font(font)
+        .multilineTextAlignment(.center)
     }
 
     // MARK: - Formatting Helpers
