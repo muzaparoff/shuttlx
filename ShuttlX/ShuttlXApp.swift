@@ -122,6 +122,12 @@ struct ShuttlXApp: App {
     //                         without touching the real sessions.json.
     //   SHUTTLX_TAB=<name>    selects a tab at launch:
     //                         training|programs|history|analytics|settings.
+    //   SHUTTLX_SHOW_PLANS=1  additionally auto-pushes the Training Plans
+    //                         list (the four built-in plans) — the seam
+    //                         itself lives in ProgramsTabView.
+    //   SHUTTLX_HISTORY_MODE=<day|week|month>  pre-selects the History
+    //                         period segment — the seam itself lives in
+    //                         TrainingHistoryView.
     //
     // Both also bypass onboarding on a fresh install so the tabs are
     // actually reachable. Launch via `SIMCTL_CHILD_SHUTTLX_DEMO_DATA=1
@@ -144,6 +150,7 @@ struct ShuttlXApp: App {
 
     private var screenshotSeamsActive: Bool {
         demoDataRequested || launchTabRequest != nil
+            || ProcessInfo.processInfo.environment["SHUTTLX_SHOW_PLANS"] == "1"
     }
     #endif
 
@@ -329,19 +336,24 @@ enum ShuttlXDemoData {
     /// are deterministic so re-captures produce identical screenshots.
     static func makeSessions(now: Date = Date()) -> [TrainingSession] {
         // (daysAgo, startHour, minutes, avgHR, runMin, walkMin, displayName?)
+        //
+        // Deliberately periodized: the last 7 days are a light recovery week
+        // and the two weeks before are heavy, so AnalyticsEngine's
+        // form = fitness − fatigue comes out clearly positive and the
+        // Recovery Status card photographs as "Fresh", not "Needs rest".
         let specs: [(days: Int, hour: Int, minutes: Int, avgHR: Double, run: Int, walk: Int, name: String?)] = [
-            (1,  8, 34, 152, 5, 2, "Run 5 / Walk 2"),
-            (2, 18, 24, 143, 3, 2, "Run 3 / Walk 2"),
-            (4,  7, 45, 148, 8, 3, nil),
-            (6, 12, 28, 155, 4, 1, "HIIT Intervals"),
-            (8,  9, 21, 139, 3, 3, "Easy Run/Walk"),
-            (9, 17, 38, 150, 6, 2, nil),
-            (11, 8, 30, 146, 5, 2, "Run 5 / Walk 2"),
-            (13, 18, 26, 141, 3, 2, "Run 3 / Walk 2"),
-            (15, 7, 42, 149, 8, 3, nil),
-            (17, 12, 23, 137, 3, 3, "Easy Run/Walk"),
-            (19, 9, 35, 151, 6, 2, "Tempo Intervals"),
-            (20, 17, 29, 144, 4, 2, nil),
+            (1,  8, 34, 143, 5, 2, "Run 5 / Walk 2"),
+            (5, 18, 24, 139, 3, 3, "Easy Run/Walk"),
+            (8,  9, 38, 150, 6, 2, nil),
+            (9, 17, 30, 146, 5, 2, "Run 5 / Walk 2"),
+            (11, 8, 42, 149, 8, 3, nil),
+            (12, 12, 28, 155, 4, 1, "HIIT Intervals"),
+            (14, 18, 26, 141, 3, 2, "Run 3 / Walk 2"),
+            (15, 7, 45, 148, 8, 3, nil),
+            (16, 12, 34, 152, 5, 2, "Run 5 / Walk 2"),
+            (18, 9, 35, 151, 6, 2, "Tempo Intervals"),
+            (19, 17, 29, 144, 4, 2, nil),
+            (20, 8, 40, 147, 6, 3, "Run 6 / Walk 3"),
         ]
 
         let calendar = Calendar.current

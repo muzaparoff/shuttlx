@@ -13,6 +13,18 @@ struct TrainingHistoryView: View {
     @State private var selectedDate = Date()
     @State private var viewMode: HistoryViewMode = .day
 
+    #if DEBUG
+    /// Screenshot seam (SHUTTLX_HISTORY_MODE=<day|week|month>): pre-selects
+    /// the period segment so captures show a populated list without
+    /// synthetic taps. See the screenshot-seams MARK in ShuttlXApp.
+    init() {
+        if let raw = ProcessInfo.processInfo.environment["SHUTTLX_HISTORY_MODE"],
+           let mode = HistoryViewMode(rawValue: raw.capitalized) {
+            _viewMode = State(initialValue: mode)
+        }
+    }
+    #endif
+
     private var filteredSessions: [TrainingSession] {
         let calendar = Calendar.current
         return dataManager.sessions.filter { session in

@@ -7,6 +7,14 @@ struct ProgramsTabView: View {
     @EnvironmentObject var workoutController: iPhoneWorkoutController
     @ObservedObject var sharedData = PhoneSyncCoordinator.shared
 
+    #if DEBUG
+    /// Screenshot seam (SHUTTLX_SHOW_PLANS=1): auto-pushes the Training
+    /// Plans list on appear so the four built-in plans can be captured
+    /// without synthetic taps. See the screenshot-seams MARK in ShuttlXApp.
+    @State private var autoShowPlans =
+        ProcessInfo.processInfo.environment["SHUTTLX_SHOW_PLANS"] == "1"
+    #endif
+
     var body: some View {
         NavigationStack {
             List {
@@ -103,6 +111,11 @@ struct ProgramsTabView: View {
             .scrollContentBackground(.hidden)
             .themedScreenBackground()
             .navigationTitle("Programs")
+            #if DEBUG
+            .navigationDestination(isPresented: $autoShowPlans) {
+                PlanListView()
+            }
+            #endif
         }
     }
 
