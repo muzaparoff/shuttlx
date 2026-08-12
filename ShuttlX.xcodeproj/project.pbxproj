@@ -20,6 +20,7 @@
 		A5923515B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A5923515F /* PrivacyInfo.xcprivacy */; };
 		A5923516B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923516F /* OnboardingView.swift */; };
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
+		HV000001B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = HV000001F /* HelpView.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
 		A5923521B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5923521F /* Assets.xcassets */; };
 		A5923531 /* SessionDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923531F /* SessionDetailView.swift */; };
@@ -249,6 +250,7 @@
 		A5923515F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		A5923516F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		HV000001F /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A5923530F /* DetectedActivity+Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "DetectedActivity+Theme.swift"; sourceTree = "<group>"; };
@@ -520,6 +522,7 @@
 				A5923514F /* DebugView.swift */,
 				A5923516F /* OnboardingView.swift */,
 				A5923517F /* SettingsView.swift */,
+				HV000001F /* HelpView.swift */,
 				A5923518F /* SyncDebugView.swift */,
 				A5923D01 /* DashboardView.swift */,
 				C5923002 /* RouteMapView.swift */,
@@ -960,6 +963,7 @@
 				A5923514B /* DebugView.swift in Sources */,
 				A5923516B /* OnboardingView.swift in Sources */,
 				A5923517B /* SettingsView.swift in Sources */,
+				HV000001B /* HelpView.swift in Sources */,
 				A5923518B /* SyncDebugView.swift in Sources */,
 				A5923B01 /* ShuttlXTheme.swift in Sources */,
 				TH000011 /* ThemeColors.swift in Sources */,

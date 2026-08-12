@@ -426,6 +426,22 @@ struct SettingsView: View {
                 .accessibilityHint("Permanently deletes all training session data")
             }
 
+            // Help Section
+            Section("Help") {
+                NavigationLink {
+                    HelpView()
+                } label: {
+                    HStack {
+                        Image(systemName: "questionmark.circle.fill")
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                        Text("Help")
+                    }
+                }
+                .accessibilityLabel("Help")
+                .accessibilityHint("How-to guides for workouts, programs, themes, widgets, and privacy")
+            }
+
             // About Section
             Section("About") {
                 HStack {
