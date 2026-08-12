@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<!-- ShuttlX marketing shot featuring two watch captures on one 1320x2868 canvas.
+     Placeholders: HEADLINE_TEXT, SUB_TEXT, SHOT_A, SHOT_B. -->
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@600;800&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 1320px; height: 2868px; overflow: hidden; }
+  body {
+    background: radial-gradient(120% 60% at 50% -5%, #16222e 0%, #0a0a0f 55%, #0d0d16 100%);
+    font-family: 'Inter', -apple-system, sans-serif;
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .caption { text-align: center; padding: 150px 90px 0; }
+  .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 30px; font-weight: 700; letter-spacing: 0.35em;
+    color: #00e5ff; text-transform: uppercase; margin-bottom: 26px;
+  }
+  .caption h1 {
+    font-size: 96px; font-weight: 800; letter-spacing: -0.02em;
+    line-height: 1.08; color: #f0f0f5;
+  }
+  .caption h1 .accent { color: #00e5ff; }
+  .caption p { font-size: 44px; font-weight: 600; color: #8888aa; margin-top: 26px; }
+  .watches { display: flex; gap: 70px; margin-top: 190px; align-items: center; }
+  .watch {
+    width: 560px; border-radius: 130px; padding: 26px;
+    background: #1a1a28;
+    box-shadow: 0 0 90px rgba(0, 229, 255, 0.15), 0 60px 120px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  .watch::before, .watch::after {
+    content: ""; position: absolute; left: 50%; transform: translateX(-50%);
+    width: 300px; height: 150px; background: #14141f; z-index: -1;
+  }
+  .watch::before { top: -140px; border-radius: 40px 40px 0 0; }
+  .watch::after  { bottom: -140px; border-radius: 0 0 40px 40px; }
+  .watch img { display: block; width: 100%; border-radius: 106px; }
+  .watch.small { width: 470px; }
+</style>
+</head>
+<body>
+  <div class="caption">
+    <div class="eyebrow">ShuttlX</div>
+    <h1>HEADLINE_TEXT</h1>
+    <p>SUB_TEXT</p>
+  </div>
+  <div class="watches">
+    <div class="watch"><img src="SHOT_A"></div>
+    <div class="watch small"><img src="SHOT_B"></div>
+  </div>
+</body>
+</html>
