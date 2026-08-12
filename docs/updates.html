@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>What's New — ShuttlX</title>
+    <meta name="description" content="ShuttlX release notes — every new feature and fix, straight from the development history.">
+    <link rel="icon" href="app-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --border: rgba(255,255,255,0.08);
+            --text: #f0f0f5;
+            --text-secondary: #8888aa;
+            --accent: #00e5ff;
+            --green: #39ff8e;
+            --amber: #ffb400;
+            --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg); color: var(--text); line-height: 1.6;
+        }
+        .wrap { max-width: 720px; margin: 0 auto; padding: 40px 20px 80px; }
+        header { display: flex; align-items: center; gap: 12px; margin-bottom: 40px; }
+        header img { width: 44px; height: 44px; border-radius: 10px; }
+        header .name { font-weight: 800; font-size: 19px; }
+        header nav { margin-left: auto; display: flex; gap: 18px; }
+        header nav a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 600; }
+        header nav a:hover { color: var(--accent); }
+        .eyebrow {
+            font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px;
+        }
+        h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+        .lede { color: var(--text-secondary); margin-bottom: 36px; }
+        .release {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px 22px; margin-bottom: 14px;
+        }
+        .release .ver { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+        .release h3 { font-size: 17px; font-weight: 700; }
+        .release time { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-secondary); }
+        .release ul { list-style: none; }
+        .release li { padding: 3px 0; font-size: 14.5px; color: var(--text); }
+        .tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; margin-right: 8px; }
+        .tag-feat { color: var(--green); }
+        .tag-fix { color: var(--amber); }
+        footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--border);
+                 font-size: 13px; color: var(--text-secondary); display: flex; gap: 18px; }
+        footer a { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <img src="app-icon.png" alt="ShuttlX icon">
+        <span class="name">ShuttlX</span>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="privacy-policy.html">Privacy</a>
+        </nav>
+    </header>
+    <p class="eyebrow">Release notes</p>
+    <h1>What's new in ShuttlX</h1>
+    <p class="lede">Every release, straight from the development history — published automatically by the release pipeline.</p>
+    <div id="releases"><p style="color:var(--text-secondary)">Loading…</p></div>
+    <footer>
+        <span>© 2026 ShuttlX</span>
+        <a href="index.html">Home</a>
+        <a href="privacy-policy.html">Privacy Policy</a>
+    </footer>
+</div>
+<script>
+fetch('releases.json')
+  .then(function (r) { return r.json(); })
+  .then(function (releases) {
+    var root = document.getElementById('releases');
+    root.innerHTML = '';
+    releases.forEach(function (rel) {
+      var div = document.createElement('div');
+      div.className = 'release';
+      var notes = rel.notes.map(function (n) {
+        var cls = n.type === 'feat' ? 'tag-feat' : 'tag-fix';
+        var word = n.type === 'feat' ? 'NEW' : 'FIX';
+        return '<li><span class="tag ' + cls + '">' + word + '</span>' +
+          n.text.replace(/&/g, '&amp;').replace(/</g, '&lt;') + '</li>';
+      }).join('');
+      div.innerHTML = '<div class="ver"><h3>v' + rel.version + '</h3>' +
+        '<time datetime="' + rel.date + '">' + rel.date + '</time></div>' +
+        '<ul>' + notes + '</ul>';
+      root.appendChild(div);
+    });
+  })
+  .catch(function () {
+    document.getElementById('releases').innerHTML =
+      '<p style="color:var(--text-secondary)">Release notes are temporarily unavailable.</p>';
+  });
+</script>
+</body>
+</html>

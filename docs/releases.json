@@ -1,0 +1,604 @@
+[
+ {
+  "version": "1.1.56",
+  "date": "2026-08-06",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Apple Workout-style free-run metrics + centered Live Activity timer"
+   }
+  ]
+ },
+ {
+  "version": "1.1.55",
+  "date": "2026-08-04",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Free-run timer stall, first-launch auto-stop, 1h+ display truncation"
+   }
+  ]
+ },
+ {
+  "version": "1.1.54",
+  "date": "2026-07-29",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Long-session dead zone \u2014 route >60KB payloads via transferFile"
+   }
+  ]
+ },
+ {
+  "version": "1.1.53",
+  "date": "2026-07-25",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Tier-1 widget expansion + deep-link routing fixes"
+   },
+   {
+    "type": "fix",
+    "text": "Release type-checker timeout in WidgetProgressShapes"
+   }
+  ]
+ },
+ {
+  "version": "1.1.52",
+  "date": "2026-07-25",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Remote stop delivery + Live Activity lifecycle \u2014 runtime-verified"
+   }
+  ]
+ },
+ {
+  "version": "1.1.51",
+  "date": "2026-07-25",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Walkman hardware refresh \u2014 palette, dashboard, timer heroes"
+   }
+  ]
+ },
+ {
+  "version": "1.1.49",
+  "date": "2026-07-24",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "P0 crash fixes \u2014 stale interval state, HK session guard, orphan race, unreachable summary"
+   },
+   {
+    "type": "fix",
+    "text": "Wire transferUserInfo fallback for remote workout controls"
+   },
+   {
+    "type": "fix",
+    "text": "Defect 1 + 2 from crash-auditor \u2014 pendingSummary parity, start-failure UX"
+   },
+   {
+    "type": "fix",
+    "text": "S-4/S-5/S-6 \u2014 concurrency race, lastSessionID channel, timer QoS"
+   },
+   {
+    "type": "fix",
+    "text": "S-5 narrowed \u2014 lastSessionID tap only in sendSessionViaFileTransfer"
+   }
+  ]
+ },
+ {
+  "version": "1.1.48",
+  "date": "2026-07-24",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Data-loss + iOS timer stop + Mixtape cassette shell"
+   }
+  ]
+ },
+ {
+  "version": "1.1.46",
+  "date": "2026-07-23",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Sessions.json read-append-write off the main actor"
+   },
+   {
+    "type": "fix",
+    "text": "Sessions.json writes off the main actor in PhoneSyncCoordinator"
+   },
+   {
+    "type": "fix",
+    "text": "FM Tuner completion badge + pause decorative animation loops"
+   },
+   {
+    "type": "fix",
+    "text": "Archive oldest sessions at cap instead of dropping newest"
+   },
+   {
+    "type": "fix",
+    "text": "Stable session id across checkpoint and final saves"
+   },
+   {
+    "type": "fix",
+    "text": "Cap requestAllSessions inline reply by cumulative byte budget"
+   },
+   {
+    "type": "feat",
+    "text": "Timer reliability, live sync, and workout visibility improvements"
+   }
+  ]
+ },
+ {
+  "version": "1.1.45",
+  "date": "2026-07-08",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Drop stale display ticks instead of stacking main-actor tasks"
+   }
+  ]
+ },
+ {
+  "version": "1.1.43",
+  "date": "2026-07-07",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Timer freeze root causes \u2014 wall-clock countdown, periodic checkpoint, session-state handling"
+   }
+  ]
+ },
+ {
+  "version": "1.1.41",
+  "date": "2026-06-24",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Mixtape deck \u2014 SIDE A inline with timer, haptic only upward \u2265105 BPM"
+   }
+  ]
+ },
+ {
+  "version": "1.1.39",
+  "date": "2026-06-20",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Restore live BPM + add no-HR watchdog; arcade handheld skin; remove VUMeter theme"
+   }
+  ]
+ },
+ {
+  "version": "1.1.38",
+  "date": "2026-06-14",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Authentic cassette-deck timer redesign (iOS + watch)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.35",
+  "date": "2026-06-06",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Phase 4 QA fixes \u2014 Arcade digits + Neovim interval hero + 4 more"
+   },
+   {
+    "type": "feat",
+    "text": "GPS distance fusion (iPhone) + HKLiveWorkoutBuilder distance (watch) \u2014 closes T-METRICS.3/4"
+   }
+  ]
+ },
+ {
+  "version": "1.1.34",
+  "date": "2026-06-06",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "VU Meter + Neovim timer heroes \u2014 Wave 2 complete"
+   },
+   {
+    "type": "fix",
+    "text": "Rolling 30s window + early-workout guard \u2014 kills the 10'00 lock"
+   }
+  ]
+ },
+ {
+  "version": "1.1.33",
+  "date": "2026-06-06",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Classic Radio timer hero \u2014 1960s tuning dial + bakelite knobs"
+   }
+  ]
+ },
+ {
+  "version": "1.1.32",
+  "date": "2026-06-06",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Synthwave timer hero \u2014 Outrun dashboard with neon horizon"
+   },
+   {
+    "type": "feat",
+    "text": "Mixtape timer hero \u2014 Walkman cassette deck with spinning reels"
+   },
+   {
+    "type": "feat",
+    "text": "Arcade timer hero \u2014 7-segment HI-SCORE cabinet"
+   }
+  ]
+ },
+ {
+  "version": "1.1.30",
+  "date": "2026-06-06",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "BPM visible in walk/run + add project-manager agent + persistent plan/memory"
+   }
+  ]
+ },
+ {
+  "version": "1.1.29",
+  "date": "2026-05-23",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Derive cadence from step deltas when CMPedometer.currentCadence is nil"
+   }
+  ]
+ },
+ {
+  "version": "1.1.28",
+  "date": "2026-05-21",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Wire FM Tuner chrome into iOS + watchOS workout timer screens"
+   }
+  ]
+ },
+ {
+  "version": "1.1.27",
+  "date": "2026-05-19",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Uniform MetricCard height \u2014 fixed icon frame + minHeight 88"
+   }
+  ]
+ },
+ {
+  "version": "1.1.26",
+  "date": "2026-05-19",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Remove drawingGroup + ignoresSafeArea, add HK auth timeout"
+   }
+  ]
+ },
+ {
+  "version": "1.1.25",
+  "date": "2026-05-19",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Remove FM Tuner chrome overlays from global background modifier"
+   }
+  ]
+ },
+ {
+  "version": "1.1.24",
+  "date": "2026-05-19",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Restore minimumScaleFactor on HR/metric rows + ZStack full-screen frame"
+   }
+  ]
+ },
+ {
+  "version": "1.1.23",
+  "date": "2026-05-19",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "WatchOS timer performance + Live Activity wiring"
+   },
+   {
+    "type": "feat",
+    "text": "Add FM Tuner \u2014 8th theme (deep navy LCD, cyan monospaced)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.22",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 7 Phase 1c \u2014 gym recovery redesign (manual stations + always-on BPM)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.21",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 7 Phase 1a+1b \u2014 manual Start/End Station API"
+   }
+  ]
+ },
+ {
+  "version": "1.1.20",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Relocate workout CTAs to Programs tab + surface HR-unavailable"
+   }
+  ]
+ },
+ {
+  "version": "1.1.19",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 6 Phase 6 \u2014 Live Activity deep-link \u2192 workout timer"
+   }
+  ]
+ },
+ {
+  "version": "1.1.18",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 6 Phase 4 \u2014 entry points wired (Dashboard + TemplateList)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.17",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 6 Phase 3 \u2014 iPhoneWorkoutTimerView (3-mode SwiftUI timer)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.16",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 6 Phase 2 \u2014 iPhoneWorkoutController + iOS HR + haptics"
+   }
+  ]
+ },
+ {
+  "version": "1.1.15",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 6 Phase 1a \u2014 ShuttlXShared library w/ IntervalEngine + HapticPlayer"
+   }
+  ]
+ },
+ {
+  "version": "1.1.14",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Interval countdown freeze \u2014 wire IntervalEngine into manager's SwiftUI observation graph"
+   }
+  ]
+ },
+ {
+  "version": "1.1.13",
+  "date": "2026-05-16",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Sprint 5 \u2014 P1 cluster (5 fixes from audit)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.10",
+  "date": "2026-05-15",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Sprint 2 \u2014 interval countdown hero + cadence pipeline"
+   }
+  ]
+ },
+ {
+  "version": "1.1.9",
+  "date": "2026-05-15",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Add product-designer, qa-engineer, test-author, release-shepherd, docs-keeper + team playbooks"
+   },
+   {
+    "type": "fix",
+    "text": "Sprint 1 \u2014 4 P0 crash fixes + 9 design ship-blockers from full audit"
+   }
+  ]
+ },
+ {
+  "version": "1.1.8",
+  "date": "2026-05-09",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Live metrics + finish-sync resilience via dual-channel WC"
+   }
+  ]
+ },
+ {
+  "version": "1.1.7",
+  "date": "2026-04-30",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Dual-condition station detection + gym recovery UI overhaul"
+   }
+  ]
+ },
+ {
+  "version": "1.1.6",
+  "date": "2026-04-28",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Gym recovery sessions show correct name in history and Live Activity"
+   }
+  ]
+ },
+ {
+  "version": "1.1.5",
+  "date": "2026-04-27",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Cardiac rehab passive timer \u2014 detect stations via walking signal"
+   }
+  ]
+ },
+ {
+  "version": "1.1.4",
+  "date": "2026-04-27",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Add Gym Recovery card to iOS Programs screen to match watch home screen"
+   }
+  ]
+ },
+ {
+  "version": "1.1.3",
+  "date": "2026-04-27",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Add Gym Recovery card to watch home screen"
+   }
+  ]
+ },
+ {
+  "version": "1.1.2",
+  "date": "2026-04-26",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Part A audit fixes \u2014 cardiac safety, privacy, accessibility, data-integrity"
+   },
+   {
+    "type": "fix",
+    "text": "Onboarding tone, HR zone visual + accessibility labels"
+   },
+   {
+    "type": "feat",
+    "text": "Gym Heart-Recovery monitoring mode (Part B)"
+   }
+  ]
+ },
+ {
+  "version": "1.1.1",
+  "date": "2026-04-23",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Replace RevenueCat test key with production App Store key"
+   },
+   {
+    "type": "fix",
+    "text": "Restore missing xcworkspacedata so Xcode can open the project"
+   },
+   {
+    "type": "fix",
+    "text": "Replace private GitHub link in privacy policy, add fastlane metadata URLs"
+   },
+   {
+    "type": "fix",
+    "text": "Use semver sort for version tags so v1.1.0 beats v1.0.x"
+   }
+  ]
+ },
+ {
+  "version": "1.1.0",
+  "date": "2026-04-22",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Save HKWorkout to HealthKit so workouts appear in Health app and Activity rings"
+   },
+   {
+    "type": "fix",
+    "text": "Replace hardcoded HR zones with age-based Tanaka formula calculation"
+   },
+   {
+    "type": "fix",
+    "text": "Privacy manifest compliance \u2014 add PrivacyInfo to extension targets, remove false DiskSpace API"
+   },
+   {
+    "type": "fix",
+    "text": "Remove unused recalibrate-estimates entitlement, add file protection to all App Group writes"
+   },
+   {
+    "type": "fix",
+    "text": "Prevent calorie/HR double-counting on workout pause/resume"
+   },
+   {
+    "type": "fix",
+    "text": "Watch\u2192iPhone sync reliability \u2014 pending buffer, reconciliation, logging"
+   },
+   {
+    "type": "fix",
+    "text": "Unwrap optional HKWorkout before accessing .uuid in log message"
+   },
+   {
+    "type": "feat",
+    "text": "Integrate RevenueCat subscriptions + TelemetryDeck analytics"
+   },
+   {
+    "type": "feat",
+    "text": "Auto release notes, App Store metadata, and screenshot spec"
+   },
+   {
+    "type": "fix",
+    "text": "Add trailing newline to whats_new.txt to fix ENDOFNOTES delimiter error"
+   },
+   {
+    "type": "fix",
+    "text": "Remove CODE_SIGN_IDENTITY override from xcodebuild archive command"
+   },
+   {
+    "type": "fix",
+    "text": "Restore CODE_SIGN_IDENTITY and add CODE_SIGN_STYLE=Manual"
+   }
+  ]
+ }
+]

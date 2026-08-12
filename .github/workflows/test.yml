@@ -22,6 +22,7 @@ jobs:
       project: ShuttlX.xcodeproj
       scheme: ShuttlX
       release_workflow: deploy.yml
+      site_notes_workflow: site-release-notes.yml
       # Migration default — flip to full tests once verified locally.
       run_tests: false
       warnings_gate: false

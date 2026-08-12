@@ -1,0 +1,32 @@
+name: 🏪 Store Release
+
+# Stages the App Store listing for an uploaded build (metadata + screenshots
+# from the fastlane dirs) and optionally submits for review.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Marketing version to stage (e.g. 1.1.57)"
+        required: true
+        type: string
+      build_number:
+        description: "Build number to attach (e.g. 228)"
+        required: true
+        type: string
+      submit:
+        description: "Submit for App Review after staging"
+        type: boolean
+        default: false
+
+jobs:
+  store:
+    uses: muzaparoff/appstore-kit/.github/workflows/store-release.yml@v1
+    with:
+      asc_app_id: "6758673894"
+      version: ${{ inputs.version }}
+      build_number: ${{ inputs.build_number }}
+      submit: ${{ inputs.submit }}
+    secrets:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
