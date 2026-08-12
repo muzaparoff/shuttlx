@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>How It Works — ShuttlX</title>
+    <meta name="description" content="Every ShuttlX feature, step by step: interval workouts on Apple Watch, custom templates, built-in training programs, themes, history and analytics.">
+    <link rel="icon" href="app-icon.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0a0a0f; --surface: #12121a; --border: rgba(255,255,255,0.08);
+            --text: #f0f0f5; --text-secondary: #8888aa;
+            --accent: #00e5ff; --green: #39ff8e; --amber: #ffb400; --radius: 16px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); line-height: 1.65; }
+        .wrap { max-width: 760px; margin: 0 auto; padding: 32px 20px 80px; }
+        header { display: flex; align-items: center; margin-bottom: 44px; }
+        header .logo { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--text); }
+        header .logo img { width: 44px; height: 44px; border-radius: 10px; }
+        header .logo span { font-weight: 800; font-size: 19px; }
+        header nav { margin-left: auto; display: flex; gap: 18px; }
+        header nav a { color: var(--text-secondary); text-decoration: none; font-size: 14px; font-weight: 600; }
+        header nav a:hover { color: var(--accent); }
+        .eyebrow { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700;
+                   letter-spacing: 0.15em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+        h1 { font-size: clamp(28px, 6vw, 40px); font-weight: 800; letter-spacing: -0.02em; margin-bottom: 10px; }
+        .lede { color: var(--text-secondary); margin-bottom: 40px; max-width: 560px; }
+        h2 { font-size: 22px; font-weight: 800; margin: 44px 0 14px; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+                padding: 20px 22px; margin-bottom: 14px; }
+        .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+        .card p { font-size: 14.5px; color: var(--text-secondary); }
+        ol.steps { list-style: none; counter-reset: step; margin-top: 12px; }
+        ol.steps li { position: relative; padding: 0 0 12px 40px; counter-increment: step; font-size: 15px; }
+        ol.steps li::before {
+            content: counter(step);
+            position: absolute; left: 0; top: 1px; width: 26px; height: 26px; border-radius: 50%;
+            background: rgba(0,229,255,0.12); color: var(--accent);
+            font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+        }
+        ol.steps b { color: var(--text); font-weight: 700; }
+        .plan-tag { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700;
+                    color: var(--green); letter-spacing: 0.08em; text-transform: uppercase; }
+        footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--border);
+                 font-size: 13px; color: var(--text-secondary); display: flex; gap: 18px; flex-wrap: wrap; }
+        footer a { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <a href="index.html" class="logo"><img src="app-icon.png" alt="ShuttlX home"><span>ShuttlX</span></a>
+        <nav>
+            <a href="updates.html">What's New</a>
+            <a href="privacy-policy.html">Privacy</a>
+        </nav>
+    </header>
+
+    <p class="eyebrow">The guide</p>
+    <h1>How ShuttlX works</h1>
+    <p class="lede">Every feature, step by step — from your first interval workout on Apple Watch to custom templates and training programs.</p>
+
+    <h2>Start an interval workout on your watch</h2>
+    <div class="card">
+        <ol class="steps">
+            <li>Open ShuttlX on your <b>Apple Watch</b> and pick a workout — a built-in template like <b>5K Interval</b>, or free run.</li>
+            <li>Tap <b>Start</b>. The big timer shows the current interval; <b>WORK</b> and <b>REST</b> phases switch automatically with haptics.</li>
+            <li>Watch your <b>heart rate zone</b> live — if your HR runs high, the <b>"Ease off"</b> banner tells you before you overdo it.</li>
+            <li>Pause with the green button, finish with the red one. The workout saves to HealthKit and syncs to your iPhone automatically.</li>
+        </ol>
+    </div>
+
+    <h2>Build your own intervals on iPhone</h2>
+    <div class="card">
+        <ol class="steps">
+            <li>On iPhone, open the <b>Programs</b> tab and tap <b>+</b>.</li>
+            <li>Set your work and rest durations, repeats, and warm-up/cool-down.</li>
+            <li>Save — the template appears on your watch within moments, ready to start from the wrist or straight from a <b>widget</b>.</li>
+        </ol>
+    </div>
+
+    <h2>Built-in training programs</h2>
+    <div class="card">
+        <h3><span class="plan-tag">8 weeks</span> &nbsp;Couch to 5K</h3>
+        <p>Go from zero to running 5K in 8 weeks. Three workouts per week with gradual progression.</p>
+    </div>
+    <div class="card">
+        <h3><span class="plan-tag">4 weeks</span> &nbsp;HIIT Starter</h3>
+        <p>High-intensity interval program. Three sessions per week building from 20s to 40s work intervals.</p>
+    </div>
+    <div class="card">
+        <h3><span class="plan-tag">6 weeks</span> &nbsp;5K Improvement</h3>
+        <p>Improve your 5K time with a mix of tempo runs, intervals, and easy runs — four sessions per week.</p>
+    </div>
+    <div class="card">
+        <h3><span class="plan-tag">ongoing</span> &nbsp;Gym Heart Recovery</h3>
+        <p>Two gym sessions per week. Your watch automatically monitors heart-rate recovery between sets — no scripted exercises.</p>
+    </div>
+
+    <h2>History &amp; analytics</h2>
+    <div class="card">
+        <ol class="steps">
+            <li>Every workout lands in the <b>History</b> tab with intervals, heart rate, pace and route.</li>
+            <li><b>Analytics</b> shows weekly volume, streaks and trends over time.</li>
+            <li>All data lives in <b>HealthKit and on your devices</b> — see the privacy policy for the details.</li>
+        </ol>
+    </div>
+
+    <h2>Make it yours</h2>
+    <div class="card">
+        <ol class="steps">
+            <li>Pick a <b>theme</b> in Settings — from the clean glass look to the Walkman-style <b>Mixtape</b> deck. Your watch follows automatically.</li>
+            <li>Add the <b>Home Screen widget</b> or a watch <b>complication</b> to start your favourite workout in one tap.</li>
+        </ol>
+    </div>
+
+    <footer>
+        <span>© 2026 ShuttlX</span>
+        <a href="index.html">Home</a>
+        <a href="updates.html">Release Notes</a>
+        <a href="privacy-policy.html">Privacy Policy</a>
+    </footer>
+</div>
+</body>
+</html>
