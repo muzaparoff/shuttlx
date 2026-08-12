@@ -1,5 +1,15 @@
 [
  {
+  "version": "1.3.1",
+  "date": "2026-08-12",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "IPhone-only device family \u2014 ShuttlX targets iPhone + Apple Watch, never iPad"
+   }
+  ]
+ },
+ {
   "version": "1.3.0",
   "date": "2026-08-12",
   "notes": [
