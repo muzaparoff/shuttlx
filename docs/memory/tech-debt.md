@@ -16,7 +16,7 @@
 - [x] ~~Cadence: CMPedometer captures step count, but steps-per-minute not computed or displayed~~ — FIXED 2026-05-23. Both `WatchWorkoutManager.startPedometerUpdates` and `iPhoneWorkoutController.startPedometer` now fall back to a step-delta derivation over a ≥3s window when `CMPedometer.currentCadence` is nil (frequent during the first 30-60s of a workout + always nil in the simulator). Apple's instantaneous cadence still takes precedence when available. Display gates relaxed to render "—" when zero instead of hiding the CAD card entirely (avoids layout pop-in).
 - [x] ~~Pace: Cumulative average locked at 10'00 due to CMPedometer warmup lag~~ — FIXED 2026-06-06. Both targets now compute pace from sliding 30s window with guards (≥20s into workout, ≥0.05km moved, ≥5s + ≥5m in window). Avoids warmup spike artifact entirely. See `docs/incidents/2026-06-06-pace-10min.md`.
 - [ ] Training Plans: plan days reference template names by string, not UUID — no direct Watch launch from plan
-- [ ] Custom Fonts: 7-segment (Arcade) & pixel (some themes) use system monospaced as fallback — OFL fonts not bundled
+- [x] ~~Custom Fonts: 7-segment & pixel OFL fonts not bundled~~ — MOOT: the retro themes that wanted them were deleted in the July 2026 theme reduction (only Clean + Mixtape remain)
 - [ ] BPM visibility in free-run walk/run: FIXED 2026-06-06 by converting DIST/PACE/CAD to compactMetric two-up rows (frees ~30pt on 41mm screen). Watch layout budget is ~180pt; full-size rows overflow. Layout lesson: track metric row heights when designing watch UIs.
 
 ## Fixed Issues (for reference)
@@ -31,4 +31,4 @@
 - [x] HealthKit background delivery entitlement added to watchOS
 - [x] Deprecated Alert API replaced
 - [x] Theme switching: stored `current` property + `selectTheme()` method (Build 29)
-- [x] Per-theme timer heroes: 6 themes now render unique hero visualizations (Synthwave speedometer, Mixtape reels, Arcade 7-segment, Classic Radio tuning needle, VU Meter gauges, Neovim command line) on both iOS and watchOS (Build 34)
+- [x] Per-theme timer heroes shipped on both iOS and watchOS (Build 34); after the July 2026 theme reduction only the Mixtape hero remains (Clean stays minimal)

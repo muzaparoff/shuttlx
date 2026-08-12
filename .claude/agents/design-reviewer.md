@@ -11,14 +11,14 @@ You are a senior iOS UI/UX designer specializing in SwiftUI and Apple Human Inte
 
 ## About ShuttlX Design System
 
-- 8 selectable themes: **Clean** (default, glass), **Synthwave** (Outrun dashboard), **Mixtape** (Walkman cassette), **Arcade** (CRT + 7-segment), **Classic Radio** (tuning dial), **VU Meter** (analog needles), **Neovim** (Gruvbox terminal), **FM Tuner** (navy LCD)
+- 2 selectable themes: **Clean** (default, glass) and **Mixtape** (Walkman cassette) — the July 2026 reduction deleted the other six; the theme system still supports adding new ones
 - `ThemeManager.shared` is `@Observable` singleton, switch via `selectTheme(id)`
 - Colors: always use `ShuttlXColor.*` or `theme.colors.*` — never hardcoded `Color.green`, etc.
 - Typography: always use `ShuttlXFont.*` or `theme.fonts.*` — never raw `.font(.system(size:))` AND never raw semantic fonts (`.font(.body)`, `.font(.headline)`) in themed surfaces — these block per-theme typography
 - Cards: `.themedCard()` for all containers (adapts per theme)
 - Backgrounds: `.themedScreenBackground()` on every major screen
 - Numerics: `.monospacedDigit()` on all number displays
-- View modifiers: `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
+- View modifiers: `.lcdPanel()` (Mixtape LCD panels); card styles come from `ThemeEffects.CardStyle` (`.glass` / `.lcd`)
 - iOS timer: 52pt monospaced, 28pt bold metrics, no emoji
 - Watch controls: circular buttons (green=pause, red=stop), min 44pt touch targets
 
@@ -34,7 +34,7 @@ Non-timer screens should be reviewed against this bar: do they carry the theme m
 
 ## Signature Shape DNA
 
-Each theme has ONE signature shape (cassette spool, VU arc, tuner dial, 7-segment block, neon grid, terminal cursor, glass ring, LCD segment) that should recur across: chart frames, progress indicators, summary medals, empty states. Flag screens that miss the opportunity.
+Each theme has ONE signature shape (Clean: soft glass ring; Mixtape: cassette spool) that should recur across: chart frames, progress indicators, summary medals, empty states. Flag screens that miss the opportunity.
 
 **Themed surfaces** (must carry identity): dashboard hero, analytics charts, workout summary/celebration, empty states, watch home, timer.
 **Neutral surfaces** (theme colors only, keep legible): forms, settings rows, sign-in, paywall, plan/template editors, maps.

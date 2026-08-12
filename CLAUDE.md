@@ -14,14 +14,14 @@ The watchOS target remains Apple-frameworks-only.
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
 - **Codebase**: ~13,500 LOC across 145 Swift files
-- **CI**: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
+- **CI**: thin GitHub Actions callers of the shared `muzaparoff/appstore-kit@v1` reusable workflows (`.github/workflows/`): `test.yml` runs CI on push to main and auto-bumps the semver tag from conventional commits; the `v*` tag triggers `deploy.yml` → archive, sign, upload to TestFlight. `store-release.yml` (manual) stages the App Store listing from `fastlane/metadata` + `marketing/appstore/final`. Fastlane the tool is NOT part of CI; `scripts/bump_version.sh` no longer exists — versioning is fully automatic
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | ~74 | PhoneSyncCoordinator (~875), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files |
-| watchOS | `ShuttlX Watch App` | ~38 | WatchWorkoutManager (~1,450, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator, TrainingView (137 + 4 extension files), ThemeManager + theme files |
+| iOS | `ShuttlX` | ~74 | PhoneSyncCoordinator (~1,130), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files, HelpView |
+| watchOS | `ShuttlX Watch App` | ~38 | WatchWorkoutManager (~1,680, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator (~1,200), TrainingView (122 + 2 extension files: +Controls, +Metrics), ThemeManager + theme files |
 | Shared (SPM) | `ShuttlXShared` | 13 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
 | iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
@@ -48,14 +48,14 @@ xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination '
 ```
 iPhone creates template → TemplateManager.save()
   → persist to App Group → sendTemplatesToWatch() via WCSession
-  → Watch receives → stores in SharedDataManager.workoutTemplates
+  → Watch receives → stores in WatchSyncCoordinator.workoutTemplates
 
 Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
   → HealthKit session + timer + sensors
   → Every 1s: IntervalEngine.tick() + broadcast live metrics to iPhone
   → On complete: saveWorkoutData() → TrainingSession sent via WCSession
 
-iPhone receives session → SharedDataManager → DataManager → UI updates
+iPhone receives session → PhoneSyncCoordinator → DataManager → UI updates
 
 Widget/Control deep-link flow (iOS):
   Widget → widgetURL "shuttlx://start-template/{id}" or "shuttlx://start-freerun"
@@ -69,7 +69,7 @@ Watch complication deep-link flow:
 
 Theme sync:
   iPhone: Settings → ThemeManager.selectedThemeID → UserDefaults (App Group)
-    → SharedDataManager.sendThemeToWatch() via applicationContext
+    → PhoneSyncCoordinator.sendThemeToWatch() via applicationContext
   Watch: receives → ThemeManager.shared.selectedThemeID → UI updates
 ```
 
@@ -78,14 +78,13 @@ Theme sync:
 - `ThemeManager` (`@Observable` singleton) manages active theme, persists to App Group UserDefaults
 - **Switching**: call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
 - `current` is a **stored** property (not computed) — ensures `@Observable` generates proper tracking
-- **FM Tuner chrome state** (4 properties, FM Tuner theme only): `vuMeterValue` (0.0–1.0), `signalStrength` (0–5), `footerStatusLines` ([String]), `chromeVisible` (Bool) — other themes ignore these
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
-- Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects`
-- 7 themes: Clean (glass cards, system fonts), Synthwave (Outrun dashboard + scrolling perspective grid), Mixtape (Walkman with spinning cassette reels), Arcade (7-segment HI-SCORE display + INSERT COIN), Classic Radio (horizontal tuning dial with sweeping needle), Neovim (modal `:command` status line + line-number gutter), FM Tuner (deep navy LCD, cyan monospaced)
-- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Synthwave: horizon grid, Mixtape: blue body + texture lines, Arcade: CRT scanlines+vignette, Classic Radio: warm brown grain + vignette, Neovim: #1D2021 solid + left gutter stripe (iOS) / solid (watchOS), FM Tuner: #021018 solid + FMTunerHeader chrome overlay + FMTunerVUColumn overlay (Canvas, 18 segments)
-- View modifiers: `.themedCard()`, `.neonGlow()`, `.lcdPanel()`, `.scanlineOverlay()`, `.synthwaveGrid()`
-- `ThemeEffects.CardStyle` values: `.glass`, `.neon`, `.lcd`, `.pixel`, `.tape`, `.terminal` (Neovim)
-- Files: 15 per target under `Theme/` (ThemeColors, ThemeFonts, ThemeEffects, AppTheme, ThemeManager, ThemeModifiers, Themes/Clean, Themes/Synthwave, Themes/Mixtape, Themes/Arcade, Themes/ClassicRadio, Themes/Neovim, Themes/FMTuner, Components/FMTunerHeader, Components/FMTunerVUColumn)
+- Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects` + `ThemeChartStyle`
+- **2 themes** (`validIDs` in ThemeManager: `"clean"`, `"mixtape"`): Clean (default — glass cards, system fonts, calm cardiac-patient baseline), Mixtape (Walkman cassette deck — blue player body, spinning reels, tape-counter aesthetics). The July 2026 theme reduction deleted Synthwave, Arcade, Classic Radio, Neovim, FM Tuner and VU Meter app-wide (see the note in `ShuttlXWidgets/Shared/WidgetTheme.swift`); the architecture still supports adding themes via `AppTheme.all` + a new `Themes/<Name>Theme.swift` pair
+- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Mixtape: blue body + texture lines (`ThemedSceneBackground.swift` dispatches; `.cleanMeshBackground()` / `.mixtapeBackground()` are the per-theme modifiers)
+- View modifiers: `.themedCard()` (all card containers), `.lcdPanel()` (defined in ThemeModifiers, Mixtape LCD panels)
+- `ThemeEffects.CardStyle` values: `.glass` (Clean), `.lcd` (Mixtape)
+- Files under `Theme/` (mirrored per target): ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, ShuttlXTheme, Themes/CleanTheme, Themes/MixtapeTheme, Themes/MixtapeTimerHero (watch: Themes/Decorations/MixtapeTimerHero), Components/ThemedSceneBackground, Components/ThemedTransportButton; iOS additionally has ThemeChartStyle + IntervalTypeThemeHelpers
 
 ## Data Storage
 
@@ -100,7 +99,8 @@ Theme sync:
 - **Minimal external dependencies** — iOS target uses RevenueCat + TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
-- **Dynamic multi-theme UI**: 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, Neovim, FM Tuner) — selectable in Settings
+- **Dynamic multi-theme UI**: 2 themes (Clean, Mixtape) — selectable in Settings (reduced from 7 in July 2026; the theme system still supports adding more)
+- **In-app Help**: `ShuttlX/Views/HelpView.swift`, reachable from Settings → Help — update it when user-facing flows change
 - **Most models live in the ShuttlXShared package** (`Shared/`) — single source of truth, `import ShuttlXShared`. Only `TrainingSession` and `WorkoutTemplate` remain duplicated per target (update BOTH copies) until the Phase 4 engine unification — see `.claude/rules/models.md`
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 - **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status
@@ -126,7 +126,7 @@ Additional rules load automatically based on the files being edited:
 
 - `/wcsession-sync-review` — WCSession payload limits, applicationContext merge semantics, retry rules
 - `/watchos-constraints` — battery/memory budgets, TimelineView `paused:`, AOD, workout survival
-- `/observable-theme-patterns` — `@Observable` tracking gotchas, bridge re-render gap, mirrored-file drift, 7-theme switch coverage
+- `/observable-theme-patterns` — `@Observable` tracking gotchas, bridge re-render gap, mirrored-file drift, 2-theme switch coverage
 - `/json-persistence-safety` — single-writer rule, corruption recovery, schema versioning, id-stable dedup
 - `/swift-concurrency-review` — actor isolation, queue conventions, known-good patterns to preserve
 
@@ -212,7 +212,7 @@ Team of 4 read-only reviewers. They never edit code; the lead synthesizes a Go/N
 
 ### Playbook E — HealthKit correctness review
 
-> Prompt: *Create a read-only team: healthkit-domain-expert, recovery-feature-architect, performance-engineer. Coordinate on a single clinical-grade audit doc.*
+> Prompt: *Create a read-only team: healthkit-domain-expert, performance-auditor. Coordinate on a single clinical-grade audit doc.*
 
 ### Playbook F — Visual refresh
 

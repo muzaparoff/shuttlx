@@ -61,22 +61,22 @@ globs:
 
 ## Watch Complications / Widgets
 
-- Widget files are in `ShuttlX Watch App/Widgets/`
-- Types: LastWorkout, QuickStart, WeeklyProgress
+- Widget files are in `ShuttlXWatchWidgets/`
+- Types: LastWorkout, QuickStart, WeeklyProgress, TodayWorkout
 - Data provided via `WatchWidgetDataProvider`
 
 ## Theme System
 
-- All 7 themes (Clean, Synthwave, Mixtape, Arcade, Classic Radio, Neovim, FM Tuner) are supported on watchOS
+- Both themes (Clean, Mixtape) are supported on watchOS (July 2026 reduction — the other 5 themes were deleted app-wide)
 - Theme files mirrored in `ShuttlX Watch App/Theme/` with watch-specific font sizes
 - Theme selection synced from iPhone via WCSession `applicationContext`
 - `ThemeManager.shared` injected at app root in `ShuttlXWatchApp.swift`
 - Use `ShuttlXColor.*` / `ShuttlXFont.*` (bridges to active theme) or `@Environment(ThemeManager.self)`
-- FM Tuner on watch: plain #021018 navy background; screens add FMTunerCompactHeader and FMTunerWatchVUColumn(level:) directly
+- Mixtape on watch: full-screen Walkman LCD deck — `MixtapeWatchDeck` in `ShuttlX Watch App/Theme/Themes/Decorations/MixtapeTimerHero.swift`, rendered from `TrainingView+Metrics.swift`; reel rotation keys off `elapsedTime` (halts on pause), decorations are `.allowsHitTesting(false)`
 
 ## Sync
 
-- Watch-side sync is in `SharedDataManager.swift` (525 lines)
-- Phone-side sync is in iOS `SharedDataManager.swift` (605 lines)
+- Watch-side sync is in `WatchSyncCoordinator.swift` (~1,200 lines)
+- Phone-side sync is in iOS `PhoneSyncCoordinator.swift` (~1,130 lines)
 - Both must handle offline gracefully — queue and retry
 - Theme sync: `handleIncomingPayload` handles `"syncTheme"` action from iPhone

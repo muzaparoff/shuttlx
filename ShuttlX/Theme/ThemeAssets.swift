@@ -370,7 +370,7 @@ private struct TickMark: View {
 
 // MARK: New Helper Shapes
 
-/// Tiny circle with cross line — used for screw decorations (Mixtape corners, VU Meter mounting)
+/// Tiny circle with cross line — used for screw decorations (Mixtape corners)
 private struct ScrewDecoration: View {
     let color: Color
 
@@ -399,7 +399,7 @@ private struct ScrewDecoration: View {
     }
 }
 
-/// Canvas-based dot matrix grid — used for LCD textures (Mixtape) and sub-pixel patterns (Arcade)
+/// Canvas-based dot matrix grid — used for LCD textures (Mixtape)
 private struct DotGrid: View {
     let color: Color
     let dotSize: CGFloat

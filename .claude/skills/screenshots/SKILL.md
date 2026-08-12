@@ -33,7 +33,7 @@ Capture simulator screenshots for App Store submission across all required devic
 4. **Training Plans** — C25K / plan list
 5. **Analytics** — fitness/fatigue chart, VO2max
 6. **Session Detail** — post-workout with route map
-7. **Themes** — side-by-side or settings showing 4 themes
+7. **Themes** — side-by-side or settings showing both themes (Clean + Mixtape)
 8. **Live Activity** — Dynamic Island / Lock Screen
 9. **Watch Sync** — showing connected Watch
 10. **Widgets** — home screen with widgets

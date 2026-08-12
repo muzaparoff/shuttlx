@@ -1,6 +1,6 @@
 ---
 name: Per-Theme Timer Hero Pattern
-description: How each of 6 themes renders a unique hero visualization on iOS and watchOS; the watch chrome overlay pattern; dispatch mechanics
+description: How a theme renders a unique hero visualization on iOS and watchOS; the watch chrome overlay pattern; dispatch mechanics. Only the Mixtape hero survives the July 2026 theme reduction.
 type: project
 originSessionId: timer-redesign-sprint-2026-06-06
 ---
@@ -9,40 +9,28 @@ originSessionId: timer-redesign-sprint-2026-06-06
 
 ## Overview
 
-Starting in Build 34, 6 of 8 themes each own a unique, theme-branded **hero** visualization that plays during the active-workout timer display. The hero is the dominant visual element that brings each theme's personality to the timer screen.
+Introduced in Build 34, a theme can own a unique, theme-branded **hero** visualization that plays during the active-workout timer display. The hero is the dominant visual element that brings the theme's personality to the timer screen.
+
+The July 2026 theme reduction cut the app to **2 themes (Clean + Mixtape)**, so **Mixtape's is the only shipped hero** today (Clean stays intentionally minimal). The dispatch pattern below is how any future theme's hero gets added.
 
 ## File Structure
 
 ```
 iOS Target:
-  ShuttlX/Theme/Themes/SynthwaveHero.swift
-  ShuttlX/Theme/Themes/MixtapeHero.swift
-  ShuttlX/Theme/Themes/ArcadeHero.swift
-  ShuttlX/Theme/Themes/ClassicRadioHero.swift
-  ShuttlX/Theme/Themes/VUMeterHero.swift
-  ShuttlX/Theme/Themes/NeovimHero.swift
+  ShuttlX/Theme/Themes/MixtapeTimerHero.swift        (~730 lines)
 
 watchOS Target:
-  ShuttlX Watch App/Theme/Themes/SynthwaveHero.swift
-  ShuttlX Watch App/Theme/Themes/MixtapeHero.swift
-  ShuttlX Watch App/Theme/Themes/ArcadeHero.swift
-  ShuttlX Watch App/Theme/Themes/ClassicRadioHero.swift
-  ShuttlX Watch App/Theme/Themes/VUMeterHero.swift
-  ShuttlX Watch App/Theme/Themes/NeovimHero.swift
+  ShuttlX Watch App/Theme/Themes/Decorations/MixtapeTimerHero.swift  (~440 lines, MixtapeWatchDeck)
 ```
 
 Each file is **independent per target** — iOS and watchOS have different frame budgets, font sizes, and layout constraints, so the hero implementations diverge by platform.
 
-## 6 Themes with Heroes
+## Shipped Hero
 
-| Theme | iOS Hero | Watch Hero | Root Cause |
-|-------|----------|-----------|-----------|
-| Synthwave | Outrun speedometer needle + scrolling perspective grid | Compact speedometer + grid (narrow) | Speed metaphor + road perspective |
-| Mixtape | Twin spinning cassette reels + LCD tape counter | Reel animation simplified for watch | Analog tape motion |
-| Arcade | 7-segment HI-SCORE display + "INSERT COIN" + blink animation | 7-segment score (compact) | Retro arcade aesthetics |
-| Classic Radio | Horizontal tuning dial with sweeping needle + frequency readout | Tuning needle arc (compact) | Analog radio dial metaphor |
-| VU Meter | Dual vertical gauge needles (driven by HR and pace) + dB scale | Dual needle meters (vertical) | Live audio metering visual |
-| Neovim | Modal `:command` status line + elapsed time in register syntax + blinking cursor | Command line (compact) + register | Terminal/Vim aesthetics |
+| Theme | iOS Hero | Watch Hero | Metaphor |
+|-------|----------|-----------|----------|
+| Mixtape | Twin spinning cassette reels + LCD tape counter | Full-screen Walkman LCD deck (`MixtapeWatchDeck`): `SIDE A ▸ <phase>` strip, oversized timer, zone-tinted BPM + VU bar | Analog tape motion |
+| Clean | minimal (default case) | minimal | Calm accessibility baseline |
 
 ## Dispatch Mechanism
 
@@ -54,21 +42,12 @@ In `iPhoneWorkoutTimerView.swift`, the hero section uses a `@ViewBuilder` switch
 @ViewBuilder
 var themedTimerBody: some View {
     switch themeManager.current.id {
-    case "synthwave":
-        SynthwaveHero(controller: controller)
     case "mixtape":
-        MixtapeHero(controller: controller)
-    case "arcade":
-        ArcadeHero(controller: controller)
-    case "classicradio":
-        ClassicRadioHero(controller: controller)
-    case "vumeter":
-        VUMeterHero(controller: controller)
-    case "neovim":
-        NeovimHero(controller: controller)
+        // Mixtape hero (reels + tape counter)
+        ...
     default:
-        // Clean theme (minimal hero) or FM Tuner (uses existing FMTunerHeader)
-        EmptyView()
+        // Clean theme — minimal presentation
+        ...
     }
 }
 ```
@@ -77,90 +56,50 @@ The hero receives the **same `iPhoneWorkoutController`** instance that drives me
 
 ### watchOS
 
-In `TrainingView.swift`, within the `fullWorkoutDisplayTab` ZStack, each theme has a conditional block:
+In `TrainingView+Metrics.swift`, the metrics tab conditionally renders the theme-specific deck:
 
 ```swift
-ZStack {
-    // Metrics rows (DIST, PACE, CAD, HR, etc.)
-    VStack { ... }
-    
-    // Per-theme hero overlay (non-hittable)
-    if themeManager.current.id == "synthwave" {
-        SynthwaveHero(workoutManager: workoutManager)
-            .allowsHitTesting(false)
-    }
-    if themeManager.current.id == "mixtape" {
-        MixtapeHero(workoutManager: workoutManager)
-            .allowsHitTesting(false)
-    }
-    // ... (same for other 4 themes)
+if themeManager.current.id == "mixtape" {
+    MixtapeWatchDeck(workoutManager: workoutManager)
 }
 ```
 
-**Key constraint**: all overlays use `.allowsHitTesting(false)` to ensure pause/stop buttons remain tappable underneath. The hero is purely decorative.
+**Key constraint**: decorative overlays use `.allowsHitTesting(false)` so pause/stop controls remain tappable underneath.
 
 ## Data Flow
 
-### iOS Hero Receives
-
-Each hero initializer looks like:
-
-```swift
-struct SynthwaveHero: View {
-    let controller: iPhoneWorkoutController
-    
-    var body: some View {
-        // reads: controller.currentHeartRate, controller.currentPace, 
-        //        controller.currentDistance, controller.elapsedTime, etc.
-    }
-}
-```
-
-### watchOS Hero Receives
-
-```swift
-struct SynthwaveHero: View {
-    let workoutManager: WatchWorkoutManager
-    
-    var body: some View {
-        // reads: workoutManager.currentHeartRate, workoutManager.currentPace,
-        //        workoutManager.currentDistance, workoutManager.elapsedTime, etc.
-    }
-}
-```
-
-Both targets have the same public metric properties on their respective workout managers, so hero code can be structurally similar even if the frame budgets differ.
+Heroes read metric properties from the target's workout engine (`iPhoneWorkoutController` on iOS, `WatchWorkoutManager` on watch): `currentHeartRate`, `currentPace`, `currentDistance`, `elapsedTime`, pause state. Both targets expose equivalent metric APIs, so hero code can be structurally similar even when the frame budgets differ.
 
 ## Implementation Notes
 
 ### Layout Constraints
 
-- **iOS**: Full-screen timer region (typically 250–300pt tall, 280pt wide on landscape); hero can use Canvas, complex animations, multiple layers
-- **watchOS**: Constrained by 41mm/45mm screen size; hero must fit alongside or beneath the 5–6 metric rows; typical hero height is 80–120pt; avoid horizontal Canvas drawings (use vertical stacks instead)
+- **iOS**: full-screen timer region; hero can use Canvas, complex animations, multiple layers
+- **watchOS**: constrained by 40/46mm screen; the Mixtape deck is the full metrics page (see `.claude/rules/watchos.md` for the size-solving rules); avoid layouts that trigger silent scale-to-fit
 
 ### Animation Patterns
 
 - Heroes are **event-driven**: they animate based on workout state (paused vs. active) and metric changes
-- Use `onChange` to detect pace changes (rolling window updates) and trigger speedometer needle movements
-- Use `Timer` or `.onReceive` if periodic animation is needed (e.g., cassette reel spin, cursor blink, needle gauge swing)
+- The watch reel rotation keys off `elapsedTime` — monotonic, so it halts on pause with no catch-up snap; respect Reduce Motion
+- On iOS, any `TimelineView(.animation)` must pass `paused:` tied to the workout pause state (`MixtapeTimerHero.swift`: `minimumInterval: 1.0 / 24.0, paused: !isRunning`)
 
 ### Reuse of Controller Data
 
-- **Do NOT** duplicate state from the controller into the hero — always read from the controller instance passed in
+- **Do NOT** duplicate state from the controller into the hero — always read from the instance passed in
 - **Do NOT** call controller methods (e.g., `pause()`, `stop()`) from hero code — the hero is view-only
-- If a hero needs to transform a metric (e.g., derive RPM from HR for a VU Meter needle position), define a `@ViewBuilder` helper inside the hero file, not in the controller
+- If a hero needs to transform a metric, define a helper inside the hero file, not in the controller
 
 ### Non-hittable Overlays on Watch
 
-The `.allowsHitTesting(false)` modifier is essential because:
+`.allowsHitTesting(false)` on decorations is essential because:
 
-1. Hero layers (especially wide Canvas-based ones) can accidentally block taps on buttons below
+1. Decorative layers (especially wide Canvas-based ones) can accidentally block taps on buttons below
 2. Users must always be able to pause/stop, even if a visual glitch happens in the hero
 3. The hero is supplementary — controls take priority
 
 ## Testing
 
-Per-theme heroes should be tested:
+Heroes should be tested:
 
 1. **At workout start** — hero renders correctly with initial 0 metrics
 2. **During active workout** — hero responds to metric updates (pace, HR, distance)
@@ -170,12 +109,11 @@ Per-theme heroes should be tested:
 
 ## Future Extensions
 
-- FM Tuner theme uses the existing `FMTunerHeader` + `FMTunerVUColumn` pattern (not a per-hero file)
-- Clean theme has optional minimal hero (or none) — defined in the default case of the dispatch switch
-- If a future theme is added, add a new hero file to both targets and a case in the dispatch switch
+- Clean theme keeps a minimal hero (default case of the dispatch switch) — it is the accessibility baseline
+- If a future theme is added, add a hero file to both targets and a case in each dispatch site (grep every `switch`/`if` on theme id in BOTH targets)
 
 ## Related Docs
 
 - `.claude/rules/design-system.md` — Per-theme Timer Hero subsection documents dispatch and reuse rules
-- `docs/plans/timer-redesign.md` — Phase 3 describes the wiring (Phase 2) and per-theme implementation (Phase 3)
-- `docs/incidents/2026-06-06-pace-10min.md` — pace rolling-window fix that makes speedometer/gauge animations stable
+- `.claude/rules/watchos.md` — Mixtape watch deck + size-solving rules
+- `docs/incidents/2026-06-06-pace-10min.md` — pace rolling-window fix that keeps metric-driven animations stable

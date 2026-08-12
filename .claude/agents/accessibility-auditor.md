@@ -41,7 +41,7 @@ Scan all SwiftUI view files and check for:
 - No autoplay animations that can't be stopped
 
 ### Color & Contrast
-- All 6 themes maintain sufficient contrast ratios (4.5:1 for text, 3:1 for UI elements)
+- Both themes (Clean, Mixtape) maintain sufficient contrast ratios (4.5:1 for text, 3:1 for UI elements)
 - Information is not conveyed by color alone (activity types use icons + color)
 - `@Environment(\.colorSchemeContrast)` checked for Increase Contrast mode
 

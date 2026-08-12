@@ -60,7 +60,7 @@ These are the canonical playbooks for ShuttlX. Reference them by name when the u
 
 3 teammates: `product-designer` (palette + visual language in `design/proposals/`), `senior-ios-developer` (iOS theme files), `swiftui-watchos-specialist` (watchOS theme files). `docs-keeper` updates the theme table after all 3 finish.
 
-### Playbook T5 — Timer redesign (current sprint)
+### Playbook T5 — Timer redesign (2026-06 sprint, when the app still had 6+ themes; kept as a wave-pattern example)
 
 6 themes x 2 platforms = 12 redesigns. Two waves of three themes each. Per wave: `senior-ios-developer` + `swiftui-watchos-specialist` work in parallel on different themes (no file overlap within a wave). After each wave: short QA + push. After all waves: `docs-keeper`.
 

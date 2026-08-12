@@ -1,5 +1,10 @@
 # Watch → iOS Sync Architecture
 
+> **Naming note (July 2026)**: the sync classes referenced below were renamed —
+> watch `SharedDataManager` → `WatchSyncCoordinator.swift` (~1,200 lines), iOS
+> `SharedDataManager` → `PhoneSyncCoordinator.swift` (~1,130 lines). Line numbers
+> below date from the 2026-06 investigation snapshot and have drifted.
+
 ## Data Flow
 1. Watch `WatchWorkoutManager.saveWorkoutData()` (line 791) builds `TrainingSession` with full `routePoints`, `segments`, `kmSplits`
 2. Calls `SharedDataManager.sendSessionToiOS()` (watch, line 99)

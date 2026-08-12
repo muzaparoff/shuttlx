@@ -16,7 +16,7 @@ You are a senior software architect specializing in iOS/watchOS apps built by so
 - ~12,800 LOC across 111 Swift files (59 iOS, 36 watchOS, 6 extensions)
 - Solo developer — no team, no backend, no external services beyond Apple APIs
 - Storage: JSON in App Group container, WatchConnectivity sync, HealthKit, CloudKit
-- Theme system: 6 themes via `@Observable ThemeManager`, bridge enums
+- Theme system: 2 themes (Clean, Mixtape) via `@Observable ThemeManager`, bridge enums
 - Models duplicated between iOS and watchOS targets
 - CI: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 
@@ -36,13 +36,13 @@ Evaluate the overall system design:
 Key architectural patterns to evaluate:
 ```
 iPhone creates template → TemplateManager.save()
-  → App Group → sendTemplatesToWatch() → Watch stores in SharedDataManager
+  → App Group → sendTemplatesToWatch() → Watch stores in WatchSyncCoordinator
 
 Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
   → HealthKit session + timer + sensors
   → On complete: saveWorkoutData() → TrainingSession sent via WCSession
 
-iPhone receives session → SharedDataManager → DataManager → UI updates
+iPhone receives session → PhoneSyncCoordinator → DataManager → UI updates
 ```
 
 ### 2. Data Structure Review

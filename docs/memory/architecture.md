@@ -16,7 +16,7 @@ type: project
 | ShuttlXApp.swift | 40 | App entry, environment setup |
 | ContentView.swift | 66 | Tab bar: Dashboard / Programs / History / Settings |
 | **Services/** | | |
-| SharedDataManager.swift | 605 | WatchConnectivity sync, live metrics |
+| PhoneSyncCoordinator.swift | ~1,130 | WatchConnectivity sync, live metrics (renamed from SharedDataManager, July 2026) |
 | iPhoneWorkoutController.swift | 780+ | Core iOS workout engine, HealthKit, pace rolling-window |
 | AnalyticsEngine.swift | 413 | Data analytics, trends, weekly stats |
 | CloudKitSyncManager.swift | 247 | CloudKit sync |
@@ -37,24 +37,22 @@ type: project
 | ExerciseDevice.swift | 70+ | Device type enum + metadata (6 built-in + custom) |
 | ChartData.swift | 81 | Chart helpers (iOS only) |
 | WorkoutActivityAttributes.swift | 17 | Live Activity attributes (iOS only) |
-| **Theme/** (16 files, 8 themes) | | |
-| ThemeManager.swift | 80+ | @Observable theme manager, persistence, WCSession sync |
-| AppTheme.swift | 40+ | Theme struct: colors + fonts + effects |
-| ThemeColors.swift | 120+ | ~40 color tokens per theme |
-| ThemeFonts.swift | 80+ | ~20 font tokens per theme |
-| ThemeEffects.swift | 50+ | Visual effects config (glow, scanlines, grid) |
-| ThemeModifiers.swift | 200+ | View modifiers: themedCard, neonGlow, lcdPanel, etc. |
-| Themes/Clean.swift | 60+ | Theme definition |
-| Themes/Synthwave.swift | 60+ | Synthwave theme |
-| Themes/Mixtape.swift | 60+ | Mixtape theme |
-| Themes/Arcade.swift | 60+ | Arcade theme |
-| Themes/ClassicRadio.swift | 60+ | Classic Radio theme |
-| Themes/VUMeter.swift | 60+ | VU Meter theme |
-| Themes/Neovim.swift | 60+ | Neovim theme |
-| Themes/FMTuner.swift | 60+ | FM Tuner theme |
-| Themes/*Hero.swift | 150–300 ea | Per-theme hero visualizations (Synthwave, Mixtape, Arcade, ClassicRadio, VUMeter, Neovim) |
-| Components/FMTunerHeader.swift | 100+ | FM Tuner chrome header (iOS) |
-| Components/FMTunerVUColumn.swift | 100+ | FM Tuner VU meter column (iOS) |
+| **Theme/** (15 files, 2 themes — Clean + Mixtape since the July 2026 reduction) | | |
+| ThemeManager.swift | 47 | @Observable theme manager, persistence, `validIDs = {"clean","mixtape"}` |
+| AppTheme.swift | 28 | Theme struct: colors + fonts + effects + chartStyle |
+| ThemeColors.swift | 113 | ~40 color tokens per theme |
+| ThemeFonts.swift | 40 | ~20 font tokens per theme |
+| ThemeEffects.swift | 31 | Visual effects config, CardStyle `.glass`/`.lcd` |
+| ThemeChartStyle.swift | 70 | Per-theme chart styling (iOS only) |
+| ThemeModifiers.swift | 190 | View modifiers: themedCard, lcdPanel, etc. |
+| ThemeAssets.swift | 429 | Shared Canvas decorations (reels, tape, dot grids) |
+| ShuttlXTheme.swift | 171 | ShuttlXColor/ShuttlXFont bridge enums |
+| IntervalTypeThemeHelpers.swift | 99 | Interval-type theming helpers (iOS only) |
+| Themes/CleanTheme.swift | 106 | Clean theme definition |
+| Themes/MixtapeTheme.swift | 106 | Mixtape theme definition |
+| Themes/MixtapeTimerHero.swift | 732 | Mixtape timer hero (reels + tape counter) |
+| Components/ThemedSceneBackground.swift | 666 | Screen backgrounds (mesh gradient / Walkman body) |
+| Components/ThemedTransportButton.swift | 242 | Themed transport controls |
 | **Views/** | | |
 | Workout/iPhoneWorkoutTimerView.swift | 420+ | Active workout timer + metrics + hero dispatch |
 | AnalyticsView.swift | 514 | Analytics & trends |
@@ -105,7 +103,7 @@ type: project
 | ContentView.swift | 38 | Root navigation |
 | **Services/** | | |
 | WatchWorkoutManager.swift | 944 | Core watch workout engine, HealthKit, sensors, pace rolling-window |
-| SharedDataManager.swift | 525 | Watch-side WatchConnectivity |
+| WatchSyncCoordinator.swift | ~1,200 | Watch-side WatchConnectivity (renamed from SharedDataManager, July 2026) |
 | IntervalEngine.swift | 134 | Interval countdown state machine |
 | **Models/** (8 shared with iOS) | | |
 | ActivitySegment.swift | 60 | Running/walking/stationary tracking |
@@ -116,17 +114,18 @@ type: project
 | WorkoutSport.swift | 88 | Sport type enum |
 | WorkoutTemplate.swift | 95 | Interval program definition |
 | ExerciseDevice.swift | 70+ | Device type enum |
-| **Theme/** (16 files, 8 themes) | | |
-| ThemeManager.swift | 80+ | @Observable theme manager (same as iOS) |
-| AppTheme.swift | 40+ | Theme struct (same as iOS) |
-| ThemeColors.swift | 120+ | ~40 color tokens (same as iOS) |
-| ThemeFonts.swift | 80+ | ~20 font tokens (watch-sized) |
-| ThemeEffects.swift | 50+ | Visual effects (watch variant) |
-| ThemeModifiers.swift | 200+ | View modifiers (watch-sized) |
-| Themes/*.swift | 60+ ea | 8 theme definitions (watch-sized) |
-| Themes/*Hero.swift | 80–150 ea | Per-theme hero visualizations (compact for watch) |
-| Components/FMTunerCompactHeader.swift | 60+ | FM Tuner compact header (watch) |
-| Components/FMTunerWatchVUColumn.swift | 60+ | FM Tuner VU meter (watch) |
+| **Theme/** (13 files, 2 themes — Clean + Mixtape, mirrored from iOS) | | |
+| ThemeManager.swift | ~47 | @Observable theme manager (same as iOS) |
+| AppTheme.swift | ~28 | Theme struct (same as iOS) |
+| ThemeColors.swift | ~113 | ~40 color tokens (same as iOS) |
+| ThemeFonts.swift | ~40 | ~20 font tokens (watch-sized) |
+| ThemeEffects.swift | ~31 | Visual effects (watch variant) |
+| ThemeModifiers.swift | ~190 | View modifiers (watch-sized) |
+| ThemeAssets.swift | — | Shared Canvas decorations (watch-sized) |
+| ShuttlXTheme.swift | — | Bridge enums (watch) |
+| Themes/CleanTheme.swift / Themes/MixtapeTheme.swift | ~106 ea | 2 theme definitions (watch-sized) |
+| Themes/Decorations/MixtapeTimerHero.swift | 443 | MixtapeWatchDeck — full-screen Walkman LCD deck |
+| Components/ThemedSceneBackground.swift / ThemedTransportButton.swift | — | Backgrounds + transport controls (watch) |
 | **Views/** | | |
 | TrainingView.swift | 357 | Active workout UI (timer + metrics + hero overlays + controls) |
 | ProgramSelectionView.swift | 200 | Program picker |
@@ -162,7 +161,7 @@ type: project
 ```
 iPhone creates template → TemplateManager.save()
   → persist to App Group → sendTemplatesToWatch() via WCSession
-  → Watch receives → stores in SharedDataManager.workoutTemplates
+  → Watch receives → stores in WatchSyncCoordinator.workoutTemplates
 
 Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
   → HealthKit session + DispatchSourceTimer + sensors (CMPedometer, CMMotionActivity)
@@ -170,14 +169,14 @@ Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
   → Broadcast live metrics to iPhone via WCSession
   → On complete: saveWorkoutData() → TrainingSession sent via WCSession
 
-iPhone receives session → SharedDataManager → DataManager → persists → UI updates
+iPhone receives session → PhoneSyncCoordinator → DataManager → persists → UI updates
   → AnalyticsEngine processes trends, computes VO2max/TSB/PRs
   → WidgetDataProvider refreshes widgets
   → LiveActivityManager updates Dynamic Island during active workout
 
 Theme changes:
   iPhone: Settings → ThemeManager.shared.selectTheme(id) → UserDefaults (App Group)
-    → SharedDataManager.sendThemeToWatch() via applicationContext
+    → PhoneSyncCoordinator.sendThemeToWatch() via applicationContext
   Watch: receives → ThemeManager.shared.selectedThemeID → UI re-renders
 ```
 

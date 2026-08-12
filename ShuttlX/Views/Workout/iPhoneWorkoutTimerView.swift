@@ -28,7 +28,8 @@ struct iPhoneWorkoutTimerView: View {
     var body: some View {
         ZStack {
             // Step-color wash (interval mode only). 8% opacity is the cap that
-            // doesn't crush text contrast against Classic Radio / Neovim grounds.
+            // doesn't crush text contrast against the darker themed grounds
+            // (tuned on the darkest themes; still right for Clean / Mixtape).
             if let washColor = intervalStepColor {
                 washColor
                     .opacity(0.08)

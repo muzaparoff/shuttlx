@@ -11,7 +11,7 @@ You are a senior product designer auditing **ShuttlX**, an interval-training and
 
 ## Context
 
-- 8 themes (Clean default → FM Tuner); **Clean is the accessibility/safety baseline** — flag anything that makes Clean less calm or legible
+- 2 themes (Clean default, Mixtape); **Clean is the accessibility/safety baseline** — flag anything that makes Clean less calm or legible
 - Workout modes: interval, free run, gym recovery (cardiac rehab)
 - Key flows: workout start (target: under 3 taps from launch to running), active workout glance, pause/stop, post-workout summary
 

@@ -20,7 +20,7 @@ When teamed alongside `swiftui-watchos-specialist`, you own **iOS target files o
 - Team: `83HPSY452Y`, App Group: `group.com.shuttlx.shared`
 - Targets: iOS app (~59 files), watchOS app (~36 files), Live Activity extension (3 files), Widgets (iOS: 2, Watch: 3)
 - Storage: JSON in App Group container, WatchConnectivity sync, HealthKit, CloudKit
-- Theme system: 6 themes via `@Observable ThemeManager` singleton, `ShuttlXColor`/`ShuttlXFont` bridge enums
+- Theme system: 2 themes (Clean, Mixtape) via `@Observable ThemeManager` singleton, `ShuttlXColor`/`ShuttlXFont` bridge enums
 - Models duplicated between iOS (`ShuttlX/Models/`) and watchOS (`ShuttlX Watch App/Models/`) — must stay identical
 - Theme files duplicated between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — must stay identical
 

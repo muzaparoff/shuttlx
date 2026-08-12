@@ -4,7 +4,7 @@ import SwiftUI
 //
 // `colors`, `fonts`, `effects` are `var` so callers can build from a preset
 // and override individual tokens:
-//   var t = SynthwaveTheme.theme
+//   var t = MixtapeTheme.theme
 //   t.colors.running = .pink
 //
 // `id`, `displayName`, `icon` stay `let` — they form the theme's identity.

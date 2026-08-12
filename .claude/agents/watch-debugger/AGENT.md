@@ -14,8 +14,8 @@ You diagnose issues with the ShuttlX watchOS companion app. Focus on these subsy
 - Crash recovery — is workout data saved before potential crash?
 
 ## Sync Issues
-- Check `ShuttlX Watch App/Services/SharedDataManager.swift` (watch, 525 lines)
-- Check `ShuttlX/Services/SharedDataManager.swift` (iOS, 605 lines)
+- Check `ShuttlX Watch App/Services/WatchSyncCoordinator.swift` (watch, ~1,200 lines)
+- Check `ShuttlX/Services/PhoneSyncCoordinator.swift` (iOS, ~1,130 lines)
 - WCSession activation — correct lifecycle point?
 - Message delivery — checking `isReachable`, fallback to `transferUserInfo`?
 - Retry mechanism — exponential backoff? Stacking prevention?

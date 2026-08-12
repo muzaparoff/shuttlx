@@ -9,7 +9,7 @@ Apply when writing or reviewing any code in `ShuttlX Watch App/`, especially the
 
 ## Battery & rendering budget
 
-- [ ] Every `TimelineView(.animation(minimumInterval:))` MUST pass `paused:` tied to workout pause state. Reference implementation: `ClassicRadioTimerHero.swift` (`minimumInterval: 1.0/12.0, paused: workoutManager.isPaused`). A hero redrawing a static frame at 24 Hz while paused is a defect.
+- [ ] Every `TimelineView(.animation(minimumInterval:))` MUST pass `paused:` tied to workout pause state. Reference implementation: `ShuttlX/Theme/Themes/MixtapeTimerHero.swift` (iOS hero: `minimumInterval: 1.0 / 24.0, paused: !isRunning`). The watch Mixtape deck (`ShuttlX Watch App/Theme/Themes/Decorations/MixtapeTimerHero.swift`) avoids TimelineView entirely — reel rotation keys off `elapsedTime`, which stops advancing on pause. A hero redrawing a static frame at 24 Hz while paused is a defect.
 - [ ] Redraw rate budget on watch: ≤12 Hz for decorative animation, 1 Hz for data-driven updates. 24 Hz needs written justification.
 - [ ] AOD / wrist-down: `isLuminanceReduced` must tear down heroes and swap to the minimal AOD view (pattern: `aodMinimalView`, TrainingView.swift). No decorative animation may run in AOD.
 - [ ] No idle animations outside an active workout screen (design-system anti-goal).

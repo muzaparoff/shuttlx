@@ -24,7 +24,7 @@ iPhone `selectTheme(id)` → App Group UserDefaults `selectedThemeID` → `sendT
 ## Mirrored-file drift (15 files × 2 targets)
 
 - [ ] `ShuttlX/Theme/` and `ShuttlX Watch App/Theme/` are hand-mirrored — every theme change must update BOTH. When reviewing, diff the counterpart file for drift.
-- [ ] Theme dispatch switches (e.g. `ThemedCompletionBadge`) must cover ALL 7 theme ids: `clean`, `synthwave`, `mixtape`, `arcade`, `classicradio`, `neovim`, `fmtuner`. A missing case silently falls back to Clean — when adding a theme, grep for every `switch` on theme id in BOTH targets.
+- [ ] Theme dispatch switches (e.g. `ThemedCompletionBadge`) must cover BOTH live theme ids: `clean`, `mixtape` (the only ids in ThemeManager's `validIDs` since the July 2026 reduction). A missing case silently falls back to Clean — when adding a theme, grep for every `switch` on theme id in BOTH targets.
 - [ ] TrainingSession/WorkoutTemplate are also duplicated per target — keep byte-identical (watch-parity guard test in `swift test`).
 
 ## Design-system compliance on themed surfaces
@@ -33,4 +33,4 @@ iPhone `selectTheme(id)` → App Group UserDefaults `selectedThemeID` → `sendT
 - [ ] Raw semantic fonts (`.font(.body)`, `.font(.headline)`) are violations on themed surfaces — use `ShuttlXFont.*`.
 - [ ] Neutral surfaces (forms, settings, paywall, editors) use theme colors only — keep legible.
 - [ ] One parametric Canvas per theme signature shape — never N illustrations per state.
-- [ ] Dead code check: chrome state on ThemeManager (`vuMeterValue`, `signalStrength`, `footerStatusLines`, `chromeVisible`) is currently never written by shipped code — do not build on it without wiring it up first.
+- [ ] Dead code check: ThemeManager carries NO per-theme chrome state (the old FM-Tuner properties `vuMeterValue`/`signalStrength`/`footerStatusLines`/`chromeVisible` were deleted with that theme in July 2026) — its only stored state is `selectedThemeID` + `current`. Do not reintroduce theme-specific state on the manager; keep chrome state inside the theme's own views.

@@ -23,7 +23,7 @@ You are a senior QA engineer testing **ShuttlX**, an interval-training + cardiac
 2. **Interval transitions** — run→walk haptic fires, color/font matches active theme, no UI stutter during transition
 3. **Gym recovery** — dual-condition detection (stationary ≥15s AND HR rise ≥6 BPM, or 45s fallback) starts a station, walking enters rest immediately, HRR captures fire at +60s/+120s
 4. **Watch → iOS sync** — tap Finish on watch → session appears in iOS history within 8s; live HR visible in iOS Live Activity after iPhone unlock
-5. **Theme switching** — switch each of 7 themes, verify fonts/colors/backgrounds apply to: dashboard, settings, run/walk timer, recovery timer, history, analytics
+5. **Theme switching** — switch both themes (Clean, Mixtape), verify fonts/colors/backgrounds apply to: dashboard, settings, run/walk timer, recovery timer, history, analytics
 6. **Empty / error / offline** — every primary screen has a non-blank state when there's no data
 7. **Live Activity** — fires on workout start, label matches workout type (NOT "Run+Walk" for gym recovery), HR updates while iPhone locked
 8. **Save & resume** — pause workout, leave app, return: state restored; force-quit during workout: data recoverable from App Group

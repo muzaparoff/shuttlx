@@ -417,8 +417,8 @@ struct AnalyticsView: View {
     }
 
     private func paceZoneBarColor(zone: String, chartStyle: ThemeChartStyle) -> Color {
-        // Keep stock pace zone colors for Clean / Mixtape / Classic Radio;
-        // for other themes use the chart accent tinted by zone intensity
+        // Both live chart styles (Clean's rounded Swift Charts bars and
+        // Mixtape's tape strips) keep the stock pace zone colors
         switch chartStyle.barShape {
         case .roundedSwiftCharts, .tapeStrip:
             return ShuttlXColor.forPaceZone(zone)

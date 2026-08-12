@@ -33,9 +33,9 @@
 - [x] Sign in with Apple + CloudKit sync (basic pull/push, no push-triggered)
 
 ### UI & Theming
-- [x] 4 selectable themes: Clean, Synthwave, Casio LCD, Arcade
+- [x] Selectable themes (currently 2: Clean + Mixtape — the July 2026 reduction deleted the other themes app-wide)
 - [x] ThemeManager @Observable singleton, dual-target mirrored files
-- [x] .themedCard(), .neonGlow(), .lcdPanel(), .scanlineOverlay(), .synthwaveGrid()
+- [x] .themedCard(), .lcdPanel() modifiers; CardStyle .glass/.lcd
 - [x] Theme sync iPhone → Watch via applicationContext
 
 ### Live Activity & Widgets
@@ -62,7 +62,7 @@
 ### Priority 2: Quick Wins
 4. **Cadence (SPM)** — CMPedometer data already captured, just compute steps/minute and display. Low effort, high value.
 5. **Auto-Pause** — pause workout at stoplights/stops, resume on movement. Top user complaint when missing.
-6. **Custom Fonts** — bundle 7-segment (Casio) & pixel (Arcade) OFL fonts. Theme polish.
+6. ~~**Custom Fonts** — bundle 7-segment & pixel OFL fonts~~ — MOOT: the themes that needed them were deleted in the July 2026 theme reduction.
 7. **Pace/HR Alerts** — configurable alerts when pace or HR exits target zone.
 
 ### Priority 3: Growth
