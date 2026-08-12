@@ -1,0 +1,20 @@
+name: 🔗 Attach Build to Testers
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Build number to attach (blank = newest VALID)"
+        required: false
+        default: ""
+
+jobs:
+  attach:
+    uses: muzaparoff/appstore-kit/.github/workflows/testflight-attach.yml@v1
+    with:
+      bundle_id: com.shuttlx.ShuttlX
+      build_number: ${{ inputs.build_number }}
+    secrets:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}

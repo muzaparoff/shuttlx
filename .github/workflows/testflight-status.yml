@@ -1,0 +1,14 @@
+name: 📋 TestFlight Status
+
+on:
+  workflow_dispatch:
+
+jobs:
+  status:
+    uses: muzaparoff/appstore-kit/.github/workflows/testflight-status.yml@v1
+    with:
+      bundle_id: com.shuttlx.ShuttlX
+    secrets:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}

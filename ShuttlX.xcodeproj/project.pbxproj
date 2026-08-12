@@ -1295,9 +1295,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.1.56;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.watchkitapp;
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.watchkitapp";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -1597,9 +1598,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.1.56;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX;
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
@@ -1709,6 +1711,7 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1.56;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
@@ -1934,9 +1937,10 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1.56;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
+				PROVISIONING_PROFILE_SPECIFIER = "com.shuttlx.ShuttlX.ShuttlXWidgets";
 				SKIP_INSTALL = YES;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -2100,9 +2104,10 @@
 					"@executable_path/../../Frameworks",
 				);
 				MARKETING_VERSION = 1.1.56;
+				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				PROVISIONING_PROFILE_SPECIFIER = ShuttlXWatchWidget;
+				PROVISIONING_PROFILE_SPECIFIER = "ShuttlXWatchWidget";
 				SDKROOT = watchos;
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;

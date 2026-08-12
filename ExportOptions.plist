@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>method</key><string>app-store-connect</string>
+  <key>teamID</key><string>83HPSY452Y</string>
+  <key>uploadSymbols</key><true/>
+  <key>destination</key><string>export</string>
+  <key>signingStyle</key><string>manual</string>
+  <key>signingCertificate</key><string>Apple Distribution</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>com.shuttlx.ShuttlX</key><string>com.shuttlx.ShuttlX</string>
+    <key>com.shuttlx.ShuttlX.watchkitapp</key><string>com.shuttlx.ShuttlX.watchkitapp</string>
+    <key>com.shuttlx.ShuttlX.ShuttlXWidgets</key><string>com.shuttlx.ShuttlX.ShuttlXWidgets</string>
+    <key>com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets</key><string>ShuttlXWatchWidget</string>
+    <key>com.shuttlx.ShuttlX.ShuttlXLiveActivity</key><string>ShuttlX LiveActivity AppStore</string>
+  </dict>
+</dict>
+</plist>

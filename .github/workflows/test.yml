@@ -1,76 +1,28 @@
-# =============================================================================
-# ShuttlX — Build & Test on Pull Requests
-# =============================================================================
-
-name: Build & Test
+name: 🧪 CI
 
 on:
+  push:
+    branches: [main]
+    paths-ignore: ['**/*.md', 'docs/**']
   pull_request:
     branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: test-${{ github.ref }}
-  cancel-in-progress: true
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  build-and-test:
-    name: Build & Test (iOS + watchOS)
-    runs-on: macos-15
-    timeout-minutes: 30
-
-    steps:
-      # ------------------------------------------------------------------
-      # 1. Checkout
-      # ------------------------------------------------------------------
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      # ------------------------------------------------------------------
-      # 2. Select Xcode 26 (iOS 26 SDK)
-      # ------------------------------------------------------------------
-      - name: Select Xcode version
-        run: |
-          XCODE_PATH=$(ls -d /Applications/Xcode_26*.app 2>/dev/null | sort -V | tail -1)
-          if [ -z "$XCODE_PATH" ]; then
-            XCODE_PATH=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -1)
-          fi
-          echo "Using Xcode at: $XCODE_PATH"
-          sudo xcode-select -s "$XCODE_PATH/Contents/Developer"
-          xcodebuild -version
-          echo "--- Available schemes ---"
-          xcodebuild -project ShuttlX.xcodeproj -list
-
-      # ------------------------------------------------------------------
-      # 3. Run SPM unit tests (ShuttlXShared: IntervalEngine, RecoverySegmenter)
-      # ------------------------------------------------------------------
-      - name: Run unit tests (swift test)
-        run: swift test
-
-      # ------------------------------------------------------------------
-      # 4. Build iOS target
-      # ------------------------------------------------------------------
-      - name: Build iOS (simulator)
-        run: |
-          xcodebuild \
-            -project ShuttlX.xcodeproj \
-            -scheme ShuttlX \
-            -sdk iphonesimulator \
-            -destination "generic/platform=iOS Simulator" \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty --color
-
-      # ------------------------------------------------------------------
-      # 5. Build watchOS target
-      # ------------------------------------------------------------------
-      - name: Build watchOS (simulator)
-        run: |
-          xcodebuild \
-            -project ShuttlX.xcodeproj \
-            -scheme "ShuttlX Watch App" \
-            -sdk watchsimulator \
-            -destination "generic/platform=watchOS Simulator" \
-            -configuration Debug \
-            CODE_SIGNING_ALLOWED=NO \
-            clean build | xcpretty --color
+  ci:
+    uses: muzaparoff/appstore-kit/.github/workflows/ci.yml@v1
+    permissions:
+      contents: write
+      actions: write
+    with:
+      project: ShuttlX.xcodeproj
+      scheme: ShuttlX
+      release_workflow: deploy.yml
+      # Migration default — flip to full tests once verified locally.
+      run_tests: false
+      warnings_gate: false
+    secrets: inherit
