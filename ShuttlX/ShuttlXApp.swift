@@ -1,5 +1,6 @@
 import SwiftUI
 import os.log
+import ShuttlXShared
 import RevenueCat
 import TelemetryDeck
 import WatchConnectivity
@@ -59,6 +60,12 @@ struct ShuttlXApp: App {
             #endif
         }
         .onChange(of: scenePhase) { _, newPhase in
+            #if DEBUG
+            // Screenshot seam runs are hermetic: no disk reloads, no sync
+            // reconciliation, no CloudKit — the seeded demo data must not be
+            // disturbed and the real user data must not be touched.
+            if screenshotSeamsActive { return }
+            #endif
             if newPhase == .active {
                 dataManager.loadSessionsFromAppGroup()
                 sharedDataManager.reconcileWithDataManager()
@@ -102,12 +109,58 @@ struct ShuttlXApp: App {
                 controller.applyPreviewSnapshot()
             }
     }
+
+    // MARK: - Screenshot seams (marketing captures)
+    //
+    // Sibling of the SHUTTLX_SNAPSHOT harness above, for the full app UI
+    // rather than the timer hero:
+    //
+    //   SHUTTLX_DEMO_DATA=1   seeds ~12 plausible completed sessions across
+    //                         the last 3 weeks IN MEMORY ONLY (DataManager
+    //                         demo mode blocks every disk read/write), so
+    //                         Training/History/Analytics photograph well
+    //                         without touching the real sessions.json.
+    //   SHUTTLX_TAB=<name>    selects a tab at launch:
+    //                         training|programs|history|analytics|settings.
+    //
+    // Both also bypass onboarding on a fresh install so the tabs are
+    // actually reachable. Launch via `SIMCTL_CHILD_SHUTTLX_DEMO_DATA=1
+    // SIMCTL_CHILD_SHUTTLX_TAB=history xcrun simctl launch ...`.
+
+    private var demoDataRequested: Bool {
+        ProcessInfo.processInfo.environment["SHUTTLX_DEMO_DATA"] == "1"
+    }
+
+    private var launchTabRequest: Int? {
+        switch ProcessInfo.processInfo.environment["SHUTTLX_TAB"] {
+        case "training":  return 0
+        case "programs":  return 1
+        case "history":   return 2
+        case "analytics": return 3
+        case "settings":  return 4
+        default:          return nil
+        }
+    }
+
+    private var screenshotSeamsActive: Bool {
+        demoDataRequested || launchTabRequest != nil
+    }
     #endif
+
+    /// True when the onboarding flow should be shown instead of the tabs.
+    /// Screenshot seam runs skip onboarding even on a fresh install.
+    private var showOnboarding: Bool {
+        #if DEBUG
+        return isFirstLaunch && !screenshotSeamsActive
+        #else
+        return isFirstLaunch
+        #endif
+    }
 
     @ViewBuilder
     private var appRoot: some View {
             Group {
-                if isFirstLaunch {
+                if showOnboarding {
                     OnboardingView(isFirstLaunch: $isFirstLaunch)
                 } else {
                     ContentView()
@@ -144,6 +197,14 @@ struct ShuttlXApp: App {
                     workoutController?.remoteStop()
                 }
                 #if DEBUG
+                // Screenshot seams (see the MARK above): seed demo sessions
+                // and/or select a launch tab.
+                if demoDataRequested {
+                    dataManager.activateDemoMode(sessions: ShuttlXDemoData.makeSessions())
+                }
+                if let tab = launchTabRequest {
+                    deepLinkRouter.pendingTab = tab
+                }
                 // Test hooks (simulator automation): SHUTTLX_AUTOSTART_WATCH
                 // remote-starts a free run on the Watch after N seconds;
                 // SHUTTLX_AUTOSTOP_WATCH stops it after N seconds — both drive
@@ -254,3 +315,97 @@ struct ShuttlXApp: App {
         }
     }
 }
+
+#if DEBUG
+// MARK: - Demo Data (screenshot seam)
+
+/// Deterministic, plausible completed sessions for marketing screenshots.
+/// Seeded only via `SHUTTLX_DEMO_DATA=1` (see the screenshot-seams MARK in
+/// `ShuttlXApp`) and held in memory only — `DataManager` demo mode blocks all
+/// disk persistence, so the real user's sessions.json is never touched.
+enum ShuttlXDemoData {
+    /// ~12 completed run/walk sessions spread across the last 3 weeks with
+    /// varied durations (20–45 min), distances, and heart rates. All values
+    /// are deterministic so re-captures produce identical screenshots.
+    static func makeSessions(now: Date = Date()) -> [TrainingSession] {
+        // (daysAgo, startHour, minutes, avgHR, runMin, walkMin, displayName?)
+        let specs: [(days: Int, hour: Int, minutes: Int, avgHR: Double, run: Int, walk: Int, name: String?)] = [
+            (1,  8, 34, 152, 5, 2, "Run 5 / Walk 2"),
+            (2, 18, 24, 143, 3, 2, "Run 3 / Walk 2"),
+            (4,  7, 45, 148, 8, 3, nil),
+            (6, 12, 28, 155, 4, 1, "HIIT Intervals"),
+            (8,  9, 21, 139, 3, 3, "Easy Run/Walk"),
+            (9, 17, 38, 150, 6, 2, nil),
+            (11, 8, 30, 146, 5, 2, "Run 5 / Walk 2"),
+            (13, 18, 26, 141, 3, 2, "Run 3 / Walk 2"),
+            (15, 7, 42, 149, 8, 3, nil),
+            (17, 12, 23, 137, 3, 3, "Easy Run/Walk"),
+            (19, 9, 35, 151, 6, 2, "Tempo Intervals"),
+            (20, 17, 29, 144, 4, 2, nil),
+        ]
+
+        let calendar = Calendar.current
+        return specs.enumerated().map { index, spec in
+            let day = calendar.date(byAdding: .day, value: -spec.days, to: now) ?? now
+            var comps = calendar.dateComponents([.year, .month, .day], from: day)
+            comps.hour = spec.hour
+            comps.minute = (12 + index * 7) % 50
+            let start = calendar.date(from: comps) ?? day
+            let duration = TimeInterval(spec.minutes * 60)
+            let end = start.addingTimeInterval(duration)
+
+            // Pace scales gently with intensity: harder sessions are faster.
+            let paceSecPerKm = 430.0 - (spec.avgHR - 135.0) * 4.0   // ~5'40"–6'50"/km
+            let distanceKm = ((duration / paceSecPerKm) * 100).rounded() / 100
+
+            // Alternate run/walk segments through the whole session.
+            var segments: [ActivitySegment] = []
+            var cursor = start
+            var isRun = true
+            while cursor < end {
+                let segEnd = min(cursor.addingTimeInterval(TimeInterval((isRun ? spec.run : spec.walk) * 60)), end)
+                let segDuration = segEnd.timeIntervalSince(cursor)
+                segments.append(ActivitySegment(
+                    activityType: isRun ? .running : .walking,
+                    startDate: cursor,
+                    endDate: segEnd,
+                    steps: Int((isRun ? 168.0 : 118.0) * segDuration / 60),
+                    distance: distanceKm * (segDuration / duration) * (isRun ? 1.15 : 0.8)
+                ))
+                cursor = segEnd
+                isRun.toggle()
+            }
+
+            var session = TrainingSession(
+                startDate: start,
+                endDate: end,
+                duration: duration,
+                averageHeartRate: spec.avgHR,
+                maxHeartRate: spec.avgHR + 21,
+                caloriesBurned: (duration / 60 * 10.4).rounded(),
+                distance: distanceKm,
+                totalSteps: segments.compactMap { $0.steps }.reduce(0, +),
+                segments: segments,
+                kmSplits: splits(distanceKm: distanceKm, paceSecPerKm: paceSecPerKm),
+                averageCadence: 158 + Double(index % 5) * 3,
+                maxCadence: 176 + (index % 4) * 2
+            )
+            session.sportType = .running
+            session.programName = spec.name
+            return session
+        }
+    }
+
+    private static func splits(distanceKm: Double, paceSecPerKm: Double) -> [KmSplitData]? {
+        let fullKms = Int(distanceKm)
+        guard fullKms >= 1 else { return nil }
+        var cumulative: TimeInterval = 0
+        return (1...fullKms).map { km in
+            // Small deterministic wobble so the splits chart isn't flat.
+            let split = paceSecPerKm + Double((km * 13) % 7) * 4.0 - 12.0
+            cumulative += split
+            return KmSplitData(kmNumber: km, splitTime: split, cumulativeTime: cumulative)
+        }
+    }
+}
+#endif

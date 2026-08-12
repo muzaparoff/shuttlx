@@ -46,6 +46,27 @@ class DataManager: ObservableObject {
         setupBindings()
     }
 
+    #if DEBUG
+    // MARK: - Demo Mode (screenshot seam, SHUTTLX_DEMO_DATA=1)
+
+    /// When true, the session list is seeded demo data held in memory only:
+    /// `saveSessionsToAppGroup`, `loadSessionsFromAppGroup`, and disk-merge
+    /// all no-op, so a demo run can never corrupt (or leak into) the real
+    /// user's sessions.json in the App Group.
+    private(set) var isDemoDataMode = false
+
+    /// Swaps the in-memory session list for the seeded demo sessions and
+    /// blocks all further disk persistence. A disk load kicked off by `init`
+    /// may still be in flight; `mergeLoadedSessions` checks the flag on the
+    /// main actor, so its result is discarded once demo mode is active.
+    func activateDemoMode(sessions demoSessions: [TrainingSession]) {
+        isDemoDataMode = true
+        sessions = demoSessions
+        processedSessionIds = Set(demoSessions.map { $0.id })
+        logger.info("Demo mode active: seeded \(demoSessions.count) in-memory sessions; disk persistence disabled")
+    }
+    #endif
+
     private func setupBindings() {
         PhoneSyncCoordinator.shared.$syncedSessions
             .receive(on: DispatchQueue.main)
@@ -214,6 +235,9 @@ class DataManager: ObservableObject {
 
     // MARK: - App Group Storage
     func saveSessionsToAppGroup() {
+        #if DEBUG
+        guard !isDemoDataMode else { return }
+        #endif
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
@@ -246,6 +270,9 @@ class DataManager: ObservableObject {
     }
 
     func loadSessionsFromAppGroup() {
+        #if DEBUG
+        guard !isDemoDataMode else { return }
+        #endif
         guard let containerURL = getWorkingContainer() else { return }
 
         let url = containerURL.appendingPathComponent(sessionsKey)
@@ -279,6 +306,9 @@ class DataManager: ObservableObject {
     }
 
     private func mergeLoadedSessions(_ loaded: [TrainingSession]) {
+        #if DEBUG
+        guard !isDemoDataMode else { return }
+        #endif
         guard !loaded.isEmpty else { return }
 
         // Fast path: first load (empty in-memory list) — skip the per-session
