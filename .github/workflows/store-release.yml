@@ -26,6 +26,7 @@ jobs:
       version: ${{ inputs.version }}
       build_number: ${{ inputs.build_number }}
       submit: ${{ inputs.submit }}
+      shots_dir: marketing/appstore/final
     secrets:
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
