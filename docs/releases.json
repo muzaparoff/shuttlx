@@ -1,5 +1,27 @@
 [
  {
+  "version": "1.3.0",
+  "date": "2026-08-12",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "How It Works guide; app icon is the home button (web standard)"
+   },
+   {
+    "type": "feat",
+    "text": "Add in-app Help screen wired into Settings"
+   },
+   {
+    "type": "feat",
+    "text": "Add DEBUG screenshot seams for demo data and launch tab"
+   },
+   {
+    "type": "feat",
+    "text": "Add four data-rich App Store screenshots"
+   }
+  ]
+ },
+ {
   "version": "1.2.0",
   "date": "2026-08-12",
   "notes": [
