@@ -1,5 +1,15 @@
 [
  {
+  "version": "1.4.0",
+  "date": "2026-08-13",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Guarded rating prompt (modern StoreKit) + Send Feedback in Settings"
+   }
+  ]
+ },
+ {
   "version": "1.3.1",
   "date": "2026-08-12",
   "notes": [
