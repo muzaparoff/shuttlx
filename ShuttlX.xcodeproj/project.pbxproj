@@ -12,6 +12,7 @@
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
 		A5923505 /* TrainingSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923505F /* TrainingSession.swift */; };
 		A5923507B /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507F /* DataManager.swift */; };
+		FB000001 /* FeedbackPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001F /* FeedbackPrompt.swift */; };
 		A5923508B /* PhoneSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508F /* PhoneSyncCoordinator.swift */; };
 		A5923510B /* TrainingHistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923510F /* TrainingHistoryView.swift */; };
 		A5923511B /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923511F /* SessionRowView.swift */; };
@@ -235,6 +236,7 @@
 		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
 		A5923507 /* ShuttlXApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXApp.swift; sourceTree = "<group>"; };
 		A5923507F /* DataManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataManager.swift; sourceTree = "<group>"; };
+		FB000001F /* FeedbackPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedbackPrompt.swift; sourceTree = "<group>"; };
 		IW000001F /* iPhoneHapticPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneHapticPlayer.swift; sourceTree = "<group>"; };
 		IW000002F /* iOSHeartRateMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSHeartRateMonitor.swift; sourceTree = "<group>"; };
 		IW000003F /* iPhoneWorkoutController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iPhoneWorkoutController.swift; sourceTree = "<group>"; };
@@ -481,6 +483,7 @@
 			isa = PBXGroup;
 			children = (
 				A5923507F /* DataManager.swift */,
+				FB000001F /* FeedbackPrompt.swift */,
 				A5923508F /* PhoneSyncCoordinator.swift */,
 				LA000005 /* LiveActivityManager.swift */,
 				D5923002F /* TemplateManager.swift */,
@@ -955,6 +958,7 @@
 				A5923503 /* ShuttlXApp.swift in Sources */,
 				A5923505 /* TrainingSession.swift in Sources */,
 				A5923507B /* DataManager.swift in Sources */,
+				FB000001 /* FeedbackPrompt.swift in Sources */,
 				A5923508B /* PhoneSyncCoordinator.swift in Sources */,
 				A5923531 /* SessionDetailView.swift in Sources */,
 				A5923510B /* TrainingHistoryView.swift in Sources */,

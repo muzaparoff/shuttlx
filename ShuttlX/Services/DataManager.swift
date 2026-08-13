@@ -1,7 +1,6 @@
 import Foundation
 import Combine
 import HealthKit
-import StoreKit
 import WidgetKit
 import TelemetryDeck
 import os.log
@@ -86,12 +85,14 @@ class DataManager: ObservableObject {
                 sessions.append(session)
                 hasChanges = true
                 trackWorkoutCompleted(session)
+                // A completed workout landing on the iPhone is a "happy moment" —
+                // the guarded prompt decides if/when to actually ask for a rating.
+                FeedbackPrompt.recordHappyMoment()
             }
         }
         if hasChanges {
             archiveOldestBeyondCap()
             saveSessionsToAppGroup()
-            requestAppReviewIfEligible()
         }
     }
 
@@ -152,25 +153,6 @@ class DataManager: ObservableObject {
             "durationMinutes": String(Int(session.duration / 60)),
             "isInterval": String(session.completedIntervals?.isEmpty == false)
         ])
-    }
-
-    // MARK: - App Review
-
-    private func requestAppReviewIfEligible() {
-        let key = "com.shuttlx.reviewRequestedForSessionCount"
-        let lastPromptCount = UserDefaults.standard.integer(forKey: key)
-        let totalSessions = sessions.count
-
-        // Prompt after 3rd workout, then again at 10, 25, etc.
-        let milestones = [3, 10, 25, 50, 100]
-        guard let milestone = milestones.first(where: { totalSessions >= $0 && lastPromptCount < $0 }) else { return }
-
-        UserDefaults.standard.set(milestone, forKey: key)
-
-        if let scene = UIApplication.shared.connectedScenes
-            .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene {
-            SKStoreReviewController.requestReview(in: scene)
-        }
     }
 
     // MARK: - HealthKit

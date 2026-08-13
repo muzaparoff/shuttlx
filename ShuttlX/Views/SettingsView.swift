@@ -8,6 +8,7 @@ import ShuttlXShared
 
 struct SettingsView: View {
     @Environment(ThemeManager.self) var themeManager
+    @Environment(\.openURL) private var openURL
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var sharedDataManager: PhoneSyncCoordinator
     @EnvironmentObject var authManager: AuthenticationManager
@@ -440,6 +441,22 @@ struct SettingsView: View {
                 }
                 .accessibilityLabel("Help")
                 .accessibilityHint("How-to guides for workouts, programs, themes, widgets, and privacy")
+
+                Button {
+                    if let url = feedbackMailURL {
+                        openURL(url)
+                    }
+                } label: {
+                    HStack {
+                        Image(systemName: "envelope.fill")
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                        Text("Send Feedback")
+                            .foregroundStyle(ShuttlXColor.textPrimary)
+                    }
+                }
+                .accessibilityLabel("Send Feedback")
+                .accessibilityHint("Opens an email to the developer with your app version and device details prefilled")
             }
 
             // About Section
@@ -549,6 +566,41 @@ struct SettingsView: View {
             if let savedMaxHR = HeartRateZoneCalculator.loadSavedMaxHR(), savedMaxHR > 0 {
                 maxHRText = "\(Int(savedMaxHR.rounded()))"
             }
+        }
+    }
+
+    // MARK: - Feedback Mail
+
+    /// `mailto:` URL with subject "ShuttlX <version> (<build>) feedback" and a
+    /// body prefilled with app version, iOS version, and device model.
+    /// URL-encoding is handled by `URLComponents`.
+    private var feedbackMailURL: URL? {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+        let body = """
+        App version: \(version) (\(build))
+        iOS version: \(UIDevice.current.systemVersion)
+        Device: \(deviceModelIdentifier)
+
+
+        """
+        var components = URLComponents()
+        components.scheme = "mailto"
+        components.path = "muzyukins@gmail.com"
+        components.queryItems = [
+            URLQueryItem(name: "subject", value: "ShuttlX \(version) (\(build)) feedback"),
+            URLQueryItem(name: "body", value: body)
+        ]
+        return components.url
+    }
+
+    /// Hardware model identifier (e.g. "iPhone16,1") — more useful in feedback
+    /// mail than `UIDevice.model`, which only says "iPhone".
+    private var deviceModelIdentifier: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        return withUnsafePointer(to: &systemInfo.machine) {
+            $0.withMemoryRebound(to: CChar.self, capacity: 1) { String(cString: $0) }
         }
     }
 
