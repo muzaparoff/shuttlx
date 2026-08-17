@@ -15,6 +15,10 @@ struct WorkoutSummary {
     let splitsCount: Int
     var completedSets: Int? = nil
     var averageHRR1: Double? = nil
+    /// No body mass in Health (or read access withheld), so ShuttlX's per-phase
+    /// MET calorie estimate was suppressed rather than run against a placeholder
+    /// weight — Phase 2 / plan item 5.
+    var bodyMassUnavailable: Bool = false
 }
 
 // MARK: - Post-Workout Summary Screen
@@ -102,6 +106,24 @@ struct WorkoutSummaryView: View {
                     statusLine: (mode: "DONE", file: "saved", position: "ok"),
                     headerLabel: "WORKOUT"
                 )
+
+                if summary.bodyMassUnavailable {
+                    // Deliberately non-blocking and single-line: the workout is
+                    // saved and Apple's calories are still shown. Without a weight
+                    // we simply decline to invent ShuttlX's own estimate.
+                    HStack(alignment: .top, spacing: ShuttlXSpacing.xs) {
+                        Image(systemName: "scalemass")
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundColor(ShuttlXColor.textSecondary)
+                            .accessibilityHidden(true)
+                        Text("Add your weight in the Health app for accurate calories.")
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundColor(ShuttlXColor.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.horizontal)
+                    .accessibilityElement(children: .combine)
+                }
 
                 // Done button — primary CTA style
                 Button(action: onDismiss) {

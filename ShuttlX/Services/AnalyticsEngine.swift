@@ -13,6 +13,16 @@ struct WeeklySummary: Identifiable {
     let averageHeartRate: Double?
     let trainingLoad: Double
 
+    // MARK: - Run/walk split (Phase 4, 2026-08 run+walk plan — AnalyticsView surfacing)
+    // Sourced from ActivitySegment via TrainingSession's per-phase rollups (Phase 2).
+    // Calories use `activeEnergyCalories` (Apple's segment-summed estimate), the
+    // primary display value established in `ActivitySegment.swift`. Nil when no
+    // session in the week has segment-level calorie data (pre-Phase-2 sessions).
+    let runningDuration: TimeInterval
+    let walkingDuration: TimeInterval
+    let runningCalories: Double?
+    let walkingCalories: Double?
+
     var weekLabel: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
@@ -186,13 +196,22 @@ enum AnalyticsEngine {
             let avgHR = heartRates.isEmpty ? nil : heartRates.reduce(0, +) / Double(heartRates.count)
             let load = computeTrainingLoad(for: weekSessions)
 
+            let runningDuration = weekSessions.reduce(0.0) { $0 + $1.totalRunningDuration }
+            let walkingDuration = weekSessions.reduce(0.0) { $0 + $1.totalWalkingDuration }
+            let runningCalValues = weekSessions.compactMap(\.totalRunningActiveEnergy)
+            let walkingCalValues = weekSessions.compactMap(\.totalWalkingActiveEnergy)
+
             return WeeklySummary(
                 weekStartDate: weekStart,
                 totalDuration: totalDuration,
                 totalDistance: totalDistance,
                 sessionCount: weekSessions.count,
                 averageHeartRate: avgHR,
-                trainingLoad: load
+                trainingLoad: load,
+                runningDuration: runningDuration,
+                walkingDuration: walkingDuration,
+                runningCalories: runningCalValues.isEmpty ? nil : runningCalValues.reduce(0, +),
+                walkingCalories: walkingCalValues.isEmpty ? nil : walkingCalValues.reduce(0, +)
             )
         }
     }

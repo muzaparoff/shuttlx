@@ -32,6 +32,7 @@ struct AnalyticsView: View {
                         fitnessOverviewRow
                         fitnessTrendChart
                         weeklyVolumeChart
+                        runWalkSplitCard
                         vo2maxCard
                         personalRecordsSection
                         paceZoneChart
@@ -232,6 +233,147 @@ struct AnalyticsView: View {
         .themedCard(accent: ShuttlXColor.calories, headerLabel: "WEEKLY VOLUME")
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Weekly training volume: \(a11yLabel.isEmpty ? "no data" : a11yLabel)")
+    }
+
+    // MARK: - Run vs Walk Split (Phase 4, 2026-08 run+walk plan)
+    //
+    // Aggregates ActivitySegment-derived run/walk time + calories across the same
+    // 6-week window as the trend charts above. Calories use `activeEnergyCalories`
+    // (Apple's segment-summed estimate) — the primary display value established in
+    // `ActivitySegment.swift`. Older sessions with empty/nil segment data simply
+    // contribute 0 duration and nil calories, so the card (and each weekly row)
+    // hides itself gracefully instead of showing zeros.
+
+    private var totalRunningDuration: TimeInterval {
+        weeklyTrend.reduce(0) { $0 + $1.runningDuration }
+    }
+
+    private var totalWalkingDuration: TimeInterval {
+        weeklyTrend.reduce(0) { $0 + $1.walkingDuration }
+    }
+
+    private var totalRunningCalories: Double? {
+        let values = weeklyTrend.compactMap(\.runningCalories)
+        return values.isEmpty ? nil : values.reduce(0, +)
+    }
+
+    private var totalWalkingCalories: Double? {
+        let values = weeklyTrend.compactMap(\.walkingCalories)
+        return values.isEmpty ? nil : values.reduce(0, +)
+    }
+
+    @ViewBuilder
+    private var runWalkSplitCard: some View {
+        if totalRunningDuration > 0 || totalWalkingDuration > 0 {
+            VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Run vs Walk")
+                        .font(ShuttlXFont.cardTitle)
+
+                    // Task 14: light-touch differentiator framing — ShuttlX tracks
+                    // and costs walk breaks separately instead of folding them into
+                    // one running number the way Apple Fitness does.
+                    Text("Every walk break tracked and costed separately from your runs.")
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                }
+
+                runWalkSplitBar(running: totalRunningDuration, walking: totalWalkingDuration)
+                    .frame(height: 14)
+                    .clipShape(RoundedRectangle(cornerRadius: 7))
+
+                HStack(spacing: 20) {
+                    runWalkLegendItem(activity: .running, duration: totalRunningDuration, calories: totalRunningCalories)
+                    runWalkLegendItem(activity: .walking, duration: totalWalkingDuration, calories: totalWalkingCalories)
+                    Spacer()
+                }
+
+                let weeksWithSplit = weeklyTrend.filter { $0.runningDuration > 0 || $0.walkingDuration > 0 }
+                if weeksWithSplit.count > 1 {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("WEEKLY SPLIT")
+                            .font(ShuttlXFont.microLabel)
+                            .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.8))
+
+                        ForEach(weeksWithSplit) { week in
+                            HStack(spacing: 8) {
+                                Text(week.weekLabel)
+                                    .font(ShuttlXFont.microLabel)
+                                    .foregroundStyle(ShuttlXColor.textSecondary)
+                                    .frame(width: 44, alignment: .leading)
+                                runWalkSplitBar(running: week.runningDuration, walking: week.walkingDuration)
+                                    .frame(height: 8)
+                                    .clipShape(RoundedRectangle(cornerRadius: 4))
+                            }
+                        }
+                    }
+                    .accessibilityHidden(true)
+                }
+            }
+            .padding(16)
+            .themedCard(
+                accent: ShuttlXColor.running,
+                statusLine: (mode: "SPLIT", file: "runwalk.json", position: "6w"),
+                headerLabel: "RUN + WALK"
+            )
+            .accessibilityElement(children: .combine)
+            .accessibilityLabel(runWalkAccessibilitySummary)
+        }
+    }
+
+    @ViewBuilder
+    private func runWalkSplitBar(running: TimeInterval, walking: TimeInterval) -> some View {
+        GeometryReader { geometry in
+            let total = running + walking
+            HStack(spacing: total > 0 ? 1 : 0) {
+                if running > 0 {
+                    Rectangle()
+                        .fill(ShuttlXColor.running)
+                        .frame(width: max(4, geometry.size.width * (running / max(total, 0.001))))
+                }
+                if walking > 0 {
+                    Rectangle()
+                        .fill(ShuttlXColor.walking)
+                        .frame(width: max(4, geometry.size.width * (walking / max(total, 0.001))))
+                }
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private func runWalkLegendItem(activity: DetectedActivity, duration: TimeInterval, calories: Double?) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                Circle()
+                    .fill(activity.themeColor)
+                    .frame(width: 8, height: 8)
+                Text(activity.displayName)
+                    .font(ShuttlXFont.cardCaption)
+            }
+            Text(FormattingUtils.formatDuration(duration))
+                .font(ShuttlXFont.cardSubtitle.monospacedDigit())
+
+            if let calories {
+                Text("\(Int(calories.rounded())) cal")
+                    .font(ShuttlXFont.microLabel)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                    .monospacedDigit()
+            }
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var runWalkAccessibilitySummary: String {
+        var summary = "Run versus walk breakdown, last 6 weeks. Running \(FormattingUtils.formatDuration(totalRunningDuration))"
+        if let cal = totalRunningCalories {
+            summary += ", \(Int(cal.rounded())) calories"
+        }
+        summary += ". Walking \(FormattingUtils.formatDuration(totalWalkingDuration))"
+        if let cal = totalWalkingCalories {
+            summary += ", \(Int(cal.rounded())) calories"
+        }
+        summary += "."
+        return summary
     }
 
     // MARK: - VO2max Card

@@ -179,13 +179,35 @@ struct ActivitySegmentsView: View {
     let totalDuration: TimeInterval
     @State private var showAllSegments = false
 
+    // MARK: - Per-phase calorie aggregation (Phase 4, 2026-08 run+walk plan)
+    //
+    // `activeEnergyCalories` (Apple's segment-summed activeEnergyBurned) is the
+    // primary display value — see the rationale comment on `ActivitySegment`.
+    // `estimatedCalories` (ShuttlX's phase-honest MET estimate) is surfaced as a
+    // secondary caption only when present and materially different, so older
+    // sessions or sessions with unknown body mass just show the one number they
+    // have — never a fabricated "0 cal".
+    private struct ActivityAggregate {
+        let activity: DetectedActivity
+        let duration: TimeInterval
+        let activeEnergyCalories: Double?
+        let estimatedCalories: Double?
+    }
+
     /// Aggregated totals per activity type, sorted by duration descending
-    private var aggregated: [(activity: DetectedActivity, duration: TimeInterval)] {
-        var dict: [DetectedActivity: TimeInterval] = [:]
-        for segment in segments {
-            dict[segment.activityType, default: 0] += segment.duration
-        }
-        return dict.sorted { $0.value > $1.value }.map { (activity: $0.key, duration: $0.value) }
+    private var aggregated: [ActivityAggregate] {
+        let grouped = Dictionary(grouping: segments, by: \.activityType)
+        return grouped.map { activity, segs in
+            let duration = segs.reduce(0) { $0 + $1.duration }
+            let activeValues = segs.compactMap(\.activeEnergyCalories)
+            let estimatedValues = segs.compactMap(\.estimatedCalories)
+            return ActivityAggregate(
+                activity: activity,
+                duration: duration,
+                activeEnergyCalories: activeValues.isEmpty ? nil : activeValues.reduce(0, +),
+                estimatedCalories: estimatedValues.isEmpty ? nil : estimatedValues.reduce(0, +)
+            )
+        }.sorted { $0.duration > $1.duration }
     }
 
     var body: some View {
@@ -207,21 +229,43 @@ struct ActivitySegmentsView: View {
             .frame(height: 12)
             .clipShape(RoundedRectangle(cornerRadius: 6))
 
-            // Aggregated summary row
-            HStack(spacing: 12) {
+            // Aggregated summary rows — duration + per-phase calories
+            VStack(alignment: .leading, spacing: 6) {
                 ForEach(aggregated, id: \.activity) { item in
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(item.activity.themeColor)
-                            .frame(width: 8, height: 8)
-                        Text(item.activity.displayName)
-                            .font(ShuttlXFont.cardCaption)
-                        Text(FormattingUtils.formatDuration(item.duration))
-                            .font(ShuttlXFont.cardCaption.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 1) {
+                        HStack(spacing: 4) {
+                            Circle()
+                                .fill(item.activity.themeColor)
+                                .frame(width: 8, height: 8)
+                            Text(item.activity.displayName)
+                                .font(ShuttlXFont.cardCaption)
+                            Text(FormattingUtils.formatDuration(item.duration))
+                                .font(ShuttlXFont.cardCaption.monospacedDigit())
+                                .foregroundStyle(ShuttlXColor.textSecondary)
+
+                            if let cal = item.activeEnergyCalories {
+                                Text("\u{2022}")
+                                    .font(ShuttlXFont.cardCaption)
+                                    .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.7))
+                                Text("\(Int(cal.rounded())) cal")
+                                    .font(ShuttlXFont.cardCaption.monospacedDigit())
+                                    .foregroundStyle(ShuttlXColor.calories)
+                            }
+                        }
+
+                        // ShuttlX's own phase-honest MET estimate, shown only when it
+                        // exists and materially differs from Apple's primary number —
+                        // this is the differentiator: Apple costs the whole session
+                        // under one activity type, ShuttlX costs each phase on its own.
+                        if let estimate = item.estimatedCalories, shouldShowEstimate(estimate, primary: item.activeEnergyCalories) {
+                            Text("ShuttlX phase estimate: \(Int(estimate.rounded())) cal")
+                                .font(ShuttlXFont.microLabel)
+                                .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.8))
+                                .padding(.leading, 12)
+                        }
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(item.activity.displayName), \(FormattingUtils.formatDuration(item.duration))")
+                    .accessibilityLabel(accessibilityLabel(for: item))
                 }
             }
 
@@ -267,11 +311,42 @@ struct ActivitySegmentsView: View {
 
                 Text(FormattingUtils.formatDuration(segment.duration))
                     .font(ShuttlXFont.cardSubtitle.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+
+                // Primary calorie number only, when known — no fabricated "0 cal"
+                // for older segments recorded before Phase 2's per-phase calories.
+                if let cal = segment.activeEnergyCalories {
+                    Text("\(Int(cal.rounded())) cal")
+                        .font(ShuttlXFont.cardCaption.monospacedDigit())
+                        .foregroundStyle(ShuttlXColor.calories)
+                }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
+            .accessibilityLabel(segment.activeEnergyCalories.map {
+                "\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration)), \(Int($0.rounded())) calories"
+            } ?? "\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
         }
+    }
+
+    // MARK: - Accessibility
+
+    private func accessibilityLabel(for item: ActivityAggregate) -> String {
+        var label = "\(item.activity.displayName), \(FormattingUtils.formatDuration(item.duration))"
+        if let cal = item.activeEnergyCalories {
+            label += ", \(Int(cal.rounded())) calories"
+        }
+        if let estimate = item.estimatedCalories, shouldShowEstimate(estimate, primary: item.activeEnergyCalories) {
+            label += ", ShuttlX phase estimate \(Int(estimate.rounded())) calories"
+        }
+        return label
+    }
+
+    /// Show ShuttlX's MET estimate only when it's the sole number available, or
+    /// when it differs meaningfully (>=5 kcal) from Apple's primary estimate —
+    /// keeps the common case (the two roughly agree) to a single glanceable number.
+    private func shouldShowEstimate(_ estimate: Double, primary: Double?) -> Bool {
+        guard let primary else { return true }
+        return abs(estimate - primary) >= 5
     }
 }
 
@@ -287,9 +362,9 @@ struct ActivitySegmentsView: View {
             distance: 3.2,
             totalSteps: 4200,
             segments: [
-                ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-1800), endDate: Date().addingTimeInterval(-1500)),
-                ActivitySegment(activityType: .running, startDate: Date().addingTimeInterval(-1500), endDate: Date().addingTimeInterval(-900)),
-                ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-900), endDate: Date())
+                ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-1800), endDate: Date().addingTimeInterval(-1500), averageHeartRate: 118, estimatedCalories: 38, activeEnergyCalories: 42),
+                ActivitySegment(activityType: .running, startDate: Date().addingTimeInterval(-1500), endDate: Date().addingTimeInterval(-900), averageHeartRate: 158, estimatedCalories: 165, activeEnergyCalories: 172),
+                ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-900), endDate: Date(), averageHeartRate: 121, estimatedCalories: 55, activeEnergyCalories: 68)
             ],
             route: [
                 RoutePoint(latitude: 55.7558, longitude: 37.6173, timestamp: Date().addingTimeInterval(-1800)),

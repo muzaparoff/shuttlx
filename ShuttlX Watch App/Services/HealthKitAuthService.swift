@@ -35,10 +35,16 @@ final class HealthKitAuthService {
         // so we always call requestAuthorization — it is a no-op if already granted.
         let (readTypes, writeTypes) = buildHealthKitTypes()
 
-        // Include date of birth for age-based HR zone calculation (Tanaka formula)
+        // Characteristics: date of birth for age-based HR zones (Tanaka formula),
+        // plus biological sex for the health profile behind per-phase calorie
+        // estimation (Phase 2 / CE4 of the 2026-08 run+walk plan). `bodyMass` is a
+        // quantity type and is added in buildHealthKitTypes().
         var allReadTypes: Set<HKObjectType> = Set(readTypes)
         if let dobType = HKCharacteristicType.characteristicType(forIdentifier: .dateOfBirth) {
             allReadTypes.insert(dobType)
+        }
+        if let sexType = HKCharacteristicType.characteristicType(forIdentifier: .biologicalSex) {
+            allReadTypes.insert(sexType)
         }
 
         guard !readTypes.isEmpty else {
@@ -103,9 +109,110 @@ final class HealthKitAuthService {
         if let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
             readTypes.insert(stepType)
         }
+        // Body mass drives the MET calorie model (kcal = MET × kg × hours). Without
+        // it there is no honest per-phase estimate — see loadAnthropometrics().
+        if let bodyMassType = HKQuantityType.quantityType(forIdentifier: .bodyMass) {
+            readTypes.insert(bodyMassType)
+        }
 
         writeTypes.insert(HKWorkoutType.workoutType())
         return (readTypes, writeTypes)
+    }
+
+    // MARK: - Anthropometrics (Phase 2 / CE4)
+
+    /// App Group key iOS Settings writes when the wearer types a weight by hand
+    /// (`DeviceManager.userWeightKg`). NOTE: App Group containers are per-device —
+    /// the phone's value does not reach the watch today, so on watchOS this is a
+    /// forward-compatible override that is normally absent and HealthKit is the
+    /// real source. Kept so a future WC sync of Settings lands for free.
+    private static let manualWeightKey = "userWeightKg"
+    private static let manualAgeKey = "userAge"
+    private static let appGroupIdentifier = "group.com.shuttlx.shared"
+
+    /// Reads body mass, age and biological sex once per workout start.
+    ///
+    /// Deliberately returns a nil `weightKg` when nothing is known — the caller
+    /// suppresses ShuttlX's calorie estimate and prompts for the weight instead of
+    /// substituting a 70 kg stand-in (plan item 5).
+    func loadAnthropometrics() async -> Anthropometrics {
+        let defaults = UserDefaults(suiteName: Self.appGroupIdentifier)
+
+        let manualWeight = defaults?.double(forKey: Self.manualWeightKey) ?? 0
+        let manualAge = defaults?.integer(forKey: Self.manualAgeKey) ?? 0
+
+        let age: Int? = manualAge > 0 ? manualAge : ageFromHealthKit()
+        let weightKg: Double? = manualWeight > 0 ? manualWeight : await bodyMassFromHealthKit()
+
+        let maxHR: Double? = {
+            if let saved = HeartRateZoneCalculator.loadSavedMaxHR(), saved > 0 { return saved }
+            guard let age = age else { return nil }
+            return HeartRateZoneCalculator(age: age, manualMaxHR: nil).estimatedMaxHR
+        }()
+
+        let anthropometrics = Anthropometrics(
+            weightKg: weightKg,
+            age: age,
+            maxHeartRate: maxHR,
+            biologicalSex: biologicalSexFromHealthKit()
+        )
+
+        logger.info("""
+            Anthropometrics: weight=\(weightKg.map { String(format: "%.1fkg", $0) } ?? "unavailable") \
+            (\(manualWeight > 0 ? "manual" : "healthkit")) age=\(age.map(String.init) ?? "unavailable") \
+            maxHR=\(maxHR.map { String(Int($0.rounded())) } ?? "unavailable") \
+            sex=\(anthropometrics.biologicalSex.rawValue)
+            """)
+        return anthropometrics
+    }
+
+    private func ageFromHealthKit() -> Int? {
+        do {
+            let components = try healthStore.dateOfBirthComponents()
+            let currentYear = Calendar.current.dateComponents([.year], from: Date()).year
+            guard let birthYear = components.year, let currentYear = currentYear else { return nil }
+            let age = currentYear - birthYear
+            return (age > 0 && age < 120) ? age : nil
+        } catch {
+            logger.info("Date of birth not available: \(error.localizedDescription)")
+            return nil
+        }
+    }
+
+    private func biologicalSexFromHealthKit() -> Anthropometrics.BiologicalSex {
+        do {
+            switch try healthStore.biologicalSex().biologicalSex {
+            case .female: return .female
+            case .male: return .male
+            case .other: return .other
+            case .notSet: return .unspecified
+            @unknown default: return .unspecified
+            }
+        } catch {
+            logger.info("Biological sex not available: \(error.localizedDescription)")
+            return .unspecified
+        }
+    }
+
+    /// Most recent `bodyMass` sample. HealthKit never reports whether a READ scope
+    /// was granted, so a denial is indistinguishable from "never weighed myself" —
+    /// both land here as nil, and both want the same UI prompt.
+    private func bodyMassFromHealthKit() async -> Double? {
+        guard let bodyMassType = HKQuantityType.quantityType(forIdentifier: .bodyMass) else { return nil }
+        let store = healthStore
+        let sample: HKQuantitySample? = await withCheckedContinuation { continuation in
+            let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+            let query = HKSampleQuery(sampleType: bodyMassType,
+                                      predicate: nil,
+                                      limit: 1,
+                                      sortDescriptors: [sort]) { _, samples, _ in
+                continuation.resume(returning: samples?.first as? HKQuantitySample)
+            }
+            store.execute(query)
+        }
+        guard let sample = sample else { return nil }
+        let kg = sample.quantity.doubleValue(for: .gramUnit(with: .kilo))
+        return kg > 0 ? kg : nil
     }
 
     /// Reads date of birth from HealthKit and persists the Tanaka-derived max HR

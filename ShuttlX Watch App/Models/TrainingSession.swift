@@ -107,6 +107,26 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         segments.filter { $0.activityType == .walking }.reduce(0) { $0 + $1.duration }
     }
 
+    // MARK: - Per-phase calorie rollups (Phase 2, 2026-08 run+walk plan)
+    // Computed, not stored: the numbers live on the segments, so old sessions
+    // (and any session recorded without a body mass) simply return nil.
+
+    private func segmentCalories(_ activity: DetectedActivity,
+                                 _ pick: (ActivitySegment) -> Double?) -> Double? {
+        let values = segments.filter { $0.activityType == activity }.compactMap(pick)
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +)
+    }
+
+    /// ShuttlX's MET estimate for the run phases.
+    var totalRunningCalories: Double? { segmentCalories(.running) { $0.estimatedCalories } }
+    /// ShuttlX's MET estimate for the walk phases.
+    var totalWalkingCalories: Double? { segmentCalories(.walking) { $0.estimatedCalories } }
+    /// Apple's `activeEnergyBurned` attributed to the run phases.
+    var totalRunningActiveEnergy: Double? { segmentCalories(.running) { $0.activeEnergyCalories } }
+    /// Apple's `activeEnergyBurned` attributed to the walk phases.
+    var totalWalkingActiveEnergy: Double? { segmentCalories(.walking) { $0.activeEnergyCalories } }
+
     init(
         id: UUID = UUID(),
         startDate: Date,

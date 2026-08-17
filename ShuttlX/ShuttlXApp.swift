@@ -371,18 +371,29 @@ enum ShuttlXDemoData {
             let distanceKm = ((duration / paceSecPerKm) * 100).rounded() / 100
 
             // Alternate run/walk segments through the whole session.
+            //
+            // Calorie fields (Phase 2/4, 2026-08 run+walk plan): `estimatedCalories`
+            // is ShuttlX's phase-honest MET estimate (run ~11 kcal/min, walk ~4.2
+            // kcal/min). `activeEnergyCalories` simulates Apple's own number, which
+            // costs the whole session under the single `.running` HKWorkoutActivityType
+            // (CE5) — so walk phases are visibly over-credited relative to ShuttlX's
+            // estimate here, demonstrating the differentiator on demo screenshots.
             var segments: [ActivitySegment] = []
             var cursor = start
             var isRun = true
             while cursor < end {
                 let segEnd = min(cursor.addingTimeInterval(TimeInterval((isRun ? spec.run : spec.walk) * 60)), end)
                 let segDuration = segEnd.timeIntervalSince(cursor)
+                let segMinutes = segDuration / 60
                 segments.append(ActivitySegment(
                     activityType: isRun ? .running : .walking,
                     startDate: cursor,
                     endDate: segEnd,
                     steps: Int((isRun ? 168.0 : 118.0) * segDuration / 60),
-                    distance: distanceKm * (segDuration / duration) * (isRun ? 1.15 : 0.8)
+                    distance: distanceKm * (segDuration / duration) * (isRun ? 1.15 : 0.8),
+                    averageHeartRate: isRun ? spec.avgHR + 6 : spec.avgHR - 12,
+                    estimatedCalories: segMinutes * (isRun ? 11.0 : 4.2),
+                    activeEnergyCalories: segMinutes * (isRun ? 11.4 : 7.8)
                 ))
                 cursor = segEnd
                 isRun.toggle()

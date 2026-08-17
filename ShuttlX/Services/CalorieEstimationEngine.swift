@@ -1,105 +1,67 @@
 import Foundation
-import os.log
 import ShuttlXShared
 
-enum CalorieEstimationEngine {
-    private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "CalorieEstimation")
+/// iOS-side conveniences over the shared `CalorieEstimationEngine`.
+///
+/// The MET math itself moved to `Shared/CalorieEstimationEngine.swift` in Phase 2
+/// of `docs/plans/2026-08-runwalk-dynamic-sessions-plan.md` so the watch can call
+/// it per detected segment while the workout is running. Only the overloads that
+/// take a `TrainingSession` stay here: `TrainingSession` is still duplicated per
+/// target (`.claude/rules/models.md`) and therefore cannot live in the package.
+///
+/// Every overload returns an **optional** — a nil body mass yields nil, never a
+/// silent 70 kg placeholder (plan item 5).
+extension CalorieEstimationEngine {
 
-    // MARK: - Default METs per Sport
-
-    static func defaultMET(for sport: WorkoutSport) -> Double {
-        switch sport {
-        case .running: return 9.8
-        case .walking: return 3.5
-        case .cycling: return 7.5
-        case .swimming: return 8.0
-        case .hiking: return 6.0
-        case .elliptical: return 5.0
-        case .crossTraining: return 6.0
-        case .other: return 4.0
-        }
-    }
-
-    // MARK: - Estimation
-
-    /// Estimate calories: MET x weight(kg) x duration(hours)
-    /// - Parameters:
-    ///   - met: Metabolic equivalent (use device MET or sport default)
-    ///   - weightKg: User weight in kilograms (defaults to 70 if nil)
-    ///   - durationSeconds: Workout duration in seconds
-    ///   - averageHeartRate: Optional average HR for MET adjustment
-    ///   - age: Optional user age for HR-adjusted MET
-    /// - Returns: Estimated kilocalories
-    static func estimate(
-        met: Double,
-        weightKg: Double?,
-        durationSeconds: TimeInterval,
-        averageHeartRate: Double? = nil,
-        age: Int? = nil
-    ) -> Double {
-        let weight = weightKg ?? 70.0
-        let hours = durationSeconds / 3600.0
-        let adjustedMET = hrAdjustedMET(baseMET: met, averageHR: averageHeartRate, age: age)
-        let kcal = adjustedMET * weight * hours
-        logger.debug("Calorie estimate: MET=\(adjustedMET, privacy: .public) weight=\(weight)kg duration=\(hours, privacy: .public)h → \(kcal, privacy: .public) kcal")
-        return kcal
-    }
-
-    /// Convenience: estimate from a TrainingSession using sport default MET
+    /// Estimate from a session using its sport's default MET.
     static func estimate(
         for session: TrainingSession,
         weightKg: Double?,
-        age: Int? = nil
-    ) -> Double {
+        age: Int? = nil,
+        maxHeartRate: Double? = nil
+    ) -> Double? {
         let sport = session.sportType ?? .running
-        let met = defaultMET(for: sport)
         return estimate(
-            met: met,
+            for: session,
+            met: defaultMET(for: sport),
             weightKg: weightKg,
-            durationSeconds: session.duration,
-            averageHeartRate: session.averageHeartRate,
-            age: age
+            age: age,
+            maxHeartRate: maxHeartRate
         )
     }
 
-    /// Convenience: estimate using a device's effective MET
+    /// Estimate from a session using a device's effective MET.
     static func estimate(
         for session: TrainingSession,
         device: ExerciseDevice,
         weightKg: Double?,
-        age: Int? = nil
-    ) -> Double {
-        return estimate(
+        age: Int? = nil,
+        maxHeartRate: Double? = nil
+    ) -> Double? {
+        estimate(
+            for: session,
             met: device.effectiveMET,
             weightKg: weightKg,
-            durationSeconds: session.duration,
-            averageHeartRate: session.averageHeartRate,
-            age: age
+            age: age,
+            maxHeartRate: maxHeartRate
         )
     }
 
-    // MARK: - HR-Adjusted MET
-
-    /// Adjusts base MET using average heart rate and age.
-    /// Uses a simplified Swain formula adjustment factor.
-    private static func hrAdjustedMET(baseMET: Double, averageHR: Double?, age: Int?) -> Double {
-        guard let hr = averageHR, let age = age, hr > 0, age > 0 else {
-            return baseMET
-        }
-
-        let maxHR = 220.0 - Double(age)
-        guard maxHR > 0 else { return baseMET }
-
-        let hrReserveRatio = hr / maxHR
-
-        // Clamp to reasonable range
-        guard hrReserveRatio > 0.3, hrReserveRatio < 1.0 else {
-            return baseMET
-        }
-
-        // Scale factor: if HR is high relative to predicted max, bump MET up slightly
-        // At ~70% maxHR the factor is ~1.0, above that it increases
-        let adjustmentFactor = 0.5 + (hrReserveRatio * 0.7)
-        return baseMET * adjustmentFactor
+    private static func estimate(
+        for session: TrainingSession,
+        met: Double,
+        weightKg: Double?,
+        age: Int?,
+        maxHeartRate: Double?
+    ) -> Double? {
+        guard let weight = weightKg, weight > 0 else { return nil }
+        return estimate(
+            met: met,
+            weightKg: weight,
+            durationSeconds: session.duration,
+            averageHeartRate: session.averageHeartRate,
+            age: age,
+            maxHeartRate: maxHeartRate
+        )
     }
 }

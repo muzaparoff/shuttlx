@@ -192,10 +192,44 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var accumulatedPauseTime: TimeInterval = 0
     private var pauseStartDate: Date?
 
-    // Debounce: pending activity must persist for this duration before committing
-    private let activityDebounceInterval: TimeInterval = 5.0
-    private var pendingActivity: DetectedActivity?
-    private var pendingActivityStartTime: Date?
+    // Debounce: pending activity must persist for this duration before committing.
+    // The debounce itself is unchanged; ActivityClassifier layers the confidence
+    // and cadence-corroboration gates on top of it (Phase 1 / CE1).
+    private static let activityDebounceInterval: TimeInterval = 5.0
+    private var classifier = ActivityClassifier(debounceInterval: WatchWorkoutManager.activityDebounceInterval)
+    /// True while `currentSegmentStartTime` is set but no `ActivitySegment` row
+    /// has been opened for it yet — the workout has started (or resumed) and we
+    /// are waiting for the first *confident* classification. The segment is then
+    /// backdated to `currentSegmentStartTime`, so no `.unknown` placeholder ever
+    /// reaches storage (CE2).
+    private var awaitingSegmentOpen = false
+    /// Step/distance totals at the current segment's start — the deltas become
+    /// `ActivitySegment.steps` / `.distance` when the segment closes (CE2).
+    private var segmentStartSteps: Int = 0
+    private var segmentStartDistance: Double = 0
+    /// `currentCadence` starts at 0 and is only written once a pedometer sample
+    /// lands; without this flag the classifier cannot tell "0 spm" from
+    /// "no cadence yet" — and they mean opposite things for `.stationary`.
+    private var hasCadenceSample = false
+    /// Most recent motion reading, kept in interval mode purely so the
+    /// instrumentation can report where detection disagreed with the plan.
+    private var lastMotionReading: (activity: DetectedActivity, confidence: ActivityClassifier.Confidence)?
+    /// Interval-mode segment reconciliation: the `IntervalEngine` step index the
+    /// current segment was opened for (CE7).
+    private var lastIntervalStepIndex: Int?
+
+    // MARK: - Per-phase energy (Phase 2 / CE3-CE5)
+
+    /// Timestamped HR / Apple-energy / pause timeline. The running accumulators
+    /// above answer "what was the session average"; this answers "what happened
+    /// during *this* segment", which is what per-phase calories need.
+    private var metricsLedger = SegmentMetricsLedger()
+    /// Body mass / age / max HR resolved once per workout start.
+    private var anthropometrics = Anthropometrics()
+    /// True when body mass is unknown, so no ShuttlX MET estimate can be produced.
+    /// Drives the "add your weight in Health" hint on the summary screen — we do
+    /// not substitute a 70 kg placeholder (plan item 5).
+    @Published private(set) var bodyMassUnavailable: Bool = false
 
     let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchWorkoutManager")
 
@@ -232,6 +266,20 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         healthKitAuthorized = result.authorized
         authorizationDenied = result.denied
         return result.authorized
+    }
+
+    /// Fire-and-forget read of body mass / age / sex for the per-phase calorie
+    /// model (Phase 2 / CE4).
+    private func loadAnthropometrics() {
+        Task { [weak self] in
+            guard let self = self else { return }
+            let values = await self.authService.loadAnthropometrics()
+            self.anthropometrics = values
+            self.bodyMassUnavailable = !values.hasBodyMass
+            if !values.hasBodyMass {
+                self.logger.warning("SEG KCAL: body mass unavailable — ShuttlX per-phase estimate suppressed (no 70kg placeholder)")
+            }
+        }
     }
 
     // MARK: - Workout Lifecycle
@@ -326,8 +374,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         timeAtLastKm = 0
         segments = []
         currentActivity = .unknown
-        pendingActivity = nil
-        pendingActivityStartTime = nil
+        classifier.reset()
+        awaitingSegmentOpen = true
+        segmentStartSteps = 0
+        segmentStartDistance = 0
+        hasCadenceSample = false
+        lastMotionReading = nil
+        lastIntervalStepIndex = nil
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
@@ -348,9 +401,23 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         accumulatedPauseTime = 0
         pauseStartDate = nil
         routePoints = []
+        metricsLedger.reset()
 
-        // Start first segment as unknown
-        segments.append(ActivitySegment(activityType: .unknown, startDate: now))
+        // Anthropometrics are NOT awaited: the calorie model only runs when a
+        // segment closes, and the first close is minutes away. Blocking the start
+        // button on an HKSampleQuery would trade a real UX cost for nothing.
+        loadAnthropometrics()
+
+        // No `.unknown` placeholder segment (CE2). Free-run/gym sessions open
+        // their first segment from the first confident classification, backdated
+        // to `now`; interval sessions open theirs immediately from the plan.
+        if workoutMode == .interval, let engine = intervalEngine, let step = engine.currentStep {
+            let planned = Self.plannedActivity(for: step.type)
+            openSegment(activity: planned, at: now)
+            currentActivity = planned
+            lastIntervalStepIndex = engine.currentStepIndex
+            logger.info("SEG OPEN [plan] step 1/\(engine.totalStepsCount) \(step.type.rawValue) -> \(planned.rawValue)")
+        }
 
         // RC-1: Only mark the workout active after the HK session is confirmed started.
         // If the session fails, roll back timestamps so saveWorkoutData() can't persist
@@ -359,6 +426,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             workoutStartTime = nil
             timerReferenceDate = nil
             segments = []
+            awaitingSegmentOpen = false
+            lastIntervalStepIndex = nil
             return
         }
         isWorkoutActive = true
@@ -508,7 +577,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Accumulate pause duration
         if let pauseStart = pauseStartDate {
-            accumulatedPauseTime += Date().timeIntervalSince(pauseStart)
+            let pauseEnd = Date()
+            accumulatedPauseTime += pauseEnd.timeIntervalSince(pauseStart)
+            // Segments close on RESUME, not on pause, so the paused span sits
+            // inside the segment that was open. Record it or the MET estimate
+            // charges the wearer for standing still (Phase 2).
+            metricsLedger.recordPause(from: pauseStart, to: pauseEnd)
             pauseStartDate = nil
         }
 
@@ -516,11 +590,30 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // start + total pause == Date() - elapsedTime.
         timerReferenceDate = workoutStartTime?.addingTimeInterval(accumulatedPauseTime)
 
-        // Close the current segment and start a new one
-        closeCurrentSegment()
+        // Close the current segment and start a new one. CE2: the old code
+        // reopened the segment carrying the PRE-PAUSE `currentActivity`, which is
+        // stale by definition — a pause is exactly when the wearer changes what
+        // they are doing. Interval mode re-seeds from the plan (authoritative);
+        // free-run/gym mode waits for the classifier to re-earn the activity and
+        // backdates the segment to this moment once it does.
         let now = Date()
+        closeCurrentSegment(at: now)
         currentSegmentStartTime = now
-        segments.append(ActivitySegment(activityType: currentActivity, startDate: now))
+        currentSegmentTime = 0
+        segmentStartSteps = totalSteps
+        segmentStartDistance = totalDistance
+        awaitingSegmentOpen = true
+
+        if workoutMode == .interval, let engine = intervalEngine, let step = engine.currentStep {
+            let planned = Self.plannedActivity(for: step.type)
+            openSegment(activity: planned, at: now)
+            currentActivity = planned
+            lastIntervalStepIndex = engine.currentStepIndex
+            logger.info("SEG OPEN [plan/resume] step \(engine.currentStepIndex + 1)/\(engine.totalStepsCount) \(step.type.rawValue) -> \(planned.rawValue)")
+        } else {
+            classifier.requireReconfirmation()
+            logger.info("SEG PENDING [free-run/resume] awaiting re-classification (was \(self.currentActivity.rawValue))")
+        }
 
         startDisplayTimer()
         let sport = activeTemplate?.sportType ?? .running
@@ -551,7 +644,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         #endif
 
         // Close final segment
-        closeCurrentSegment()
+        closeCurrentSegment(at: Date())
 
         // Note: session is sent to iOS by saveWorkoutData() which is called before stopWorkout()
         // stopWorkout() only cleans up state — no duplicate send
@@ -577,8 +670,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         noHeartRateDetected = false
         workoutStartTime = nil
         currentSegmentStartTime = nil
-        pendingActivity = nil
-        pendingActivityStartTime = nil
+        classifier.reset()
+        awaitingSegmentOpen = false
+        segmentStartSteps = 0
+        segmentStartDistance = 0
+        hasCadenceSample = false
+        lastMotionReading = nil
+        lastIntervalStepIndex = nil
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
@@ -589,6 +687,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         lastCadenceTimestamp = nil
         paceWindowSamples.removeAll(keepingCapacity: true)
         totalCaloriesAccumulated = 0
+        // Free the per-phase timeline as soon as the session is saved — it is the
+        // largest per-workout allocation this class holds.
+        metricsLedger.reset()
         heartRateAnchor = nil
         caloriesAnchor = nil
         broadcaster.reset()
@@ -767,13 +868,18 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 stopWorkout()
                 return
             }
+            // Keep the segment timeline locked to the plan's step boundaries.
+            reconcileIntervalSegment(engine: engine)
         }
 
         elapsedTime = wallClockElapsed
         currentSegmentTime = Date().timeIntervalSince(segStart)
 
-        // Check debounce for pending activity transitions
-        checkPendingActivityTransition()
+        // Check debounce + corroboration for pending activity transitions
+        // (no-op in interval mode — the classifier is never fed there).
+        if workoutMode != .interval {
+            checkPendingActivityTransition()
+        }
 
         // Tick recovery segmenter if in gym recovery mode
         if workoutMode == .gymRecovery, var segmenter = recoverySegmenter {
@@ -906,57 +1012,300 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             detected = .unknown
         }
 
-        // Only start debounce if activity actually changed
-        if detected != currentActivity {
-            if detected != pendingActivity {
-                // New pending activity
-                pendingActivity = detected
-                pendingActivityStartTime = Date()
-            }
-            // Otherwise the same pending activity continues accumulating time
-        } else {
-            // Activity matches current - clear any pending transition
-            pendingActivity = nil
-            pendingActivityStartTime = nil
+        let confidence: ActivityClassifier.Confidence
+        switch activity.confidence {
+        case .low: confidence = .low
+        case .medium: confidence = .medium
+        case .high: confidence = .high
+        @unknown default: confidence = .low
         }
+
+        if detected != .unknown {
+            lastMotionReading = (detected, confidence)
+        }
+
+        // Interval mode: the template's step schedule is ground truth for the
+        // segment timeline (CE7). Motion is still read — it feeds the
+        // plan-vs-detection disagreement log — but never opens a segment.
+        guard workoutMode != .interval else { return }
+
+        let outcome = classifier.ingest(activity: detected, confidence: confidence, now: Date())
+        switch outcome {
+        case .droppedLowConfidence(let proposed):
+            logger.debug("SEG READ [free-run] \(proposed.rawValue) dropped — low confidence")
+        case .startedPending(let proposed):
+            logger.info("SEG PENDING [free-run] \(proposed.rawValue) conf=\(confidence.label) cadence=\(self.cadenceForClassification.map(String.init) ?? "n/a")")
+        case .droppedUnclassified, .continuedPending, .confirmedCurrent:
+            break
+        }
+    }
+
+    /// Cadence as the classifier should see it: `nil` until the pedometer has
+    /// actually reported, because a literal 0 spm is meaningful evidence.
+    private var cadenceForClassification: Int? {
+        hasCadenceSample ? currentCadence : nil
     }
 
     private func checkPendingActivityTransition() {
-        guard let pending = pendingActivity,
-              let startTime = pendingActivityStartTime else { return }
-
-        let elapsed = Date().timeIntervalSince(startTime)
-        if elapsed >= activityDebounceInterval {
-            commitActivityTransition(to: pending)
-            pendingActivity = nil
-            pendingActivityStartTime = nil
+        switch classifier.evaluate(cadence: cadenceForClassification, now: Date()) {
+        case .idle:
+            break
+        case .holding(let hold):
+            logger.warning("""
+                SEG HOLD [free-run] \(hold.activity.rawValue) held \(String(format: "%.0f", hold.heldFor))s — \
+                cadence \(hold.cadence.map(String.init) ?? "n/a") spm contradicts at conf=\(hold.minConfidence.label) \
+                (needs high); staying on \(self.currentActivity.rawValue)
+                """)
+        case .commit(let decision):
+            commitActivityTransition(decision)
         }
     }
 
-    private func commitActivityTransition(to newActivity: DetectedActivity) {
+    private func commitActivityTransition(_ decision: ActivityClassifier.Decision) {
         let now = Date()
+        let backdated = awaitingSegmentOpen
+        let startDate: Date
 
-        // Close current segment
-        closeCurrentSegment()
+        if awaitingSegmentOpen {
+            // First classification of this run/resume — the segment owns the time
+            // back to the workout (or resume) start instead of leaving a hole.
+            startDate = currentSegmentStartTime ?? now
+        } else {
+            closeCurrentSegment(at: now)
+            startDate = now
+            currentSegmentStartTime = now
+            segmentStartSteps = totalSteps
+            segmentStartDistance = totalDistance
+        }
 
-        // Start new segment
-        currentActivity = newActivity
-        currentSegmentStartTime = now
-        currentSegmentTime = 0
-        segments.append(ActivitySegment(activityType: newActivity, startDate: now))
+        currentActivity = decision.activity
+        openSegment(activity: decision.activity, at: startDate)
+        currentSegmentTime = now.timeIntervalSince(startDate)
 
-        // Haptic feedback on activity change
+        // Haptic feedback on activity change (not on a re-open of the same activity)
         #if os(watchOS)
-        WKInterfaceDevice.current().play(.start)
+        if !decision.isReconfirmation {
+            WKInterfaceDevice.current().play(.start)
+        }
         #endif
 
-        logger.info("Activity changed to \(newActivity.rawValue)")
+        let kind = backdated ? "open" : "switch"
+        logger.info("""
+            SEG COMMIT [free-run/\(kind)] \(decision.previous.rawValue) -> \(decision.activity.rawValue) \
+            conf=\(decision.minConfidence.label)..\(decision.maxConfidence.label) \
+            cadence=\(decision.cadence.map(String.init) ?? "n/a") spm (\(decision.cadenceCheck.rawValue)) \
+            held=\(String(format: "%.0f", decision.heldFor))s hr=\(self.heartRate) \
+            at +\(Int(startDate.timeIntervalSince(self.workoutStartTime ?? startDate)))s
+            """)
     }
 
-    private func closeCurrentSegment() {
+    // MARK: - Interval Plan Reconciliation (CE7)
+
+    /// The plan's declared activity for a template step. Run/walk programs use
+    /// warm-up and cool-down as walking phases, which is also what a wearer
+    /// actually does during them.
+    static func plannedActivity(for stepType: IntervalType) -> DetectedActivity {
+        switch stepType {
+        case .work: return .running
+        case .rest, .warmup, .cooldown: return .walking
+        }
+    }
+
+    /// Called after every engine tick. When the engine has advanced to a new
+    /// step, close the segment and open one typed by the plan. The plan is
+    /// trusted **exclusively** here: an independent classifier misfire mid-run
+    /// interval would otherwise contradict a schedule we already know exactly.
+    /// Motion detection is still logged alongside so Phase 1 verification can
+    /// measure how often the two disagree.
+    private func reconcileIntervalSegment(engine: IntervalEngine) {
+        let index = engine.currentStepIndex
+        guard let step = engine.currentStep else { return }
+        guard lastIntervalStepIndex != index else { return }
+        lastIntervalStepIndex = index
+
+        let planned = Self.plannedActivity(for: step.type)
         let now = Date()
+
+        if awaitingSegmentOpen {
+            openSegment(activity: planned, at: currentSegmentStartTime ?? now)
+        } else if planned != currentActivity {
+            closeCurrentSegment(at: now)
+            currentSegmentStartTime = now
+            currentSegmentTime = 0
+            segmentStartSteps = totalSteps
+            segmentStartDistance = totalDistance
+            openSegment(activity: planned, at: now)
+        }
+        currentActivity = planned
+
+        let detected = lastMotionReading.map { "\($0.activity.rawValue)@\($0.confidence.label)" } ?? "n/a"
+        let agreement = lastMotionReading.map { $0.activity == planned ? "agrees" : "disagrees" } ?? "unavailable"
+        logger.info("""
+            SEG COMMIT [plan] step \(index + 1)/\(engine.totalStepsCount) \(step.type.rawValue) -> \(planned.rawValue) \
+            motion=\(detected) (\(agreement)) cadence=\(self.cadenceForClassification.map(String.init) ?? "n/a") spm \
+            hr=\(self.heartRate) at +\(Int(self.elapsedTime))s
+            """)
+    }
+
+    // MARK: - Segment Bookkeeping
+
+    private func openSegment(activity: DetectedActivity, at date: Date) {
+        segments.append(ActivitySegment(activityType: activity, startDate: date))
+        awaitingSegmentOpen = false
+    }
+
+    /// Closes the open segment and stamps the steps/distance accrued across its
+    /// span (CE2 — these fields existed on the model but were never written).
+    private func closeCurrentSegment(at date: Date = Date()) {
         guard !segments.isEmpty else { return }
-        segments[segments.count - 1].endDate = now
+        let index = segments.count - 1
+        segments[index].endDate = date
+        segments[index].steps = max(0, totalSteps - segmentStartSteps)
+        segments[index].distance = max(0, totalDistance - segmentStartDistance)
+    }
+
+    /// Snapshot of the segment timeline for persistence: closes the live segment,
+    /// then runs the hygiene pass (min-length merge + same-type coalesce).
+    /// Interval sessions pass `minimumDuration: 0` — plan-derived segments are
+    /// ground truth and are never treated as noise.
+    /// - Parameter logEnergy: emit the `SEG KCAL` bias instrumentation. Only the
+    ///   final save passes `true` — the 15s crash checkpoint runs this same path
+    ///   and would otherwise repeat every line dozens of times per workout,
+    ///   making the log unusable for the walk-vs-run bias measurement it exists
+    ///   for (plan item 8). The numbers are written to the checkpoint either way.
+    private func finalizedSegments(logEnergy: Bool = false) -> [ActivitySegment] {
+        let now = Date()
+        var snapshot = segments
+
+        if awaitingSegmentOpen {
+            // No segment is open: we are between the workout/resume start and the
+            // first confident classification. Everything already in `segments` is
+            // correctly closed — appending a provisional span typed with the last
+            // known activity keeps the timeline whole instead of leaving a hole.
+            // If it is shorter than the minimum the hygiene pass folds it away.
+            if let start = currentSegmentStartTime, now.timeIntervalSince(start) > 0 {
+                snapshot.append(ActivitySegment(activityType: currentActivity,
+                                                startDate: start,
+                                                endDate: now,
+                                                steps: max(0, totalSteps - segmentStartSteps),
+                                                distance: max(0, totalDistance - segmentStartDistance)))
+            }
+        } else if let index = snapshot.indices.last {
+            snapshot[index].endDate = now
+            snapshot[index].steps = max(0, totalSteps - segmentStartSteps)
+            snapshot[index].distance = max(0, totalDistance - segmentStartDistance)
+        }
+
+        let result = SegmentHygiene.finalize(
+            snapshot,
+            minimumDuration: workoutMode == .interval ? 0 : SegmentHygiene.minimumSegmentDuration,
+            now: now
+        )
+        if result.absorbed > 0 || result.coalesced > 0 {
+            logger.info("SEG FINALIZE: \(snapshot.count) raw -> \(result.segments.count) kept (absorbed \(result.absorbed) under \(Int(SegmentHygiene.minimumSegmentDuration))s, coalesced \(result.coalesced))")
+        }
+        return annotateWithEnergy(result.segments, now: now, log: logEnergy)
+    }
+
+    // MARK: - Per-phase Energy Attribution (Phase 2 / CE3, CE5)
+
+    /// Stamps average HR, ShuttlX's MET estimate and Apple's summed
+    /// `activeEnergyBurned` onto each finalized segment.
+    ///
+    /// Runs **after** the hygiene pass, not during recording: absorbing a blip or
+    /// coalescing two segments changes the time range the numbers belong to, and
+    /// re-deriving from the ledger is both simpler and more correct than trying to
+    /// merge partial calorie sums. It is also idempotent, which matters because
+    /// this path runs on every 15s checkpoint as well as the final save.
+    private func annotateWithEnergy(_ segments: [ActivitySegment], now: Date, log: Bool) -> [ActivitySegment] {
+        guard !segments.isEmpty else { return segments }
+
+        // Fold in the still-open pause (checkpoints are written from
+        // applyPauseState, i.e. while paused) without mutating the live ledger.
+        var ledger = metricsLedger
+        if let pauseStart = pauseStartDate, now > pauseStart {
+            ledger.recordPause(from: pauseStart, to: now)
+        }
+
+        // Gym-recovery sessions run as functionalStrengthTraining; a wrist flail
+        // classified as "running" there must not be charged a 9.8 running MET, so
+        // the whole session is costed at the cross-training MET instead.
+        let sport: WorkoutSport = workoutMode == .gymRecovery ? .crossTraining : (activeTemplate?.sportType ?? .running)
+        let configName = workoutMode == .gymRecovery ? "functionalStrengthTraining" : sport.rawValue
+        var annotated: [ActivitySegment] = []
+        annotated.reserveCapacity(segments.count)
+
+        for segment in segments {
+            var s = segment
+            let end = s.endDate ?? now
+            let activeDuration = ledger.activeDuration(from: s.startDate, to: end)
+            let avgHR = ledger.averageHeartRate(from: s.startDate, to: end)
+            let appleKcal = ledger.activeEnergy(from: s.startDate, to: end)
+            let shuttlxKcal = CalorieEstimationEngine.estimateSegment(
+                activity: s.activityType,
+                sport: sport,
+                activeDurationSeconds: activeDuration,
+                averageHeartRate: avgHR,
+                anthropometrics: anthropometrics
+            )
+
+            s.averageHeartRate = avgHR
+            s.estimatedCalories = shuttlxKcal
+            s.activeEnergyCalories = appleKcal
+            annotated.append(s)
+
+            guard log else { continue }
+
+            // Plan item 8 — bias instrumentation. Grep `SEG KCAL` after logging the
+            // same walk under a `.walking` vs `.running` configuration to measure
+            // how far Apple's single-activity-type model drifts on walk phases.
+            // `config=` is the HKWorkoutConfiguration activity type the whole
+            // session ran under; `met=` is what ShuttlX charged this phase.
+            let delta: String = {
+                guard let a = appleKcal, let s = shuttlxKcal else { return "n/a" }
+                let d = s - a
+                let pct = a > 0 ? (d / a) * 100 : 0
+                return String(format: "%+.1f (%+.0f%%)", d, pct)
+            }()
+            logger.info("""
+                SEG KCAL [\(s.activityType.rawValue)] config=\(configName) mode=\(String(describing: self.workoutMode)) \
+                dur=\(String(format: "%.0f", activeDuration))s hr=\(avgHR.map { String(format: "%.0f", $0) } ?? "n/a") \
+                met=\(String(format: "%.1f", CalorieEstimationEngine.met(for: s.activityType, sport: sport))) \
+                weight=\(self.anthropometrics.weightKg.map { String(format: "%.1f", $0) } ?? "n/a")kg \
+                age=\(self.anthropometrics.age.map(String.init) ?? "n/a") \
+                shuttlx=\(shuttlxKcal.map { String(format: "%.1f", $0) } ?? "n/a") \
+                apple=\(appleKcal.map { String(format: "%.1f", $0) } ?? "n/a") delta=\(delta)
+                """)
+        }
+
+        if log {
+            // One roll-up line per workout: the run-vs-walk split is the number the
+            // bias experiment compares across a `.walking`- and a `.running`-
+            // configured recording of the same route.
+            func total(_ activity: DetectedActivity, _ pick: (ActivitySegment) -> Double?) -> Double {
+                annotated.filter { $0.activityType == activity }.compactMap(pick).reduce(0, +)
+            }
+            func seconds(_ activity: DetectedActivity) -> Int {
+                Int(annotated.filter { $0.activityType == activity }.reduce(0) { $0 + $1.duration })
+            }
+            logger.info("""
+                SEG KCAL SUMMARY config=\(configName) segments=\(annotated.count) \
+                run=\(seconds(.running))s/shuttlx \(String(format: "%.1f", total(.running) { $0.estimatedCalories }))/apple \(String(format: "%.1f", total(.running) { $0.activeEnergyCalories })) \
+                walk=\(seconds(.walking))s/shuttlx \(String(format: "%.1f", total(.walking) { $0.estimatedCalories }))/apple \(String(format: "%.1f", total(.walking) { $0.activeEnergyCalories })) \
+                sessionApple=\(String(format: "%.1f", self.totalCaloriesAccumulated))
+                """)
+        }
+
+        return annotated
+    }
+
+    /// Sum of the per-segment ShuttlX MET estimates. Nil when body mass is
+    /// unknown (no segment carries an estimate) — `TrainingSession.caloriesBurned`
+    /// still holds Apple's whole-session number in that case.
+    private func shuttlxEstimatedCalories(for segments: [ActivitySegment]) -> Double? {
+        let values = segments.compactMap { $0.estimatedCalories }
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +)
     }
 
     // MARK: - Location Tracking
@@ -1031,6 +1380,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 }()
                 if let spm = spm {
                     self.currentCadence = spm
+                    // From here on a 0 spm reading means "not stepping", not
+                    // "pedometer hasn't reported yet" — the classifier needs the
+                    // distinction (see cadenceForClassification).
+                    self.hasCadenceSample = true
                     // Only average when actually moving (spm > 0) and not paused.
                     // Zero ticks happen during walks against treadmill rails or rest periods —
                     // including them would skew the average toward zero.
@@ -1187,6 +1540,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         let bpmUnit = HKUnit.count().unitDivided(by: .minute())
         let bpmValues = quantitySamples.map { $0.quantity.doubleValue(for: bpmUnit) }
+        // Keep the timestamps too — the session accumulators below discard them,
+        // and per-segment averages cannot be reconstructed afterwards.
+        let timedValues: [(date: Date, bpm: Double)] = quantitySamples.map {
+            ($0.startDate, $0.quantity.doubleValue(for: bpmUnit))
+        }
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
@@ -1197,6 +1555,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             if !self.isPaused {
                 self.heartRateSampleSum += bpmValues.reduce(0, +)
                 self.heartRateSampleCount += bpmValues.count
+                for sample in timedValues {
+                    self.metricsLedger.recordHeartRate(bpm: sample.bpm, at: sample.date)
+                }
             }
             if let latestBPM = bpmValues.last {
                 self.heartRate = Int(latestBPM.rounded())
@@ -1274,11 +1635,20 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let kcalUnit = HKUnit.kilocalorie()
         let kcalValues = quantitySamples.map { $0.quantity.doubleValue(for: kcalUnit) }
         let batchTotal = kcalValues.reduce(0, +)
+        // Apple's energy samples are already personally calibrated (HR + motion +
+        // Health profile) and each carries its own start/end. Bucketing them by
+        // segment range is therefore free per-phase energy — CE5 / plan item 7.
+        let spans: [(start: Date, end: Date, kcal: Double)] = quantitySamples.map {
+            ($0.startDate, $0.endDate, $0.quantity.doubleValue(for: kcalUnit))
+        }
 
         Task { @MainActor [weak self] in
             guard let self = self else { return }
             self.totalCaloriesAccumulated += batchTotal
             self.calories = Int(self.totalCaloriesAccumulated)
+            for span in spans {
+                self.metricsLedger.recordEnergy(kcal: span.kcal, from: span.start, to: span.end)
+            }
         }
     }
 
@@ -1294,10 +1664,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     func saveWorkoutDataToLocalStorage() {
         guard let startTime = workoutStartTime else { return }
 
-        var segmentsCopy = segments
-        if !segmentsCopy.isEmpty {
-            segmentsCopy[segmentsCopy.count - 1].endDate = Date()
-        }
+        let segmentsCopy = finalizedSegments()
 
         let backupSplits: [KmSplitData]? = completedKmSplits.isEmpty ? nil : completedKmSplits.map {
             KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
@@ -1306,7 +1673,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Calculate total pause time including current pause if active
         let totalPause = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
 
-        let session = TrainingSession(
+        var session = TrainingSession(
             id: currentSessionID,
             startDate: startTime,
             endDate: Date(),
@@ -1322,6 +1689,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
             maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
         )
+        // ShuttlX's own phase-aware total, alongside Apple's `caloriesBurned`.
+        session.estimatedCalories = shuttlxEstimatedCalories(for: segmentsCopy)
 
         persistence.checkpoint(session)
     }
@@ -1464,17 +1833,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             avgPace: currentPace,
             splitsCount: lastCompletedKm,
             completedSets: workoutMode == .gymRecovery ? captures.count : nil,
-            averageHRR1: avgHRR1
+            averageHRR1: avgHRR1,
+            bodyMassUnavailable: bodyMassUnavailable
         )
     }
 
     func saveWorkoutData() {
         guard let startTime = workoutStartTime else { return }
 
-        var segmentsCopy = segments
-        if !segmentsCopy.isEmpty {
-            segmentsCopy[segmentsCopy.count - 1].endDate = Date()
-        }
+        let segmentsCopy = finalizedSegments(logEnergy: true)
 
         let splits: [KmSplitData]? = completedKmSplits.isEmpty ? nil : completedKmSplits.map {
             KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
@@ -1499,6 +1866,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
             maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
         )
+        // Phase-aware total from the per-segment MET estimates (Phase 2). Apple's
+        // whole-session number stays in `caloriesBurned`; nothing is overwritten.
+        session.estimatedCalories = shuttlxEstimatedCalories(for: segmentsCopy)
 
         // Attach interval results if this was an interval workout
         if workoutMode == .interval, let engine = intervalEngine {
@@ -1534,6 +1904,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let capturedWorkoutName = workoutName
         let capturedIsIndoor = workoutMode == .gymRecovery || (activeTemplate?.sportType?.hkLocationType ?? .unknown) == .indoor
         let capturedIntervalCount = activeTemplate?.intervals.count ?? 0
+        // Phase 3 (interop): publish the SAME finalized phase timeline that is
+        // persisted app-side, so HealthKit and TrainingSession.segments can never
+        // disagree about where the walk/run boundaries were.
+        let capturedPhaseSegments = segmentsCopy
+        let capturedWorkoutStart = startTime
+        let capturedLogger = logger
         // Nil out builder/route references before async work so no other call reuses them
         workoutBuilder = nil
         #endif
@@ -1544,6 +1920,26 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             #if os(watchOS)
             if let builder = builderToFinish {
                 do {
+                    // End date is fixed up front: it bounds the phase activities and
+                    // .segment events written below, and HealthKit requires both to
+                    // sit inside the workout's own interval.
+                    let endDate = Date()
+
+                    // Phase 3 / plan items 9-10 (optional interop). Deliberately
+                    // ahead of the mandatory metadata + endCollection + finishWorkout
+                    // sequence and fully self-contained: it never throws, so a
+                    // rejected phase write can never cost the user their workout.
+                    await WorkoutPhaseHealthKitWriter.write(
+                        segments: capturedPhaseSegments,
+                        configuration: builder.workoutConfiguration,
+                        builder: builder,
+                        bounds: WorkoutPhaseHealthKitWriter.Bounds(
+                            start: builder.startDate ?? capturedWorkoutStart,
+                            end: endDate
+                        ),
+                        logger: capturedLogger
+                    )
+
                     // Attach metadata before closing the builder so it appears in Health.app
                     var hkMetadata: [String: Any] = [
                         HKMetadataKeyIndoorWorkout: NSNumber(value: capturedIsIndoor)
@@ -1555,7 +1951,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                         hkMetadata["intervalCount"] = NSNumber(value: capturedIntervalCount)
                     }
                     try await builder.addMetadata(hkMetadata)
-                    let endDate = Date()
                     try await builder.endCollection(at: endDate)
                     let workout = try await builder.finishWorkout()
                     await MainActor.run {
