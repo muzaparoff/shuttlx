@@ -1,0 +1,20 @@
+name: ✉️ Resend TestFlight Invite
+
+on:
+  workflow_dispatch:
+    inputs:
+      email:
+        description: "Tester email to re-invite"
+        required: true
+        default: "muzyukins@gmail.com"
+
+jobs:
+  resend:
+    uses: muzaparoff/appstore-kit/.github/workflows/testflight-resend-invite.yml@v1
+    with:
+      bundle_id: com.shuttlx.ShuttlX
+      email: ${{ inputs.email }}
+    secrets:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
