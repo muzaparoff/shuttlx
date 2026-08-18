@@ -1,5 +1,15 @@
 [
  {
+  "version": "1.5.1",
+  "date": "2026-08-18",
+  "notes": [
+   {
+    "type": "fix",
+    "text": "Main app + watch app shipped as CFBundleShortVersionString 1.1.0 forever"
+   }
+  ]
+ },
+ {
   "version": "1.4.0",
   "date": "2026-08-13",
   "notes": [
