@@ -30,9 +30,11 @@ struct AnalyticsView: View {
                     } else {
                         recoveryStatusCard
                         fitnessOverviewRow
-                        fitnessTrendChart
-                        weeklyVolumeChart
+                        ScrubTimelineHeroCard(sessions: sessions)
+                        ComparisonSplitCard(sessions: sessions)
+                        CalendarHeatmapCard(sessions: sessions)
                         runWalkSplitCard
+                        WeeklyCarouselCard(sessions: sessions)
                         vo2maxCard
                         personalRecordsSection
                         paceZoneChart
@@ -149,90 +151,6 @@ struct AnalyticsView: View {
                 compact: true
             )
         }
-    }
-
-    // MARK: - Fitness Trend Chart
-
-    private var fitnessTrendChart: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Training Load Trend")
-                .font(ShuttlXFont.cardTitle)
-
-            let chartStyle = themeManager.current.chartStyle
-            if weeklyTrend.isEmpty {
-                ThemedBarChart.emptyState(chartStyle: chartStyle, height: 180)
-            } else {
-                ThemedLineChart(
-                    labels: weeklyTrend.map { $0.weekLabel },
-                    values: weeklyTrend.map { $0.trainingLoad },
-                    yUnit: "",
-                    chartHeight: 180,
-                    chartStyle: chartStyle
-                )
-            }
-        }
-        .padding(16)
-        .themedCard(
-            accent: ShuttlXColor.running,
-            statusLine: (mode: "LOAD", file: "trend.json", position: "6w"),
-            headerLabel: "TRAINING LOAD"
-        )
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel({
-            let summary = weeklyTrend.map { "\($0.weekLabel) load \(String(format: "%.0f", $0.trainingLoad))" }.joined(separator: ", ")
-            return "Training load trend: \(summary.isEmpty ? "no data" : summary)"
-        }())
-    }
-
-    // MARK: - Weekly Volume Chart
-
-    private var weeklyVolumeChart: some View {
-        let chartStyle = themeManager.current.chartStyle
-        let volumeValues = weeklyTrend.map { $0.totalDuration / 60.0 }
-        let volumeLabels = weeklyTrend.map { $0.weekLabel }
-        let a11yLabel = weeklyTrend.map {
-            "\($0.weekLabel) \(Int($0.totalDuration / 60)) minutes"
-        }.joined(separator: ", ")
-
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("Weekly Volume")
-                .font(ShuttlXFont.cardTitle)
-
-            if weeklyTrend.isEmpty {
-                ThemedBarChart.emptyState(chartStyle: chartStyle, height: 160)
-            } else {
-                ThemedBarChart(
-                    values: volumeValues,
-                    labels: volumeLabels,
-                    yUnit: "m",
-                    chartHeight: 200,
-                    chartStyle: chartStyle
-                )
-            }
-
-            // Distance sub-row (keep for all themes)
-            if !weeklyTrend.isEmpty {
-                HStack {
-                    ForEach(weeklyTrend) { week in
-                        VStack(spacing: 2) {
-                            Text(FormattingUtils.formatDistance(week.totalDistance))
-                                .font(ShuttlXFont.microLabel)
-                                .foregroundStyle(.secondary)
-                                .monospacedDigit()
-                            Text("\(week.sessionCount)")
-                                .font(ShuttlXFont.microLabel)
-                                .foregroundStyle(.tertiary)
-                                .monospacedDigit()
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                }
-            }
-        }
-        .padding(16)
-        .themedCard(accent: ShuttlXColor.calories, headerLabel: "WEEKLY VOLUME")
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Weekly training volume: \(a11yLabel.isEmpty ? "no data" : a11yLabel)")
     }
 
     // MARK: - Run vs Walk Split (Phase 4, 2026-08 run+walk plan)

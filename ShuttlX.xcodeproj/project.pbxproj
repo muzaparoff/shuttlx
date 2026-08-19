@@ -46,6 +46,10 @@
 		B5923013 /* PaceTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923003 /* PaceTrendChart.swift */; };
 		B5923014 /* HRZoneChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923004 /* HRZoneChart.swift */; };
 		B5923015 /* WeekStripView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923005 /* WeekStripView.swift */; };
+		CH000001B /* CalendarHeatmapCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CH000001F /* CalendarHeatmapCard.swift */; };
+		WC000001B /* WeeklyCarouselCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = WC000001F /* WeeklyCarouselCard.swift */; };
+		ST000001B /* ScrubTimelineHeroCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = ST000001F /* ScrubTimelineHeroCard.swift */; };
+		CS000001B /* ComparisonSplitCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = CS000001F /* ComparisonSplitCard.swift */; };
 		C5923012 /* RouteMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5923002 /* RouteMapView.swift */; };
 		D5923001 /* WorkoutTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923001F /* WorkoutTemplate.swift */; };
 		D5923002 /* TemplateManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5923002F /* TemplateManager.swift */; };
@@ -272,6 +276,10 @@
 		B5923003 /* PaceTrendChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceTrendChart.swift; sourceTree = "<group>"; };
 		B5923004 /* HRZoneChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HRZoneChart.swift; sourceTree = "<group>"; };
 		B5923005 /* WeekStripView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekStripView.swift; sourceTree = "<group>"; };
+		CH000001F /* CalendarHeatmapCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarHeatmapCard.swift; sourceTree = "<group>"; };
+		WC000001F /* WeeklyCarouselCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyCarouselCard.swift; sourceTree = "<group>"; };
+		ST000001F /* ScrubTimelineHeroCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScrubTimelineHeroCard.swift; sourceTree = "<group>"; };
+		CS000001F /* ComparisonSplitCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonSplitCard.swift; sourceTree = "<group>"; };
 		C5923002 /* RouteMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RouteMapView.swift; sourceTree = "<group>"; };
 		D5923001F /* WorkoutTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplate.swift; sourceTree = "<group>"; };
 		D5923002F /* TemplateManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateManager.swift; sourceTree = "<group>"; };
@@ -624,6 +632,10 @@
 				B5923005 /* WeekStripView.swift */,
 				TC000002 /* ThemedBarChart.swift */,
 				TC000003 /* ThemedLineChart.swift */,
+				CH000001F /* CalendarHeatmapCard.swift */,
+				WC000001F /* WeeklyCarouselCard.swift */,
+				ST000001F /* ScrubTimelineHeroCard.swift */,
+				CS000001F /* ComparisonSplitCard.swift */,
 				TC000020 /* Accents */,
 			);
 			path = Charts;
@@ -1003,6 +1015,10 @@
 				B5923015 /* WeekStripView.swift in Sources */,
 				TC000012 /* ThemedBarChart.swift in Sources */,
 				TC000013 /* ThemedLineChart.swift in Sources */,
+				CH000001B /* CalendarHeatmapCard.swift in Sources */,
+				WC000001B /* WeeklyCarouselCard.swift in Sources */,
+				ST000001B /* ScrubTimelineHeroCard.swift in Sources */,
+				CS000001B /* ComparisonSplitCard.swift in Sources */,
 
 				TC000017 /* MixtapeSpoolDot.swift in Sources */,
 				H5923001 /* WorkoutSport+Theme.swift in Sources */,
