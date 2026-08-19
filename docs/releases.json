@@ -1,5 +1,15 @@
 [
  {
+  "version": "1.6.0",
+  "date": "2026-08-19",
+  "notes": [
+   {
+    "type": "feat",
+    "text": "Dynamic Analytics timeline \u2014 scrub, compare, heatmap, carousel"
+   }
+  ]
+ },
+ {
   "version": "1.5.1",
   "date": "2026-08-18",
   "notes": [
