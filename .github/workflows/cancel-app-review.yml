@@ -1,0 +1,14 @@
+name: 🛑 Cancel App Review
+
+on:
+  workflow_dispatch:
+
+jobs:
+  cancel:
+    uses: muzaparoff/appstore-kit/.github/workflows/cancel-app-review.yml@v1
+    with:
+      bundle_id: com.shuttlx.ShuttlX
+    secrets:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_API_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_API_KEY_CONTENT }}
