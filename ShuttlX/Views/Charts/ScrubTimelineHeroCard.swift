@@ -103,16 +103,26 @@ struct ScrubTimelineHeroCard: View {
     @State private var manualIndex: Int?
     @Environment(ThemeManager.self) private var themeManager
 
+    // Bug 4 fix (2026-08 review): `points` used to be recomputed at the top of
+    // `body` on every render — including every `manualIndex` mutation fired by
+    // the drag gesture's `onChanged` on each touch-move frame, which re-bucketed
+    // the entire session history from scratch dozens of times per drag. Cached
+    // here and only recomputed when `preset`/`sessions` actually change (see
+    // `.task(id:)` below); the drag handler only ever mutates `manualIndex`
+    // against this already-computed array.
+    @State private var points: [TimelinePoint] = []
+    // Bug 1 fix: whether ANY real session falls inside the currently selected
+    // window — independent of `points`, which is always a full-length bucket
+    // array (see `buildPoints`'s doc comment) and can never be empty in
+    // practice, so `points.isEmpty` could never detect "no workouts in this
+    // range."
+    @State private var hasCoverage: Bool = false
+
     private var chartStyle: ThemeChartStyle { themeManager.current.chartStyle }
 
     var body: some View {
-        // Materialized once per body pass — `points` is filtered/reduced from
-        // `sessions` and must not be recomputed (with fresh identity) multiple
-        // times in the same render, or the chart's "selected point" highlight
-        // and the scrub track's position could disagree.
-        let points = Self.buildPoints(preset: preset, sessions: sessions)
         let index = clampedIndex(count: points.count)
-        let selected: TimelinePoint? = points.indices.contains(index) ? points[index] : nil
+        let selected: TimelinePoint? = (hasCoverage && points.indices.contains(index)) ? points[index] : nil
 
         VStack(alignment: .leading, spacing: 8) {
             Text("Distance")
@@ -120,11 +130,11 @@ struct ScrubTimelineHeroCard: View {
 
             heroHeader(selected: selected)
 
-            if points.isEmpty {
-                emptyState
-            } else {
+            if hasCoverage {
                 chart(points: points, selectedIndex: index)
                 scrubTrack(count: points.count, selectedIndex: index, selected: selected)
+            } else {
+                emptyState
             }
 
             presetRow
@@ -135,6 +145,19 @@ struct ScrubTimelineHeroCard: View {
         }
         .padding(16)
         .themedCard(accent: AnalyticsDataVizPalette.seriesBlue, headerLabel: "TIMELINE")
+        // Keyed on preset + session count (mirrors AnalyticsView's own
+        // `.task(id: dataManager.sessions.count)` convention) — never on
+        // `manualIndex`, so dragging the scrubber never re-triggers bucketing.
+        .task(id: "\(preset.rawValue)-\(sessions.count)") {
+            recomputePoints()
+        }
+    }
+
+    // MARK: - Bucketing cache
+
+    private func recomputePoints() {
+        points = Self.buildPoints(preset: preset, sessions: sessions)
+        hasCoverage = Self.hasCoverage(preset: preset, sessions: sessions)
     }
 
     // MARK: - Selection
@@ -349,17 +372,45 @@ struct ScrubTimelineHeroCard: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(ShuttlXFont.heroIcon)
                 .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.4))
-            Text("No workouts yet")
+            Text("No workouts in this range")
                 .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(ShuttlXColor.textSecondary)
         }
         .frame(maxWidth: .infinity)
         .frame(height: 130)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("No workout data available")
+        .accessibilityLabel("No workout data in the selected date range")
     }
 
     // MARK: - Bucketing
+
+    /// Bug 1 fix: `buildPoints` below always returns a full-length bucket array
+    /// (7/30 daily buckets, 13 weekly, or 12 monthly) regardless of whether any
+    /// real session data falls inside the window — the `compactMap` only drops
+    /// entries on Calendar arithmetic failure, which essentially never happens.
+    /// So `points.isEmpty` can never detect "no workouts in this window"; this
+    /// checks real session coverage directly against the same window bounds.
+    private static func hasCoverage(preset: ScrubRangePreset, sessions: [TrainingSession]) -> Bool {
+        let calendar = Calendar.current
+        let now = Date()
+
+        switch preset {
+        case .sevenDay, .thirtyDay:
+            let days = preset == .sevenDay ? 7 : 30
+            let today = calendar.startOfDay(for: now)
+            guard let windowStart = calendar.date(byAdding: .day, value: -(days - 1), to: today) else { return false }
+            let windowEnd = calendar.date(byAdding: .day, value: 1, to: today) ?? now
+            return sessions.contains { $0.startDate >= windowStart && $0.startDate < windowEnd }
+
+        case .ninetyDay:
+            guard let windowStart = calendar.date(byAdding: .day, value: -(13 * 7), to: now) else { return false }
+            return sessions.contains { $0.startDate >= windowStart && $0.startDate <= now }
+
+        case .oneYear:
+            guard let windowStart = calendar.date(byAdding: .month, value: -12, to: now) else { return false }
+            return sessions.contains { $0.startDate >= windowStart && $0.startDate <= now }
+        }
+    }
 
     private static func buildPoints(preset: ScrubRangePreset, sessions: [TrainingSession]) -> [TimelinePoint] {
         let calendar = Calendar.current

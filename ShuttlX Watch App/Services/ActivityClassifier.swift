@@ -23,7 +23,10 @@ import ShuttlXShared
 /// 3. **Corroboration gate** — cadence must not actively contradict the
 ///    proposal. If it does (e.g. motion says "running" at 96 spm), the
 ///    transition only commits when *every* reading in the pending window was
-///    `.high` confidence.
+///    `.high` confidence — **or** the proposal has been held for
+///    `maxPendingHold`, at which point it commits anyway (see that constant).
+///    The gate delays a transition; it must never be able to cancel one
+///    permanently.
 struct ActivityClassifier {
 
     // MARK: - Confidence
@@ -117,6 +120,11 @@ struct ActivityClassifier {
         /// True when this decision re-opens a segment for an unchanged activity
         /// (workout start / resume-from-pause), rather than a real transition.
         let isReconfirmation: Bool
+        /// True when the corroboration gate was still contradicting at commit
+        /// time and `maxPendingHold` forced the decision through. The commit is
+        /// correct policy (see `maxPendingHold`) but is the lower-confidence
+        /// kind — flagged so it can be told apart in traces.
+        let forcedByTimeout: Bool
     }
 
     struct Hold: Sendable {
@@ -146,6 +154,32 @@ struct ActivityClassifier {
 
     let debounceInterval: TimeInterval
 
+    /// Default ceiling on how long the corroboration gate may block an already
+    /// debounced proposal before it commits regardless.
+    ///
+    /// **Why a ceiling exists at all.** `minConfidence` is a running minimum over
+    /// the pending window, so it only ever decreases: one `.medium` reading puts
+    /// the window permanently below the `.high` bar the contradiction branch
+    /// demands. A wearer whose gait sits on the run/walk cadence boundary
+    /// (130–140 spm) with CoreMotion at `.medium` therefore used to hold forever
+    /// — pinned to the pre-transition activity for the rest of the session, and
+    /// feeding the wrong MET into the per-phase calorie estimate. The plain
+    /// debounce this classifier replaced always committed after 5 s; that
+    /// eventual-commitment guarantee is restored here.
+    ///
+    /// **Why 18 s.** 3.6× the 5 s debounce, so a *transient* contradiction (a
+    /// kerb, a corner, a red light, pedometer lag) still resolves inside the
+    /// window and nothing flaps; and CMPedometer refreshes cadence every few
+    /// seconds, so the window spans several independent cadence samples rather
+    /// than one stale one. It also bounds the worst-case mis-attribution to 18 s
+    /// of one segment — under the 20 s upper end considered, and close to
+    /// `SegmentHygiene.minimumSegmentDuration` (10 s), so a forced commit still
+    /// produces a segment the hygiene pass treats as real rather than a blip.
+    static let defaultMaxPendingHold: TimeInterval = 18
+
+    /// Effective ceiling for this instance; never less than `debounceInterval`.
+    let maxPendingHold: TimeInterval
+
     /// Last committed classification. Mirrors `WatchWorkoutManager.currentActivity`.
     private(set) var committed: DetectedActivity = .unknown
     /// When true the next confident reading commits **even if it equals**
@@ -154,8 +188,10 @@ struct ActivityClassifier {
     private(set) var needsReconfirmation: Bool = true
     private var pending: Pending?
 
-    init(debounceInterval: TimeInterval) {
+    init(debounceInterval: TimeInterval,
+         maxPendingHold: TimeInterval = ActivityClassifier.defaultMaxPendingHold) {
         self.debounceInterval = debounceInterval
+        self.maxPendingHold = max(debounceInterval, maxPendingHold)
     }
 
     /// Full reset — workout start.
@@ -204,9 +240,11 @@ struct ActivityClassifier {
         guard held >= debounceInterval else { return .idle }
 
         let check = Self.cadenceCheck(for: current.activity, cadence: cadence)
-        if check == .contradicts && current.minConfidence < .high {
+        let contradicted = check == .contradicts && current.minConfidence < .high
+        if contradicted && held < maxPendingHold {
             // Motion and the pedometer disagree and motion isn't certain —
             // keep waiting rather than persisting a probable misclassification.
+            // Bounded by `maxPendingHold`: waiting is allowed, wedging is not.
             guard !current.holdReported else {
                 pending = current
                 return .idle
@@ -219,6 +257,18 @@ struct ActivityClassifier {
                                  heldFor: held))
         }
 
+        // Past `maxPendingHold` the proposal commits on the best evidence there
+        // is: `current.activity` itself. That is simultaneously the majority and
+        // the most recent reading of the window, because the window is
+        // homogeneous by construction — `ingest` restarts `since` whenever a
+        // different activity arrives, and clears `pending` outright on a reading
+        // that matches `committed`. So reaching this line means one activity was
+        // proposed continuously for the whole hold, every contributing reading
+        // was at least `.medium` (`.low` never enters `pending`), and the only
+        // dissent is the cadence heuristic near its own grey band.
+        // Invariants below are unchanged: `committed`/`needsReconfirmation`/
+        // `pending` are settled exactly as on a normal commit.
+
         let decision = Decision(
             activity: current.activity,
             previous: committed,
@@ -227,7 +277,8 @@ struct ActivityClassifier {
             cadence: cadence,
             cadenceCheck: check,
             heldFor: held,
-            isReconfirmation: current.activity == committed
+            isReconfirmation: current.activity == committed,
+            forcedByTimeout: contradicted
         )
         committed = current.activity
         needsReconfirmation = false

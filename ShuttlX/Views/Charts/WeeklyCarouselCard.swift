@@ -83,12 +83,27 @@ struct WeeklyCarouselCard: View {
 
     // MARK: - Body
 
+    /// Bug 1 fix: `weeks` below always returns `weekCount` buckets regardless of
+    /// whether any real session falls in the carousel's window — the
+    /// `compactMap` only drops entries on Calendar arithmetic failure, which
+    /// essentially never happens. So `weeks.isEmpty` could never detect "no
+    /// sessions in the last `weekCount` weeks" (e.g. a fresh account whose only
+    /// sessions are older than the carousel window). This checks real session
+    /// coverage directly against the same window bounds `weeks` buckets over.
+    private var hasCoverage: Bool {
+        let calendar = Calendar.current
+        guard let windowStart = calendar.date(byAdding: .day, value: -(weekCount * 7), to: referenceDate) else {
+            return false
+        }
+        return sessions.contains { $0.startDate >= windowStart && $0.startDate < referenceDate }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Weekly Recap")
                 .font(ShuttlXFont.sectionHeader)
 
-            if weeks.isEmpty {
+            if !hasCoverage {
                 emptyState
             } else {
                 carousel
@@ -103,10 +118,19 @@ struct WeeklyCarouselCard: View {
     }
 
     private var emptyState: some View {
-        Text("Complete a workout to see your weekly recap.")
-            .font(ShuttlXFont.cardSubtitle)
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        VStack(spacing: 6) {
+            Image(systemName: "calendar.badge.clock")
+                .font(ShuttlXFont.heroIcon)
+                .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.4))
+            Text("Complete a workout to see your weekly recap.")
+                .font(ShuttlXFont.cardSubtitle)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .frame(minHeight: 120)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("No weekly recap data available. Complete a workout to see your weekly recap.")
     }
 
     // MARK: - Carousel

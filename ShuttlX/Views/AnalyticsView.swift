@@ -239,20 +239,76 @@ struct AnalyticsView: View {
         }
     }
 
+    // Bug 2 fix (2026-08 review): the two segment widths used to be floored
+    // independently (`max(4, width * ratio)`) with no renormalization, so a
+    // heavily lopsided split (e.g. running=59min, walking=30sec) floored the
+    // tiny segment up to 4pt while the large segment still claimed ~99% of the
+    // width — the combined width exceeded the container and clipped/overflowed.
+    // Now the raw proportional widths are computed first and always sum to the
+    // available width; only if a segment's raw width would fall below the 4pt
+    // floor is it lifted to 4pt, with the difference subtracted from the OTHER
+    // segment so the total never exceeds the container.
+    /// Raw proportional widths, renormalized so `running + walking` (+ the 1pt
+    /// inter-segment spacing when both are present) never exceeds `totalWidth`.
+    /// Pulled out of the `@ViewBuilder` closure below — plain `if`/reassignment
+    /// statements inside a GeometryReader's (ViewBuilder) trailing closure don't
+    /// type-check as ordinary imperative code, since the builder tries to treat
+    /// every statement as View-producing.
+    private func splitWidths(
+        running: TimeInterval,
+        walking: TimeInterval,
+        totalWidth: CGFloat
+    ) -> (running: CGFloat, walking: CGFloat) {
+        let total = running + walking
+        let floor: CGFloat = 4
+        let spacing: CGFloat = (running > 0 && walking > 0) ? 1 : 0
+        let available = max(0, totalWidth - spacing)
+
+        let rawRunningWidth: CGFloat = total > 0 ? available * CGFloat(running / total) : 0
+        let rawWalkingWidth: CGFloat = total > 0 ? available * CGFloat(walking / total) : 0
+
+        var runningWidth: CGFloat = running > 0 ? max(floor, rawRunningWidth) : 0
+        var walkingWidth: CGFloat = walking > 0 ? max(floor, rawWalkingWidth) : 0
+
+        // Renormalize: if flooring one (or both) segments pushed the combined
+        // width past `available`, claw the difference back out of whichever
+        // segment has slack above the floor — never let the total exceed the
+        // container.
+        let overflow = (runningWidth + walkingWidth) - available
+        if overflow > 0 {
+            if running > 0 && rawRunningWidth > floor {
+                runningWidth = max(floor, runningWidth - overflow)
+            } else if walking > 0 && rawWalkingWidth > floor {
+                walkingWidth = max(floor, walkingWidth - overflow)
+            }
+        }
+        return (runningWidth, walkingWidth)
+    }
+
+    // Bug 2 fix (2026-08 review): the two segment widths used to be floored
+    // independently (`max(4, width * ratio)`) with no renormalization, so a
+    // heavily lopsided split (e.g. running=59min, walking=30sec) floored the
+    // tiny segment up to 4pt while the large segment still claimed ~99% of the
+    // width — the combined width exceeded the container and clipped/overflowed.
+    // `splitWidths` above computes the raw proportional widths first and always
+    // sums them to the available width, only lifting a segment to the 4pt floor
+    // and subtracting the difference from the OTHER segment when needed.
     @ViewBuilder
     private func runWalkSplitBar(running: TimeInterval, walking: TimeInterval) -> some View {
         GeometryReader { geometry in
-            let total = running + walking
-            HStack(spacing: total > 0 ? 1 : 0) {
+            let widths = splitWidths(running: running, walking: walking, totalWidth: geometry.size.width)
+            let spacing: CGFloat = (running > 0 && walking > 0) ? 1 : 0
+
+            HStack(spacing: spacing) {
                 if running > 0 {
                     Rectangle()
                         .fill(ShuttlXColor.running)
-                        .frame(width: max(4, geometry.size.width * (running / max(total, 0.001))))
+                        .frame(width: widths.running)
                 }
                 if walking > 0 {
                     Rectangle()
                         .fill(ShuttlXColor.walking)
-                        .frame(width: max(4, geometry.size.width * (walking / max(total, 0.001))))
+                        .frame(width: widths.walking)
                 }
             }
         }

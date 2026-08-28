@@ -170,14 +170,22 @@ public enum CalorieEstimationEngine {
 
         let hrReserveRatio = hr / maxHR
 
-        // Clamp to reasonable range
-        guard hrReserveRatio > 0.3, hrReserveRatio < 1.0 else {
-            return baseMET
-        }
+        // Below ~30% of max the HR signal is resting noise (or a bogus max HR):
+        // there is no intensity information to add, so the flat sport MET stands.
+        guard hrReserveRatio > 0.3 else { return baseMET }
+
+        // At the top the ratio is **clamped, not rejected**. `220 - age` (and even
+        // Tanaka) routinely under-predicts real max HR, so genuine near-max efforts
+        // report ≥ 1.0 all the time. Bailing out to `baseMET` there produced a
+        // cliff — 179 bpm against a 180 max gave 1.196× but 180 bpm gave 1.0×, a
+        // ~16% calorie drop for one extra beat — which flattened exactly the
+        // hardest segments this per-phase model exists to cost accurately.
+        // Clamping keeps the factor monotonic and bounded at 1.2×.
+        let effectiveRatio = min(hrReserveRatio, 1.0)
 
         // Scale factor: if HR is high relative to predicted max, bump MET up slightly
         // At ~70% maxHR the factor is ~1.0, above that it increases
-        let adjustmentFactor = 0.5 + (hrReserveRatio * 0.7)
+        let adjustmentFactor = 0.5 + (effectiveRatio * 0.7)
         return baseMET * adjustmentFactor
     }
 }

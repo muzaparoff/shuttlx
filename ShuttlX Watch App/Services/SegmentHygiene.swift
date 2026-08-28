@@ -80,17 +80,29 @@ enum SegmentHygiene {
             }
 
             var s = segment
-            if let first = leadingBlips.first, let last = leadingBlips.last {
-                // Only stretch the start back when the blips actually abut this
-                // segment; otherwise just keep their steps/distance.
-                if isContiguous(last, s) {
+            if !leadingBlips.isEmpty {
+                // Fold forward only the blips that form an *unbroken* chain up to
+                // this segment. Checking just the last hop is not enough: with
+                // `blip1 | pause | blip2 | segment` the last hop is contiguous, so
+                // backdating to blip1's start would bury the whole paused interval
+                // inside the segment's wall clock. That duration feeds
+                // totalRunningDuration/totalWalkingDuration, which would then
+                // disagree with SegmentMetricsLedger's pace/calorie figures —
+                // those correctly exclude paused time.
+                let chainStart = contiguousChainStart(of: leadingBlips, endingAt: s)
+                let chain = leadingBlips[chainStart...]
+                if let first = chain.first {
                     s.startDate = first.startDate
+                    for blip in chain {
+                        s.steps = sum(s.steps, blip.steps)
+                        s.distance = sum(s.distance, blip.distance)
+                    }
+                    absorbed += chain.count
                 }
-                for blip in leadingBlips {
-                    s.steps = sum(s.steps, blip.steps)
-                    s.distance = sum(s.distance, blip.distance)
-                }
-                absorbed += leadingBlips.count
+                // Blips stranded on the far side of a gap keep their own short
+                // span rather than donating time or steps to a segment they were
+                // never part of (same treatment as the post-pause tail below).
+                kept.append(contentsOf: leadingBlips[..<chainStart])
                 leadingBlips.removeAll()
             }
             kept.append(s)
@@ -153,6 +165,20 @@ enum SegmentHygiene {
     /// Segments recorded back-to-back abut exactly; anything larger than this is
     /// a pause (or an un-classified hole) and must not be merged over.
     static let contiguityTolerance: TimeInterval = 1.0
+
+    /// Index of the earliest blip joined to `next` by an unbroken run of
+    /// contiguous segments — i.e. the furthest back `next.startDate` may be
+    /// stretched without crossing a pause. Returns `blips.count` when even the
+    /// last blip sits on the far side of a gap (nothing may be folded forward).
+    private static func contiguousChainStart(of blips: [ActivitySegment],
+                                             endingAt next: ActivitySegment) -> Int {
+        guard let last = blips.last, isContiguous(last, next) else { return blips.count }
+        var start = blips.count - 1
+        while start > 0, isContiguous(blips[start - 1], blips[start]) {
+            start -= 1
+        }
+        return start
+    }
 
     private static func isContiguous(_ lhs: ActivitySegment, _ rhs: ActivitySegment) -> Bool {
         guard let end = lhs.endDate else { return false }

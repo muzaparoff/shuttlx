@@ -31,6 +31,32 @@ private enum ComparisonPeriodPair: String, CaseIterable, Identifiable {
     var periodNoun: String { self == .week ? "week" : "month" }
 }
 
+// MARK: - Delta direction (Bug 3 fix)
+//
+// `isIncrease = (percentDelta ?? 0) >= 0` used to treat an EXACT 0% delta as
+// "increase," rendering a red bar sliver + "+0%" badge that read as "got
+// worse" when nothing actually changed. Deltas within `neutralThresholdPercent`
+// of zero are now classified as `.neutral` and render with no red/blue
+// connotation — consistent with the "New" (no-baseline) badge already using
+// `ShuttlXColor.textSecondary`.
+
+private enum DeltaDirection: Equatable {
+    case increase
+    case decrease
+    case neutral
+
+    /// nil (no prior-period baseline) and near-zero deltas both classify as
+    /// neutral; callers that need to distinguish "New" from "No change" check
+    /// `percentDelta == nil` separately.
+    static func classify(_ percentDelta: Double?, threshold: Double = neutralThresholdPercent) -> DeltaDirection {
+        guard let pct = percentDelta else { return .neutral }
+        if abs(pct) < threshold { return .neutral }
+        return pct >= 0 ? .increase : .decrease
+    }
+
+    static let neutralThresholdPercent: Double = 0.5
+}
+
 // MARK: - Metric row (computed)
 
 private struct ComparisonMetricRow: Identifiable {
@@ -194,12 +220,13 @@ struct ComparisonSplitCard: View {
         let thisText = row.accessibleUnit(row.thisValue)
         let lastText = row.accessibleUnit(row.lastValue)
         let deltaText: String
-        if let pct = row.percentDelta {
-            deltaText = pct >= 0
-                ? "up \(Int(abs(pct).rounded())) percent"
-                : "down \(Int(abs(pct).rounded())) percent"
-        } else {
-            deltaText = "no prior data to compare"
+        switch DeltaDirection.classify(row.percentDelta) {
+        case .increase:
+            deltaText = "up \(Int(abs(row.percentDelta ?? 0).rounded())) percent"
+        case .decrease:
+            deltaText = "down \(Int(abs(row.percentDelta ?? 0).rounded())) percent"
+        case .neutral:
+            deltaText = row.percentDelta == nil ? "no prior data to compare" : "no change"
         }
         return "\(row.title), this \(selectedPair.periodNoun) \(thisText), last \(selectedPair.periodNoun) \(lastText), \(deltaText)"
     }
@@ -241,14 +268,21 @@ private struct ComparisonRow: View {
 
     @ViewBuilder
     private var deltaBadge: some View {
-        if let pct = row.percentDelta {
-            Text("\(pct >= 0 ? "+" : "")\(Int(pct.rounded()))%")
+        switch DeltaDirection.classify(row.percentDelta) {
+        case .increase:
+            Text("+\(Int((row.percentDelta ?? 0).rounded()))%")
                 .font(ShuttlXFont.cardCaption)
                 .fontWeight(.bold)
                 .monospacedDigit()
-                .foregroundStyle(pct >= 0 ? AnalyticsDataVizPalette.deltaIncrease : AnalyticsDataVizPalette.seriesBlue)
-        } else {
-            Text("New")
+                .foregroundStyle(AnalyticsDataVizPalette.deltaIncrease)
+        case .decrease:
+            Text("\(Int((row.percentDelta ?? 0).rounded()))%")
+                .font(ShuttlXFont.cardCaption)
+                .fontWeight(.bold)
+                .monospacedDigit()
+                .foregroundStyle(AnalyticsDataVizPalette.seriesBlue)
+        case .neutral:
+            Text(row.percentDelta == nil ? "New" : "No change")
                 .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(ShuttlXColor.textSecondary)
         }
@@ -266,7 +300,9 @@ private struct DivergingDeltaBar: View {
     /// A delta at or beyond this magnitude fills the entire half-bar.
     private let scaleCapPercent: Double = 50
 
-    private var isIncrease: Bool { (percentDelta ?? 0) >= 0 }
+    /// Bug 3 fix: an exact (or near-exact) 0% delta must render as a neutral,
+    /// uncolored tick — never as a colored "increase" sliver.
+    private var direction: DeltaDirection { DeltaDirection.classify(percentDelta) }
     private var magnitudeFraction: CGFloat {
         guard let pct = percentDelta else { return 0 }
         return CGFloat(min(1.0, abs(pct) / scaleCapPercent))
@@ -289,12 +325,12 @@ private struct DivergingDeltaBar: View {
                     .frame(width: 2, height: 14)
                     .position(x: half, y: geo.size.height / 2)
 
-                if percentDelta != nil {
+                if percentDelta != nil, direction != .neutral {
                     Capsule()
-                        .fill(isIncrease ? increaseColor : decreaseColor)
+                        .fill(direction == .increase ? increaseColor : decreaseColor)
                         .frame(width: barWidth, height: 6)
                         .position(
-                            x: isIncrease ? half + barWidth / 2 : half - barWidth / 2,
+                            x: direction == .increase ? half + barWidth / 2 : half - barWidth / 2,
                             y: geo.size.height / 2
                         )
                 }
