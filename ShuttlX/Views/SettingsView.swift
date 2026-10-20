@@ -10,7 +10,6 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var sharedDataManager: PhoneSyncCoordinator
-    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showingSignOutConfirmation = false
@@ -19,7 +18,7 @@ struct SettingsView: View {
     @State private var showSuccessMessage = false
     @State private var successMessage = ""
     @State private var isSyncing = false
-    @State private var isCloudSyncing = false
+    @State private var showDebug = false
     @ObservedObject var deviceManager = DeviceManager.shared
     @State private var weightText: String = ""
     @State private var ageText: String = ""
@@ -30,84 +29,6 @@ struct SettingsView: View {
 
     var body: some View {
         List {
-            // Account Section
-            Section("Account") {
-                if authManager.isSignedIn {
-                    HStack {
-                        Image(systemName: "person.crop.circle.fill")
-                            .foregroundStyle(.tint)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(authManager.userName ?? "Signed In")
-                                .font(.body)
-                            Text("iCloud sync enabled")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                        Image(systemName: "checkmark.icloud.fill")
-                            .foregroundStyle(ShuttlXColor.positive)
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Account")
-                    .accessibilityValue("Signed in as \(authManager.userName ?? "Apple ID")")
-
-                    Button {
-                        isCloudSyncing = true
-                        CloudKitSyncManager.shared.performFullSync(dataManager: dataManager) {
-                            isCloudSyncing = false
-                            if let error = CloudKitSyncManager.shared.syncError {
-                                successMessage = "Sync failed: \(error)"
-                            } else {
-                                successMessage = "Sync complete"
-                            }
-                            showSuccessMessage = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                                showSuccessMessage = false
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                            Text("Sync Now")
-                            Spacer()
-                            if isCloudSyncing {
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(isCloudSyncing)
-
-                    if let syncDate = CloudKitSyncManager.shared.lastSyncDate {
-                        Text("Last synced: \(syncDate, style: .relative) ago")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Button("Sign Out", role: .destructive) {
-                        showingSignOutConfirmation = true
-                    }
-
-                    Button("Delete Account", role: .destructive) {
-                        showingDeleteAccountConfirmation = true
-                    }
-                    .disabled(isDeletingAccount)
-                } else {
-                    NavigationLink {
-                        SignInView()
-                    } label: {
-                        HStack {
-                            Image(systemName: "person.crop.circle.badge.plus")
-                                .foregroundStyle(.tint)
-                            Text("Sign In with Apple")
-                        }
-                    }
-
-                    Label("Data is stored locally only", systemImage: "exclamationmark.triangle.fill")
-                        .font(.caption)
-                        .foregroundStyle(ShuttlXColor.ctaWarning)
-                }
-            }
-
             // Watch Connection Section
             Section("Apple Watch") {
                 HStack {
@@ -204,25 +125,6 @@ struct SettingsView: View {
                     showingHealthPermissionsInfo = true
                 }
                 .accessibilityHint("Shows information about how health data is used")
-            }
-
-            // Exercise Devices Section
-            Section("Exercise Devices") {
-                NavigationLink {
-                    DeviceListView()
-                } label: {
-                    HStack {
-                        Image(systemName: "dumbbell.fill")
-                            .foregroundStyle(.tint)
-                            .accessibilityHidden(true)
-                        Text("Manage Devices")
-                        Spacer()
-                        Text("\(deviceManager.devices.count)")
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                    }
-                }
-                .accessibilityHint("View and manage exercise devices for calorie estimation")
             }
 
             // Body Metrics Section (for calorie estimation)
@@ -389,23 +291,6 @@ struct SettingsView: View {
                     .accessibilityValue(themeManager.selectedThemeID == theme.id ? "Selected" : "")
                     .accessibilityHint("Switches to \(theme.displayName) theme")
                 }
-
-                // Preview swatch
-                HStack(spacing: 6) {
-                    let preview = themeManager.current.colors
-                    Circle().fill(preview.running).frame(width: 16, height: 16)
-                    Circle().fill(preview.heartRate).frame(width: 16, height: 16)
-                    Circle().fill(preview.steps).frame(width: 16, height: 16)
-                    Circle().fill(preview.ctaPrimary).frame(width: 16, height: 16)
-                    Circle().fill(preview.pace).frame(width: 16, height: 16)
-                    Spacer()
-                    Text("Preview")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.vertical, 4)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Theme color preview")
             }
 
             // Data Management Section
@@ -418,8 +303,10 @@ struct SettingsView: View {
             }
 
             #if DEBUG
+            if showDebug {
             Section("Debug") {
                 NavigationLink("Sync Debug") { SyncDebugView() }
+            }
             }
             #endif
 
@@ -463,6 +350,8 @@ struct SettingsView: View {
                     Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                         .foregroundStyle(.secondary)
                 }
+                .contentShape(Rectangle())
+                .onLongPressGesture(minimumDuration: 1) { showDebug = true }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("App Version")
                 .accessibilityValue(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
@@ -508,42 +397,6 @@ struct SettingsView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSuccessMessage)
-        .alert("Sign Out", isPresented: $showingSignOutConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Sign Out", role: .destructive) {
-                authManager.signOut()
-            }
-        } message: {
-            Text("Your local data will be kept, but it will no longer sync to iCloud.")
-        }
-        .alert("Delete Account", isPresented: $showingDeleteAccountConfirmation) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete Account & Data", role: .destructive) {
-                isDeletingAccount = true
-                Task {
-                    do {
-                        try await authManager.deleteAccount(
-                            dataManager: dataManager,
-                            sharedDataManager: sharedDataManager
-                        )
-                        successMessage = "Account deleted"
-                        showSuccessMessage = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                            showSuccessMessage = false
-                        }
-                    } catch {
-                        successMessage = "Failed to delete account"
-                        showSuccessMessage = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 3) {
-                            showSuccessMessage = false
-                        }
-                    }
-                    isDeletingAccount = false
-                }
-            }
-        } message: {
-            Text("This will permanently delete your account, all iCloud data, and all local training sessions. This cannot be undone.")
-        }
         .themedScreenBackground()
         .onAppear {
             if let weight = deviceManager.userWeightKg {
