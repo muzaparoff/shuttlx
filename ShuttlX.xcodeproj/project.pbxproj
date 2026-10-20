@@ -42,7 +42,6 @@
 		A5923E01 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D01 /* DashboardView.swift */; };
 		A5923E02 /* LiveWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D02 /* LiveWorkoutCard.swift */; };
 		A5923E03 /* StartOnWatchCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D03 /* StartOnWatchCard.swift */; };
-		A5923E04 /* LastWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D04 /* LastWorkoutCard.swift */; };
 		A5923E05 /* WeekSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D05 /* WeekSummaryCard.swift */; };
 		B5923011 /* ChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923001 /* ChartData.swift */; };
 		B5923012 /* WeeklyDistanceChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923002 /* WeeklyDistanceChart.swift */; };
@@ -82,7 +81,6 @@
 		P5923002 /* PlanListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923002F /* PlanListView.swift */; };
 		P5923003 /* PlanDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923003F /* PlanDetailView.swift */; };
 		P5923004 /* PlanEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923004F /* PlanEditorView.swift */; };
-		P5923005 /* PlanProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923005F /* PlanProgressCard.swift */; };
 		R5923001 /* ElevationProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923001F /* ElevationProfileView.swift */; };
 		R5923002 /* LiveRouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923002F /* LiveRouteView.swift */; };
 		SS000001 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
@@ -271,7 +269,6 @@
 		A5923D01 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		A5923D02 /* LiveWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkoutCard.swift; sourceTree = "<group>"; };
 		A5923D03 /* StartOnWatchCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartOnWatchCard.swift; sourceTree = "<group>"; };
-		A5923D04 /* LastWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastWorkoutCard.swift; sourceTree = "<group>"; };
 		A5923D05 /* WeekSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekSummaryCard.swift; sourceTree = "<group>"; };
 		B5923001 /* ChartData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartData.swift; sourceTree = "<group>"; };
 		B5923002 /* WeeklyDistanceChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyDistanceChart.swift; sourceTree = "<group>"; };
@@ -311,7 +308,6 @@
 		P5923002F /* PlanListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanListView.swift; sourceTree = "<group>"; };
 		P5923003F /* PlanDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanDetailView.swift; sourceTree = "<group>"; };
 		P5923004F /* PlanEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanEditorView.swift; sourceTree = "<group>"; };
-		P5923005F /* PlanProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressCard.swift; sourceTree = "<group>"; };
 		R5923001F /* ElevationProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevationProfileView.swift; sourceTree = "<group>"; };
 		R5923002F /* LiveRouteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteView.swift; sourceTree = "<group>"; };
 		TH000001 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
@@ -615,9 +611,7 @@
 			children = (
 				A5923D02 /* LiveWorkoutCard.swift */,
 				A5923D03 /* StartOnWatchCard.swift */,
-				A5923D04 /* LastWorkoutCard.swift */,
 				A5923D05 /* WeekSummaryCard.swift */,
-				P5923005F /* PlanProgressCard.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -1005,7 +999,6 @@
 				A5923E01 /* DashboardView.swift in Sources */,
 				A5923E02 /* LiveWorkoutCard.swift in Sources */,
 				A5923E03 /* StartOnWatchCard.swift in Sources */,
-				A5923E04 /* LastWorkoutCard.swift in Sources */,
 				A5923E05 /* WeekSummaryCard.swift in Sources */,
 				B5923011 /* ChartData.swift in Sources */,
 				B5923012 /* WeeklyDistanceChart.swift in Sources */,
@@ -1036,7 +1029,6 @@
 				P5923002 /* PlanListView.swift in Sources */,
 				P5923003 /* PlanDetailView.swift in Sources */,
 				P5923004 /* PlanEditorView.swift in Sources */,
-				P5923005 /* PlanProgressCard.swift in Sources */,
 				R5923001 /* ElevationProfileView.swift in Sources */,
 				R5923002 /* LiveRouteView.swift in Sources */,
 				WG000018 /* WidgetDataProvider.swift in Sources */,

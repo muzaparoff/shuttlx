@@ -18,8 +18,10 @@ final class DeepLinkRouter: ObservableObject {
     /// loaded yet, the id is left in place so it can be retried when
     /// sessions finish loading (never silently dropped).
     @Published var pendingSessionID: UUID?
-    /// Set by `shuttlx://dashboard` to select the Training tab.
+    /// Set by `shuttlx://dashboard` to select the Today tab.
     @Published var pendingTab: Int?
+    /// Set by `shuttlx://plan`; Today pushes the Programs screen and clears it.
+    @Published var showPrograms = false
 }
 
 @main
@@ -115,7 +117,7 @@ struct ShuttlXApp: App {
     //                         Training/History/Analytics photograph well
     //                         without touching the real sessions.json.
     //   SHUTTLX_TAB=<name>    selects a tab at launch:
-    //                         training|programs|history|analytics|settings.
+    //                         today|programs|history|trends|settings.
     //   SHUTTLX_SHOW_PLANS=1  additionally auto-pushes the Training Plans
     //                         list (the four built-in plans) — the seam
     //                         itself lives in ProgramsTabView.
@@ -132,11 +134,10 @@ struct ShuttlXApp: App {
 
     private var launchTabRequest: Int? {
         switch ProcessInfo.processInfo.environment["SHUTTLX_TAB"] {
-        case "training":  return 0
-        case "programs":  return 1
-        case "history":   return 2
-        case "analytics": return 3
-        case "settings":  return 4
+        case "training", "today", "programs": return 0
+        case "history":   return 1
+        case "analytics", "trends": return 2
+        case "settings":  return 3
         default:          return nil
         }
     }
@@ -206,6 +207,9 @@ struct ShuttlXApp: App {
                 }
                 if let tab = launchTabRequest {
                     deepLinkRouter.pendingTab = tab
+                    if ProcessInfo.processInfo.environment["SHUTTLX_TAB"] == "programs" {
+                        deepLinkRouter.showPrograms = true
+                    }
                 }
                 // Test hooks (simulator automation): SHUTTLX_AUTOSTART_WATCH
                 // remote-starts a free run on the Watch after N seconds;
@@ -248,9 +252,13 @@ struct ShuttlXApp: App {
                         workoutController.isPresentingTimer = true
                     }
                 case "dashboard":
-                    // shuttlx://dashboard — select the Training tab.
-                    os_log(.info, log: deepLinkLog, "dashboard: selecting Training tab")
+                    // shuttlx://dashboard — select the Today tab.
+                    os_log(.info, log: deepLinkLog, "dashboard: selecting Today tab")
                     deepLinkRouter.pendingTab = 0
+                case "plan":
+                    // shuttlx://plan — Today tab, Programs & plans screen.
+                    deepLinkRouter.pendingTab = 0
+                    deepLinkRouter.showPrograms = true
                 case "start-template":
                     // shuttlx://start-template/{templateUUID} — widget tap.
                     // Resolve the template and remote-start it on the Watch.

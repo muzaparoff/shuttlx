@@ -44,7 +44,7 @@ struct AnalyticsView: View {
                 .padding(.horizontal)
                 .padding(.top, 8)
             }
-            .navigationTitle("Analytics")
+            .navigationTitle("Trends")
             .themedScreenBackground()
         }
         .task(id: dataManager.sessions.count) {

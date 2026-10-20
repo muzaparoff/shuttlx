@@ -62,7 +62,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "calendar.badge.clock",
-                         text: "Open the Programs tab and tap “Interval Workouts”."),
+                         text: "On the Today tab, tap “Programs & plans”, then “Interval Workouts”."),
                 HelpStep(icon: "plus",
                          text: "Tap the + button in the top-right corner to create a new program."),
                 HelpStep(icon: "character.cursor.ibeam",
@@ -72,7 +72,7 @@ enum HelpContent {
                 HelpStep(icon: "checkmark",
                          text: "Tap “Save”. The program appears under Interval Programs and syncs to your Watch."),
                 HelpStep(icon: "play.circle.fill",
-                         text: "Start it any time by tapping its row in the Programs tab — on iPhone or Watch."),
+                         text: "Start it any time by tapping its row under Today → Programs & plans — on iPhone or Watch."),
             ]),
         HelpTopic(
             id: "built-in-programs",
@@ -85,7 +85,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "calendar.badge.clock",
-                         text: "Open the Programs tab and tap “Training Plans”."),
+                         text: "On the Today tab, tap “Programs & plans”, then “Training Plans”."),
                 HelpStep(icon: "hand.tap",
                          text: "Tap a plan to see its week-by-week schedule."),
                 HelpStep(icon: "play.fill",
@@ -99,7 +99,7 @@ enum HelpContent {
             title: "History & analytics",
             body: """
             Every finished session is stored with its intervals, heart rate, \
-            route, and splits. Analytics turns that history into trends: \
+            route, and splits. Trends turns that history into trends: \
             training load, weekly volume, estimated VO2max, pace zones, and \
             personal records.
             """,
@@ -109,7 +109,7 @@ enum HelpContent {
                 HelpStep(icon: "hand.tap",
                          text: "Tap a session row for the full detail — intervals, heart rate chart, route map, and splits."),
                 HelpStep(icon: "chart.line.uptrend.xyaxis",
-                         text: "Open the Analytics tab for Recovery Status, Training Load Trend, Weekly Volume, and Personal Records."),
+                         text: "Open the Trends tab for Recovery Status, Training Load Trend, Weekly Volume, and Personal Records."),
                 HelpStep(icon: "arrow.triangle.2.circlepath",
                          text: "Missing a Watch workout? In Settings, tap “Sync from Watch” to pull it over."),
             ]),

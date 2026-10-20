@@ -16,107 +16,105 @@ struct ProgramsTabView: View {
     #endif
 
     var body: some View {
-        NavigationStack {
-            List {
-                // Quick Start — all iPhone-launchable workout modes in one place.
-                // Hidden while a watch workout is active so users can't double-
-                // launch a session on both devices.
-                if !sharedData.isWorkoutActiveOnWatch {
-                    Section {
-                        startRow(
-                            title: "Free Run",
-                            subtitle: "Open-ended · HR · GPS",
-                            systemImage: "figure.run.circle.fill",
-                            color: ShuttlXColor.running,
-                            action: { workoutController.presentFreeRun() }
-                        )
-                        startRow(
-                            title: "Gym Recovery",
-                            subtitle: "HR recovery between sets · cardiac rehab",
-                            systemImage: "heart.circle.fill",
-                            color: ShuttlXColor.heartRate,
-                            action: { workoutController.presentGymRecovery() }
-                        )
-                    } header: {
-                        Text("Quick Start")
-                    }
-                }
-
-                // All interval templates as one-tap-to-start rows. Long-press
-                // gives Edit / Delete via context menu; "Manage Workouts" link
-                // below opens the full editor list.
-                if !templateManager.templates.isEmpty && !sharedData.isWorkoutActiveOnWatch {
-                    Section {
-                        ForEach(templateManager.templates) { template in
-                            templateStartRow(template)
-                        }
-                    } header: {
-                        Text("Interval Programs")
-                    }
-                }
-
-                // Active plan
-                if let active = planManager.activePlan() {
-                    Section {
-                        activePlanRow(plan: active.plan, progress: active.progress)
-                    } header: {
-                        Text("Active Plan")
-                    }
-                }
-
-                // Training Plans
+        List {
+            // Quick Start — all iPhone-launchable workout modes in one place.
+            // Hidden while a watch workout is active so users can't double-
+            // launch a session on both devices.
+            if !sharedData.isWorkoutActiveOnWatch {
                 Section {
-                    NavigationLink {
-                        PlanListView()
-                    } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Training Plans")
-                                    .font(ShuttlXFont.cardTitle)
-                                Text("\(planManager.plans.count) plan\(planManager.plans.count == 1 ? "" : "s")")
-                                    .font(ShuttlXFont.cardCaption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "calendar.badge.clock")
-                                .foregroundStyle(ShuttlXColor.ctaPrimary)
-                        }
-                    }
-                    .accessibilityLabel("Training Plans, \(planManager.plans.count) plans")
-                    .accessibilityHint("View and manage training plans")
-                }
-
-                // Interval Workouts
-                Section {
-                    NavigationLink {
-                        TemplateListView()
-                    } label: {
-                        Label {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Interval Workouts")
-                                    .font(ShuttlXFont.cardTitle)
-                                Text("\(templateManager.templates.count) workout\(templateManager.templates.count == 1 ? "" : "s")")
-                                    .font(ShuttlXFont.cardCaption)
-                                    .foregroundStyle(.secondary)
-                            }
-                        } icon: {
-                            Image(systemName: "timer")
-                                .foregroundStyle(ShuttlXColor.walking)
-                        }
-                    }
-                    .accessibilityLabel("Interval Workouts, \(templateManager.templates.count) workouts")
-                    .accessibilityHint("View and manage interval workout templates")
+                    startRow(
+                        title: "Free Run",
+                        subtitle: "Open-ended · HR · GPS",
+                        systemImage: "figure.run.circle.fill",
+                        color: ShuttlXColor.running,
+                        action: { workoutController.presentFreeRun() }
+                    )
+                    startRow(
+                        title: "Gym Recovery",
+                        subtitle: "HR recovery between sets · cardiac rehab",
+                        systemImage: "heart.circle.fill",
+                        color: ShuttlXColor.heartRate,
+                        action: { workoutController.presentGymRecovery() }
+                    )
+                } header: {
+                    Text("Quick Start")
                 }
             }
-            .scrollContentBackground(.hidden)
-            .themedScreenBackground()
-            .navigationTitle("Programs")
-            #if DEBUG
-            .navigationDestination(isPresented: $autoShowPlans) {
-                PlanListView()
+
+            // All interval templates as one-tap-to-start rows. Long-press
+            // gives Edit / Delete via context menu; "Manage Workouts" link
+            // below opens the full editor list.
+            if !templateManager.templates.isEmpty && !sharedData.isWorkoutActiveOnWatch {
+                Section {
+                    ForEach(templateManager.templates) { template in
+                        templateStartRow(template)
+                    }
+                } header: {
+                    Text("Interval Programs")
+                }
             }
-            #endif
+
+            // Active plan
+            if let active = planManager.activePlan() {
+                Section {
+                    activePlanRow(plan: active.plan, progress: active.progress)
+                } header: {
+                    Text("Active Plan")
+                }
+            }
+
+            // Training Plans
+            Section {
+                NavigationLink {
+                    PlanListView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Training Plans")
+                                .font(ShuttlXFont.cardTitle)
+                            Text("\(planManager.plans.count) plan\(planManager.plans.count == 1 ? "" : "s")")
+                                .font(ShuttlXFont.cardCaption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "calendar.badge.clock")
+                            .foregroundStyle(ShuttlXColor.ctaPrimary)
+                    }
+                }
+                .accessibilityLabel("Training Plans, \(planManager.plans.count) plans")
+                .accessibilityHint("View and manage training plans")
+            }
+
+            // Interval Workouts
+            Section {
+                NavigationLink {
+                    TemplateListView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Interval Workouts")
+                                .font(ShuttlXFont.cardTitle)
+                            Text("\(templateManager.templates.count) workout\(templateManager.templates.count == 1 ? "" : "s")")
+                                .font(ShuttlXFont.cardCaption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } icon: {
+                        Image(systemName: "timer")
+                            .foregroundStyle(ShuttlXColor.walking)
+                    }
+                }
+                .accessibilityLabel("Interval Workouts, \(templateManager.templates.count) workouts")
+                .accessibilityHint("View and manage interval workout templates")
+            }
         }
+        .scrollContentBackground(.hidden)
+        .themedScreenBackground()
+        .navigationTitle("Programs")
+        #if DEBUG
+        .navigationDestination(isPresented: $autoShowPlans) {
+            PlanListView()
+        }
+        #endif
     }
 
     private func startRow(title: String, subtitle: String, systemImage: String, color: Color, action: @escaping () -> Void) -> some View {

@@ -10,34 +10,26 @@ struct ContentView: View {
         TabView(selection: $selectedTab) {
             DashboardView()
                 .tabItem {
-                    Label("Training", systemImage: "figure.run")
+                    Label("Today", systemImage: "figure.run")
                 }
                 .tag(0)
-                .accessibilityLabel("Training tab")
-                .accessibilityHint("Dashboard with workout status and quick start")
-
-            ProgramsTabView()
-                .tabItem {
-                    Label("Programs", systemImage: "calendar.badge.clock")
-                }
-                .tag(1)
-                .accessibilityLabel("Programs tab")
-                .accessibilityHint("Training plans and interval workout programs")
+                .accessibilityLabel("Today tab")
+                .accessibilityHint("Today's workouts, live status and quick start")
 
             HistoryView()
                 .tabItem {
                     Label("History", systemImage: "calendar")
                 }
-                .tag(2)
+                .tag(1)
                 .accessibilityLabel("History tab")
                 .accessibilityHint("Browse past sessions by calendar, list or map")
 
             AnalyticsView()
                 .tabItem {
-                    Label("Analytics", systemImage: "chart.line.uptrend.xyaxis")
+                    Label("Trends", systemImage: "chart.line.uptrend.xyaxis")
                 }
-                .tag(3)
-                .accessibilityLabel("Analytics tab")
+                .tag(2)
+                .accessibilityLabel("Trends tab")
                 .accessibilityHint("View training analytics and trends")
 
             NavigationStack {
@@ -46,7 +38,7 @@ struct ContentView: View {
             .tabItem {
                 Label("Settings", systemImage: "gear")
             }
-            .tag(4)
+            .tag(3)
             .accessibilityLabel("Settings tab")
             .accessibilityHint("Adjust app preferences")
         }
@@ -97,7 +89,7 @@ struct ContentView: View {
         showingDeepLinkSession = session
     }
 
-    /// Consumes `shuttlx://dashboard` deep links (selects the Training tab).
+    /// Consumes `shuttlx://dashboard` deep links (selects the Today tab).
     private func selectPendingTab() {
         guard let tab = deepLinkRouter.pendingTab else { return }
         selectedTab = tab
