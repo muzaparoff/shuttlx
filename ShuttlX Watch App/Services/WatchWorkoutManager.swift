@@ -212,6 +212,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // and cadence-corroboration gates on top of it (Phase 1 / CE1).
     private static let activityDebounceInterval: TimeInterval = 5.0
     private var classifier = ActivityClassifier(debounceInterval: WatchWorkoutManager.activityDebounceInterval)
+    /// Cycling vs on-foot from GPS speed (step 4b). Fed binary (.cycling / .walking),
+    /// so every switch takes the 60 s hold; run vs walk stays with `classifier`.
+    private var speedHysteresis = SpeedActivityClassifier.Hysteresis()
+    private var isCyclingBySpeed: Bool { speedHysteresis.committed == .cycling }
     /// True while `currentSegmentStartTime` is set but no `ActivitySegment` row
     /// has been opened for it yet — the workout has started (or resumed) and we
     /// are waiting for the first *confident* classification. The segment is then
@@ -390,6 +394,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         segments = []
         currentActivity = .unknown
         classifier.reset()
+        speedHysteresis = SpeedActivityClassifier.Hysteresis()
         awaitingSegmentOpen = true
         segmentStartSteps = 0
         segmentStartDistance = 0
@@ -689,6 +694,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutStartTime = nil
         currentSegmentStartTime = nil
         classifier.reset()
+        speedHysteresis = SpeedActivityClassifier.Hysteresis()
         awaitingSegmentOpen = false
         segmentStartSteps = 0
         segmentStartDistance = 0
@@ -921,7 +927,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Check debounce + corroboration for pending activity transitions
         // (no-op in interval mode — the classifier is never fed there).
         if workoutMode != .interval {
-            checkPendingActivityTransition()
+            checkSpeedActivity()
+            // While speed says cycling, CoreMotion's walk/run/stationary must not
+            // reopen a foot segment.
+            if !isCyclingBySpeed { checkPendingActivityTransition() }
         }
 
         // Tick recovery segmenter if in gym recovery mode
@@ -1123,6 +1132,54 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
+    /// Step 4b: GPS-speed cycling <-> on-foot switch for outdoor free runs. Runs on
+    /// the 1 s display tick; reads speeds already stored on `routePoints`.
+    private func checkSpeedActivity() {
+        guard workoutMode == .freeRun, !isIndoorWorkout,
+              (activeTemplate?.sportType ?? .running).supportsAutoDetection else { return }
+        let now = Date()
+        let window = SpeedActivityClassifier.minWindow
+        let wasCycling = isCyclingBySpeed
+
+        // Need GPS history older than the window, and >= 15 speed fixes inside it
+        // (so a fresh resume doesn't classify on 2-3 fixes).
+        let tail = routePoints.suffix(120)
+        if let oldest = tail.first, now.timeIntervalSince(oldest.timestamp) >= window {
+            let speeds = tail.filter { now.timeIntervalSince($0.timestamp) <= window }.compactMap(\.speed)
+            if speeds.count >= 15 {
+                let avg = speeds.reduce(0, +) / Double(speeds.count)
+                let cadence = cadenceForClassification.map(Double.init)
+                // A stop (red light) says nothing about the mode — don't ingest it.
+                if let result = SpeedActivityClassifier.classify(speed: avg, cadence: cadence, window: window),
+                   result.activity != .stationary {
+                    let mode: DetectedActivity = result.activity == .cycling ? .cycling : .walking
+                    let committed = speedHysteresis.ingest(mode, at: now)
+                    if (committed == .cycling) != wasCycling {
+                        logger.info("SEG SPEED [free-run] \(wasCycling ? "cycling" : "foot") -> \(committed == .cycling ? "cycling" : "foot") avg=\(String(format: "%.1f", avg))m/s cadence=\(cadence.map { String(Int($0)) } ?? "n/a") fixes=\(speeds.count)")
+                    }
+                }
+            }
+        }
+
+        if isCyclingBySpeed {
+            // Also covers resume-from-pause while still cycling (awaitingSegmentOpen).
+            guard currentActivity != .cycling || awaitingSegmentOpen else { return }
+            commitActivityTransition(ActivityClassifier.Decision(
+                activity: .cycling, previous: currentActivity,
+                minConfidence: .high, maxConfidence: .high,
+                cadence: cadenceForClassification, cadenceCheck: .inconclusive,
+                heldFor: 60, isReconfirmation: currentActivity == .cycling,
+                forcedByTimeout: false))
+        } else if wasCycling {
+            // Back on foot: CoreMotion re-earns run/walk. Replay its last reading,
+            // since it may not call back again if its state didn't change.
+            classifier.requireReconfirmation()
+            if let last = lastMotionReading {
+                classifier.ingest(activity: last.activity, confidence: last.confidence, now: now)
+            }
+        }
+    }
+
     private func commitActivityTransition(_ decision: ActivityClassifier.Decision) {
         let now = Date()
         let backdated = awaitingSegmentOpen
@@ -1222,7 +1279,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         guard !segments.isEmpty else { return }
         let index = segments.count - 1
         segments[index].endDate = date
-        segments[index].steps = max(0, totalSteps - segmentStartSteps)
+        // Wrist motion on a bike isn't steps.
+        segments[index].steps = segments[index].activityType == .cycling ? 0 : max(0, totalSteps - segmentStartSteps)
         segments[index].distance = max(0, totalDistance - segmentStartDistance)
     }
 
@@ -1249,12 +1307,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 snapshot.append(ActivitySegment(activityType: currentActivity,
                                                 startDate: start,
                                                 endDate: now,
-                                                steps: max(0, totalSteps - segmentStartSteps),
+                                                steps: currentActivity == .cycling ? 0 : max(0, totalSteps - segmentStartSteps),
                                                 distance: max(0, totalDistance - segmentStartDistance)))
             }
         } else if let index = snapshot.indices.last {
             snapshot[index].endDate = now
-            snapshot[index].steps = max(0, totalSteps - segmentStartSteps)
+            snapshot[index].steps = snapshot[index].activityType == .cycling ? 0 : max(0, totalSteps - segmentStartSteps)
             snapshot[index].distance = max(0, totalDistance - segmentStartDistance)
         }
 
@@ -1923,6 +1981,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         hasCadenceSample = false
         currentActivity = .unknown
         classifier.reset()
+        speedHysteresis = SpeedActivityClassifier.Hysteresis()
         lastMotionReading = nil
         lastIntervalStepIndex = nil
         lastCheckpointDate = nil
