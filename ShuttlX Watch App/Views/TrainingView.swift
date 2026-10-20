@@ -48,14 +48,21 @@ struct TrainingView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
+            // Free run: running page -> (swipe left) distance/pace/calories -> controls.
+            // Interval + gym recovery: their own main page -> controls.
             TabView(selection: $selectedTab) {
-                // Tab 1: Full-screen stacked metrics
                 workoutDisplayTab
                     .tag(0)
 
-                // Tab 2: Controls
-                controlsTab
-                    .tag(1)
+                if isFreeRunLayout {
+                    freeRunMetricsPage
+                        .tag(1)
+                    controlsTab
+                        .tag(2)
+                } else {
+                    controlsTab
+                        .tag(1)
+                }
             }
             .tabViewStyle(PageTabViewStyle())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -70,8 +77,49 @@ struct TrainingView: View {
                     onContinue: { workoutManager.continueAfterSafetyPrompt() },
                     onEndAndSave: { workoutManager.finishAndSave() }
                 )
+            } else if let unusual = workoutManager.unusualHeartRate {
+                UnusualHeartRateView(
+                    bpm: unusual.bpm, rise: unusual.rise,
+                    onOK: { workoutManager.dismissUnusualHeartRate() },
+                    onPause: {
+                        workoutManager.pauseWorkout()
+                        workoutManager.dismissUnusualHeartRate()
+                    }
+                )
+            } else if workoutManager.isPaused, workoutManager.autoPauseReason != nil {
+                AutoPausedView(
+                    seconds: WatchSyncCoordinator.shared.heartSafety.noMotionSeconds,
+                    onResume: { workoutManager.resumeWorkout() },
+                    onEndAndSave: { workoutManager.finishAndSave() }
+                )
             }
         }
+        // HR haptic for the "Ease off" banner — on the root so every layout gets it.
+        .onChange(of: workoutManager.heartRate) { _, newHR in
+            let isHigh = isHighHR(newHR)
+            if isHigh && !highIntensityHapticFired {
+                highIntensityHapticFired = true
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.notification)
+                #endif
+            } else if !isHigh {
+                highIntensityHapticFired = false
+            }
+        }
+        .onChange(of: workoutManager.lastCompletedKm) { _, _ in
+            guard !reduceMotion else { return }
+            kmSplitFlash = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+                kmSplitFlash = false
+            }
+        }
+        #if DEBUG
+        .onAppear {
+            if let tab = ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT_TAB"].flatMap(Int.init) {
+                selectedTab = tab
+            }
+        }
+        #endif
         .navigationBarHidden(true)
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {
@@ -125,9 +173,13 @@ struct TrainingView: View {
         } else if workoutManager.workoutMode == .gymRecovery {
             RecoveryWorkoutView()
                 .environmentObject(workoutManager)
+        } else if isFreeRunLayout {
+            runningPage
         } else {
             fullWorkoutDisplayTab
         }
     }
+
+    var isFreeRunLayout: Bool { workoutManager.workoutMode == .freeRun }
 
 }

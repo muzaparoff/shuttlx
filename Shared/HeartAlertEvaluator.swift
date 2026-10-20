@@ -6,7 +6,7 @@ public struct HeartAlert: Equatable, Sendable {
         case aboveLimit, belowLow, signalLost, noMotion, suddenJump
     }
     public let kind: Kind
-    /// The limit crossed (above/below). nil for signal lost / no motion.
+    /// The limit crossed (above/below), or the bpm rise for suddenJump. nil for signal lost / no motion.
     public let value: Int?
 
     public init(kind: Kind, value: Int? = nil) {
@@ -131,7 +131,7 @@ public struct HeartAlertEvaluator: Sendable {
         if flags.suddenJump, rise >= Self.jumpBpm,
            lastJump.map({ now.timeIntervalSince($0) >= Self.cooldown }) ?? true {
             lastJump = now
-            out.append(HeartAlert(kind: .suddenJump))
+            out.append(HeartAlert(kind: .suddenJump, value: rise))
         }
         return out
     }

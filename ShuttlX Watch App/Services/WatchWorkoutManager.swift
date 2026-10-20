@@ -183,6 +183,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastMotionDate: Date?
     /// "noMotion" while the workout is auto-paused by the presence heuristic; nil otherwise.
     @Published private(set) var autoPauseReason: String?
+    /// Full-screen "Unusual heart rate" card (suddenJump). Stays until dismissed.
+    struct UnusualHeartRate: Equatable { let bpm: Int; let rise: Int }
+    @Published private(set) var unusualHeartRate: UnusualHeartRate?
+    /// True once the HKWorkout of the last finished workout was written to Health.
+    @Published private(set) var healthKitSaved = false
+
+    // MARK: Auto-switch toast + Undo
+    struct ActivitySwitch: Equatable { let id = UUID(); let from: DetectedActivity; let to: DetectedActivity }
+    /// Non-nil for `undoWindow` seconds after an auto run/walk/cycle switch.
+    @Published private(set) var activitySwitch: ActivitySwitch?
+    private var undoState: (segStart: Date?, steps: Int, distance: Double)?
+    /// After Undo, no auto-switch commits until this date.
+    private var autoSwitchSuppressedUntil: Date?
+    static let undoWindow: TimeInterval = 4
+    static let undoSuppression: TimeInterval = 60
 
     // Live metrics broadcast
     private let broadcaster = LiveMetricsBroadcaster()
@@ -403,6 +418,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         timeAtLastKm = 0
         segments = []
         currentActivity = .unknown
+        healthKitSaved = false
+        clearActivitySwitch()
+        autoSwitchSuppressedUntil = nil
+        unusualHeartRate = nil
         classifier.reset()
         speedHysteresis = SpeedActivityClassifier.Hysteresis()
         awaitingSegmentOpen = true
@@ -580,6 +599,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         pauseStartDate = Date()
         // Freeze the system-rendered timer: views fall back to static elapsedTime text.
         timerReferenceDate = nil
+        // Resume reopens a fresh segment, so an Undo offered before the pause is stale.
+        clearActivitySwitch()
 
         // Push isPaused:true to iPhone before stopping the timer so the
         // 10-second timeout on the phone side doesn't clear live state.
@@ -612,6 +633,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Fresh 30/60 s grace after any resume; the reason only labels this pause.
         heartAlerts.reset()
         autoPauseReason = nil
+        autoSwitchSuppressedUntil = nil
 
         // Accumulate pause duration
         if let pauseStart = pauseStartDate {
@@ -706,6 +728,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         hasReceivedHRSample = false
         noHeartRateDetected = false
         resetHeartAlertState()
+        clearActivitySwitch()
+        autoSwitchSuppressedUntil = nil
+        unusualHeartRate = nil
         workoutStartTime = nil
         currentSegmentStartTime = nil
         classifier.reset()
@@ -943,7 +968,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Check debounce + corroboration for pending activity transitions
         // (no-op in interval mode — the classifier is never fed there).
-        if workoutMode != .interval {
+        // After an Undo the wearer has told us the detection was wrong: hold
+        // the activity for `undoSuppression` seconds instead of re-switching.
+        if let until = autoSwitchSuppressedUntil, Date() >= until { autoSwitchSuppressedUntil = nil }
+        if workoutMode != .interval, autoSwitchSuppressedUntil == nil {
             checkSpeedActivity()
             // While speed says cycling, CoreMotion's walk/run/stationary must not
             // reopen a foot segment.
@@ -1027,6 +1055,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         for alert in alerts {
             logger.warning("HEART ALERT \(alert.kind.rawValue) value=\(alert.value ?? -1) hr=\(self.heartRate) hrAge=\(hrAge)s motionAge=\(motionAge)s elapsed=\(Int(self.elapsedTime))s")
             deliverHeartAlert(alert)
+            if alert.kind == .suddenJump {
+                unusualHeartRate = UnusualHeartRate(bpm: heartRate, rise: alert.value ?? HeartAlertEvaluator.jumpBpm)
+                #if os(watchOS)
+                WKInterfaceDevice.current().play(.failure)  // stronger than the generic .notification
+                #endif
+            }
         }
         guard alerts.contains(where: { $0.kind == .noMotion }) else { return false }
         logger.warning("AUTO-PAUSE noMotion at elapsed \(Int(self.elapsedTime))s (hrAge=\(hrAge)s motionAge=\(motionAge)s)")
@@ -1034,6 +1068,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         pauseWorkout()
         return true
     }
+
+    /// "OK" on the unusual-heart-rate card. "Pause" calls pauseWorkout() first.
+    func dismissUnusualHeartRate() { unusualHeartRate = nil }
 
     /// Haptic always; a local notification only when the app is not frontmost
     /// (watchOS shows nothing for a foreground app without a delegate anyway).
@@ -1262,6 +1299,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let now = Date()
         let backdated = awaitingSegmentOpen
         let startDate: Date
+        // Captured before the close below so Undo can reopen the previous segment.
+        let previous = currentActivity
+        let undo = (segStart: currentSegmentStartTime, steps: segmentStartSteps, distance: segmentStartDistance)
 
         if awaitingSegmentOpen {
             // First classification of this run/resume — the segment owns the time
@@ -1286,6 +1326,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         #endif
 
+        // "Now walking · Undo" toast: only real run/walk/cycle switches, not the
+        // first classification and not moves to/from stationary.
+        let switchable: Set<DetectedActivity> = [.running, .walking, .cycling]
+        if !backdated, previous != decision.activity,
+           switchable.contains(previous), switchable.contains(decision.activity) {
+            let sw = ActivitySwitch(from: previous, to: decision.activity)
+            activitySwitch = sw
+            undoState = undo
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(Self.undoWindow))
+                guard let self, self.activitySwitch?.id == sw.id else { return }
+                self.clearActivitySwitch()
+            }
+        }
+
         let kind = backdated ? "open" : "switch"
         logger.info("""
             SEG COMMIT [free-run/\(kind)] \(decision.previous.rawValue) -> \(decision.activity.rawValue) \
@@ -1294,6 +1349,31 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             held=\(String(format: "%.0f", decision.heldFor))s hr=\(self.heartRate) \
             at +\(Int(startDate.timeIntervalSince(self.workoutStartTime ?? startDate)))s
             """)
+    }
+
+    private func clearActivitySwitch() {
+        activitySwitch = nil
+        undoState = nil
+    }
+
+    /// "Undo" on the auto-switch toast: drop the segment the switch just opened,
+    /// reopen the previous one, and hold that activity for `undoSuppression`.
+    func undoActivitySwitch() {
+        guard let sw = activitySwitch, let u = undoState, !segments.isEmpty else { return }
+        segments.removeLast()
+        if !segments.isEmpty { segments[segments.count - 1].endDate = nil }
+        currentSegmentStartTime = u.segStart
+        segmentStartSteps = u.steps
+        segmentStartDistance = u.distance
+        currentSegmentTime = u.segStart.map { Date().timeIntervalSince($0) } ?? 0
+        currentActivity = sw.from
+        classifier.override(to: sw.from)
+        autoSwitchSuppressedUntil = Date().addingTimeInterval(Self.undoSuppression)
+        clearActivitySwitch()
+        #if os(watchOS)
+        WKInterfaceDevice.current().play(.click)
+        #endif
+        logger.info("SEG UNDO [free-run] \(sw.to.rawValue) -> \(sw.from.rawValue), auto-switch held \(Int(Self.undoSuppression))s")
     }
 
     // MARK: - Interval Plan Reconciliation (CE7)
@@ -2164,7 +2244,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             completedSets: workoutMode == .gymRecovery ? captures.count : nil,
             averageHRR1: avgHRR1,
             bodyMassUnavailable: bodyMassUnavailable,
-            sessionID: currentSessionID
+            sessionID: currentSessionID,
+            segments: finalizedSegments()
         )
     }
 
@@ -2288,6 +2369,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     let workout = try await builder.finishWorkout()
                     await MainActor.run {
                         self.logger.info("HKWorkout saved to HealthKit: \(workout?.uuid.uuidString ?? "unknown")")
+                        self.healthKitSaved = workout != nil
                     }
                     // Attach GPS route to the saved HKWorkout
                     if let rb = routeBuilderToFinish {
@@ -2357,6 +2439,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentCadence = 162
         heartRate = 138
         calories = 812
+        currentActivity = .running
     }
 
     /// Freezes an already-seeded snapshot the way `pauseWorkout()` does, without
@@ -2367,6 +2450,40 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     func applyPausedPreviewState() {
         isPaused = true
         timerReferenceDate = nil
+    }
+
+    /// Snapshot/QA only: raise the overlays that production publishes from
+    /// private paths (auto-switch toast, unusual HR card, auto-pause).
+    func applyPreviewOverlay(_ name: String) {
+        switch name {
+        case "toast":
+            currentActivity = .walking
+            activitySwitch = ActivitySwitch(from: .running, to: .walking)
+        case "unusual":
+            unusualHeartRate = UnusualHeartRate(bpm: 141, rise: 38)
+        case "autopaused":
+            applyPausedPreviewState()
+            autoPauseReason = "noMotion"
+        default:
+            break
+        }
+    }
+
+    /// Snapshot/QA only: the post-workout summary with a 3-part ribbon.
+    func applySummaryPreview() {
+        let start = Date().addingTimeInterval(-4212)
+        let parts: [(DetectedActivity, TimeInterval)] = [(.walking, 720), (.running, 2880), (.walking, 612)]
+        var t = start
+        let segs = parts.map { part -> ActivitySegment in
+            var s = ActivitySegment(activityType: part.0, startDate: t)
+            t = t.addingTimeInterval(part.1)
+            s.endDate = t
+            return s
+        }
+        healthKitSaved = true
+        pendingSummary = WorkoutSummary(duration: 4212, distance: 9.8, avgHeartRate: 138, calories: 612,
+                                        steps: 11_204, avgPace: 430, splitsCount: 9,
+                                        sessionID: UUID(), segments: segs)
     }
 
     func applyPreviewSnapshot() {

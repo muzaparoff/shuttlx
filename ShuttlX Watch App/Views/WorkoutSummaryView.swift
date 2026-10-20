@@ -21,153 +21,147 @@ struct WorkoutSummary {
     var bodyMassUnavailable: Bool = false
     /// Id of the saved TrainingSession, so the effort answer can be attached to it.
     var sessionID: UUID? = nil
+    /// Finalized parts, for the summary ribbon.
+    var segments: [ActivitySegment] = []
 }
 
-// MARK: - Post-Workout Summary Screen
+// MARK: - Post-Workout Summary Screen (timeline mockup watch screens 7 + 8)
 
 struct WorkoutSummaryView: View {
     let summary: WorkoutSummary
     let onDismiss: () -> Void
-    @State private var showBadge = false
-    /// nil = skipped. Saved on disappear (Done), never to Health.
-    @State private var effort: Int? = nil
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @EnvironmentObject private var workoutManager: WatchWorkoutManager
+    /// Done -> the effort screen (when enabled), whose Save/Skip dismisses.
+    @State private var showingEffort: Bool
+
+    init(summary: WorkoutSummary, startOnEffort: Bool = false, onDismiss: @escaping () -> Void) {
+        self.summary = summary
+        self.onDismiss = onDismiss
+        _showingEffort = State(initialValue: startOnEffort)
+    }
+
+    private var asksEffort: Bool {
+        summary.sessionID != nil && WatchSyncCoordinator.shared.heartSafety.showEffortOnWatch
+    }
 
     var body: some View {
+        if showingEffort {
+            EffortView(
+                onSave: { value in
+                    if let id = summary.sessionID {
+                        WatchSyncCoordinator.shared.updateSessionEffort(id: id, effortRPE: value)
+                    }
+                    onDismiss()
+                },
+                onSkip: onDismiss
+            )
+        } else {
+            summaryPage
+        }
+    }
+
+    private var summaryPage: some View {
         ScrollView {
-            VStack(spacing: ShuttlXSpacing.lg) {
-                ThemedCompletionBadge()
-                    .scaleEffect(reduceMotion ? 1 : (showBadge ? 1 : 0.3))
-                    .opacity(showBadge ? 1 : 0)
-                    .animation(reduceMotion ? .easeIn(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
-
-                Text("Workout Complete")
-                    .font(ShuttlXFont.watchHeroTitle)
-
+            VStack(alignment: .leading, spacing: 0) {
+                Text("WORKOUT COMPLETE")
+                    .font(.system(size: WatchScale.pt(11), weight: .bold))
+                    .tracking(WatchScale.pt(11) * 0.08)
+                    .foregroundStyle(ShuttlXColor.ctaPrimary)
                 Text(FormattingUtils.formatTimer(summary.duration))
-                    .font(ShuttlXFont.watchSummaryTimer)
-                    .foregroundColor(ShuttlXColor.textPrimary)
-
-                // Metrics
-                VStack(spacing: ShuttlXSpacing.md) {
+                    .font(.system(size: WatchScale.pt(38), weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .fixedSize()
+                    .padding(.top, WatchScale.pt(6))
+                if !summary.segments.isEmpty {
+                    ActivityRibbon(segments: summary.segments, height: WatchScale.pt(8))
+                        .padding(.top, WatchScale.pt(8))
+                }
+                HStack(alignment: .firstTextBaseline) {
                     if summary.distance > 0 {
-                        summaryRow(icon: "location.fill", color: ShuttlXColor.running,
-                                   label: "Distance", value: FormattingUtils.formatDistance(summary.distance))
+                        valueUnit(String(format: "%.1f", summary.distance), "km", ShuttlXColor.textPrimary)
                     }
-
+                    Spacer(minLength: 4)
                     if summary.avgHeartRate > 0 {
-                        summaryRow(icon: "heart.fill", color: ShuttlXColor.heartRate,
-                                   label: "Avg Heart Rate", value: "\(summary.avgHeartRate) BPM")
-                    }
-
-                    if summary.calories > 0 {
-                        summaryRow(icon: "flame.fill", color: ShuttlXColor.calories,
-                                   label: "Calories", value: "\(summary.calories) kcal")
-                    }
-
-                    if let pace = summary.avgPace, pace > 0, pace < 3600 {
-                        summaryRow(icon: "gauge.with.dots.needle.33percent", color: ShuttlXColor.pace,
-                                   label: "Avg Pace", value: FormattingUtils.formatPace(pace))
-                    }
-
-                    if summary.steps > 0 {
-                        summaryRow(icon: "shoeprints.fill", color: ShuttlXColor.steps,
-                                   label: "Steps", value: "\(summary.steps)")
-                    }
-
-                    if summary.splitsCount > 0 {
-                        summaryRow(icon: "flag.fill", color: ShuttlXColor.running,
-                                   label: "Km Splits", value: "\(summary.splitsCount)")
-                    }
-
-                    if let sets = summary.completedSets {
-                        summaryRow(icon: "figure.strengthtraining.traditional",
-                                   color: ShuttlXColor.ctaPrimary,
-                                   label: "Sets monitored", value: "\(sets)")
-                    }
-
-                    if let hrr1 = summary.averageHRR1 {
-                        summaryRow(icon: "arrow.down.heart.fill",
-                                   color: ShuttlXColor.heartRate,
-                                   label: "Avg HRR (1min)", value: "\(Int(hrr1.rounded())) BPM")
+                        valueUnit("\(summary.avgHeartRate)", "bpm", ShuttlXColor.heartRate)
                     }
                 }
-                .padding(.horizontal)
-                .themedCard(
-                    accent: ShuttlXColor.positive,
-                    statusLine: (mode: "DONE", file: "saved", position: "ok"),
-                    headerLabel: "WORKOUT"
-                )
-
-                if summary.bodyMassUnavailable {
-                    // Deliberately non-blocking and single-line: the workout is
-                    // saved and Apple's calories are still shown. Without a weight
-                    // we simply decline to invent ShuttlX's own estimate.
-                    HStack(alignment: .top, spacing: ShuttlXSpacing.xs) {
-                        Image(systemName: "scalemass")
-                            .font(ShuttlXFont.cardCaption)
-                            .foregroundColor(ShuttlXColor.textSecondary)
-                            .accessibilityHidden(true)
-                        Text("Add your weight in the Health app for accurate calories.")
-                            .font(ShuttlXFont.cardCaption)
-                            .foregroundColor(ShuttlXColor.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.horizontal)
-                    .accessibilityElement(children: .combine)
+                .padding(.top, WatchScale.pt(12))
+                // Only after HealthKit confirmed finishWorkout(); otherwise nothing.
+                if workoutManager.healthKitSaved {
+                    Text("Saved to Health \u{2713}")
+                        .font(.system(size: WatchScale.pt(11)))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                        .padding(.top, WatchScale.pt(4))
                 }
-
-                if summary.sessionID != nil, WatchSyncCoordinator.shared.heartSafety.showEffortOnWatch {
-                    effortPicker
+                Button("Done") {
+                    #if os(watchOS)
+                    WKInterfaceDevice.current().play(.click)
+                    #endif
+                    if asksEffort { showingEffort = true } else { onDismiss() }
                 }
-
-                // Done button — primary CTA style
-                Button(action: onDismiss) {
-                    Text("Done")
-                        .font(ShuttlXFont.cardTitle)
-                        .foregroundColor(ShuttlXColor.iconOnCTA)
-                        .padding(.vertical, ShuttlXSpacing.lg)
-                }
-                .buttonStyle(ShuttlXPrimaryCTAStyle())
-                .padding(.horizontal)
-                .padding(.top, ShuttlXSpacing.md)
+                .buttonStyle(WatchPillButtonStyle.primary)
+                .padding(.top, WatchScale.pt(12))
             }
-            .padding(.vertical)
+            .padding(.horizontal, 8)
+
+            // Below the fold: everything the mockup's first screen leaves out.
+            extraRows
+                .padding(.horizontal, 8)
+                .padding(.top, WatchScale.pt(20))
         }
-        .themedScreenBackground()
-        .onDisappear {
-            if let effort, let id = summary.sessionID {
-                WatchSyncCoordinator.shared.updateSessionEffort(id: id, effortRPE: effort)
-            }
-        }
+        .scrollIndicators(.hidden)
         .onAppear {
-            showBadge = true
             #if os(watchOS)
             WKInterfaceDevice.current().play(.success)
             #endif
         }
     }
 
-    /// Skippable 0-10 effort question. Wheel picker = Digital Crown for free.
-    private var effortPicker: some View {
-        VStack(spacing: ShuttlXSpacing.xs) {
-            Text("How hard was it?")
-                .font(ShuttlXFont.cardCaption)
-                .foregroundColor(ShuttlXColor.textSecondary)
-            Picker("How hard was it?", selection: $effort) {
-                Text("Skip").tag(Int?.none)
-                ForEach(0...10, id: \.self) { n in
-                    Text(n == 0 ? "0 Rest" : n == 10 ? "10 Max" : "\(n)")
-                        .monospacedDigit()
-                        .tag(Int?.some(n))
-                }
-            }
-            .pickerStyle(.wheel)
-            .labelsHidden()
-            .frame(height: 56)
-            .accessibilityLabel("How hard was it? 0 rest to 10 max")
+    private func valueUnit(_ value: String, _ unit: String, _ color: Color) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 3) {
+            Text(value)
+                .font(.system(size: WatchScale.pt(20), weight: .bold))
+                .monospacedDigit()
+                .foregroundStyle(color)
+            Text(unit)
+                .font(.system(size: WatchScale.pt(13)))
         }
-        .padding(.horizontal)
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var extraRows: some View {
+        VStack(spacing: ShuttlXSpacing.md) {
+            if summary.calories > 0 {
+                summaryRow(icon: "flame.fill", color: ShuttlXColor.calories,
+                           label: "Calories", value: "\(summary.calories) kcal")
+            }
+            if let pace = summary.avgPace, pace > 0, pace < 3600 {
+                summaryRow(icon: "gauge.with.dots.needle.33percent", color: ShuttlXColor.pace,
+                           label: "Avg Pace", value: FormattingUtils.formatPace(pace))
+            }
+            if summary.steps > 0 {
+                summaryRow(icon: "shoeprints.fill", color: ShuttlXColor.steps,
+                           label: "Steps", value: "\(summary.steps)")
+            }
+            if let sets = summary.completedSets {
+                summaryRow(icon: "figure.strengthtraining.traditional", color: ShuttlXColor.ctaPrimary,
+                           label: "Sets monitored", value: "\(sets)")
+            }
+            if let hrr1 = summary.averageHRR1 {
+                summaryRow(icon: "arrow.down.heart.fill", color: ShuttlXColor.heartRate,
+                           label: "Avg HRR (1min)", value: "\(Int(hrr1.rounded())) BPM")
+            }
+            if summary.bodyMassUnavailable {
+                // Non-blocking: without a weight ShuttlX declines to invent its own estimate.
+                Text("Add your weight in the Health app for accurate calories.")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundColor(ShuttlXColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.bottom, ShuttlXSpacing.lg)
     }
 
     private func summaryRow(icon: String, color: Color, label: String, value: String) -> some View {
@@ -185,6 +179,78 @@ struct WorkoutSummaryView: View {
                 .monospacedDigit()
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+// MARK: - Effort 0-10 (Digital Crown)
+
+struct EffortView: View {
+    let onSave: (Int) -> Void
+    let onSkip: () -> Void
+    @State private var crown: Double = 5
+    @FocusState private var focused: Bool
+
+    private var value: Int { Int(crown.rounded()) }
+
+    /// Borg CR10 anchors (mockup: 6 = "Hard").
+    static func word(_ n: Int) -> String {
+        switch n {
+        case 0: return "Rest"
+        case 1: return "Very easy"
+        case 2: return "Easy"
+        case 3: return "Moderate"
+        case 4: return "Somewhat hard"
+        case 5, 6: return "Hard"
+        case 7, 8, 9: return "Very hard"
+        default: return "Max"
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text("How hard was it?")
+                .font(.system(size: WatchScale.pt(15), weight: .heavy))
+            Text("\(value)")
+                .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundStyle(ShuttlXColor.ctaWarning)
+                .fixedSize()
+            Text(Self.word(value))
+                .font(.system(size: WatchScale.pt(12), weight: .bold))
+                .foregroundStyle(ShuttlXColor.ctaWarning)
+            HStack(spacing: 3) {
+                ForEach(0...10, id: \.self) { i in
+                    RoundedRectangle(cornerRadius: 3)
+                        .fill(i <= value ? ShuttlXColor.ctaWarning : Color.white.opacity(0.14))
+                        .frame(height: WatchScale.pt(8))
+                }
+            }
+            .padding(.top, WatchScale.pt(10))
+            HStack {
+                Text("0 rest")
+                Spacer()
+                Text("10 max")
+            }
+            .font(.system(size: WatchScale.pt(10)))
+            .foregroundStyle(ShuttlXColor.textSecondary)
+            .padding(.top, WatchScale.pt(4))
+            HStack(spacing: 6) {
+                Button("Skip", action: onSkip)
+                    .buttonStyle(WatchPillButtonStyle.neutral)
+                Button("Save") { onSave(value) }
+                    .buttonStyle(WatchPillButtonStyle.primary)
+            }
+            .padding(.top, WatchScale.pt(8))
+        }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .focusable()
+        .focused($focused)
+        .digitalCrownRotation($crown, from: 0, through: 10, by: 1, sensitivity: .low,
+                              isContinuous: false, isHapticFeedbackEnabled: true)
+        .onAppear { focused = true }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("How hard was it? \(value) of 10, \(Self.word(value)). Turn the Digital Crown to change.")
     }
 }
 

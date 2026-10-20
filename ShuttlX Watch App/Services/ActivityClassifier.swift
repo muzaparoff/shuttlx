@@ -208,6 +208,14 @@ struct ActivityClassifier {
         pending = nil
     }
 
+    /// Undo of an auto-switch: the wearer says `activity` is right. Drop any
+    /// pending proposal so the next reading must re-earn a switch from scratch.
+    mutating func override(to activity: DetectedActivity) {
+        committed = activity
+        needsReconfirmation = false
+        pending = nil
+    }
+
     // MARK: - Input
 
     @discardableResult

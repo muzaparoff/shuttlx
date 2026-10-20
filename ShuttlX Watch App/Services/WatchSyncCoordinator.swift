@@ -15,6 +15,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var workoutTemplates: [WorkoutTemplate] = []
     /// Resolved heart limits + alert flags from the iPhone (no medication field). No UI yet.
     @Published private(set) var heartSafety = HeartSafetySettings.load()
+    #if DEBUG
+    /// Snapshot harness only — not persisted.
+    func applyPreviewHeartSafety(_ settings: HeartSafetySettings) { heartSafety = settings }
+    #endif
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchSyncCoordinator")
 

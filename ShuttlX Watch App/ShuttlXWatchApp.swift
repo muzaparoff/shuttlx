@@ -2,6 +2,7 @@ import SwiftUI
 import WatchKit
 import WidgetKit
 import os.log
+import ShuttlXShared
 
 /// watchOS relaunches the app after a crash mid-workout and calls
 /// `handleActiveWorkoutRecovery()` — possibly in the background, before any view
@@ -64,6 +65,30 @@ struct ShuttlXWatchApp: App {
                 let hrOverride = env["SHUTTLX_SNAPSHOT_HR"].flatMap(Int.init)
                 let paceOverride = env["SHUTTLX_SNAPSHOT_PACE"]
                 let pausedOverride = env["SHUTTLX_SNAPSHOT_PAUSED"] == "1"
+                // SHUTTLX_SNAPSHOT_SCREEN=home|summary|effort renders those screens
+                // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused
+                // raises a workout overlay, SHUTTLX_SNAPSHOT_LIMIT=<bpm> fakes a synced
+                // heart limit (heart-limit mode), SHUTTLX_SNAPSHOT_TAB=<n> opens a page,
+                // SHUTTLX_SNAPSHOT_ACTIVITY=running|walking|cycling sets the tag.
+                let screen = env["SHUTTLX_SNAPSHOT_SCREEN"]
+                if screen == "home" {
+                    NavigationStack { StartTrainingView() }
+                        .environment(ThemeManager.shared)
+                        .environmentObject(sharedDataManager)
+                        .environmentObject(workoutManager)
+                } else if screen == "summary" || screen == "effort" {
+                    Group {
+                        if let summary = workoutManager.pendingSummary {
+                            WorkoutSummaryView(summary: summary, startOnEffort: screen == "effort") {}
+                        } else {
+                            Color.black
+                        }
+                    }
+                    .environment(ThemeManager.shared)
+                    .environmentObject(sharedDataManager)
+                    .environmentObject(workoutManager)
+                    .task { workoutManager.applySummaryPreview() }
+                } else {
                 TrainingView()
                     .environment(ThemeManager.shared)
                     .environment(\.isLuminanceReduced, env["SHUTTLX_SNAPSHOT_AOD"] == "1")
@@ -71,6 +96,9 @@ struct ShuttlXWatchApp: App {
                     .environmentObject(workoutManager)
                     .task {
                         ThemeManager.shared.selectTheme(snapshot)
+                        if let limit = env["SHUTTLX_SNAPSHOT_LIMIT"].flatMap(Int.init) {
+                            sharedDataManager.applyPreviewHeartSafety(HeartSafetySettings(upperLimit: limit))
+                        }
                         if let freeRunElapsed {
                             workoutManager.applyFreeRunPreviewSnapshot(elapsed: freeRunElapsed)
                         } else {
@@ -83,7 +111,14 @@ struct ShuttlXWatchApp: App {
                                 : Double(paceOverride)
                         }
                         if pausedOverride { workoutManager.applyPausedPreviewState() }
+                        if let a = env["SHUTTLX_SNAPSHOT_ACTIVITY"].flatMap(DetectedActivity.init(rawValue:)) {
+                            workoutManager.currentActivity = a
+                        }
+                        if let overlay = env["SHUTTLX_SNAPSHOT_OVERLAY"] {
+                            workoutManager.applyPreviewOverlay(overlay)
+                        }
                     }
+                }
             } else {
                 appRoot
             }
