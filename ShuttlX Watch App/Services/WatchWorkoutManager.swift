@@ -1173,6 +1173,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // segment timeline (CE7). Motion is still read — it feeds the
         // plan-vs-detection disagreement log — but never opens a segment.
         guard workoutMode != .interval else { return }
+        // Settings -> "Auto-switch Run / Walk" off: motion still feeds lastMotionDate above
+        // (auto-pause), but never changes the activity.
+        guard (sharedDataManager ?? WatchSyncCoordinator.shared).heartSafety.autoSwitchActivity else { return }
 
         let outcome = classifier.ingest(activity: detected, confidence: confidence, now: Date())
         switch outcome {
@@ -1210,7 +1213,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// the 1 s display tick; reads speeds already stored on `routePoints`.
     private func checkSpeedActivity() {
         guard workoutMode == .freeRun, !isIndoorWorkout,
-              (activeTemplate?.sportType ?? .running).supportsAutoDetection else { return }
+              (activeTemplate?.sportType ?? .running).supportsAutoDetection,
+              (sharedDataManager ?? WatchSyncCoordinator.shared).heartSafety.autoSwitchActivity else { return }
         let now = Date()
         let window = SpeedActivityClassifier.minWindow
         let wasCycling = isCyclingBySpeed

@@ -110,4 +110,53 @@ final class HeartAlertEvaluatorTests: XCTestCase {
         // Fires at 10 while sample is fresh, then stale after 30 s re-arms.
         XCTAssertEqual(fired.map(\.0), [10])
     }
+
+    // MARK: Sudden jump / configurable no-motion window
+
+    func testSuddenJumpFiresOncePerRiseWithCooldown() {
+        var e = HeartAlertEvaluator()
+        var fired: [Int] = []
+        for s in 0...200 {
+            let now = t0.addingTimeInterval(TimeInterval(s))
+            let hr = (s >= 20 && s < 130) || s >= 150 ? 120 : 75   // +45 at 20 and again at 150
+            let a = e.tick(now: now, hr: hr, lastHRDate: now, lastMotionDate: now,
+                           limits: HeartAlertLimits(upper: 200, low: nil), flags: flags)
+            if a.contains(where: { $0.kind == .suddenJump }) { fired.append(s) }
+        }
+        XCTAssertEqual(fired, [20, 150]) // one alert per rise, 2 min apart
+    }
+
+    func testSlowRiseDoesNotJump() {
+        var e = HeartAlertEvaluator()
+        var hr = 70
+        for s in 0...60 {
+            let now = t0.addingTimeInterval(TimeInterval(s))
+            hr = 70 + s            // +1 bpm/s: 10 s window rises 10 only
+            XCTAssertTrue(e.tick(now: now, hr: hr, lastHRDate: now, lastMotionDate: now,
+                                 limits: HeartAlertLimits(upper: 300, low: nil), flags: flags).isEmpty)
+        }
+    }
+
+    func testJumpOffByFlag() {
+        var e = HeartAlertEvaluator()
+        var f = flags; f.suddenJump = false
+        for s in 0...20 {
+            let now = t0.addingTimeInterval(TimeInterval(s))
+            XCTAssertTrue(e.tick(now: now, hr: s < 10 ? 70 : 130, lastHRDate: now, lastMotionDate: now,
+                                 limits: HeartAlertLimits(upper: 300, low: nil), flags: f).isEmpty)
+        }
+    }
+
+    func testNoMotionWindowIsConfigurable() {
+        var e = HeartAlertEvaluator()
+        let l = HeartAlertLimits(upper: nil, low: nil, noMotionWindow: 30)
+        var firstNoMotion: Int?
+        for s in 0...100 {
+            let now = t0.addingTimeInterval(TimeInterval(s))
+            // HR seen at t0 only, no motion ever.
+            let a = e.tick(now: now, hr: 0, lastHRDate: t0, lastMotionDate: nil, limits: l, flags: flags)
+            if firstNoMotion == nil, a.contains(where: { $0.kind == .noMotion }) { firstNoMotion = s }
+        }
+        XCTAssertEqual(firstNoMotion, 30)
+    }
 }

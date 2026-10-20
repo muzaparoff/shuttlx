@@ -117,7 +117,7 @@ struct WorkoutSummaryView: View {
                     .accessibilityElement(children: .combine)
                 }
 
-                if summary.sessionID != nil {
+                if summary.sessionID != nil, WatchSyncCoordinator.shared.heartSafety.showEffortOnWatch {
                     effortPicker
                 }
 

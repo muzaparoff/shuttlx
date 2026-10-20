@@ -16,100 +16,48 @@ struct SettingsView: View {
     @State private var isDeletingAccount = false
     @State private var showSuccessMessage = false
     @State private var successMessage = ""
-    @State private var isSyncing = false
     @State private var showDebug = false
     @ObservedObject var deviceManager = DeviceManager.shared
     @State private var weightText: String = ""
     @State private var ageText: String = ""
-    @State private var maxHRText: String = ""
     @State private var heart = HeartSafetySettings.load()
-    @State private var upperLimitText = ""
-    @State private var lowLimitText = ""
+    #if DEBUG
+    @State private var seamHeartAlerts = false   // SHUTTLX_SHOW_HEART=1 screenshot seam
+    #endif
+
+    private static var seamSkipTop: Bool {
+        #if DEBUG
+        ProcessInfo.processInfo.environment["SHUTTLX_SCROLL_BOTTOM"] == "1"
+        #else
+        false
+        #endif
+    }
 
     var body: some View {
         List {
-            // Watch Connection Section
-            Section("Apple Watch") {
+            if !Self.seamSkipTop {   // SHUTTLX_SCROLL_BOTTOM=1 screenshot seam (false in release)
+            // Health & Watch
+            Section("Health & Watch") {
                 HStack {
-                    Image(systemName: "applewatch")
-                        .foregroundStyle(.tint)
-                        .accessibilityHidden(true)
                     Text("Watch Status")
                     Spacer()
-                    HStack(spacing: 4) {
-                        Circle()
-                            .fill(watchPaired ? ShuttlXColor.positive : Color.secondary)
-                            .frame(width: 8, height: 8)
-                        Text(watchStatusText)
-                            .foregroundStyle(.secondary)
-                    }
+                    statusDot(watchPaired)
+                    Text(watchStatusText).foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Watch Status")
                 .accessibilityValue(watchStatusText)
 
-                if watchPaired {
-                    Button {
-                        isSyncing = true
-                        sharedDataManager.requestSessionsFromWatch { count in
-                            sharedDataManager.reconcileSessionIDs()
-                            isSyncing = false
-                            if count > 0 {
-                                dataManager.loadSessionsFromAppGroup()
-                                successMessage = "Synced \(count) session\(count == 1 ? "" : "s") from Watch"
-                            } else {
-                                successMessage = "No new sessions on Watch"
-                            }
-                            showSuccessMessage = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
-                                showSuccessMessage = false
-                            }
-                        }
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                            Text("Sync from Watch")
-                            Spacer()
-                            if isSyncing {
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(isSyncing)
-                    .accessibilityHint("Pulls training sessions directly from your Apple Watch")
-
-                    HStack {
-                        Label("Last Sync", systemImage: "clock")
-                        Spacer()
-                        Text(sharedDataManager.lastSyncTime.map { FormattingUtils.formatShortDate($0) } ?? "Never")
-                            .font(ShuttlXFont.cardCaption.monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
-
-                    HStack {
-                        Label("Connection", systemImage: "antenna.radiowaves.left.and.right")
-                        Spacer()
-                        Text("\(Int(sharedDataManager.connectivityHealth * 100))%")
-                            .font(ShuttlXFont.cardCaption.monospacedDigit())
-                            .foregroundStyle(sharedDataManager.connectivityHealth > 0.5 ? ShuttlXColor.positive : ShuttlXColor.ctaWarning)
-                    }
-                }
-            }
-
-            // Health Integration Section
-            Section("Health Integration") {
                 HStack {
-                    Image(systemName: "heart.fill")
-                        .foregroundStyle(ShuttlXColor.heartRate)
-                        .accessibilityHidden(true)
                     Text("HealthKit Status")
                     Spacer()
-                    Text(dataManager.healthKitAuthorized ? "Connected" : "Not Connected")
-                        .foregroundStyle(dataManager.healthKitAuthorized ? ShuttlXColor.positive : .secondary)
+                    statusDot(dataManager.healthKitAuthorized)
+                    Text(dataManager.healthKitAuthorized ? "Allowed" : "Not allowed")
+                        .foregroundStyle(.secondary)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("HealthKit Status")
-                .accessibilityValue(dataManager.healthKitAuthorized ? "Connected" : "Not Connected")
+                .accessibilityValue(dataManager.healthKitAuthorized ? "Allowed" : "Not allowed")
 
                 if !dataManager.healthKitAuthorized {
                     Button("Request HealthKit Access") {
@@ -126,12 +74,42 @@ struct SettingsView: View {
                 .accessibilityHint("Shows information about how health data is used")
             }
 
+            // Heart
+            Section("Heart") {
+                NavigationLink {
+                    HeartAlertsView()
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Heart limit")
+                            Text("You or your doctor set it")
+                                .font(ShuttlXFont.cardCaption)
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text(heartLimitSummary)
+                            .font(ShuttlXFont.cardSubtitle.monospacedDigit().weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityLabel("Heart limit and alerts")
+                .accessibilityValue(heartLimitSummary)
+
+                Toggle("Show effort 0–10 on watch", isOn: Binding(
+                    get: { heart.showEffortOnWatch || heart.effortAlwaysOn },
+                    set: { heart.showEffortOnWatch = $0; pushHeart() }))
+                    .disabled(heart.effortAlwaysOn)
+                    .accessibilityHint(heart.effortAlwaysOn ? "Always on with a beta-blocker or effort-only mode" : "Asks how hard the workout was when it ends")
+
+                Toggle("Auto-switch Run / Walk", isOn: Binding(
+                    get: { heart.autoSwitchActivity },
+                    set: { heart.autoSwitchActivity = $0; pushHeart() }))
+                    .accessibilityHint("The watch changes between run, walk and cycling on its own")
+            }
+
             // Body Metrics Section (for calorie estimation)
             Section("Body Metrics") {
                 HStack {
-                    Image(systemName: "scalemass.fill")
-                        .foregroundStyle(.tint)
-                        .accessibilityHidden(true)
                     Text("Weight (kg)")
                     Spacer()
                     TextField("70", text: $weightText)
@@ -146,9 +124,6 @@ struct SettingsView: View {
                 .accessibilityLabel("Weight in kilograms")
 
                 HStack {
-                    Image(systemName: "person.fill")
-                        .foregroundStyle(.tint)
-                        .accessibilityHidden(true)
                     Text("Age")
                     Spacer()
                     TextField("30", text: $ageText)
@@ -162,94 +137,7 @@ struct SettingsView: View {
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Age in years")
-
-                HStack {
-                    Image(systemName: "heart.circle.fill")
-                        .foregroundStyle(ShuttlXColor.heartRate)
-                        .accessibilityHidden(true)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Max Heart Rate (BPM)")
-                        Text("Override auto-calculated value")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    TextField(maxHRPlaceholder, text: $maxHRText)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 80)
-                        .onChange(of: maxHRText) { _, newValue in
-                            if let bpm = Double(newValue), bpm > 0 {
-                                HeartRateZoneCalculator.saveMaxHR(bpm)
-                                sharedDataManager.sendMaxHRToWatch(bpm)
-                            } else if newValue.isEmpty {
-                                HeartRateZoneCalculator.saveMaxHR(0)   // 0 means "clear"
-                                sharedDataManager.sendMaxHRToWatch(0)
-                            }
-                        }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Maximum heart rate in beats per minute")
-                .accessibilityHint("Leave blank to use the Tanaka formula based on your age")
-
-                Text("Used for personalised heart rate zones. Auto-detected from HealthKit age when blank.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
-
-            // Heart & alerts Section
-            Section {
-                Toggle("I take a beta-blocker", isOn: Binding(
-                    get: { heart.onBetaBlocker ?? false },
-                    set: { heart.onBetaBlocker = $0; pushHeart() }))
-                    .accessibilityHint("Heart rate runs lower on beta-blockers, so the estimated limit is lowered")
-
-                HStack {
-                    Text("Upper limit (BPM)")
-                    Spacer()
-                    TextField(heart.estimatedUpperLimit(age: deviceManager.userAge).map { "\($0) estimate" } ?? "Off",
-                              text: $upperLimitText)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 110)
-                        .onChange(of: upperLimitText) { _, v in heart.upperLimit = Int(v); pushHeart() }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Upper heart rate limit in beats per minute")
-
-                HStack {
-                    Text("Low limit (BPM)")
-                    Spacer()
-                    TextField("Off", text: $lowLimitText)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 110)
-                        .onChange(of: lowLimitText) { _, v in heart.lowLimit = Int(v); pushHeart() }
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Low heart rate limit in beats per minute")
-
-                Toggle("Heart rate above limit", isOn: Binding(
-                    get: { heart.alertAboveLimit }, set: { heart.alertAboveLimit = $0; pushHeart() }))
-                Toggle("Heart rate below low limit", isOn: Binding(
-                    get: { heart.alertBelowLow && heart.lowLimit != nil },
-                    set: { heart.alertBelowLow = $0; pushHeart() }))
-                    .disabled(heart.lowLimit == nil)
-                Toggle("Heart signal lost", isOn: Binding(
-                    get: { heart.alertSignalLost }, set: { heart.alertSignalLost = $0; pushHeart() }))
-                Toggle("No motion", isOn: Binding(
-                    get: { heart.alertNoMotion }, set: { heart.alertNoMotion = $0; pushHeart() }))
-
-                if #available(iOS 26, *) {
-                    // unverified: needs device test. No public AirPods heart-rate API in the SDK
-                    // headers, so this stores intent only and has no runtime path yet.
-                    Toggle("Use AirPods heart rate", isOn: Binding(
-                        get: { heart.useAirPodsHeartRate }, set: { heart.useAirPodsHeartRate = $0; pushHeart() }))
-                }
-            } header: {
-                Text("Heart & alerts")
-            } footer: {
-                Text("Your own limit always wins over the estimate. Your medication answer stays on this device. Alerts are a reminder, not medical advice.")
             }
 
             // Data Management Section
@@ -356,8 +244,15 @@ struct SettingsView: View {
             }
         }
         .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSuccessMessage)
-        .themedScreenBackground()
+        .timelineScreenBackground()
+        .scrollDismissesKeyboard(.interactively)
+        #if DEBUG
+        .navigationDestination(isPresented: $seamHeartAlerts) { HeartAlertsView() }
+        #endif
         .onAppear {
+            #if DEBUG
+            if ProcessInfo.processInfo.environment["SHUTTLX_SHOW_HEART"] == "1" { seamHeartAlerts = true }
+            #endif
             if let weight = deviceManager.userWeightKg {
                 weightText = String(format: "%.1f", weight)
             }
@@ -365,12 +260,6 @@ struct SettingsView: View {
                 ageText = "\(age)"
             }
             heart = HeartSafetySettings.load()
-            upperLimitText = heart.upperLimit.map(String.init) ?? ""
-            lowLimitText = heart.lowLimit.map(String.init) ?? ""
-            // Load manually saved max HR (empty string when using auto-calculation)
-            if let savedMaxHR = HeartRateZoneCalculator.loadSavedMaxHR(), savedMaxHR > 0 {
-                maxHRText = "\(Int(savedMaxHR.rounded()))"
-            }
         }
     }
 
@@ -417,7 +306,7 @@ struct SettingsView: View {
 
     private var watchStatusText: String {
         guard WCSession.isSupported() else { return "Not Supported" }
-        return WCSession.default.isPaired ? "Paired" : "Not Paired"
+        return WCSession.default.isPaired ? "Connected" : "Not paired"
     }
 
     private func pushHeart() {
@@ -425,14 +314,16 @@ struct SettingsView: View {
         sharedDataManager.sendHeartSafetyToWatch(heart, age: deviceManager.userAge)
     }
 
-    /// Shows the Tanaka-formula estimate as the placeholder when no manual override is stored.
-    private var maxHRPlaceholder: String {
-        let calculator = HeartRateZoneCalculator(
-            age: deviceManager.userAge,
-            manualMaxHR: nil
-        )
-        let estimated = Int(calculator.estimatedMaxHR.rounded())
-        return "\(estimated)"
+    private var heartLimitSummary: String {
+        if heart.effortOnly { return "Effort only" }
+        return heart.effectiveUpperLimit(age: deviceManager.userAge).map { "\($0) bpm" } ?? "Not set"
+    }
+
+    private func statusDot(_ good: Bool) -> some View {
+        Circle()
+            .fill(good ? ShuttlXColor.positive : Color.secondary)
+            .frame(width: 8, height: 8)
+            .accessibilityHidden(true)
     }
 }
 

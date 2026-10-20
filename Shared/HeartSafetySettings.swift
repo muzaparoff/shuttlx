@@ -1,5 +1,8 @@
 import Foundation
 
+/// Which sensor feeds heart rate. Intent only for `.airPods`.
+public enum HeartRateSource: String, Codable, Sendable { case best, watch, airPods }
+
 /// Heart limits and alert switches.
 ///
 /// HEALTH DATA RULE: `onBetaBlocker` is medication data. It stays on the phone:
@@ -17,11 +20,29 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
     public var alertNoMotion: Bool
     /// Intent only. unverified: needs device test (no public AirPods HR API in the SDK headers).
     public var useAirPodsHeartRate: Bool
+    /// Alert on a rise of >= 40 bpm within 10 s.
+    public var alertSuddenJump: Bool
+    /// Seconds without heart rate and motion before auto-pause: 30 / 60 / 120.
+    public var noMotionSeconds: Int
+    /// "Use effort only": 0-10 scale, no heart-rate limit (no upper-limit alerts, no zone word).
+    public var effortOnly: Bool
+    public var showEffortOnWatch: Bool
+    /// Run/walk and cycling auto-switch on the watch.
+    public var autoSwitchActivity: Bool
+    /// Intent only. unverified: needs device test.
+    public var heartRateSource: HeartRateSource
+    /// MEDICATION NOTES: phone only, stripped from `watchPayload`.
+    public var medicineName: String?
+    public var dailyDose: String?
 
     public init(onBetaBlocker: Bool? = nil, upperLimit: Int? = nil, lowLimit: Int? = nil,
                 alertAboveLimit: Bool = true, alertBelowLow: Bool = true,
                 alertSignalLost: Bool = true, alertNoMotion: Bool = true,
-                useAirPodsHeartRate: Bool = false) {
+                useAirPodsHeartRate: Bool = false,
+                alertSuddenJump: Bool = true, noMotionSeconds: Int = 60,
+                effortOnly: Bool = false, showEffortOnWatch: Bool = true,
+                autoSwitchActivity: Bool = true, heartRateSource: HeartRateSource = .best,
+                medicineName: String? = nil, dailyDose: String? = nil) {
         self.onBetaBlocker = onBetaBlocker
         self.upperLimit = upperLimit
         self.lowLimit = lowLimit
@@ -30,6 +51,14 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
         self.alertSignalLost = alertSignalLost
         self.alertNoMotion = alertNoMotion
         self.useAirPodsHeartRate = useAirPodsHeartRate
+        self.alertSuddenJump = alertSuddenJump
+        self.noMotionSeconds = noMotionSeconds
+        self.effortOnly = effortOnly
+        self.showEffortOnWatch = showEffortOnWatch
+        self.autoSwitchActivity = autoSwitchActivity
+        self.heartRateSource = heartRateSource
+        self.medicineName = medicineName
+        self.dailyDose = dailyDose
     }
 
     // Tolerant decoding: every key optional so older/newer JSON still loads.
@@ -43,7 +72,15 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
             alertBelowLow: try c.decodeIfPresent(Bool.self, forKey: .alertBelowLow) ?? true,
             alertSignalLost: try c.decodeIfPresent(Bool.self, forKey: .alertSignalLost) ?? true,
             alertNoMotion: try c.decodeIfPresent(Bool.self, forKey: .alertNoMotion) ?? true,
-            useAirPodsHeartRate: try c.decodeIfPresent(Bool.self, forKey: .useAirPodsHeartRate) ?? false)
+            useAirPodsHeartRate: try c.decodeIfPresent(Bool.self, forKey: .useAirPodsHeartRate) ?? false,
+            alertSuddenJump: try c.decodeIfPresent(Bool.self, forKey: .alertSuddenJump) ?? true,
+            noMotionSeconds: try c.decodeIfPresent(Int.self, forKey: .noMotionSeconds) ?? 60,
+            effortOnly: try c.decodeIfPresent(Bool.self, forKey: .effortOnly) ?? false,
+            showEffortOnWatch: try c.decodeIfPresent(Bool.self, forKey: .showEffortOnWatch) ?? true,
+            autoSwitchActivity: try c.decodeIfPresent(Bool.self, forKey: .autoSwitchActivity) ?? true,
+            heartRateSource: (try? c.decodeIfPresent(HeartRateSource.self, forKey: .heartRateSource)) ?? .best,
+            medicineName: try c.decodeIfPresent(String.self, forKey: .medicineName),
+            dailyDose: try c.decodeIfPresent(String.self, forKey: .dailyDose))
     }
 
     // MARK: Limits
@@ -57,8 +94,11 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
 
     /// The user's own limit always wins over the estimate.
     public func effectiveUpperLimit(age: Int?) -> Int? {
-        upperLimit ?? estimatedUpperLimit(age: age)
+        effortOnly ? nil : (upperLimit ?? estimatedUpperLimit(age: age))
     }
+
+    /// Effort 0-10 is always on with a beta-blocker or effort-only mode.
+    public var effortAlwaysOn: Bool { onBetaBlocker == true || effortOnly }
 
     /// EASY < 70% / STEADY < 90% / HARD of the limit. nil when no limit is known.
     public func zoneWord(hr: Int, age: Int? = nil) -> String? {
@@ -76,6 +116,10 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
         p.upperLimit = effectiveUpperLimit(age: age)
         p.onBetaBlocker = nil
         p.useAirPodsHeartRate = false
+        p.heartRateSource = .best
+        p.medicineName = nil
+        p.dailyDose = nil
+        p.showEffortOnWatch = showEffortOnWatch || effortAlwaysOn
         return p
     }
 

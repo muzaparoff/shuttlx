@@ -1,6 +1,5 @@
 import SwiftUI
 import HealthKit
-import WatchConnectivity
 import ShuttlXShared
 
 struct OnboardingView: View {
@@ -9,7 +8,28 @@ struct OnboardingView: View {
     @State private var currentPage = 0
     @State private var heart = HeartSafetySettings.load()
     @State private var limitText = ""
-    @State private var lowText = ""
+    @State private var betaChoice: BetaChoice?
+    @State private var limitChoice = LimitChoice.doctor
+    @State private var medicineText = ""
+    @State private var doseText = ""
+    @FocusState private var limitFocused: Bool
+
+    init(isFirstLaunch: Binding<Bool>) {
+        _isFirstLaunch = isFirstLaunch
+        let h = HeartSafetySettings.load()
+        _heart = State(initialValue: h)
+        _betaChoice = State(initialValue: h.onBetaBlocker.map { $0 ? .yes : .no })
+        _medicineText = State(initialValue: h.medicineName ?? "")
+        _doseText = State(initialValue: h.dailyDose ?? "")
+        _limitText = State(initialValue: h.upperLimit.map(String.init) ?? "")
+        _limitChoice = State(initialValue: h.effortOnly ? .effortOnly : .doctor)
+        #if DEBUG
+        // Screenshot seam: SHUTTLX_ONBOARDING_STEP=2|3 opens that step directly.
+        if let raw = ProcessInfo.processInfo.environment["SHUTTLX_ONBOARDING_STEP"], let step = Int(raw) {
+            _currentPage = State(initialValue: step <= 1 ? 0 : min(step, 3))
+        }
+        #endif
+    }
 
     var body: some View {
         VStack {
@@ -18,12 +38,10 @@ struct OnboardingView: View {
                 healthPage.tag(1)
                 medicationPage.tag(2)
                 limitPage.tag(3)
-                watchPage.tag(4)
             }
-            .tabViewStyle(.page)
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            .tabViewStyle(.page(indexDisplayMode: .never))
         }
-        .themedScreenBackground()
+        .timelineScreenBackground()
         .accessibilityElement(children: .contain)
     }
 
@@ -117,180 +135,202 @@ struct OnboardingView: View {
         .padding()
     }
 
-    // MARK: - Page 3: Beta-blocker
+    // MARK: - Step 2 of 3: Beta-blocker
 
     private var medicationPage: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "pills.fill")
-                .font(ShuttlXFont.onboardingIcon)
-                .foregroundStyle(ShuttlXColor.heartRate)
-                .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("Step 2 of 3").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                Spacer()
+                Button("Skip") { withAnimation { currentPage = 3 } }
+                    .font(ShuttlXFont.cardSubtitle)
+                    .accessibilityHint("Skip. You can answer later in Settings.")
+            }
+            .padding(.horizontal, 20)
 
             Text("Do you take a beta-blocker?")
-                .font(ShuttlXFont.metricLarge)
-                .multilineTextAlignment(.center)
+                .font(ShuttlXFont.metricMedium)
                 .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, 20)
 
-            Text("It makes your heart rate run lower, so your limit is adjusted. Your doctor's limit always wins. Stays on this device.")
+            Text("Medicines like metoprolol or bisoprolol keep your heart rate lower. We then set your limit differently.")
                 .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
 
-            Spacer()
-
-            // "Not sure" is treated as Yes.
-            ForEach([("Yes", true), ("No", false), ("Not sure", true)], id: \.0) { label, value in
-                Button {
-                    heart.onBetaBlocker = value
-                    heart.save()
-                    withAnimation { currentPage = 3 }
-                } label: {
-                    Text(label)
+            List {
+                // "Not sure" is stored as Yes (safe side).
+                ForEach(BetaChoice.allCases, id: \.self) { choice in
+                    Button {
+                        betaChoice = choice
+                    } label: {
+                        HStack {
+                            Text(choice.title)
+                                .fontWeight(betaChoice == choice ? .semibold : .regular)
+                                .foregroundStyle(ShuttlXColor.textPrimary)
+                            Spacer()
+                            if betaChoice == choice {
+                                Image(systemName: "checkmark").fontWeight(.bold).foregroundStyle(.tint)
+                                    .accessibilityHidden(true)
+                            }
+                        }
+                    }
+                    .accessibilityLabel(choice.title)
+                    .accessibilityAddTraits(betaChoice == choice ? .isSelected : [])
                 }
-                .buttonStyle(ShuttlXPrimaryCTAStyle())
+
+                Section {
+                    HStack {
+                        Text("Medicine")
+                        Spacer()
+                        TextField("Metoprolol", text: $medicineText).multilineTextAlignment(.trailing)
+                    }
+                    HStack {
+                        Text("Daily dose")
+                        Spacer()
+                        TextField("50 mg", text: $doseText).multilineTextAlignment(.trailing)
+                    }
+                } header: {
+                    Text("Optional · stays on this phone")
+                }
             }
+            .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
+
+            Text("Not medical advice. Your doctor knows your safe limit best.")
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
 
             Button {
+                saveMedication()
                 withAnimation { currentPage = 3 }
             } label: {
-                Text("Skip for Now")
-                    .font(ShuttlXFont.cardSubtitle)
-                    .foregroundStyle(.secondary)
+                Text("Continue")
             }
-            .accessibilityHint("Skip. You can answer later in Settings.")
+            .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
+            .padding(.horizontal, 16)
 
             Spacer().frame(height: 40)
         }
-        .padding()
+        .padding(.top, 8)
     }
 
-    // MARK: - Page 4: Heart limit
+    private func saveMedication() {
+        switch betaChoice {
+        case .no: heart.onBetaBlocker = false
+        case .yes, .notSure: heart.onBetaBlocker = true
+        case .none: break
+        }
+        heart.medicineName = medicineText.isEmpty ? nil : medicineText
+        heart.dailyDose = doseText.isEmpty ? nil : doseText
+        heart.save()
+    }
+
+    // MARK: - Step 3 of 3: Heart limit
 
     private var limitPage: some View {
         let age = DeviceManager.shared.userAge
         let estimate = heart.estimatedUpperLimit(age: age)
-        return VStack(spacing: 24) {
-            Spacer()
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Step 3 of 3")
+                .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
 
-            Image(systemName: "heart.text.square.fill")
-                .font(ShuttlXFont.onboardingIcon)
-                .foregroundStyle(ShuttlXColor.heartRate)
-                .accessibilityHidden(true)
-
-            Text("Heart limit")
-                .font(ShuttlXFont.metricLarge)
+            Text("Your heart limit")
+                .font(ShuttlXFont.metricMedium)
                 .accessibilityAddTraits(.isHeader)
+                .padding(.horizontal, 20)
 
-            Text("Optional. Enter your doctor's limit if you have one.")
+            Text("The watch warns you when you reach it.")
                 .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
+                .padding(.horizontal, 20)
 
-            VStack(spacing: 12) {
-                TextField(estimate.map { "\($0) (estimate)" } ?? "Upper limit (BPM)", text: $limitText)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Upper heart rate limit in beats per minute")
-                TextField("Low limit (BPM), off by default", text: $lowText)
-                    .keyboardType(.numberPad)
-                    .textFieldStyle(.roundedBorder)
-                    .accessibilityLabel("Low heart rate limit in beats per minute, optional")
+            List {
+                limitRow(.doctor, title: "My doctor gave me a limit") {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        TextField("125", text: $limitText)
+                            .keyboardType(.numberPad)
+                            .focused($limitFocused)
+                            .font(ShuttlXFont.metricLarge.monospacedDigit())
+                            .fixedSize()
+                            .accessibilityLabel("Heart rate limit in beats per minute")
+                        Text("bpm").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                    }
+                }
+                limitRow(.estimate, title: "Estimate it for me") {
+                    if let estimate {
+                        Text("≈ \(estimate) bpm max for age \(age ?? 0)\(heart.onBetaBlocker == true ? " on a beta-blocker" : ""). An estimate, not a prescription.")
+                            .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                    }
+                }
+                limitRow(.effortOnly, title: "Use effort only") {
+                    Text("0–10 scale, no heart-rate limit.")
+                        .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                }
             }
-            .padding(.horizontal)
+            .scrollContentBackground(.hidden)
+            .scrollDismissesKeyboard(.interactively)
 
-            Spacer()
+            Text("Effort 0–10 is always on with a beta-blocker. Heart rate and effort are used together.")
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 20)
 
             Button {
-                heart.upperLimit = Int(limitText)
-                heart.lowLimit = Int(lowText)
+                heart.effortOnly = limitChoice == .effortOnly
+                heart.upperLimit = limitChoice == .doctor ? Int(limitText) : nil
                 heart.save()
                 PhoneSyncCoordinator.shared.sendHeartSafetyToWatch(heart, age: age)
-                withAnimation { currentPage = 4 }
-            } label: {
-                Text("Continue")
-            }
-            .buttonStyle(ShuttlXPrimaryCTAStyle())
-
-            Button {
-                withAnimation { currentPage = 4 }
-            } label: {
-                Text("Skip for Now")
-                    .font(ShuttlXFont.cardSubtitle)
-                    .foregroundStyle(.secondary)
-            }
-            .accessibilityHint("Skip. You can set limits later in Settings.")
-
-            Spacer().frame(height: 40)
-        }
-        .padding()
-    }
-
-    // MARK: - Page 5: Watch Pairing
-
-    private var watchPage: some View {
-        VStack(spacing: 24) {
-            Spacer()
-
-            Image(systemName: "applewatch")
-                .font(ShuttlXFont.onboardingIcon)
-                .foregroundStyle(.tint)
-                .symbolEffect(.bounce, value: currentPage == 4)
-                .accessibilityHidden(true)
-
-            Text("Apple Watch")
-                .font(ShuttlXFont.metricLarge)
-                .accessibilityAddTraits(.isHeader)
-
-            if watchPaired && watchAppInstalled {
-                Text("Your watch is paired and ready.\nWorkouts start on your wrist and sync automatically.")
-                    .font(ShuttlXFont.sectionHeader)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-
-                HStack(spacing: 16) {
-                    WatchStatusRow(icon: "checkmark.circle.fill", label: "Watch Paired", isGood: true)
-                    WatchStatusRow(icon: "checkmark.circle.fill", label: "App Installed", isGood: true)
-                }
-            } else {
-                Text("No Apple Watch paired — that's fine.\nYou can review your sessions and settings on iPhone.")
-                    .font(ShuttlXFont.sectionHeader)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-
-                Text("To start workouts, open ShuttlX on your Apple Watch.")
-                    .font(ShuttlXFont.cardSubtitle)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-
-            Spacer()
-
-            Button {
                 isFirstLaunch = false
             } label: {
-                Text("Begin")
+                Text("Done")
             }
-            .buttonStyle(ShuttlXPrimaryCTAStyle())
+            .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
+            .padding(.horizontal, 16)
             .accessibilityHint("Completes onboarding and opens the app")
 
             Spacer().frame(height: 40)
         }
-        .padding()
+        .padding(.top, 8)
+        .onChange(of: limitFocused) { _, focused in if focused { limitChoice = .doctor } }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { limitFocused = false }
+            }
+        }
     }
 
-    // MARK: - Watch Status
-
-    private var watchPaired: Bool {
-        WCSession.isSupported() && WCSession.default.isPaired
-    }
-
-    private var watchAppInstalled: Bool {
-        WCSession.isSupported() && WCSession.default.isWatchAppInstalled
+    private func limitRow<Detail: View>(_ choice: LimitChoice, title: String,
+                                        @ViewBuilder detail: () -> Detail) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title).fontWeight(.semibold)
+                Spacer()
+                if limitChoice == choice {
+                    Image(systemName: "checkmark").fontWeight(.bold).foregroundStyle(.tint)
+                        .accessibilityHidden(true)
+                }
+            }
+            detail()
+        }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { limitChoice = choice }
+        .accessibilityElement(children: choice == .doctor ? .contain : .combine)
+        .accessibilityLabel(title)
+        .accessibilityAddTraits(limitChoice == choice ? .isSelected : [])
     }
 }
+
+private enum BetaChoice: CaseIterable {
+    case no, yes, notSure
+    var title: String { self == .no ? "No" : self == .yes ? "Yes" : "Not sure" }
+}
+
+private enum LimitChoice { case doctor, estimate, effortOnly }
 
 // MARK: - Sub-components
 
@@ -310,22 +350,6 @@ private struct OnboardingMetric: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label) tracking")
-    }
-}
-
-private struct WatchStatusRow: View {
-    let icon: String
-    let label: String
-    let isGood: Bool
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: icon)
-                .foregroundStyle(isGood ? ShuttlXColor.positive : .secondary)
-            Text(label)
-                .font(ShuttlXFont.cardSubtitle)
-                .foregroundStyle(isGood ? .primary : .secondary)
-        }
     }
 }
 

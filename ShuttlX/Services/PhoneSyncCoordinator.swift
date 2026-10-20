@@ -233,6 +233,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         case .belowLow: enabled = s.alertBelowLow
         case .signalLost: enabled = s.alertSignalLost
         case .noMotion: enabled = s.alertNoMotion
+        case .suddenJump: enabled = s.alertSuddenJump
         }
         guard enabled else { return }
 

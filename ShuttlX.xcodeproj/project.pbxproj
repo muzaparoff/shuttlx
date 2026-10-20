@@ -18,6 +18,7 @@
 		A5923512B /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923512F /* ProgramListView.swift */; };
 		A5923514B /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923514F /* DebugView.swift */; };
 		A5923515B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A5923515F /* PrivacyInfo.xcprivacy */; };
+		A5923A01B /* HeartAlertsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01F /* HeartAlertsView.swift */; };
 		A5923516B /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923516F /* OnboardingView.swift */; };
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		HV000001B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = HV000001F /* HelpView.swift */; };
@@ -242,6 +243,7 @@
 		A5923512F /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
 		A5923514F /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		A5923515F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A5923A01F /* HeartAlertsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartAlertsView.swift; sourceTree = "<group>"; };
 		A5923516F /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		HV000001F /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
@@ -514,6 +516,7 @@
 				A5923512F /* ProgramListView.swift */,
 				A5923531F /* SessionDetailView.swift */,
 				A5923514F /* DebugView.swift */,
+				A5923A01F /* HeartAlertsView.swift */,
 				A5923516F /* OnboardingView.swift */,
 				A5923517F /* SettingsView.swift */,
 				HV000001F /* HelpView.swift */,
@@ -933,6 +936,7 @@
 				A5923511B /* SessionRowView.swift in Sources */,
 				A5923512B /* ProgramListView.swift in Sources */,
 				A5923514B /* DebugView.swift in Sources */,
+				A5923A01B /* HeartAlertsView.swift in Sources */,
 				A5923516B /* OnboardingView.swift in Sources */,
 				A5923517B /* SettingsView.swift in Sources */,
 				HV000001B /* HelpView.swift in Sources */,

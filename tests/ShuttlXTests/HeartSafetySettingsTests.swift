@@ -49,4 +49,34 @@ final class HeartSafetySettingsTests: XCTestCase {
         XCTAssertTrue(s.alertNoMotion)
         XCTAssertNil(s.lowLimit)
     }
+
+    func testWatchPayloadStripsMedicationNotes() {
+        let s = HeartSafetySettings(onBetaBlocker: true, medicineName: "Metoprolol", dailyDose: "50 mg")
+        let p = s.watchPayload(age: 60)
+        XCTAssertNil(p.medicineName)
+        XCTAssertNil(p.dailyDose)
+        XCTAssertFalse(String(decoding: try! JSONEncoder().encode(p), as: UTF8.self).contains("Metoprolol"))
+        XCTAssertEqual(s.medicineName, "Metoprolol")
+    }
+
+    func testEffortOnlyDropsLimitAndForcesEffortOn() {
+        let s = HeartSafetySettings(upperLimit: 125, effortOnly: true, showEffortOnWatch: false)
+        XCTAssertNil(s.effectiveUpperLimit(age: 60))
+        XCTAssertNil(s.zoneWord(hr: 100, age: 60))
+        let p = s.watchPayload(age: 60)
+        XCTAssertNil(p.upperLimit)
+        XCTAssertTrue(p.showEffortOnWatch)
+    }
+
+    func testBetaBlockerForcesEffortOnButOtherwiseRespectsToggle() {
+        XCTAssertTrue(HeartSafetySettings(onBetaBlocker: true, showEffortOnWatch: false).watchPayload(age: nil).showEffortOnWatch)
+        XCTAssertFalse(HeartSafetySettings(onBetaBlocker: false, showEffortOnWatch: false).watchPayload(age: nil).showEffortOnWatch)
+    }
+
+    func testNewFieldsDefaultWhenMissing() throws {
+        let s = try JSONDecoder().decode(HeartSafetySettings.self, from: Data("{}".utf8))
+        XCTAssertTrue(s.showEffortOnWatch && s.autoSwitchActivity && s.alertSuddenJump)
+        XCTAssertEqual(s.noMotionSeconds, 60)
+        XCTAssertEqual(s.heartRateSource, .best)
+    }
 }

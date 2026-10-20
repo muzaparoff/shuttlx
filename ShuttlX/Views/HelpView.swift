@@ -111,7 +111,7 @@ enum HelpContent {
                 HelpStep(icon: "chart.line.uptrend.xyaxis",
                          text: "Open the Trends tab for Recovery Status, Training Load Trend, Weekly Volume, and Personal Records."),
                 HelpStep(icon: "arrow.triangle.2.circlepath",
-                         text: "Missing a Watch workout? In Settings, tap “Sync from Watch” to pull it over."),
+                         text: "Missing a Watch workout? Open ShuttlX on the Watch; unsent workouts sync to the iPhone automatically."),
             ]),
         HelpTopic(
             id: "heart-limits",
@@ -122,15 +122,18 @@ enum HelpContent {
             rate. Without one, ShuttlX shows an estimate, labelled as such, \
             lowered if you take a beta-blocker. Your doctor's limit always \
             wins. Your medication answer stays on this iPhone; only the \
-            resulting limits are sent to your Watch.
+            resulting limits are sent to your Watch. You can also choose \
+            "Use effort only": a 0–10 effort scale and no heart-rate limit.
             """,
             steps: [
                 HelpStep(icon: "gear",
-                         text: "Open the Settings tab and find the Heart & alerts section."),
+                         text: "During setup, answer the beta-blocker question and choose your heart limit. You can skip both."),
                 HelpStep(icon: "heart.fill",
-                         text: "Enter your upper limit, and a low limit if you want one. The low limit is off until you set it."),
+                         text: "Later: Settings → Heart → Heart limit opens Heart & alerts, where you change your limit, low limit and medication notes."),
                 HelpStep(icon: "bell.badge",
-                         text: "Choose which alerts you want: above limit, below low limit, signal lost, no motion."),
+                         text: "Choose which alerts you want: above limit, below low limit, sudden jump, signal lost. Pause when no heart rate has its own switch and delay (30, 60 or 120 s)."),
+                HelpStep(icon: "applewatch",
+                         text: "Settings → Heart also switches the 0–10 effort question and Run / Walk auto-switch on the watch. Effort stays on with a beta-blocker."),
             ]),
         HelpTopic(
             id: "widgets",
@@ -167,7 +170,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "heart.fill",
-                         text: "Manage access any time: Settings tab → Health Integration → “Why We Need Access”."),
+                         text: "Manage access any time: Settings tab → Health & Watch → “Why We Need Access”."),
                 HelpStep(icon: "heart.text.square",
                          text: "If a Watch workout never synced to the iPhone, ShuttlX reads it back from Apple Health when you open the app. It shows a “From Health” badge in History."),
                 HelpStep(icon: "trash",

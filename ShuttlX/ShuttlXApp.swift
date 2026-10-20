@@ -119,6 +119,7 @@ struct ShuttlXApp: App {
     //                         without touching the real sessions.json.
     //   SHUTTLX_TAB=<name>    selects a tab at launch:
     //                         today|programs|history|trends|settings.
+    //   SHUTTLX_ONBOARDING_STEP=1|2|3  shows onboarding at that step (always, even after first launch).
     //   SHUTTLX_SHOW_PLANS=1  additionally auto-pushes the Training Plans
     //                         list (the four built-in plans) — the seam
     //                         itself lives in ProgramsTabView.
@@ -145,6 +146,7 @@ struct ShuttlXApp: App {
 
     private var screenshotSeamsActive: Bool {
         demoDataRequested || launchTabRequest != nil
+            || ProcessInfo.processInfo.environment["SHUTTLX_ONBOARDING_STEP"] != nil
             || ProcessInfo.processInfo.environment["SHUTTLX_SHOW_PLANS"] == "1"
     }
     #endif
@@ -153,6 +155,7 @@ struct ShuttlXApp: App {
     /// Screenshot seam runs skip onboarding even on a fresh install.
     private var showOnboarding: Bool {
         #if DEBUG
+        if ProcessInfo.processInfo.environment["SHUTTLX_ONBOARDING_STEP"] != nil { return true }
         return isFirstLaunch && !screenshotSeamsActive
         #else
         return isFirstLaunch
