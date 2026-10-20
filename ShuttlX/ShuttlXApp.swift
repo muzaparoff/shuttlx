@@ -119,9 +119,8 @@ struct ShuttlXApp: App {
     //   SHUTTLX_SHOW_PLANS=1  additionally auto-pushes the Training Plans
     //                         list (the four built-in plans) — the seam
     //                         itself lives in ProgramsTabView.
-    //   SHUTTLX_HISTORY_MODE=<day|week|month>  pre-selects the History
-    //                         period segment — the seam itself lives in
-    //                         TrainingHistoryView.
+    //   SHUTTLX_HISTORY_MODE=<calendar|list|map>  pre-selects the History
+    //                         mode — the seam itself lives in HistoryView.
     //
     // Both also bypass onboarding on a fresh install so the tabs are
     // actually reachable. Launch via `SIMCTL_CHILD_SHUTTLX_DEMO_DATA=1

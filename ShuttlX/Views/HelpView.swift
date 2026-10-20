@@ -105,7 +105,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "calendar",
-                         text: "Open the History tab and use the Week / Month picker to browse past sessions."),
+                         text: "Open the History tab and switch between Calendar, List and Map to browse past sessions. Map shows the routes of the selected month and groups repeated routes."),
                 HelpStep(icon: "hand.tap",
                          text: "Tap a session row for the full detail — intervals, heart rate chart, route map, and splits."),
                 HelpStep(icon: "chart.line.uptrend.xyaxis",

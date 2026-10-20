@@ -24,13 +24,13 @@ struct ContentView: View {
                 .accessibilityLabel("Programs tab")
                 .accessibilityHint("Training plans and interval workout programs")
 
-            TrainingHistoryView()
+            HistoryView()
                 .tabItem {
                     Label("History", systemImage: "calendar")
                 }
                 .tag(2)
                 .accessibilityLabel("History tab")
-                .accessibilityHint("View your past training sessions")
+                .accessibilityHint("Browse past sessions by calendar, list or map")
 
             AnalyticsView()
                 .tabItem {
