@@ -3,10 +3,9 @@
 Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI.
 
 **External dependencies (SPM):**
-- **RevenueCat** (`purchases-ios-spm`) — in-app subscriptions (iOS only)
 - **TelemetryDeck** (`SwiftSDK`) — anonymous analytics (iOS only, no biometrics)
 
-These are declared in `PrivacyInfo.xcprivacy` (ProductInteraction, DeviceID, PurchaseHistory).  
+It is declared in the iOS `PrivacyInfo.xcprivacy` (ProductInteraction, DeviceID). That manifest still lists PurchaseHistory, which no SDK in the app currently collects.  
 The watchOS target remains Apple-frameworks-only.
 
 - **Bundle**: `com.shuttlx.ShuttlX` / `com.shuttlx.ShuttlX.watchkitapp`
@@ -20,7 +19,7 @@ The watchOS target remains Apple-frameworks-only.
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | ~74 | PhoneSyncCoordinator (~1,130), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files, HelpView |
+| iOS | `ShuttlX` | ~74 | PhoneSyncCoordinator (~1,130), HistoryView + HistoryMapView, DayRibbon (`Components/`), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files, HelpView |
 | watchOS | `ShuttlX Watch App` | ~38 | WatchWorkoutManager (~1,680, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator (~1,200), TrainingView (122 + 2 extension files: +Controls, +Metrics), ThemeManager + theme files |
 | Shared (SPM) | `ShuttlXShared` | 13 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
@@ -67,6 +66,20 @@ Watch complication deep-link flow:
   Complication → widgetURL "shuttlx://start-workout" or "shuttlx://start-template/{id}"
   → ShuttlXWatchApp.onOpenURL → workoutManager.startWorkout/startIntervalWorkout
 
+iOS tabs (ContentView): Today · History (calendar / list / map modes) · Trends · Settings
+  Programs & plans is a row on Today (DashboardView → ProgramsTabView). `shuttlx://plan` selects Today and pushes Programs.
+
+Heart limits and alerts:
+  iPhone: HeartSafetySettings (App Group UserDefaults) → syncHeartSafety → watch
+    (resolved upper limit + alert flags only; the medication answer stays on the phone)
+  Watch: HeartAlertEvaluator (above limit / below low limit / signal lost / no motion)
+    → local notification when not frontmost; heartAlert message → PhoneSyncCoordinator → phone notification
+  No motion for 60 s (no HR, no motion) → auto-pause, reason "noMotion" → Live Activity "Paused – no motion"
+
+Activity auto-switch (watch): GPS speed → SpeedActivityClassifier (hysteresis) → checkSpeedActivity() in WatchWorkoutManager
+Fix a part (iOS): SessionDetailView → SegmentOverrideStore → segment_overrides.json (sessions.json never mutated)
+Live Activity controls: Pause/Resume and End are LiveActivityIntents (ShuttlX/Models/WorkoutControlIntents.swift)
+
 Theme sync:
   iPhone: Settings → ThemeManager.selectedThemeID → UserDefaults (App Group)
     → PhoneSyncCoordinator.sendThemeToWatch() via applicationContext
@@ -88,15 +101,16 @@ Theme sync:
 
 ## Data Storage
 
-- JSON files in App Group container: `sessions.json`, `workout_templates.json`, `exercise_devices.json`
+- JSON files in App Group container: `sessions.json`, `workout_templates.json`, `exercise_devices.json`, `segment_overrides.json` (iOS "Fix a part" corrections)
 - Theme selection: App Group UserDefaults key `selectedThemeID`
+- Heart limits and alert switches: App Group UserDefaults key `heartSafetySettings` (JSON)
 - Sync: WatchConnectivity (`sendMessage` + `transferUserInfo` + `applicationContext`)
 - HealthKit: workout sessions, heart rate, distance, calories
 
 ## Development Rules
 
 - **Build both platforms after every change**: `bash tests/build_and_test_both_platforms.sh --clean --build`
-- **Minimal external dependencies** — iOS target uses RevenueCat + TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
+- **Minimal external dependencies** — iOS target uses TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
 - **Dynamic multi-theme UI**: 2 themes (Clean, Mixtape) — selectable in Settings (reduced from 7 in July 2026; the theme system still supports adding more)
@@ -238,4 +252,4 @@ Auto-memory at `~/.claude/projects/-Users-sergeymuzyukin-github-shuttlx/memory/`
 
 ## Frameworks Used
 
-SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, Combine, os.log, WatchKit
+SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, AppIntents, UserNotifications, Combine, os.log, WatchKit

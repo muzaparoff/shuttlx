@@ -26,6 +26,9 @@ duplicated per target until the Phase 4 engine unification
 | WorkoutSport | `Shared/WorkoutSport.swift` | themeColor lives in per-target `WorkoutSport+Theme.swift`; HK vars gated `#if canImport(HealthKit) && !os(macOS)` |
 | SessionMode | `Shared/SessionMode.swift` | |
 | HeartRateZoneCalculator | `Shared/HeartRateZoneCalculator.swift` | |
+| HeartSafetySettings | `Shared/HeartSafetySettings.swift` | HEALTH DATA: `onBetaBlocker` is device-only. `watchPayload(age:)` strips it and resolves the upper limit. `zoneWord`: EASY < 70% / STEADY < 90% / HARD |
+| HeartAlertEvaluator (+ `HeartAlert`) | `Shared/HeartAlertEvaluator.swift` | Kinds: aboveLimit, belowLow, signalLost, noMotion (60 s without HR and without motion) |
+| SpeedActivityClassifier (+ `Hysteresis`) | `Shared/ActivityClassifier.swift` | GPS speed + cadence → running / walking / cycling. 30 s min window; 60 s hold into or out of cycling, 30 s otherwise. Named apart from the watch-only `ActivityClassifier` |
 | FormattingUtils | `Shared/FormattingUtils.swift` | |
 
 Also in the package: `IntervalEngine` (canonical, consumed by iOS only for now),
@@ -37,6 +40,8 @@ Also in the package: `IntervalEngine` (canonical, consumed by iOS only for now),
 |-------|------------|
 | TrainingSession | references `IntervalType`/`CompletedInterval` which collide with the package engine's types |
 | WorkoutTemplate | defines the app-side `IntervalType` — collides with `ShuttlXShared.IntervalType` |
+
+`TrainingSession` also carries `effortRPE: Int?` (watch post-workout effort, both copies). It usually stays on the watch copy; iOS dedups by id.
 
 ## Per-target theme extensions (intentionally different per platform)
 

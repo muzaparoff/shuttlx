@@ -86,6 +86,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 - `ActivityBadge` — activity type pill (activity, duration)
 - `StreakBadge` — streak display
 - `ElevationProfileView` — elevation chart from route data
+- `ActivityRibbon` / `SessionPartRow` — per-part timeline ribbon and row (`ShuttlX/Components/DayRibbon.swift`), used on Today cards and SessionDetailView
 
 ## Layout Patterns
 

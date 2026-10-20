@@ -65,6 +65,14 @@ globs:
 - **Indoor sessions** (`sessionLocationType == .indoor`: gym recovery, elliptical, cross-training) never start CoreLocation; the guard lives in `startLocationUpdates()` and `requestLocationAndStartUpdates()`.
 - **Long-workout safety prompt**: at 3h50m ACTIVE time, `SafetyPromptView` (an overlay on `TrainingView`, not a `fullScreenCover`, so no system close button can dismiss it) shows "Still training?" with Continue / End & Save, plays `.notification` and checkpoints right away. Continue re-arms it 60 min later; no answer within 5 active minutes → `finishAndSave(autoEnded: true)` (sets `TrainingSession.autoEnded = true`, a defaulted optional in both copies). Pure logic: `Shared/SafetyPromptSchedule.swift` (tested in `tests/ShuttlXTests/SafetyPromptScheduleTests.swift`). Ticks don't run while paused, so pause freezes both the threshold and the timeout.
 
+## Heart Alerts, Auto-Pause, Activity Switch
+
+- **Alerts** (`HeartAlertEvaluator`, run from the workout tick): above limit, below low limit, signal lost, no motion. The sudden-jump alert is removed. A haptic always fires; a watch notification posts only when the app is not frontmost; every alert goes to the phone as `heartAlert`.
+- **No-motion auto-pause**: 60 s without an HR sample and without motion pauses the workout with reason `noMotion` (`autoPauseReason`). It is a heuristic: there is no public wrist-detection API. *Unverified: behaviour with the watch off the wrist (device test pending).*
+- **Zone word**: with a synced heart limit, the one-word zone (EASY / STEADY / HARD, cut-offs at 70% and 90% of the limit) takes the arc's slot beside the BPM value. Without a limit the arc stays.
+- **Activity auto-switch**: `checkSpeedActivity()` classifies on-foot vs cycling from GPS speed and cadence (`SpeedActivityClassifier`, with hysteresis). *Unverified: thresholds are not yet tuned on real sessions.*
+- **Effort**: the post-workout RPE is written to `effortRPE` through `WatchSyncCoordinator.updateSessionEffort`.
+
 ## Watch Complications / Widgets
 
 - Widget files are in `ShuttlXWatchWidgets/`
