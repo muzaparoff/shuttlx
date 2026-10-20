@@ -1,7 +1,6 @@
 import SwiftUI
 import os.log
 import ShuttlXShared
-import RevenueCat
 import TelemetryDeck
 import WatchConnectivity
 
@@ -37,12 +36,9 @@ struct ShuttlXApp: App {
     @StateObject private var deepLinkRouter = DeepLinkRouter()
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
 
-    private let subscriptionManager = SubscriptionManager.shared
     private let deepLinkLog = OSLog(subsystem: "com.shuttlx.ShuttlX", category: "DeepLink")
 
     init() {
-        subscriptionManager.configure()
-
         let telemetryConfig = TelemetryDeck.Config(appID: "2323535F-7F18-45F3-ACA2-215164CD22BC")
         TelemetryDeck.initialize(config: telemetryConfig)
     }
@@ -72,9 +68,6 @@ struct ShuttlXApp: App {
                 sharedDataManager.reconcileSessionIDs()
                 if authManager.isSignedIn {
                     cloudKitSync.performFullSync(dataManager: dataManager)
-                }
-                Task {
-                    await subscriptionManager.refreshEntitlementStatus()
                 }
                 // ActivityKit only allows STARTING a Live Activity while the
                 // app is foreground ("Target is not foreground" otherwise —

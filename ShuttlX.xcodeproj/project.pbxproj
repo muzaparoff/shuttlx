@@ -82,8 +82,6 @@
 		P5923005 /* PlanProgressCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = P5923005F /* PlanProgressCard.swift */; };
 		R5923001 /* ElevationProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923001F /* ElevationProfileView.swift */; };
 		R5923002 /* LiveRouteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = R5923002F /* LiveRouteView.swift */; };
-		RC000001 /* RevenueCat in Frameworks */ = {isa = PBXBuildFile; productRef = RC100001 /* RevenueCat */; };
-		RC000002 /* RevenueCatUI in Frameworks */ = {isa = PBXBuildFile; productRef = RC100002 /* RevenueCatUI */; };
 		SS000001 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		SS000002 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
 		SS000003 /* ShuttlXShared in Frameworks */ = {isa = PBXBuildFile; productRef = SS100001 /* ShuttlXShared */; };
@@ -92,8 +90,6 @@
 		IW000002 /* iOSHeartRateMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000002F /* iOSHeartRateMonitor.swift */; };
 		IW000003 /* iPhoneWorkoutController.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000003F /* iPhoneWorkoutController.swift */; };
 		IW000004 /* iPhoneWorkoutTimerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = IW000004F /* iPhoneWorkoutTimerView.swift */; };
-		SM000011 /* SubscriptionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000001 /* SubscriptionManager.swift */; };
-		SM000012 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = SM000002 /* PaywallView.swift */; };
 		TD000001 /* TelemetryDeck in Frameworks */ = {isa = PBXBuildFile; productRef = TD100001 /* TelemetryDeck */; };
 		TH000011 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
 		TH000012 /* ThemeFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000002 /* ThemeFonts.swift */; };
@@ -312,8 +308,6 @@
 		P5923005F /* PlanProgressCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanProgressCard.swift; sourceTree = "<group>"; };
 		R5923001F /* ElevationProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ElevationProfileView.swift; sourceTree = "<group>"; };
 		R5923002F /* LiveRouteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveRouteView.swift; sourceTree = "<group>"; };
-		SM000001 /* SubscriptionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionManager.swift; sourceTree = "<group>"; };
-		SM000002 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		TH000001 /* ThemeColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeColors.swift; sourceTree = "<group>"; };
 		TH000002 /* ThemeFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeFonts.swift; sourceTree = "<group>"; };
 		TH000003 /* ThemeEffects.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeEffects.swift; sourceTree = "<group>"; };
@@ -409,8 +403,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				RC000001 /* RevenueCat in Frameworks */,
-				RC000002 /* RevenueCatUI in Frameworks */,
 				TD000001 /* TelemetryDeck in Frameworks */,
 				SS000002 /* ShuttlXShared in Frameworks */,
 			);
@@ -502,7 +494,6 @@
 				F5923002 /* CloudKitSyncManager.swift */,
 				ED000002 /* CalorieEstimationEngine.swift */,
 				ED000003 /* DeviceManager.swift */,
-				SM000001 /* SubscriptionManager.swift */,
 				IW000001F /* iPhoneHapticPlayer.swift */,
 				IW000002F /* iOSHeartRateMonitor.swift */,
 				IW000003F /* iPhoneWorkoutController.swift */,
@@ -550,7 +541,6 @@
 				R5923002F /* LiveRouteView.swift */,
 				ED000004 /* DeviceListView.swift */,
 				ED000005 /* DevicePickerView.swift */,
-				SM000002 /* PaywallView.swift */,
 				IW000004F /* iPhoneWorkoutTimerView.swift */,
 				A5923D10 /* Dashboard */,
 				B5923020 /* Charts */,
@@ -786,8 +776,6 @@
 			);
 			name = ShuttlX;
 			packageProductDependencies = (
-				RC100001 /* RevenueCat */,
-				RC100002 /* RevenueCatUI */,
 				TD100001 /* TelemetryDeck */,
 				SS100001 /* ShuttlXShared */,
 			);
@@ -889,7 +877,6 @@
 			mainGroup = A59234D5;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */,
 				TD200001 /* XCRemoteSwiftPackageReference "SwiftSDK" */,
 				SS200001 /* XCLocalSwiftPackageReference "." */,
 			);
@@ -1048,8 +1035,6 @@
 				ED000013 /* DeviceManager.swift in Sources */,
 				ED000014 /* DeviceListView.swift in Sources */,
 				ED000015 /* DevicePickerView.swift in Sources */,
-				SM000011 /* SubscriptionManager.swift in Sources */,
-				SM000012 /* PaywallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2201,14 +2186,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/RevenueCat/purchases-ios-spm.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 5.0.0;
-			};
-		};
 		TD200001 /* XCRemoteSwiftPackageReference "SwiftSDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/TelemetryDeck/SwiftSDK.git";
@@ -2227,20 +2204,10 @@
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		RC100001 /* RevenueCat */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCat;
-		};
 		SS100001 /* ShuttlXShared */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = SS200001 /* XCLocalSwiftPackageReference "." */;
 			productName = ShuttlXShared;
-		};
-		RC100002 /* RevenueCatUI */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = RC200001 /* XCRemoteSwiftPackageReference "purchases-ios-spm" */;
-			productName = RevenueCatUI;
 		};
 		TD100001 /* TelemetryDeck */ = {
 			isa = XCSwiftPackageProductDependency;
