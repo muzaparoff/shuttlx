@@ -29,7 +29,7 @@ struct iPhoneWorkoutTimerView: View {
         ZStack {
             // Step-color wash (interval mode only). 8% opacity is the cap that
             // doesn't crush text contrast against the darker themed grounds
-            // (tuned on the darkest themes; still right for Clean / Mixtape).
+            // (tuned on the darkest themes; still right for Clean).
             if let washColor = intervalStepColor {
                 washColor
                     .opacity(0.08)
@@ -39,7 +39,7 @@ struct iPhoneWorkoutTimerView: View {
                                value: controller.intervalEngine?.currentStep?.label)
             }
 
-            themedTimerBody
+            standardTimerBody
         }
         .overlay(alignment: .top) {
             if let engine = controller.intervalEngine {
@@ -47,7 +47,7 @@ struct iPhoneWorkoutTimerView: View {
                     .allowsHitTesting(false)
             }
         }
-        .timerScreenBackground(themeID: themeManager.current.id)
+        .themedScreenBackground()
         .alert("Finish Workout", isPresented: $showingFinishConfirmation) {
             Button("Save & Finish") {
                 _ = controller.finish()
@@ -69,24 +69,6 @@ struct iPhoneWorkoutTimerView: View {
             Button("Keep Going", role: .cancel) {}
         } message: {
             Text("This will end the workout without saving.")
-        }
-    }
-
-    // MARK: - Theme dispatch
-    //
-    // Each non-Clean theme gets the opportunity to fully restructure the timer
-    // body. The default case is the shared layout (header / hero / metrics /
-    // controls). Phase 3 of the timer redesign sprint replaces each themed
-    // case with a struct that owns the entire visible body for that theme —
-    // file-scoped per theme so multiple agents can implement different themes
-    // in parallel without conflicting on this dispatch.
-    @ViewBuilder
-    private var themedTimerBody: some View {
-        switch themeManager.current.id {
-        case "mixtape":
-            MixtapeTimerHero(controller: controller)
-        default:
-            standardTimerBody
         }
     }
 

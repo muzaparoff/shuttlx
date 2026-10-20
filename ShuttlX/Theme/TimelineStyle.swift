@@ -2,7 +2,7 @@ import SwiftUI
 
 // Flat "timeline" look for Today / Session detail (approved mockup, 2026-10).
 // Clean: grouped-grey screen + flat grouped-white card, no border or shine.
-// Other themes keep their own card and background so Mixtape still renders.
+// Any future theme keeps its own card and background.
 
 extension View {
     @ViewBuilder

@@ -16,7 +16,6 @@ Each theme owns ONE signature shape, reused across surfaces so the whole app fee
 | Theme | Signature shape |
 |---|---|
 | Clean | soft glass ring |
-| Mixtape | cassette spool (circle + spokes) |
 
 Reuse as: chart frame, progress indicator, summary medal, empty/loading state. One parametric `Canvas` per theme — never N illustrations per state.
 
@@ -29,7 +28,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 
 ## Theme System
 
-- 2 selectable themes: **Clean** (default) and **Mixtape** (July 2026 reduction deleted Synthwave, Arcade, Classic Radio, Neovim, FM Tuner and VU Meter app-wide; the system still supports adding themes)
+- 1 theme: **Clean** (October 2026 deleted Mixtape; the July 2026 reduction deleted Synthwave, Arcade, Classic Radio, Neovim, FM Tuner and VU Meter). The system still supports adding themes — register in `AppTheme.all` and `ThemeID.valid`. Saved/synced ids outside `ThemeID.valid` fall back to `clean`
 - `ThemeManager.shared` is the `@Observable` singleton — injected via `.environment(ThemeManager.shared)` at app root
 - **Theme switching**: always call `ThemeManager.shared.selectTheme(id)` — never set `selectedThemeID` directly
 - `current` is a stored `@Observable` property (not computed) — ensures SwiftUI re-renders on theme change
@@ -41,16 +40,15 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 ## Screen Backgrounds
 
 - Use `.themedScreenBackground()` on every major screen's outermost container (NavigationStack, ScrollView, List, TabView)
-- Switches automatically per active theme: mesh gradient (Clean), blue body texture (Mixtape)
-- Background modifiers: `.cleanMeshBackground()`, `.mixtapeBackground()` (dispatched via `Theme/Components/ThemedSceneBackground.swift`)
+- Switches automatically per active theme: mesh gradient (Clean)
+- Background modifier: `.cleanMeshBackground()` (called directly by `.themedScreenBackground()` while there is a single theme)
 - `MeshGradient` is iOS-only — watchOS Clean theme uses `LinearGradient` fallback
 - All background overlays use `.allowsHitTesting(false)` and `.ignoresSafeArea()`
 
 ## Cards & Containers
 
-- Use `.themedCard()` for all card containers — adapts per theme via `ThemeEffects.CardStyle`: `.glass` (Clean) / `.lcd` (Mixtape)
+- Use `.themedCard()` for all card containers — adapts per theme via `ThemeEffects.CardStyle`: `.glass` (Clean)
 - `.glassBackground(cornerRadius:)` still available as a fallback for Clean-only contexts
-- `.lcdPanel()` (ThemeModifiers) is available for Mixtape LCD panel surfaces
 - Never use `Divider()` between list items — use vertical spacing (`LazyVStack(spacing: 12)`)
 - Standard card padding: `.padding(16)`
 
@@ -105,16 +103,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 
 ## Per-theme Timer Hero
 
-Each theme renders a unique animated **hero** element during the active-workout timer display:
-
-- **iOS dispatch**: `iPhoneWorkoutTimerView.swift` calls `@ViewBuilder themedTimerBody(controller:)` — switch on `themeManager.current.id`
-- **Watch dispatch**: `TrainingView.fullWorkoutDisplayTab` conditionally renders theme-specific overlays via `if themeManager.current.id == "<id>"` blocks
-- **File structure**: a theme's hero lives in its own file (iOS: `ShuttlX/Theme/Themes/MixtapeTimerHero.swift`, watch: `ShuttlX Watch App/Theme/Themes/Decorations/MixtapeTimerHero.swift`)
-- **Watch Chrome Pattern**: Overlays placed inside the ZStack of `fullWorkoutDisplayTab` (below metrics, above background) — all overlays use `.allowsHitTesting(false)` to avoid blocking tap controls
-- **Controller Reuse**: all heroes access the same `controller` / `workoutManager` data (HR, pace, distance, etc.) — no controller logic lives in theme files
-- **Themes with Heroes**: only Mixtape (iOS: dual spinning reels + tape counter; **watch: full-screen Walkman LCD deck** — `MixtapeWatchDeck`). The other former heroes were deleted with their themes in July 2026.
-- **Mixtape watch deck** (`MixtapeWatchDeck` in `Theme/Themes/Decorations/MixtapeTimerHero.swift`): full-bleed green LCD, `SIDE A ▸ <phase>` now-playing strip beside the system clock, oversized hero timer (leading zero trimmed: `1:48`), inline zone-tinted `<bpm> BPM` + VU bar, `DIST`/`PACE` on separate lines. No zone badge — HR colour IS the zone and a directional haptic fires on zone crossings. Phase wording is Mixtape-only walk-run (`RUN`/`WALK`/`WARM UP`/`COOL DOWN`); the shared `IntervalType.displayName` stays Work/Rest for all other screens.
-- **Clean**: minimal hero (optional) — stays the calm accessibility baseline
+No theme currently ships a custom hero: Clean is the minimal, calm accessibility baseline and both timers render the shared layout (iOS `standardTimerBody`, watch `fullWorkoutDisplayTab`). If a theme adds one later, dispatch on `themeManager.current.id` (iOS in `iPhoneWorkoutTimerView`, watch in `TrainingView+Metrics`), keep the hero in its own file under `Theme/Themes/`, reuse the same `controller` / `workoutManager` data, and mark overlays `.allowsHitTesting(false)`.
 
 ## iOS Timer Screen
 

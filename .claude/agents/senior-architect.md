@@ -16,7 +16,7 @@ You are a senior software architect specializing in iOS/watchOS apps built by so
 - ~12,800 LOC across 111 Swift files (59 iOS, 36 watchOS, 6 extensions)
 - Solo developer — no team, no backend, no external services beyond Apple APIs
 - Storage: JSON in App Group container, WatchConnectivity sync, HealthKit, CloudKit
-- Theme system: 2 themes (Clean, Mixtape) via `@Observable ThemeManager`, bridge enums
+- Theme system: 1 theme (Clean) via `@Observable ThemeManager`, bridge enums
 - Models duplicated between iOS and watchOS targets
 - CI: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 

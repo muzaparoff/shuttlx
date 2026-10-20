@@ -93,11 +93,11 @@ Theme sync:
 - `current` is a **stored** property (not computed) — ensures `@Observable` generates proper tracking
 - `ShuttlXColor.*` / `ShuttlXFont.*` enums bridge to `ThemeManager.shared` — all existing code is theme-aware
 - Theme structs: `AppTheme` → `ThemeColors` (~40 tokens) + `ThemeFonts` (~20 tokens) + `ThemeEffects` + `ThemeChartStyle`
-- **2 themes** (`validIDs` in ThemeManager: `"clean"`, `"mixtape"`): Clean (default — glass cards, system fonts, calm cardiac-patient baseline), Mixtape (Walkman cassette deck — blue player body, spinning reels, tape-counter aesthetics). The July 2026 theme reduction deleted Synthwave, Arcade, Classic Radio, Neovim, FM Tuner and VU Meter app-wide (see the note in `ShuttlXWidgets/Shared/WidgetTheme.swift`); the architecture still supports adding themes via `AppTheme.all` + a new `Themes/<Name>Theme.swift` pair
-- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS), Mixtape: blue body + texture lines (`ThemedSceneBackground.swift` dispatches; `.cleanMeshBackground()` / `.mixtapeBackground()` are the per-theme modifiers)
-- View modifiers: `.themedCard()` (all card containers), `.lcdPanel()` (defined in ThemeModifiers, Mixtape LCD panels)
-- `ThemeEffects.CardStyle` values: `.glass` (Clean), `.lcd` (Mixtape)
-- Files under `Theme/` (mirrored per target): ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, ShuttlXTheme, Themes/CleanTheme, Themes/MixtapeTheme, Themes/MixtapeTimerHero (watch: Themes/Decorations/MixtapeTimerHero), Components/ThemedSceneBackground, Components/ThemedTransportButton; iOS additionally has ThemeChartStyle + IntervalTypeThemeHelpers
+- **1 theme** (`ThemeID.valid` in `Shared/ThemeID.swift` = `["clean"]`): Clean (default — glass cards, system fonts, calm cardiac-patient baseline). The July 2026 reduction deleted Synthwave, Arcade, Classic Radio, Neovim, FM Tuner and VU Meter; Mixtape (Walkman cassette deck) was deleted in October 2026, leaving Clean as the only theme. The architecture still supports adding themes via `AppTheme.all` + a new `Themes/<Name>Theme.swift` pair + adding the id to `ThemeID.valid`. A saved or synced id that is not in `ThemeID.valid` (e.g. a leftover `mixtape`) falls back to `clean` on load and is ignored by `selectTheme`
+- **Screen backgrounds**: `.themedScreenBackground()` on all major views — Clean: MeshGradient (iOS)/LinearGradient (watchOS); `.cleanMeshBackground()` is the per-theme modifier. With one theme `themedScreenBackground()` calls it directly; re-introduce a switch on `ThemeManager.shared.current.id` when a second theme is added
+- View modifiers: `.themedCard()` (all card containers)
+- `ThemeEffects.CardStyle` values: `.glass` (Clean)
+- Files under `Theme/` (mirrored per target): ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, ShuttlXTheme, Themes/CleanTheme; iOS additionally has ThemeChartStyle + TimelineStyle + IntervalTypeThemeHelpers
 
 ## Data Storage
 
@@ -113,7 +113,7 @@ Theme sync:
 - **Minimal external dependencies** — iOS target uses TelemetryDeck (SPM); watchOS target is Apple-frameworks-only. Do not add new external dependencies without explicit approval
 - **Discuss features before implementing** — never start without explicit approval
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
-- **Dynamic multi-theme UI**: 2 themes (Clean, Mixtape) — selectable in Settings (reduced from 7 in July 2026; the theme system still supports adding more)
+- **Multi-theme-ready UI**: only Clean ships (Mixtape deleted Oct 2026), so Settings has no theme picker; the theme system still supports adding more
 - **In-app Help**: `ShuttlX/Views/HelpView.swift`, reachable from Settings → Help — update it when user-facing flows change
 - **Most models live in the ShuttlXShared package** (`Shared/`) — single source of truth, `import ShuttlXShared`. Only `TrainingSession` and `WorkoutTemplate` remain duplicated per target (update BOTH copies) until the Phase 4 engine unification — see `.claude/rules/models.md`
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing

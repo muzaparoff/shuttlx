@@ -5,10 +5,8 @@ import SwiftUI
 // Provides background, surface, and accent colors per theme ID.
 // Widget extensions cannot access ShuttlXColor/ThemeManager — all colors are defined locally.
 //
-// Only "clean" and "mixtape" are live themes (July 2026 reduction — Synthwave,
-// Arcade, Classic Radio, and Neovim were deleted app-wide). This file used to
-// carry dead branches for those removed themes; they were pruned here as part
-// of the Tier-1 widget cleanup pass.
+// Only "clean" is a live theme (Synthwave, Arcade, Classic Radio, Neovim, FM Tuner,
+// VU Meter and Mixtape were deleted app-wide). Unknown ids fall back to Clean.
 
 struct WidgetTheme {
     let background: Color
@@ -17,22 +15,13 @@ struct WidgetTheme {
     let accent: Color
 
     static func forID(_ id: String) -> WidgetTheme {
-        switch id {
-        case "mixtape":
-            return WidgetTheme(
-                background:     Color(red: 0.05, green: 0.08, blue: 0.13),
-                backgroundDark: Color(red: 0.03, green: 0.05, blue: 0.09),
-                surface:        Color(red: 0.10, green: 0.19, blue: 0.38),
-                accent:         Color(red: 0.20, green: 0.65, blue: 0.95)   // blue
-            )
-        default: // "clean"
-            return WidgetTheme(
-                background:     Color(red: 0.08, green: 0.08, blue: 0.12),
-                backgroundDark: Color(red: 0.04, green: 0.04, blue: 0.08),
-                surface:        Color(red: 0.14, green: 0.14, blue: 0.20),
-                accent:         Color(red: 0.25, green: 0.80, blue: 0.45)   // system green
-            )
-        }
+        // Single theme today; switch on `id` when another is added.
+        return WidgetTheme(
+            background:     Color(red: 0.08, green: 0.08, blue: 0.12),
+            backgroundDark: Color(red: 0.04, green: 0.04, blue: 0.08),
+            surface:        Color(red: 0.14, green: 0.14, blue: 0.20),
+            accent:         Color(red: 0.25, green: 0.80, blue: 0.45)   // system green
+        )
     }
 
     /// Reads the active theme ID from the App Group UserDefaults. Shared by

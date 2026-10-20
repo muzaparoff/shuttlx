@@ -31,7 +31,7 @@ struct HRZoneChart: View {
         }())
     }
 
-    // MARK: - Swift Charts (Clean + Mixtape + stock themes)
+    // MARK: - Swift Charts (Clean + stock themes)
 
     private var swiftChartsZones: some View {
         Chart(zones) { zone in
@@ -63,12 +63,10 @@ struct HRZoneChart: View {
     // MARK: - Helpers
 
     private func zoneBarColor(_ zone: HRZoneDistribution) -> Color {
-        // Clean and Mixtape keep stock zone colours; others use accent
+        // Clean keeps stock zone colours
         switch chartStyle.barShape {
-        case .roundedSwiftCharts, .tapeStrip:
+        case .roundedSwiftCharts:
             return zone.color
-        default:
-            return chartStyle.accentColor.opacity(0.75)
         }
     }
 }

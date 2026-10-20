@@ -117,27 +117,6 @@ extension TrainingView {
                 IntervalStepWash(engine: engine)
             }
 
-            // Mixtape — full cassette-deck face (twin spinning reels flanking an
-            // LCD tape-window hero). Replaces the standard stacked metrics for
-            // this theme; gym-recovery still routes to RecoveryWorkoutView above.
-            if themeManager.current.id == "mixtape" {
-                MixtapeWatchDeck(workoutManager: workoutManager,
-                                 isInterval: isInterval,
-                                 screenH: h)
-                    .onChange(of: workoutManager.heartRate) { _, newHR in
-                        let isHigh = isHighHR(newHR)
-                        if isHigh && !highIntensityHapticFired {
-                            highIntensityHapticFired = true
-                            #if os(watchOS)
-                            WKInterfaceDevice.current().play(.notification)
-                            #endif
-                        } else if !isHigh {
-                            highIntensityHapticFired = false
-                        }
-                    }
-            }
-
-            if themeManager.current.id != "mixtape" {
             // Free run runs at spacing 0 and lets `flexGap` do ALL the distribution.
             // A `Spacer(minLength: 0)` does not cost 0 inside a spaced VStack — the
             // stack still inserts its spacing on BOTH sides of it. With four
@@ -148,7 +127,6 @@ extension TrainingView {
             VStack(alignment: isInterval ? .center : .leading,
                    spacing: isInterval ? rowSpacing : 0) {
                 // Workout-name header — INTERVAL ONLY.
-                // (Mixtape renders its own J-card label strip in MixtapeWatchDeck.)
                 //
                 // In interval mode the name identifies the running program
                 // ("5K INTERVAL") and is genuinely informative. In free run it is
@@ -193,7 +171,6 @@ extension TrainingView {
                 flexGap(!isInterval)
 
                 // Hero: interval countdown (interval) or elapsed time (free run).
-                // (Mixtape renders its own cassette-deck hero in MixtapeWatchDeck.)
                 timerRow(valueSize: valueSize, labelSize: labelSize, labelWidth: labelWidth,
                          heroSize: isInterval ? heroSize : frHeroSize)
 
@@ -307,7 +284,7 @@ extension TrainingView {
                     // that column used to hold is what lets the digits reach
                     // 0.15h–0.17h instead of the old 0.155h-nominal that was then
                     // scale-to-fit down to ~21pt on 40mm.
-                    //
+                //
                     // Width is solved from the ACTUAL glyph count of the value:
                     // "6'47\"" is 5 glyphs, a walking "12'34\"" is 6, and the
                     // no-data case is the single "—". Sizing per-value means the
@@ -381,13 +358,6 @@ extension TrainingView {
             // frees to the type scale.
             .padding(.bottom, isInterval ? 0 : max(10, h * 0.055))
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }   // end: standard stacked-metrics layout (non-mixtape themes)
-
-            // Mixtape chrome — the spinning reel now rides inline on the J-card
-            // header line (MixtapeReelBadge in the header HStack above) so it no
-            // longer needs a full-screen overlay or a leading inset. The shell
-            // frame + corner screws come from mixtapeBackground(); the J-card
-            // name strip carries the rest of the cassette identity.
         }
         .overlay(alignment: .top) {
             if isInterval, let engine = workoutManager.intervalEngine {

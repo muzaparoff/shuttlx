@@ -23,7 +23,6 @@ struct WeeklyCarouselCard: View {
     @Environment(ThemeManager.self) private var themeManager
     @State private var scrolledWeekID: Date?
 
-    private var isMixtape: Bool { themeManager.current.id == "mixtape" }
 
     // MARK: - Data
 
@@ -175,7 +174,14 @@ struct WeeklyCarouselCard: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .lcdPanel()
+        .background(
+            RoundedRectangle(cornerRadius: themeManager.effects.cardCornerRadius)
+                .fill(themeManager.colors.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: themeManager.effects.cardCornerRadius)
+                .strokeBorder(themeManager.colors.surfaceBorder, lineWidth: 1)
+        )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
             "\(week.label): \(FormattingUtils.formatDistance(week.totalDistanceKm)), " +
@@ -283,15 +289,6 @@ struct WeeklyCarouselCard: View {
             .padding()
     }
     .environment(ThemeManager.shared)
-}
-
-#Preview("Mixtape") {
-    ScrollView {
-        WeeklyCarouselCard(sessions: .previewMock)
-            .padding()
-    }
-    .environment(ThemeManager.shared)
-    .onAppear { ThemeManager.shared.selectTheme("mixtape") }
 }
 
 private extension Array where Element == TrainingSession {

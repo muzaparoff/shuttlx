@@ -37,7 +37,7 @@ You own `ShuttlX Watch App/**`, plus the watch-specific files in `ShuttlXWidgets
 ## ShuttlX-specific
 
 - Theme files mirrored in `ShuttlX Watch App/Theme/` — keep identical to iOS counterpart
-- Both themes (Clean, Mixtape) supported — the July 2026 reduction deleted the other themes app-wide
+- Only Clean is supported — Mixtape and the other themes were deleted app-wide
 - `WatchSyncCoordinator.swift` (watch) handles WC sync — multi-channel: sendMessage + transferUserInfo + applicationContext
 - `WatchWorkoutManager.swift` is the central workout state; `RecoverySegmenter` is a pure value-type state machine
 

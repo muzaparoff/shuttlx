@@ -81,12 +81,11 @@ globs:
 
 ## Theme System
 
-- Both themes (Clean, Mixtape) are supported on watchOS (July 2026 reduction — the other 5 themes were deleted app-wide)
+- Clean is the only theme (July 2026 reduction deleted 5, October 2026 deleted Mixtape)
 - Theme files mirrored in `ShuttlX Watch App/Theme/` with watch-specific font sizes
 - Theme selection synced from iPhone via WCSession `applicationContext`
 - `ThemeManager.shared` injected at app root in `ShuttlXWatchApp.swift`
 - Use `ShuttlXColor.*` / `ShuttlXFont.*` (bridges to active theme) or `@Environment(ThemeManager.self)`
-- Mixtape on watch: full-screen Walkman LCD deck — `MixtapeWatchDeck` in `ShuttlX Watch App/Theme/Themes/Decorations/MixtapeTimerHero.swift`, rendered from `TrainingView+Metrics.swift`; reel rotation keys off `elapsedTime` (halts on pause), decorations are `.allowsHitTesting(false)`
 
 ## Sync
 

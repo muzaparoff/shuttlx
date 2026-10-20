@@ -28,7 +28,6 @@ struct CalendarHeatmapCard: View {
     @Environment(ThemeManager.self) private var themeManager
     @State private var selectedIndex: Int?
 
-    private var isMixtape: Bool { themeManager.current.id == "mixtape" }
 
     private static let columns = 14
 
@@ -113,7 +112,7 @@ struct CalendarHeatmapCard: View {
 
     private func cell(for day: HeatmapDay, index: Int) -> some View {
         let bucket = Self.bucketIndex(forDistanceKm: day.distanceKm)
-        let color = HeatmapRamp.swatches(isMixtape: isMixtape)[bucket]
+        let color = HeatmapRamp.swatches[bucket]
         let isSelected = selectedIndex == index
 
         return Button {
@@ -151,7 +150,7 @@ struct CalendarHeatmapCard: View {
                 .foregroundStyle(.secondary)
             ForEach(0..<HeatmapRamp.stepCount, id: \.self) { step in
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(HeatmapRamp.swatches(isMixtape: isMixtape)[step])
+                    .fill(HeatmapRamp.swatches[step])
                     .frame(width: 12, height: 12)
             }
             Text("More")
@@ -200,27 +199,13 @@ struct CalendarHeatmapCard: View {
 private enum HeatmapRamp {
     static let stepCount = 5
 
-    static func swatches(isMixtape: Bool) -> [Color] {
-        isMixtape ? mixtapeRamp : cleanRamp
-    }
-
     // Clean — blue ramp, light (rest) -> dark (heavy).
-    private static let cleanRamp: [Color] = [
+    static let swatches: [Color] = [
         Color(red: 0.933, green: 0.957, blue: 0.988), // #EEF4FC
         Color(red: 0.804, green: 0.886, blue: 0.984), // #CDE2FB
         Color(red: 0.525, green: 0.714, blue: 0.937), // #86B6EF
         Color(red: 0.224, green: 0.529, blue: 0.898), // #3987E5
         Color(red: 0.094, green: 0.310, blue: 0.584)  // #184F95
-    ]
-
-    // Mixtape — amber ramp, dark (rest, recedes into the LCD body) -> bright
-    // (heavy), echoing the tape-hole motif already used for the watch reel badge.
-    private static let mixtapeRamp: [Color] = [
-        Color(red: 0.173, green: 0.125, blue: 0.075), // #2C2013
-        Color(red: 0.353, green: 0.235, blue: 0.094), // #5A3C18
-        Color(red: 0.541, green: 0.361, blue: 0.122), // #8A5C1F
-        Color(red: 0.753, green: 0.498, blue: 0.133), // #C07F22
-        Color(red: 0.949, green: 0.663, blue: 0.231)  // #F2A93B
     ]
 }
 
@@ -232,15 +217,6 @@ private enum HeatmapRamp {
             .padding()
     }
     .environment(ThemeManager.shared)
-}
-
-#Preview("Mixtape") {
-    ScrollView {
-        CalendarHeatmapCard(sessions: .previewMock)
-            .padding()
-    }
-    .environment(ThemeManager.shared)
-    .onAppear { ThemeManager.shared.selectTheme("mixtape") }
 }
 
 private extension Array where Element == TrainingSession {

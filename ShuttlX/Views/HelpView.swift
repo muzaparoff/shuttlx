@@ -114,24 +114,6 @@ enum HelpContent {
                          text: "Missing a Watch workout? In Settings, tap “Sync from Watch” to pull it over."),
             ]),
         HelpTopic(
-            id: "themes",
-            icon: "paintbrush",
-            title: "Themes: Clean & Mixtape",
-            body: """
-            ShuttlX has two looks. Clean is the calm, minimal default — glass \
-            cards and system type. Mixtape turns your workout into a \
-            Walkman-style cassette deck, spinning reels included. Your choice \
-            syncs to the Watch automatically.
-            """,
-            steps: [
-                HelpStep(icon: "gear",
-                         text: "Open the Settings tab and scroll to the Appearance section."),
-                HelpStep(icon: "hand.tap",
-                         text: "Tap “Clean” or “Mixtape” — the whole app restyles instantly, and the swatch row previews the palette."),
-                HelpStep(icon: "applewatch",
-                         text: "The Watch picks up the new theme on its own; no steps needed there."),
-            ]),
-        HelpTopic(
             id: "heart-limits",
             icon: "heart.text.square",
             title: "Heart limits & alerts",

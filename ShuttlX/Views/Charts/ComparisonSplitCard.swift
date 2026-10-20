@@ -380,15 +380,6 @@ private enum ComparisonPreviewData {
     .onAppear { ThemeManager.shared.selectTheme("clean") }
 }
 
-#Preview("Mixtape") {
-    ScrollView {
-        ComparisonSplitCard(sessions: ComparisonPreviewData.sessions)
-            .padding()
-    }
-    .environment(ThemeManager.shared)
-    .onAppear { ThemeManager.shared.selectTheme("mixtape") }
-}
-
 #Preview("No prior data") {
     ScrollView {
         ComparisonSplitCard(sessions: Array(ComparisonPreviewData.sessions.prefix(3)))

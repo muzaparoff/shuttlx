@@ -33,11 +33,6 @@
 		A5923B93 /* HistoryMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A93 /* HistoryMapView.swift */; };
 		A5923B91 /* DayRibbon.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A91 /* DayRibbon.swift */; };
 		A5923B06 /* PressScaleButtonStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A06 /* PressScaleButtonStyle.swift */; };
-		MX002B /* ThemedTransportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX002F /* ThemedTransportButton.swift */; };
-		MX003B /* ThemedSceneBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX003F /* ThemedSceneBackground.swift */; };
-		MX004B /* ThemedTransportButton.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = MX002F /* ThemedTransportButton.swift */; };
-		MX005B /* ThemedSceneBackground.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = MX003F /* ThemedSceneBackground.swift */; };
-		MX001B /* MixtapeTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX001F /* MixtapeTimerHero.swift */; };
 
 		A5923E01 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D01 /* DashboardView.swift */; };
 		T0DA0001 /* TodayTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = T0DA0001F /* TodayTimeline.swift */; };
@@ -103,7 +98,6 @@
 		TH000015 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
 		TH000016 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
 		TH000017 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
-		TH000019 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
 		TH000022 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 
 		TH000031 /* ThemeColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000001 /* ThemeColors.swift */; };
@@ -113,14 +107,12 @@
 		TH000035 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000005 /* ThemeManager.swift */; };
 		TH000036 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000006 /* ThemeModifiers.swift */; };
 		TH000037 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000007 /* CleanTheme.swift */; };
-		TH000039 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000009 /* MixtapeTheme.swift */; };
 		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 
 		TC000011 /* ThemeChartStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
 		TC000012 /* ThemedBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000002 /* ThemedBarChart.swift */; };
 		TC000013 /* ThemedLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000003 /* ThemedLineChart.swift */; };
 
-		TC000017 /* MixtapeSpoolDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000007 /* MixtapeSpoolDot.swift */; };
 		TC000021 /* ThemeChartStyle.swift in Sources (Widgets) */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
 		WG000010 /* ShuttlXWidgetsBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000001 /* ShuttlXWidgetsBundle.swift */; };
 		WG000011 /* SmallWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = WG000002 /* SmallWidget.swift */; };
@@ -158,10 +150,7 @@
 		WW100026 /* ThemeModifiers.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00007 /* ThemeModifiers.swift */; };
 		WW100027 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00008 /* ThemeAssets.swift */; };
 		WW100028 /* CleanTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00009 /* CleanTheme.swift */; };
-		WW100030 /* MixtapeTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00011 /* MixtapeTheme.swift */; };
 
-		WW100037 /* ThemedTransportButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00018 /* ThemedTransportButton.swift */; };
-		WW100038 /* ThemedSceneBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = WWT00019 /* ThemedSceneBackground.swift */; };
 		WW200099 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WW000010 /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
@@ -321,18 +310,13 @@
 		TH000005 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		TH000006 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeModifiers.swift; sourceTree = "<group>"; };
 		TH000007 /* CleanTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanTheme.swift; sourceTree = "<group>"; };
-		TH000009 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTheme.swift; sourceTree = "<group>"; };
 		TH000021 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeAssets.swift; sourceTree = "<group>"; };
 
-		MX001F /* MixtapeTimerHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeTimerHero.swift; sourceTree = "<group>"; };
-		MX002F /* ThemedTransportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedTransportButton.swift; sourceTree = "<group>"; };
-		MX003F /* ThemedSceneBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedSceneBackground.swift; sourceTree = "<group>"; };
 
 		TC000001 /* ThemeChartStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeChartStyle.swift; sourceTree = "<group>"; };
 		TC000002 /* ThemedBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedBarChart.swift; sourceTree = "<group>"; };
 		TC000003 /* ThemedLineChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedLineChart.swift; sourceTree = "<group>"; };
 
-		TC000007 /* MixtapeSpoolDot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MixtapeSpoolDot.swift; sourceTree = "<group>"; };
 		WG000001 /* ShuttlXWidgetsBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXWidgetsBundle.swift; sourceTree = "<group>"; };
 		WG000002 /* SmallWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmallWidget.swift; sourceTree = "<group>"; };
 		WG000003 /* MediumWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediumWidget.swift; sourceTree = "<group>"; };
@@ -368,10 +352,7 @@
 		WWT00007 /* ThemeModifiers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeModifiers.swift; path = "ShuttlX Watch App/Theme/ThemeModifiers.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00008 /* ThemeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemeAssets.swift; path = "ShuttlX Watch App/Theme/ThemeAssets.swift"; sourceTree = SOURCE_ROOT; };
 		WWT00009 /* CleanTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = CleanTheme.swift; path = "ShuttlX Watch App/Theme/Themes/CleanTheme.swift"; sourceTree = SOURCE_ROOT; };
-		WWT00011 /* MixtapeTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = MixtapeTheme.swift; path = "ShuttlX Watch App/Theme/Themes/MixtapeTheme.swift"; sourceTree = SOURCE_ROOT; };
 
-		WWT00018 /* ThemedTransportButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemedTransportButton.swift; path = "ShuttlX Watch App/Theme/Components/ThemedTransportButton.swift"; sourceTree = SOURCE_ROOT; };
-		WWT00019 /* ThemedSceneBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ThemedSceneBackground.swift; path = "ShuttlX Watch App/Theme/Components/ThemedSceneBackground.swift"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -579,18 +560,8 @@
 				T0DA0002F /* TimelineStyle.swift */,
 				TH000021 /* ThemeAssets.swift */,
 				TH000030 /* Themes */,
-				MX010G /* ThemeComponents */,
 			);
 			path = Theme;
-			sourceTree = "<group>";
-		};
-		MX010G /* ThemeComponents */ = {
-			isa = PBXGroup;
-			children = (
-				MX002F /* ThemedTransportButton.swift */,
-				MX003F /* ThemedSceneBackground.swift */,
-			);
-			path = Components;
 			sourceTree = "<group>";
 		};
 		A5923C02 /* Components */ = {
@@ -633,18 +604,8 @@
 				WC000001F /* WeeklyCarouselCard.swift */,
 				ST000001F /* ScrubTimelineHeroCard.swift */,
 				CS000001F /* ComparisonSplitCard.swift */,
-				TC000020 /* Accents */,
 			);
 			path = Charts;
-			sourceTree = "<group>";
-		};
-		TC000020 /* Accents */ = {
-			isa = PBXGroup;
-			children = (
-
-				TC000007 /* MixtapeSpoolDot.swift */,
-			);
-			path = Accents;
 			sourceTree = "<group>";
 		};
 		D39E30B42F9CE31B00FE8D49 /* Recovered References */ = {
@@ -659,10 +620,7 @@
 				WWT00007 /* ThemeModifiers.swift */,
 				WWT00008 /* ThemeAssets.swift */,
 				WWT00009 /* CleanTheme.swift */,
-				WWT00011 /* MixtapeTheme.swift */,
 
-				WWT00018 /* ThemedTransportButton.swift */,
-				WWT00019 /* ThemedSceneBackground.swift */,
 			);
 			name = "Recovered References";
 			sourceTree = "<group>";
@@ -683,9 +641,7 @@
 			isa = PBXGroup;
 			children = (
 				TH000007 /* CleanTheme.swift */,
-				TH000009 /* MixtapeTheme.swift */,
 
-				MX001F /* MixtapeTimerHero.swift */,
 
 			);
 			path = Themes;
@@ -990,12 +946,8 @@
 				T0DA0002 /* TimelineStyle.swift in Sources */,
 				TH000022 /* ThemeAssets.swift in Sources */,
 				TH000017 /* CleanTheme.swift in Sources */,
-				TH000019 /* MixtapeTheme.swift in Sources */,
 
 				TC000011 /* ThemeChartStyle.swift in Sources */,
-				MX001B /* MixtapeTimerHero.swift in Sources */,
-				MX002B /* ThemedTransportButton.swift in Sources */,
-				MX003B /* ThemedSceneBackground.swift in Sources */,
 
 				A5923B02 /* MetricCard.swift in Sources */,
 				A5923B03 /* ActivityBadge.swift in Sources */,
@@ -1016,7 +968,6 @@
 				ST000001B /* ScrubTimelineHeroCard.swift in Sources */,
 				CS000001B /* ComparisonSplitCard.swift in Sources */,
 
-				TC000017 /* MixtapeSpoolDot.swift in Sources */,
 				H5923001 /* WorkoutSport+Theme.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
 				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
@@ -1079,10 +1030,7 @@
 				TH000036 /* ThemeModifiers.swift in Sources */,
 				TH000042 /* ThemeAssets.swift in Sources */,
 				TH000037 /* CleanTheme.swift in Sources */,
-				TH000039 /* MixtapeTheme.swift in Sources */,
 
-				MX004B /* ThemedTransportButton.swift in Sources (Widgets) */,
-				MX005B /* ThemedSceneBackground.swift in Sources (Widgets) */,
 				WGT0001B /* WidgetTheme.swift in Sources */,
 				WGT0002B /* WidgetProgressShapes.swift in Sources */,
 				WGT0003B /* WidgetTemplateProvider.swift in Sources */,
@@ -1115,10 +1063,7 @@
 				WW100026 /* ThemeModifiers.swift in Sources */,
 				WW100027 /* ThemeAssets.swift in Sources */,
 				WW100028 /* CleanTheme.swift in Sources */,
-				WW100030 /* MixtapeTheme.swift in Sources */,
 
-				WW100037 /* ThemedTransportButton.swift in Sources */,
-				WW100038 /* ThemedSceneBackground.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

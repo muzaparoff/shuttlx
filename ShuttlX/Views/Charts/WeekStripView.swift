@@ -21,7 +21,6 @@ struct WeekStripView: View {
         }
     }
 
-    private var isMixtape: Bool { themeManager.current.id == "mixtape" }
     private var chartStyle: ThemeChartStyle { themeManager.current.chartStyle }
 
     var body: some View {
@@ -40,24 +39,15 @@ struct WeekStripView: View {
                                 .font(ShuttlXFont.cardSubtitle.weight(day.isToday ? .bold : .medium))
                                 .foregroundStyle(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.textPrimary)
 
-                            // Mixtape: spool decoration if has sessions; others: dots
-                            if isMixtape && day.sessionCount > 0 {
-                                MixtapeSpoolDot(
-                                    color: day.isSelected ? ShuttlXColor.iconOnCTA : chartStyle.accentColor,
-                                    size: 16
-                                )
-                                .frame(height: 16)
-                            } else {
-                                // Session dots
-                                HStack(spacing: 2) {
-                                    ForEach(0..<min(day.sessionCount, 3), id: \.self) { _ in
-                                        Circle()
-                                            .fill(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.running)
-                                            .frame(width: 4, height: 4)
-                                    }
+                            // Session dots
+                            HStack(spacing: 2) {
+                                ForEach(0..<min(day.sessionCount, 3), id: \.self) { _ in
+                                    Circle()
+                                        .fill(day.isSelected ? ShuttlXColor.iconOnCTA : ShuttlXColor.running)
+                                        .frame(width: 4, height: 4)
                                 }
-                                .frame(height: 4)
                             }
+                            .frame(height: 4)
                         }
                         .frame(width: 44, height: 72)
                         .background(

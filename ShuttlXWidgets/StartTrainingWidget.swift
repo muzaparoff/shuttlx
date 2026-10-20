@@ -110,13 +110,7 @@ struct StartTrainingWidgetView: View {
     private var ringSize: CGFloat { family == .systemSmall ? 52 : 60 }
 
     var body: some View {
-        Group {
-            if entry.themeID == "mixtape" {
-                mixtapeBody
-            } else {
-                cleanBody
-            }
-        }
+        cleanBody
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Start \(entry.name). \(entry.summary). Tap to start on your Apple Watch.")
     }
@@ -149,40 +143,6 @@ struct StartTrainingWidgetView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(family == .systemSmall ? 8 : 16)
-    }
-
-    // Mixtape: cassette label strip + spool play affordance.
-    private var mixtapeBody: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(entry.name.uppercased())
-                .font(.caption.bold())
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(theme.surface)
-                )
-
-            HStack(spacing: 8) {
-                CassetteSpoolProgress(completed: 1, total: 1, accentColor: theme.accent, surfaceColor: theme.surface)
-                    .frame(width: 32, height: 32)
-                    .widgetAccentable()
-                Text("▸ PLAY")
-                    .font(.caption.bold())
-                    .foregroundStyle(theme.accent)
-            }
-
-            Text(entry.summary)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.65))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(family == .systemSmall ? 8 : 16)
     }
 }

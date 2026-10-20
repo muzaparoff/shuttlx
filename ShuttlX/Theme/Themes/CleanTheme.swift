@@ -81,12 +81,10 @@ extension AppTheme {
         ),
         effects: ThemeEffects(
             cardStyle: .glass,
-            hasScanlines: false,
             neonGlowColor: nil,
             cardCornerRadius: 16,
             buttonCornerRadius: 14,
-            hasMeshBackground: true,
-            hasLCDDotMatrix: false
+            hasMeshBackground: true
         ),
         chartStyle: ThemeChartStyle(
             gridStyle: .dashed,

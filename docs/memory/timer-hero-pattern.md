@@ -1,6 +1,6 @@
 ---
 name: Per-Theme Timer Hero Pattern
-description: How a theme renders a unique hero visualization on iOS and watchOS; the watch chrome overlay pattern; dispatch mechanics. Only the Mixtape hero survives the July 2026 theme reduction.
+description: How a theme renders a unique hero visualization on iOS and watchOS; the watch chrome overlay pattern; dispatch mechanics. No hero ships today: Mixtape (the last one) was deleted in October 2026.
 type: project
 originSessionId: timer-redesign-sprint-2026-06-06
 ---
@@ -11,58 +11,27 @@ originSessionId: timer-redesign-sprint-2026-06-06
 
 Introduced in Build 34, a theme can own a unique, theme-branded **hero** visualization that plays during the active-workout timer display. The hero is the dominant visual element that brings the theme's personality to the timer screen.
 
-The July 2026 theme reduction cut the app to **2 themes (Clean + Mixtape)**, so **Mixtape's is the only shipped hero** today (Clean stays intentionally minimal). The dispatch pattern below is how any future theme's hero gets added.
+The theme reductions (July 2026 to 2 themes, October 2026 to Clean only) mean **no hero ships today** — Mixtape's was deleted (Clean stays intentionally minimal). The dispatch pattern below is how any future theme's hero gets added.
 
 ## File Structure
 
-```
-iOS Target:
-  ShuttlX/Theme/Themes/MixtapeTimerHero.swift        (~730 lines)
-
-watchOS Target:
-  ShuttlX Watch App/Theme/Themes/Decorations/MixtapeTimerHero.swift  (~440 lines, MixtapeWatchDeck)
-```
-
-Each file is **independent per target** — iOS and watchOS have different frame budgets, font sizes, and layout constraints, so the hero implementations diverge by platform.
+No hero files exist today. A future hero lives in `ShuttlX/Theme/Themes/` (iOS) and `ShuttlX Watch App/Theme/Themes/Decorations/` (watch). Each is **independent per target** — iOS and watchOS have different frame budgets, font sizes, and layout constraints.
 
 ## Shipped Hero
 
-| Theme | iOS Hero | Watch Hero | Metaphor |
-|-------|----------|-----------|----------|
-| Mixtape | Twin spinning cassette reels + LCD tape counter | Full-screen Walkman LCD deck (`MixtapeWatchDeck`): `SIDE A ▸ <phase>` strip, oversized timer, zone-tinted BPM + VU bar | Analog tape motion |
-| Clean | minimal (default case) | minimal | Calm accessibility baseline |
+None. Clean is minimal (the shared layout) — the calm accessibility baseline. Mixtape (twin reels on iOS, `MixtapeWatchDeck` on watch) was deleted in October 2026.
 
 ## Dispatch Mechanism
 
 ### iOS
 
-In `iPhoneWorkoutTimerView.swift`, the hero section uses a `@ViewBuilder` switch on `themeManager.current.id`:
-
-```swift
-@ViewBuilder
-var themedTimerBody: some View {
-    switch themeManager.current.id {
-    case "mixtape":
-        // Mixtape hero (reels + tape counter)
-        ...
-    default:
-        // Clean theme — minimal presentation
-        ...
-    }
-}
-```
+`iPhoneWorkoutTimerView.swift` renders `standardTimerBody`. To add a hero, switch on `themeManager.current.id` there and fall through to `standardTimerBody` as the default.
 
 The hero receives the **same `iPhoneWorkoutController`** instance that drives metrics (HR, pace, distance, etc.). No controller logic lives in the theme files — they are **pure view** only.
 
 ### watchOS
 
-In `TrainingView+Metrics.swift`, the metrics tab conditionally renders the theme-specific deck:
-
-```swift
-if themeManager.current.id == "mixtape" {
-    MixtapeWatchDeck(workoutManager: workoutManager)
-}
-```
+In `TrainingView+Metrics.swift`, `fullWorkoutDisplayTab` renders the shared metrics stack. A themed deck would be an `if themeManager.current.id == "<id>"` branch in that ZStack.
 
 **Key constraint**: decorative overlays use `.allowsHitTesting(false)` so pause/stop controls remain tappable underneath.
 
@@ -75,13 +44,13 @@ Heroes read metric properties from the target's workout engine (`iPhoneWorkoutCo
 ### Layout Constraints
 
 - **iOS**: full-screen timer region; hero can use Canvas, complex animations, multiple layers
-- **watchOS**: constrained by 40/46mm screen; the Mixtape deck is the full metrics page (see `.claude/rules/watchos.md` for the size-solving rules); avoid layouts that trigger silent scale-to-fit
+- **watchOS**: constrained by 40/46mm screen; the metrics page is size-solved (see `.claude/rules/watchos.md` for the size-solving rules); avoid layouts that trigger silent scale-to-fit
 
 ### Animation Patterns
 
 - Heroes are **event-driven**: they animate based on workout state (paused vs. active) and metric changes
-- The watch reel rotation keys off `elapsedTime` — monotonic, so it halts on pause with no catch-up snap; respect Reduce Motion
-- On iOS, any `TimelineView(.animation)` must pass `paused:` tied to the workout pause state (`MixtapeTimerHero.swift`: `minimumInterval: 1.0 / 24.0, paused: !isRunning`)
+- Drive any watch rotation from `elapsedTime` — monotonic, so it halts on pause with no catch-up snap; respect Reduce Motion
+- On iOS, any `TimelineView(.animation)` must pass `paused:` tied to the workout pause state
 
 ### Reuse of Controller Data
 
@@ -115,5 +84,5 @@ Heroes should be tested:
 ## Related Docs
 
 - `.claude/rules/design-system.md` — Per-theme Timer Hero subsection documents dispatch and reuse rules
-- `.claude/rules/watchos.md` — Mixtape watch deck + size-solving rules
+- `.claude/rules/watchos.md` — size-solving rules
 - `docs/incidents/2026-06-06-pace-10min.md` — pace rolling-window fix that keeps metric-driven animations stable

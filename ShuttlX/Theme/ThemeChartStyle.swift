@@ -10,7 +10,7 @@ struct ThemeChartStyle: Equatable {
     // ── Grid ─────────────────────────────────────────────────────────────────
     enum GridStyle: String, Equatable {
         case dashed   // Clean — stock AxisGridLine
-        case dotted   // Mixtape
+        case dotted
     }
     var gridStyle: GridStyle   = .dashed
     var gridColor: Color       = Color(.secondarySystemFill)
@@ -19,7 +19,6 @@ struct ThemeChartStyle: Equatable {
     // ── Bars ─────────────────────────────────────────────────────────────────
     enum BarShape: String, Equatable {
         case roundedSwiftCharts   // Clean — stock BarMark with cornerRadius
-        case tapeStrip            // Mixtape — Canvas bar with tape-edge stripes
     }
     var barShape: BarShape     = .roundedSwiftCharts
 
@@ -31,21 +30,21 @@ struct ThemeChartStyle: Equatable {
 
     // ── Lines / area ─────────────────────────────────────────────────────────
     enum LineStyle: String, Equatable {
-        case smoothArea   // Clean + Mixtape — LineMark + AreaMark catmullRom
+        case smoothArea   // LineMark + AreaMark catmullRom
     }
     var lineStyle: LineStyle   = .smoothArea
 
     // ── Point markers (line chart) ────────────────────────────────────────────
     enum PointMarker: String, Equatable {
         case circle   // Clean default
-        case none     // Mixtape
+        case none
     }
     var pointMarker: PointMarker = .circle
 
     // ── Axis labels ──────────────────────────────────────────────────────────
     enum AxisLabelStyle: String, Equatable {
         case system       // Clean
-        case monospaced   // Mixtape
+        case monospaced
     }
     var axisLabelStyle: AxisLabelStyle  = .system
     var axisLabelColor: Color           = Color(.secondaryLabel)

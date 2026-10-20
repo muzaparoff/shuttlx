@@ -13,7 +13,7 @@ You are a senior product designer for **ShuttlX**, a SwiftUI interval-training a
 
 - Interval training + cardiac rehab gym recovery + free run modes
 - Primary users: include 55+ post-cardiac-event patients (cognitive load, reduced fine motor control)
-- 2 selectable themes: **Clean** (default, glass) and **Mixtape** (Walkman cassette) — the July 2026 reduction deleted the other six; the theme system still supports adding new ones
+- 1 theme: **Clean** (glass) — Mixtape (Oct 2026) and the other themes were deleted; the theme system still supports adding new ones
 - Design system: `ShuttlXColor.*`, `ShuttlXFont.*` (bridge to active theme), `.themedCard()`, `.themedScreenBackground()`
 - iOS timer screen: 52pt monospaced timer, 28pt bold metrics, no emoji
 - Watch controls: circular buttons (green=pause, red=stop), 44pt min touch targets
@@ -25,7 +25,6 @@ The product's identity strategy: **each theme owns ONE signature shape** that re
 | Theme | Signature shape |
 |---|---|
 | Clean | soft glass ring |
-| Mixtape | cassette spool (circle + spokes) |
 
 Reuse the signature shape as: chart frame, progress indicator, summary medal, empty-state illustration, loading state. One parametric `Canvas` per theme — never N illustrations per state.
 
@@ -76,7 +75,7 @@ design/proposals/2026-05-14-recovery-redesign/
 - Files to create: <list>
 - Files to modify: <list>
 - Reuse existing: <components / theme tokens / modifiers / signature shapes>
-- Theme variants verified: <both themes (Clean, Mixtape) considered; per-theme adjustments listed>
+- Theme variants verified: <Clean considered; per-theme adjustments listed>
 - Watch performance check: <no idle animation, static Shape/Canvas only, height budget ~180pt on 41mm>
 - Open questions for dev: <list, or "none">
 ```

@@ -20,32 +20,31 @@
 - [Sync Architecture & Known Bug](./sync-architecture.md)
 - [Cadence (RPM/SPM) Derivation](./cadence-derivation.md) — why CAD card was hidden, CMPedometer warmup quirk, step-delta fallback
 - [Social Features & Supabase Plan](./social-backend-plan.md) — 7-phase plan for user registration, social, Supabase backend
-- [Per-Theme Timer Hero Pattern](./timer-hero-pattern.md) — how themed timer heroes are dispatched (Mixtape is the only hero since the July 2026 theme reduction); watch chrome overlay pattern
+- [Per-Theme Timer Hero Pattern](./timer-hero-pattern.md) — how themed timer heroes would be dispatched (no hero ships since Mixtape was deleted Oct 2026); watch chrome overlay pattern
 - [Open-Source Tooling Research](./tooling-research.md) — MCP/agent/skill landscape research (2026-06-06); curated picks in docs/proposals/tooling-additions.md
 
 ## User Preferences
 - Discuss each feature before implementing — never start without explicit approval
 - **Always plan first**: analyze codebase before implementing, identify affected files
 - **Always update docs**: after any feature change, update CLAUDE.md, .claude/rules/, .claude/agents/, .claude/skills/, and memory files
-- Dynamic multi-theme system — DONE (2 themes since the July 2026 reduction: Clean, Mixtape; system still supports adding themes)
+- Multi-theme-ready system — DONE (1 theme since Oct 2026: Clean; Mixtape deleted; system still supports adding themes)
 - Wants subscription-ready product — features need to justify payment
 - Timer screen: 52pt monospaced timer, 28pt bold metrics, no emoji/icons
 - Watch controls: circular buttons (green=pause, red=stop)
 
 ## Feature Status (Build 34+ / 2026-06-06)
-**Done**: Core workout, intervals, Watch app, sync, analytics (VO2max/TSB/PRs), training plans (3 built-in), themes (2: Clean + Mixtape after the July 2026 reduction), Mixtape timer hero on both platforms, Live Activity, widgets (2 iOS + 3 Watch), maps/routes, CloudKit + Sign In (basic), onboarding, settings, iOS Free Run card, exercise devices (6 built-in + custom), MET-based calorie estimation, large session sync fix, BPM visibility in walk/run, pace rolling-window fix, cadence step-delta fallback
+**Done**: Core workout, intervals, Watch app, sync, analytics (VO2max/TSB/PRs), training plans (3 built-in), themes (1: Clean after the Oct 2026 Mixtape deletion), Live Activity, widgets (2 iOS + 3 Watch), maps/routes, CloudKit + Sign In (basic), onboarding, settings, iOS Free Run card, exercise devices (6 built-in + custom), MET-based calorie estimation, large session sync fix, BPM visibility in walk/run, pace rolling-window fix, cadence step-delta fallback
 **Partial**: Multi-sport (model only), custom fonts (not bundled)
 **Not done**: Voice coaching, export/sharing, StoreKit subscriptions, social groups/challenges, auto-pause, pace/HR alerts, user profile + public CloudKit
 
-## Theme System (IMPLEMENTED — 2 themes since the July 2026 reduction)
-- `@Observable ThemeManager` singleton, `selectTheme(id)` for switching, stored `current` property; `validIDs = {"clean", "mixtape"}`
+## Theme System (IMPLEMENTED — Clean only since Oct 2026)
+- `@Observable ThemeManager` singleton, `selectTheme(id)` for switching, stored `current` property; ids validated by `ShuttlXShared.ThemeID` (`["clean"]`, unknown ids fall back to clean)
 - July 2026 reduction deleted Synthwave, Arcade, Classic Radio, Neovim, FM Tuner and VU Meter app-wide (see `ShuttlXWidgets/Shared/WidgetTheme.swift` note); architecture still supports adding themes
 - `ShuttlXColor`/`ShuttlXFont` bridge enums — all code is theme-aware
-- Theme files mirrored per target under `Theme/` (`Themes/CleanTheme`, `Themes/MixtapeTheme`, plus the Mixtape hero: iOS `Themes/MixtapeTimerHero.swift`, watch `Themes/Decorations/MixtapeTimerHero.swift`)
+- Theme files mirrored per target under `Theme/` (`Themes/CleanTheme`)
 - **Screen backgrounds**: `.themedScreenBackground()` modifier on all major views
   - Clean: `MeshGradient` (iOS) / `LinearGradient` fallback (watchOS) — soft indigo/blue/purple
-  - Mixtape: blue player body + horizontal texture lines + blue sheen gradient; spinning cassette reels hero (iOS), full-screen Walkman LCD deck `MixtapeWatchDeck` (watch)
-- `ThemeEffects` CardStyle: `.glass` (Clean), `.lcd` (Mixtape)
+- `ThemeEffects` CardStyle: `.glass` (Clean)
 - `MeshGradient` is iOS-only — watchOS uses `LinearGradient` fallback for Clean theme
 
 ## Lessons Learned

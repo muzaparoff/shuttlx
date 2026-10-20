@@ -5,10 +5,8 @@ import Charts
 //
 // Parameterised vertical bar chart.
 // `.roundedSwiftCharts` (Clean) — Swift Charts BarMark.
-// `.tapeStrip` (Mixtape) — Canvas bars with horizontal tape-edge stripes.
 //
-// Accessibility: canvas layer is `.accessibilityHidden(true)` — callers must
-// provide `.accessibilityLabel` with a numeric summary.
+// Callers must provide `.accessibilityLabel` with a numeric summary.
 
 struct ThemedBarChart: View {
     let values: [Double]
@@ -22,11 +20,7 @@ struct ThemedBarChart: View {
     private var maxIndex: Int { values.indices.max(by: { values[$0] < values[$1] }) ?? 0 }
 
     var body: some View {
-        if chartStyle.barShape == .roundedSwiftCharts {
-            swiftChartsBar
-        } else {
-            canvasBar
-        }
+        swiftChartsBar
     }
 
     // MARK: - Swift Charts (Clean)
@@ -74,91 +68,6 @@ struct ThemedBarChart: View {
         .frame(height: chartHeight)
     }
 
-    // MARK: - Canvas Renderer (Mixtape tapeStrip)
-
-    private var canvasBar: some View {
-        ZStack(alignment: .bottomLeading) {
-            Canvas { ctx, size in
-                drawGrid(ctx: ctx, size: size)
-                drawBars(ctx: ctx, size: size)
-            }
-            .frame(height: chartHeight)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
-
-            axisLabels
-                .frame(height: chartHeight)
-        }
-    }
-
-    // MARK: - Canvas: Grid
-
-    private func drawGrid(ctx: GraphicsContext, size: CGSize) {
-        let gridLines = 4
-        let color = chartStyle.gridColor.opacity(chartStyle.gridOpacity)
-        let dash: [CGFloat] = chartStyle.gridStyle == .dotted ? [2, 4] : [4, 4]
-        for i in 1...gridLines {
-            let y = size.height * CGFloat(1 - Double(i) / Double(gridLines))
-            var path = Path()
-            path.move(to: CGPoint(x: 0, y: y))
-            path.addLine(to: CGPoint(x: size.width, y: y))
-            ctx.stroke(path, with: .color(color), style: StrokeStyle(lineWidth: 0.5, dash: dash))
-        }
-    }
-
-    // MARK: - Canvas: Bars
-
-    private func drawBars(ctx: GraphicsContext, size: CGSize) {
-        guard !values.isEmpty else { return }
-        let barCount = values.count
-        let slotW = size.width / CGFloat(barCount)
-        let bW: CGFloat = slotW * 0.60
-        let safeMax = maxValue > 0 ? maxValue : 1
-
-        for (i, value) in values.enumerated() {
-            let barH = CGFloat(value / safeMax) * size.height
-            let x = CGFloat(i) * slotW + (slotW - bW) / 2
-            let y = size.height - barH
-            let rect = CGRect(x: x, y: y, width: bW, height: barH)
-
-            // Solid fill
-            ctx.fill(Path(roundedRect: rect, cornerRadius: 2),
-                     with: .color(chartStyle.accentColor.opacity(0.70)))
-
-            // Horizontal tape-edge stripes every 6pt
-            var stripeY = y + 3
-            while stripeY < size.height {
-                let stripeRect = CGRect(x: x, y: stripeY, width: bW, height: 1)
-                ctx.fill(Path(stripeRect),
-                         with: .color(chartStyle.accentColor.opacity(0.30)))
-                stripeY += 6
-            }
-        }
-    }
-
-    // MARK: - Axis Labels
-
-    private var axisLabels: some View {
-        GeometryReader { geo in
-            let barCount = max(values.count, 1)
-            let slotW = geo.size.width / CGFloat(barCount)
-
-            ZStack(alignment: .bottomLeading) {
-                ForEach(Array(labels.enumerated()), id: \.offset) { idx, label in
-                    let x = CGFloat(idx) * slotW + slotW * 0.5
-                    Text(label)
-                        .font(.system(size: 8, weight: .regular, design:
-                            chartStyle.axisLabelStyle == .system ? .default : .monospaced
-                        ))
-                        .tracking(chartStyle.axisLabelTracking)
-                        .foregroundStyle(chartStyle.axisLabelColor)
-                        .minimumScaleFactor(0.8)
-                        .position(x: x, y: geo.size.height - 6)
-                }
-            }
-        }
-    }
-
     // MARK: - Empty state factory
 
     static func emptyState(chartStyle: ThemeChartStyle, height: CGFloat) -> some View {
@@ -174,18 +83,11 @@ private struct ThemedBarChartEmpty: View {
 
     var body: some View {
         ZStack {
-            switch chartStyle.barShape {
-            case .tapeStrip:
-                Text("▶ SIDE B UNREC ▶")
-                    .font(.system(size: 9, design: .monospaced))
-                    .foregroundStyle(chartStyle.accentColor.opacity(0.55))
-            default:
-                VStack(spacing: 6) {
-                    skeletonBars
-                    Text("Not enough data")
-                        .font(ShuttlXFont.microLabel)
-                        .foregroundStyle(chartStyle.axisLabelColor.opacity(0.60))
-                }
+            VStack(spacing: 6) {
+                skeletonBars
+                Text("Not enough data")
+                    .font(ShuttlXFont.microLabel)
+                    .foregroundStyle(chartStyle.axisLabelColor.opacity(0.60))
             }
         }
         .frame(height: height)

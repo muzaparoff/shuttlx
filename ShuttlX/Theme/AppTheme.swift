@@ -4,7 +4,7 @@ import SwiftUI
 //
 // `colors`, `fonts`, `effects`, `chartStyle` are `var` so callers can copy an
 // existing theme and override individual tokens:
-//   var t = MixtapeTheme.theme
+//   var t = AppTheme.clean
 //   t.colors.running = .pink
 //
 // `id`, `displayName`, `icon` stay `let` — they form the theme's identity.
@@ -20,7 +20,7 @@ struct AppTheme: Identifiable, Equatable {
     var effects: ThemeEffects       = ThemeEffects()
     var chartStyle: ThemeChartStyle = ThemeChartStyle()
 
-    static var all: [AppTheme] = [.clean, .mixtape]
+    static var all: [AppTheme] = [.clean]
 
     static func theme(for id: String) -> AppTheme {
         all.first { $0.id == id } ?? .clean

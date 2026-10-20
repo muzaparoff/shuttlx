@@ -12,7 +12,7 @@ A comprehensive fitness app for iOS and watchOS featuring distance-based interva
 - **💓 HealthKit Integration**: Workout sessions, heart rate, distance, calories — with crash recovery
 - **📊 Analytics**: Fitness/fatigue/form (TSB), VO2max estimate, personal records, pace zones
 - **📅 Training Plans**: Built-in plans (Couch to 5K, HIIT Starter, 5K Improvement) + custom plans
-- **🎨 Theme System**: 2 themes — **Clean** (default, calm glass) and **Mixtape** (Walkman cassette deck with spinning reels); reduced from 7 in July 2026, architecture still supports adding more
+- **🎨 Theme System**: **Clean** (calm glass) is the only theme; reduced from 7 to 2 in July 2026 and to 1 in October 2026 (Mixtape deleted), architecture still supports adding more
 - **🏝️ Live Activity**: Dynamic Island + Lock Screen during workouts
 - **📱 Widgets & Complications**: 4 iOS home-screen widgets + a Control Center control, 4 watch complications
 - **☁️ iCloud Sync**: Sign in with Apple + CloudKit cross-device sync

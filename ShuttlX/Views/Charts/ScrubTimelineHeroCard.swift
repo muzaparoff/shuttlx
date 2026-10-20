@@ -550,15 +550,6 @@ private enum ScrubPreviewData {
     .onAppear { ThemeManager.shared.selectTheme("clean") }
 }
 
-#Preview("Mixtape") {
-    ScrollView {
-        ScrubTimelineHeroCard(sessions: ScrubPreviewData.sessions)
-            .padding()
-    }
-    .environment(ThemeManager.shared)
-    .onAppear { ThemeManager.shared.selectTheme("mixtape") }
-}
-
 #Preview("Empty") {
     ScrollView {
         ScrubTimelineHeroCard(sessions: [])

@@ -3,7 +3,7 @@ import SwiftUI
 
 // MARK: - W3: Weekly Goal Ring
 //
-// Home-screen small (themed: Clean glass ring / Mixtape cassette spool) +
+// Home-screen small (themed: Clean glass ring) +
 // lock-screen accessoryCircular/accessoryRectangular (system-tinted only —
 // no custom theme colors on the lock screen, matching the watch
 // complications' `WeeklyProgressComplication` pattern).
@@ -90,13 +90,7 @@ struct WeeklyGoalRingView: View {
     // MARK: Home-screen small — themed signature shape
 
     private var themedSmallBody: some View {
-        Group {
-            if entry.themeID == "mixtape" {
-                mixtapeSpoolBody
-            } else {
-                cleanRingBody
-            }
-        }
+        cleanRingBody
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(entry.count) of \(entry.goal) workouts this week. \(statusText).")
     }
@@ -124,33 +118,6 @@ struct WeeklyGoalRingView: View {
                 }
             }
             .widgetAccentable()
-            Text(statusText)
-                .font(.caption2)
-                .foregroundStyle(.white.opacity(0.75))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(8)
-    }
-
-    private var mixtapeSpoolBody: some View {
-        VStack(spacing: 6) {
-            ZStack {
-                CassetteSpoolProgress(completed: entry.count, total: entry.goal, accentColor: theme.accent, surfaceColor: theme.surface)
-                    .frame(width: 76, height: 76)
-                VStack(spacing: 0) {
-                    Text("\(entry.count)/\(entry.goal)")
-                        .font(.system(.callout, design: .monospaced, weight: .bold))
-                        .foregroundStyle(.white)
-                        .minimumScaleFactor(0.6)
-                }
-            }
-            .widgetAccentable()
-            Text("THIS WEEK")
-                .font(.caption2.bold())
-                .foregroundStyle(theme.accent)
-                .lineLimit(1)
             Text(statusText)
                 .font(.caption2)
                 .foregroundStyle(.white.opacity(0.75))

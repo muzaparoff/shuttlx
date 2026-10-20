@@ -16,7 +16,6 @@ import ShuttlXShared
 struct RecoveryWorkoutView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @Environment(ThemeManager.self) private var themeManager
 
     #if os(watchOS)
     private let screenHeight = WKInterfaceDevice.current().screenBounds.height
@@ -33,16 +32,7 @@ struct RecoveryWorkoutView: View {
 
         return VStack(spacing: h * 0.018) {
             // Top row — total elapsed left, state pill right.
-            // Mixtape: a small spinning reel rides at the leading edge so the
-            // recovery screen carries the same cassette metaphor as the
-            // interval / free-run timers (the cassette shell + screws already
-            // come from .themedScreenBackground()). Reel spins from elapsedTime
-            // and parks when paused — identical behavior to MixtapeReelBadge
-            // elsewhere. Other themes render this row unchanged.
             HStack(spacing: 6) {
-                if themeManager.current.id == "mixtape" {
-                    MixtapeReelBadge(workoutManager: workoutManager, diameter: 22)
-                }
                 Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
                     .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                     .monospacedDigit()
@@ -116,8 +106,8 @@ struct RecoveryWorkoutView: View {
             // Station number only — no station-elapsed clock here. Total elapsed
             // already shows top-left, and (unlike the REST timer, which feeds the
             // HRR 1:00/2:00 milestones) the station clock drives no feature. With
-            // the mixtape reel badge sharing this row, "STATION N · MM:SS" was the
-            // longest string and overflowed even 46mm, truncating to "STATION…".
+            // the clock sharing this row, "STATION N · MM:SS" was the longest
+            // string and overflowed even 46mm, truncating to "STATION…".
             pillContent(
                 text: "STATION \(workoutManager.recoverySetNumber)",
                 color: ShuttlXColor.ctaPrimary,
@@ -141,8 +131,7 @@ struct RecoveryWorkoutView: View {
                 .foregroundColor(color)
                 .lineLimit(1)
                 // 0.5 floor (was 0.7): the WORK-state pill ("STATION 1 · 00:34")
-                // is the longest, and the mixtape reel badge now sharing the top
-                // row tightened the width — at 0.7 it clipped to "STATION…".
+                // is the longest string on the top row — at 0.7 it clipped to "STATION…".
                 .minimumScaleFactor(0.5)
         }
         .padding(.horizontal, 5)
@@ -184,11 +173,7 @@ struct RecoveryWorkoutView: View {
         }
     }
 
-    /// The single contextual control. Mixtape renders it as a chunky cassette key
-    /// keycap that depresses mechanically on press (reusing the cassette
-    /// channel/highlight material from `ThemedTransportButtonStyle.spec`), while
-    /// keeping the green=go / red=stop cap color so the Start vs End affordance
-    /// stays unambiguous. Every other theme keeps the original CTA capsule.
+    /// The single contextual control: green=go / red=stop CTA capsule.
     @ViewBuilder
     private func contextualButton(title: String, icon: String, capColor: Color,
                                   height: CGFloat, labelSize: CGFloat,
@@ -204,21 +189,14 @@ struct RecoveryWorkoutView: View {
         .frame(maxWidth: .infinity)
         .frame(height: height)
 
-        if themeManager.current.id == "mixtape" {
-            Button(action: action) { label }
-                .buttonStyle(CassetteRecoveryKeyStyle(capColor: capColor))
-                .accessibilityLabel(accessibilityLabel)
-                .accessibilityHint(accessibilityHint)
-        } else {
-            Button(action: action) {
-                label
-                    .background(Capsule().fill(capColor))
-                    .foregroundColor(ShuttlXColor.iconOnCTA)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityHint(accessibilityHint)
+        Button(action: action) {
+            label
+                .background(Capsule().fill(capColor))
+                .foregroundColor(ShuttlXColor.iconOnCTA)
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+        .accessibilityHint(accessibilityHint)
     }
 
     // MARK: - Helpers
@@ -255,50 +233,5 @@ struct RecoveryWorkoutView: View {
         .accessibilityLabel(reached
                             ? (value != nil ? "\(label) mark: \(value!) BPM drop" : "\(label) reached")
                             : "\(label) mark not yet reached")
-    }
-}
-
-// MARK: - Cassette keycap style for the recovery control (Mixtape only)
-//
-// Reuses the cassette channel / highlight / travel / haptic constants from
-// `ThemedTransportButtonStyle.spec(for: "mixtape")` so the recovery key feels
-// identical to the transport keys on the controls page — but takes an explicit
-// `capColor` so Start stays green and End stays red (the shared transport style
-// only colors the PLAY key, which would make a destructive End key read silver).
-private struct CassetteRecoveryKeyStyle: ButtonStyle {
-    let capColor: Color
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    func makeBody(configuration: Configuration) -> some View {
-        let spec = ThemedTransportButtonStyle.spec(for: "mixtape")
-        let down = configuration.isPressed
-        let travel = reduceMotion ? 0 : (down ? spec.travel : 0)
-
-        return ZStack {
-            // Recessed channel the cap sinks into.
-            RoundedRectangle(cornerRadius: spec.cornerRadius)
-                .fill(spec.channel)
-
-            configuration.label
-                .foregroundColor(ShuttlXColor.iconOnCTA)
-                .background(
-                    RoundedRectangle(cornerRadius: spec.cornerRadius)
-                        .fill(LinearGradient(colors: [capColor, capColor.opacity(0.78)],
-                                             startPoint: .top, endPoint: .bottom))
-                        .overlay(alignment: .top) {
-                            RoundedRectangle(cornerRadius: spec.cornerRadius)
-                                .fill(spec.highlight.opacity(down ? 0 : 0.5))
-                                .frame(height: 2)
-                                .padding(.horizontal, 6)
-                                .padding(.top, 1)
-                        }
-                )
-                .padding(down ? 2 : 0)
-                .offset(y: travel)
-                .shadow(color: .black.opacity(down ? 0.15 : 0.45),
-                        radius: down ? 1 : 4, y: down ? 1 : 3)
-        }
-        .contentShape(Rectangle())
-        .sensoryFeedback(spec.haptic, trigger: configuration.isPressed)
     }
 }

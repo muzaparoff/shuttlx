@@ -41,20 +41,8 @@ struct WorkoutSummaryView: View {
                     .opacity(showBadge ? 1 : 0)
                     .animation(reduceMotion ? .easeIn(duration: 0.2) : .spring(response: 0.5, dampingFraction: 0.6), value: showBadge)
 
-                if ThemeManager.shared.current.id == "mixtape" {
-                    // Cassette idiom: the tape has reached the end of SIDE A.
-                    VStack(spacing: ShuttlXSpacing.xs) {
-                        Text("SIDE A COMPLETE")
-                            .font(.system(size: 14, weight: .heavy, design: .monospaced))
-                            .foregroundColor(ShuttlXColor.ctaPrimary)
-                            .tracking(1)
-                        MixtapeParkedReel()
-                            .frame(width: 64, height: 30)
-                    }
-                } else {
-                    Text("Workout Complete")
-                        .font(ShuttlXFont.watchHeroTitle)
-                }
+                Text("Workout Complete")
+                    .font(ShuttlXFont.watchHeroTitle)
 
                 Text(FormattingUtils.formatTimer(summary.duration))
                     .font(ShuttlXFont.watchSummaryTimer)

@@ -1,5 +1,6 @@
 import SwiftUI
 import os.log
+import ShuttlXShared
 
 @Observable
 final class ThemeManager {
@@ -18,6 +19,11 @@ final class ThemeManager {
     var effects: ThemeEffects { current.effects }
 
     func selectTheme(_ id: String) {
+        // Retired/unknown ids (e.g. "mixtape" from an older iPhone/watch) are ignored.
+        guard ThemeID.valid.contains(id) else {
+            logger.info("Ignoring unknown theme id: \(id)")
+            return
+        }
         guard id != selectedThemeID else { return }
         selectedThemeID = id
         current = AppTheme.theme(for: id)
@@ -28,15 +34,10 @@ final class ThemeManager {
     init() {
         if let defaults = UserDefaults(suiteName: appGroupID),
            let saved = defaults.string(forKey: defaultsKey) {
-            let validIDs = Set(["clean", "mixtape"])
-            if validIDs.contains(saved) {
-                selectedThemeID = saved
-                current = AppTheme.theme(for: saved)
-            } else {
-                selectedThemeID = "clean"
-                current = .clean
-                defaults.set("clean", forKey: defaultsKey)
-            }
+            let resolved = ThemeID.resolve(saved)
+            selectedThemeID = resolved
+            current = AppTheme.theme(for: resolved)
+            if resolved != saved { defaults.set(resolved, forKey: defaultsKey) }
         }
     }
 

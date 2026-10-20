@@ -37,22 +37,18 @@ type: project
 | ExerciseDevice.swift | 70+ | Device type enum + metadata (6 built-in + custom) |
 | ChartData.swift | 81 | Chart helpers (iOS only) |
 | WorkoutActivityAttributes.swift | 17 | Live Activity attributes (iOS only) |
-| **Theme/** (15 files, 2 themes — Clean + Mixtape since the July 2026 reduction) | | |
-| ThemeManager.swift | 47 | @Observable theme manager, persistence, `validIDs = {"clean","mixtape"}` |
+| **Theme/** (Clean is the only theme — Mixtape deleted Oct 2026) | | |
+| ThemeManager.swift | 47 | @Observable theme manager, persistence, ids validated by `ShuttlXShared.ThemeID` (`["clean"]`) |
 | AppTheme.swift | 28 | Theme struct: colors + fonts + effects + chartStyle |
 | ThemeColors.swift | 113 | ~40 color tokens per theme |
 | ThemeFonts.swift | 40 | ~20 font tokens per theme |
-| ThemeEffects.swift | 31 | Visual effects config, CardStyle `.glass`/`.lcd` |
+| ThemeEffects.swift | 31 | Visual effects config, CardStyle `.glass` |
 | ThemeChartStyle.swift | 70 | Per-theme chart styling (iOS only) |
-| ThemeModifiers.swift | 190 | View modifiers: themedCard, lcdPanel, etc. |
-| ThemeAssets.swift | 429 | Shared Canvas decorations (reels, tape, dot grids) |
+| ThemeModifiers.swift | 190 | View modifiers: themedCard, cleanMeshBackground |
+| ThemeAssets.swift | 429 | Clean timer frame + completion badge |
 | ShuttlXTheme.swift | 171 | ShuttlXColor/ShuttlXFont bridge enums |
 | IntervalTypeThemeHelpers.swift | 99 | Interval-type theming helpers (iOS only) |
 | Themes/CleanTheme.swift | 106 | Clean theme definition |
-| Themes/MixtapeTheme.swift | 106 | Mixtape theme definition |
-| Themes/MixtapeTimerHero.swift | 732 | Mixtape timer hero (reels + tape counter) |
-| Components/ThemedSceneBackground.swift | 666 | Screen backgrounds (mesh gradient / Walkman body) |
-| Components/ThemedTransportButton.swift | 242 | Themed transport controls |
 | **Views/** | | |
 | Workout/iPhoneWorkoutTimerView.swift | 420+ | Active workout timer + metrics + hero dispatch |
 | AnalyticsView.swift | 514 | Analytics & trends |
@@ -114,7 +110,7 @@ type: project
 | WorkoutSport.swift | 88 | Sport type enum |
 | WorkoutTemplate.swift | 95 | Interval program definition |
 | ExerciseDevice.swift | 70+ | Device type enum |
-| **Theme/** (13 files, 2 themes — Clean + Mixtape, mirrored from iOS) | | |
+| **Theme/** (Clean only, mirrored from iOS) | | |
 | ThemeManager.swift | ~47 | @Observable theme manager (same as iOS) |
 | AppTheme.swift | ~28 | Theme struct (same as iOS) |
 | ThemeColors.swift | ~113 | ~40 color tokens (same as iOS) |
@@ -123,9 +119,7 @@ type: project
 | ThemeModifiers.swift | ~190 | View modifiers (watch-sized) |
 | ThemeAssets.swift | — | Shared Canvas decorations (watch-sized) |
 | ShuttlXTheme.swift | — | Bridge enums (watch) |
-| Themes/CleanTheme.swift / Themes/MixtapeTheme.swift | ~106 ea | 2 theme definitions (watch-sized) |
-| Themes/Decorations/MixtapeTimerHero.swift | 443 | MixtapeWatchDeck — full-screen Walkman LCD deck |
-| Components/ThemedSceneBackground.swift / ThemedTransportButton.swift | — | Backgrounds + transport controls (watch) |
+| Themes/CleanTheme.swift | ~106 | Clean theme definition (watch-sized) |
 | **Views/** | | |
 | TrainingView.swift | 357 | Active workout UI (timer + metrics + hero overlays + controls) |
 | ProgramSelectionView.swift | 200 | Program picker |

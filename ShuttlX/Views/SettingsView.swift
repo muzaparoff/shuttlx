@@ -6,7 +6,6 @@ import TelemetryDeck
 import ShuttlXShared
 
 struct SettingsView: View {
-    @Environment(ThemeManager.self) var themeManager
     @Environment(\.openURL) private var openURL
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var sharedDataManager: PhoneSyncCoordinator
@@ -253,46 +252,6 @@ struct SettingsView: View {
                 Text("Your own limit always wins over the estimate. Your medication answer stays on this device. Alerts are a reminder, not medical advice.")
             }
 
-            // Appearance Section
-            Section("Appearance") {
-                ForEach(AppTheme.all) { theme in
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            themeManager.selectTheme(theme.id)
-                        }
-                        sharedDataManager.sendThemeToWatch(theme.id)
-                        WidgetCenter.shared.reloadAllTimelines()
-                        TelemetryDeck.signal("themeChanged", parameters: ["theme": theme.id])
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: theme.icon)
-                                .font(.body.weight(.semibold))
-                                .foregroundStyle(theme.colors.ctaPrimary)
-                                .frame(width: 28)
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(theme.displayName)
-                                    .font(.body)
-                                    .foregroundStyle(Color(.label))
-                                Text(themeSubtitle(for: theme.id))
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                            }
-                            Spacer()
-                            if themeManager.selectedThemeID == theme.id {
-                                Image(systemName: "checkmark")
-                                    .font(.body.weight(.semibold))
-                                    .foregroundStyle(ShuttlXColor.ctaPrimary)
-                            }
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel("\(theme.displayName) theme")
-                    .accessibilityValue(themeManager.selectedThemeID == theme.id ? "Selected" : "")
-                    .accessibilityHint("Switches to \(theme.displayName) theme")
-                }
-            }
-
             // Data Management Section
             Section("Data Management") {
                 Button("Clear All Training Sessions", role: .destructive) {
@@ -474,14 +433,6 @@ struct SettingsView: View {
         )
         let estimated = Int(calculator.estimatedMaxHR.rounded())
         return "\(estimated)"
-    }
-
-    private func themeSubtitle(for id: String) -> String {
-        switch id {
-        case "clean":   return "Modern & minimal"
-        case "mixtape": return "Portable player"
-        default:        return ""
-        }
     }
 }
 

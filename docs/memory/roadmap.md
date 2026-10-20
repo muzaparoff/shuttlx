@@ -33,7 +33,7 @@
 - [x] Sign in with Apple + CloudKit sync (basic pull/push, no push-triggered)
 
 ### UI & Theming
-- [x] Selectable themes (currently 2: Clean + Mixtape — the July 2026 reduction deleted the other themes app-wide)
+- [x] Selectable themes (currently 1: Clean — Mixtape and the other themes were deleted app-wide)
 - [x] ThemeManager @Observable singleton, dual-target mirrored files
 - [x] .themedCard(), .lcdPanel() modifiers; CardStyle .glass/.lcd
 - [x] Theme sync iPhone → Watch via applicationContext
