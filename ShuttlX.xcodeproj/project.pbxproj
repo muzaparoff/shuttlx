@@ -110,6 +110,7 @@
 		TH000042 /* ThemeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = TH000021 /* ThemeAssets.swift */; };
 
 		TC000011 /* ThemeChartStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000001 /* ThemeChartStyle.swift */; };
+		T0DA0003 /* TrendsOverview.swift in Sources */ = {isa = PBXBuildFile; fileRef = T0DA0003F /* TrendsOverview.swift */; };
 		TC000012 /* ThemedBarChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000002 /* ThemedBarChart.swift */; };
 		TC000013 /* ThemedLineChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = TC000003 /* ThemedLineChart.swift */; };
 
@@ -314,6 +315,7 @@
 
 
 		TC000001 /* ThemeChartStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeChartStyle.swift; sourceTree = "<group>"; };
+		T0DA0003F /* TrendsOverview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsOverview.swift; sourceTree = "<group>"; };
 		TC000002 /* ThemedBarChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedBarChart.swift; sourceTree = "<group>"; };
 		TC000003 /* ThemedLineChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemedLineChart.swift; sourceTree = "<group>"; };
 
@@ -598,6 +600,7 @@
 				B5923003 /* PaceTrendChart.swift */,
 				B5923004 /* HRZoneChart.swift */,
 				B5923005 /* WeekStripView.swift */,
+				T0DA0003F /* TrendsOverview.swift */,
 				TC000002 /* ThemedBarChart.swift */,
 				TC000003 /* ThemedLineChart.swift */,
 				CH000001F /* CalendarHeatmapCard.swift */,
@@ -961,6 +964,7 @@
 				B5923013 /* PaceTrendChart.swift in Sources */,
 				B5923014 /* HRZoneChart.swift in Sources */,
 				B5923015 /* WeekStripView.swift in Sources */,
+				T0DA0003 /* TrendsOverview.swift in Sources */,
 				TC000012 /* ThemedBarChart.swift in Sources */,
 				TC000013 /* ThemedLineChart.swift in Sources */,
 				CH000001B /* CalendarHeatmapCard.swift in Sources */,

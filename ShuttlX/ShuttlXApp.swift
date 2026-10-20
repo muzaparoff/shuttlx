@@ -213,7 +213,8 @@ struct ShuttlXApp: App {
                 let env = ProcessInfo.processInfo.environment
                 if let t = env["SHUTTLX_THEME"] { themeManager.selectTheme(t) }
                 if demoDataRequested {
-                    var demo = ShuttlXDemoData.makeSessions()
+                    // SHUTTLX_DEMO_MONTH=1: ~20 sessions with GPS routes this month (History/Trends shots).
+                    var demo = env["SHUTTLX_DEMO_MONTH"] == "1" ? ShuttlXDemoData.makeMonthSessions() : ShuttlXDemoData.makeSessions()
                     if env["SHUTTLX_DEMO_TODAY"] == "1" { demo += ShuttlXDemoData.makeTodaySessions() }
                     dataManager.activateDemoMode(sessions: demo)
                     // SHUTTLX_DEMO_OPEN=1 opens today's morning session detail.
@@ -488,6 +489,68 @@ enum ShuttlXDemoData {
                                                               endDate: rideStart.addingTimeInterval(45 * 60), distance: 14.2)])
         ride.sportType = .cycling
         return [morning, ride]
+    }
+
+    /// ~20 sessions in the current month with routes: three repeated loops (same-route groups),
+    /// a ride, a short walk. Deterministic; days after today are skipped.
+    static func makeMonthSessions(now: Date = Date()) -> [TrainingSession] {
+        enum Kind { case loopA, loopC, ride, walk, line }
+        let specs: [(day: Int, hour: Int, min: Int, kind: Kind)] = [
+            (1, 7, 62, .loopA), (3, 7, 40, .loopC), (3, 18, 35, .walk), (4, 17, 50, .ride), (6, 7, 61, .loopA),
+            (8, 18, 33, .walk), (9, 7, 42, .loopC), (10, 8, 58, .line), (11, 17, 55, .ride), (13, 7, 64, .loopA),
+            (15, 7, 40, .loopC), (15, 18, 30, .walk), (16, 12, 52, .line), (17, 7, 63, .loopA), (18, 18, 34, .walk),
+            (19, 17, 48, .ride),
+        ]
+        let cal = Calendar.current
+        let monthStart = cal.dateInterval(of: .month, for: now)?.start ?? now
+        func route(_ kind: Kind, start: Date, duration: TimeInterval, n: Int = 90) -> [RoutePoint] {
+            (0..<n).map { i in
+                let f = Double(i) / Double(n - 1), a = f * 2 * .pi
+                let lat: Double, lon: Double
+                switch kind {
+                case .loopA: lat = 52.2053 + 0.006 * sin(a) + 0.001 * sin(3 * a); lon = 0.1218 + 0.011 * (cos(a) - 1)
+                case .loopC: lat = 52.2150 + 0.0035 * sin(a); lon = 0.1100 + 0.006 * (cos(a) - 1)
+                case .ride:  lat = 52.1850 + 0.020 * sin(a) + 0.004 * sin(2 * a); lon = 0.1000 + 0.030 * (cos(a) - 1)
+                case .walk:  lat = 52.2000 + 0.0022 * sin(a); lon = 0.1300 + 0.0032 * (cos(a) - 1)
+                case .line:  lat = 52.2250 + 0.020 * f + 0.001 * sin(8 * a); lon = 0.1350 + 0.004 * sin(a)
+                }
+                return RoutePoint(latitude: lat, longitude: lon, timestamp: start.addingTimeInterval(duration * f))
+            }
+        }
+        var out: [TrainingSession] = []
+        for (idx, sp) in specs.enumerated() {
+            guard let day = cal.date(byAdding: .day, value: sp.day - 1, to: monthStart), day <= now,
+                  let start = cal.date(bySettingHour: sp.hour, minute: (idx * 7) % 40, second: 0, of: day),
+                  start < now else { continue }
+            let total = TimeInterval(sp.min * 60)
+            let km: Double
+            let parts: [(DetectedActivity, Double)]   // activity, share of time
+            switch sp.kind {
+            case .loopA: km = 9.8 + Double(idx % 3) * 0.1; parts = [(.walking, 0.12), (.running, 0.72), (.walking, 0.16)]
+            case .loopC: km = 5.1 + Double(idx % 2) * 0.1; parts = [(.walking, 0.1), (.running, 0.8), (.walking, 0.1)]
+            case .ride:  km = 18 + Double(idx % 4); parts = [(.cycling, 1)]
+            case .walk:  km = 3.0; parts = [(.walking, 1)]
+            case .line:  km = 8.2; parts = [(.running, 0.55), (.walking, 0.15), (.running, 0.3)]
+            }
+            var cursor = start
+            var segs: [ActivitySegment] = []
+            for (a, share) in parts {
+                let end = cursor.addingTimeInterval(total * share)
+                let speed: Double = a == .running ? 1.35 : a == .walking ? 0.55 : 2.4   // relative km weights
+                segs.append(ActivitySegment(
+                    activityType: a, startDate: cursor, endDate: end,
+                    steps: a == .cycling ? nil : Int((a == .running ? 168.0 : 112.0) * total * share / 60),
+                    distance: km * speed * share / parts.reduce(0) { $0 + (($1.0 == .running ? 1.35 : $1.0 == .walking ? 0.55 : 2.4) * $1.1) },
+                    averageHeartRate: a == .running ? 152 : a == .walking ? 118 : 126))
+                cursor = end
+            }
+            var s = TrainingSession(startDate: start, endDate: cursor, duration: total, averageHeartRate: 138,
+                                    maxHeartRate: 171, caloriesBurned: total / 60 * 9, distance: km, segments: segs,
+                                    route: route(sp.kind, start: start, duration: total))
+            s.sportType = sp.kind == .ride ? .cycling : sp.kind == .walk ? .walking : .running
+            out.append(s)
+        }
+        return out
     }
 
     private static func splits(distanceKm: Double, paceSecPerKm: Double) -> [KmSplitData]? {

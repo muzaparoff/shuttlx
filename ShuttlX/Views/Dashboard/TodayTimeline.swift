@@ -41,7 +41,7 @@ enum TodayFormat {
         case .running: return "Run"
         case .walking: return "Walk"
         case .cycling: return "Cycle"
-        default: return a.displayName
+        case .stationary, .unknown: return "Rest"
         }
     }
 
@@ -225,6 +225,7 @@ struct TimelineSessionRow: View {
 struct RouteThumbnail: View {
     let session: TrainingSession
     let segments: [ActivitySegment]
+    var size: CGSize = RouteSnapshotCache.wide
     @Environment(\.colorScheme) private var scheme
     @State private var image: UIImage?
 
@@ -235,8 +236,8 @@ struct RouteThumbnail: View {
                 Image(uiImage: image).resizable().scaledToFill()
             }
         }
-        .task(id: "\(session.id)-\(scheme == .dark)-\(segments.map(\.activityType.rawValue))") {
-            image = await RouteSnapshotCache.image(for: session, segments: segments, dark: scheme == .dark)
+        .task(id: "\(session.id)-\(scheme == .dark)-\(size.width)-\(segments.map(\.activityType.rawValue))") {
+            image = await RouteSnapshotCache.image(for: session, segments: segments, dark: scheme == .dark, size: size)
         }
         .accessibilityHidden(true)
     }
@@ -246,10 +247,12 @@ struct RouteThumbnail: View {
 enum RouteSnapshotCache {
     private static let cache = NSCache<NSString, UIImage>()
     private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "RouteSnapshot")
-    private static let size = CGSize(width: 300, height: 82)
+    static let wide = CGSize(width: 300, height: 82)
+    static let square = CGSize(width: 92, height: 92)
 
-    static func image(for session: TrainingSession, segments: [ActivitySegment], dark: Bool) async -> UIImage? {
-        let key = "\(session.id)-\(dark)-\(segments.map(\.activityType.rawValue))" as NSString
+    static func image(for session: TrainingSession, segments: [ActivitySegment], dark: Bool,
+                      size: CGSize = wide) async -> UIImage? {
+        let key = "\(session.id)-\(dark)-\(size.width)-\(segments.map(\.activityType.rawValue))" as NSString
         if let hit = cache.object(forKey: key) { return hit }
         guard let route = session.route, route.count >= 2 else { return nil }
         // Thumbnails don't need more than ~150 points.

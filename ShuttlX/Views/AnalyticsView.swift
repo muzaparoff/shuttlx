@@ -28,28 +28,92 @@ struct AnalyticsView: View {
                     if sessions.isEmpty {
                         emptyStateView
                     } else {
-                        recoveryStatusCard
-                        fitnessOverviewRow
-                        ScrubTimelineHeroCard(sessions: sessions)
-                        ComparisonSplitCard(sessions: sessions)
-                        CalendarHeatmapCard(sessions: sessions)
-                        runWalkSplitCard
-                        WeeklyCarouselCard(sessions: sessions)
-                        vo2maxCard
-                        personalRecordsSection
-                        paceZoneChart
-                        elevationSection
+                        TrendsOverview(sessions: sessions)
+                        detailRows
                     }
                 }
-                .padding(.horizontal)
+                .padding(.horizontal, 16)
                 .padding(.top, 8)
+                .padding(.bottom, 24)
             }
             .navigationTitle("Trends")
-            .themedScreenBackground()
+            .timelineScreenBackground()
         }
         .task(id: dataManager.sessions.count) {
             recomputeAnalytics()
         }
+    }
+
+    // MARK: - Rows that push the detail cards (everything the old single page showed)
+
+    private var detailRows: some View {
+        VStack(spacing: 0) {
+            detailRow("Heart rate zones", hint: nil) { detailScreen("Heart rate zones") { hrZonesCards } }
+            Divider().padding(.leading, 14)
+            detailRow("Records", hint: records.fastestKmPace.map { FormattingUtils.formatPace($0) + "/km best" }) {
+                detailScreen("Records") { recordsCards }
+            }
+            Divider().padding(.leading, 14)
+            detailRow("More", hint: nil) { detailScreen("More") { moreCards } }
+        }
+        .timelineCard()
+    }
+
+    private func detailRow<D: View>(_ title: String, hint: String?, @ViewBuilder destination: () -> D) -> some View {
+        NavigationLink(destination: destination()) {
+            HStack {
+                Text(title)
+                    .font(ShuttlXFont.cardSubtitle)
+                    .foregroundStyle(ShuttlXColor.textPrimary)
+                Spacer()
+                if let hint {
+                    Text(hint)
+                        .font(ShuttlXFont.cardCaption.monospacedDigit())
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(ShuttlXFont.cardCaption.weight(.semibold))
+                    .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(title + (hint.map { ", \($0)" } ?? ""))
+    }
+
+    private func detailScreen<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        ScrollView {
+            VStack(spacing: 16) { content() }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .padding(.bottom, 24)
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .themedScreenBackground()
+    }
+
+    @ViewBuilder private var hrZonesCards: some View {
+        HRZoneChart(zones: dataManager.heartRateZones(for: sessions))
+        paceZoneChart
+    }
+
+    @ViewBuilder private var recordsCards: some View {
+        personalRecordsSection
+        vo2maxCard
+        elevationSection
+    }
+
+    @ViewBuilder private var moreCards: some View {
+        recoveryStatusCard
+        fitnessOverviewRow
+        ScrubTimelineHeroCard(sessions: sessions)
+        ComparisonSplitCard(sessions: sessions)
+        CalendarHeatmapCard(sessions: sessions)
+        runWalkSplitCard
+        WeeklyCarouselCard(sessions: sessions)
     }
 
     // MARK: - Analytics Cache
@@ -187,13 +251,6 @@ struct AnalyticsView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Run vs Walk")
                         .font(ShuttlXFont.cardTitle)
-
-                    // Task 14: light-touch differentiator framing — ShuttlX tracks
-                    // and costs walk breaks separately instead of folding them into
-                    // one running number the way Apple Fitness does.
-                    Text("Every walk break tracked and costed separately from your runs.")
-                        .font(ShuttlXFont.cardCaption)
-                        .foregroundStyle(ShuttlXColor.textSecondary)
                 }
 
                 runWalkSplitBar(running: totalRunningDuration, walking: totalWalkingDuration)

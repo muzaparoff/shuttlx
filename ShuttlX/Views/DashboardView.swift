@@ -175,8 +175,11 @@ struct DashboardView: View {
                 }
             }
             .sheet(item: $fixing) { seg in
-                FixPartSheet(segment: seg) { overrides.set($0, for: seg) }
-                    .presentationDetents([.medium])
+                // The dialog clears `pickingPartFor` when it dismisses, so find the part's session by id.
+                let parts = dataManager.sessions.first { $0.segments.contains { $0.id == seg.id } }?.segments ?? []
+                FixPartSheet(segment: seg, partNumber: parts.firstIndex { $0.id == seg.id }.map { $0 + 1 }) {
+                    overrides.set($0, for: seg)
+                }
             }
             .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: isLive)
             .timelineScreenBackground()

@@ -43,9 +43,20 @@ struct SessionDetailView: View {
             .padding()
         }
         .sheet(item: $fixing) { seg in
-            FixPartSheet(segment: seg) { overrides.set($0, for: seg) }
-                .presentationDetents([.medium])
+            FixPartSheet(segment: seg, partNumber: segments.firstIndex { $0.id == seg.id }.map { $0 + 1 }) {
+                overrides.set($0, for: seg)
+            }
         }
+        #if DEBUG
+        // Screenshot seam: SHUTTLX_DEMO_FIX=<part number> opens "Fix a part" on that part.
+        .task {
+            if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_FIX"], let n = Int(raw),
+               segments.indices.contains(n - 1) {
+                try? await Task.sleep(for: .seconds(1))
+                fixing = segments[n - 1]
+            }
+        }
+        #endif
         .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
         .timelineScreenBackground()
@@ -212,47 +223,177 @@ struct SessionDetailView: View {
 }
 
 
-/// "Fix a part": pick Running / Walking / Cycling for one part. The correction is stored
-/// beside the session (SegmentOverrideStore), never in sessions.json.
+/// "Fix a part" (approved mockup): dimmed bottom sheet, four tiles Run / Walk / Cycle / Rest, and the
+/// evidence ShuttlX has for the part. The correction is stored beside the session
+/// (SegmentOverrideStore), never in sessions.json. Rest = `DetectedActivity.stationary`.
+/// Not built (see wave 2a report): "Merge with next" (needs a sessions.json rewrite) and the scrubber.
 struct FixPartSheet: View {
     let segment: ActivitySegment   // already shows the effective type
+    var partNumber: Int?
     let onSave: (DetectedActivity) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var choice: DetectedActivity
 
-    init(segment: ActivitySegment, onSave: @escaping (DetectedActivity) -> Void) {
+    private let options: [DetectedActivity] = [.running, .walking, .cycling, .stationary]
+
+    init(segment: ActivitySegment, partNumber: Int? = nil, onSave: @escaping (DetectedActivity) -> Void) {
         self.segment = segment
+        self.partNumber = partNumber
         self.onSave = onSave
-        _choice = State(initialValue: segment.activityType)
+        _choice = State(initialValue: segment.activityType == .unknown ? .stationary : segment.activityType)
     }
 
-    var body: some View {
-        NavigationStack {
-            List {
-                ForEach([DetectedActivity.running, .walking, .cycling], id: \.self) { a in
-                    Button {
-                        choice = a
-                    } label: {
-                        HStack {
-                            Image(systemName: a.systemImage).foregroundStyle(a.themeColor).frame(width: 28)
-                            Text(a.displayName).font(ShuttlXFont.cardSubtitle).foregroundStyle(ShuttlXColor.textPrimary)
-                            Spacer()
-                            if choice == a { Image(systemName: "checkmark").foregroundStyle(ShuttlXColor.ctaPrimary) }
-                        }
-                    }
-                    .accessibilityLabel(a.displayName + (choice == a ? ", selected" : ""))
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .themedScreenBackground()
-            .navigationTitle("Fix a part")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { onSave(choice); dismiss() }
-                }
-            }
+    private var title: String {
+        let end = segment.endDate ?? segment.startDate.addingTimeInterval(segment.duration)
+        return (partNumber.map { "Part \($0) \u{00B7} " } ?? "")
+            + "\(TodayFormat.clock(segment.startDate))\u{2013}\(TodayFormat.clock(end))"
+    }
+
+    // MARK: Evidence (only what the segment data really contains)
+
+    private var speedMS: Double? {
+        guard let km = segment.distance, km > 0.02, segment.duration > 0 else { return nil }
+        return km * 1000 / segment.duration
+    }
+
+    private var cadence: Double? {
+        guard let steps = segment.steps, steps > 0, segment.duration > 0 else { return nil }
+        return Double(steps) / segment.duration * 60
+    }
+
+    private var guess: SpeedActivityClassifier.Result? {
+        guard let speedMS else { return nil }
+        return SpeedActivityClassifier.classify(speed: speedMS, cadence: cadence, window: segment.duration)
+    }
+
+    private var chips: [(text: String, spoken: String)] {
+        var out: [(String, String)] = []
+        if let km = segment.distance, km > 0.05, segment.duration > 0 {
+            let p = FormattingUtils.formatPace(segment.duration / km) + "/km"
+            out.append(("pace \(p)", "pace \(p)"))
         }
+        if let hr = segment.averageHeartRate, hr > 0 {
+            out.append(("\u{2665} \(Int(hr.rounded())) bpm", "heart rate \(Int(hr.rounded())) beats per minute"))
+        }
+        if let c = cadence { out.append(("cadence \(Int(c.rounded())) spm", "cadence \(Int(c.rounded())) steps per minute")) }
+        if let v = speedMS {
+            let t = String(format: "%.1f km/h", v * 3.6)
+            out.append(("speed \(t)", "speed \(t)"))
+        }
+        return out
+    }
+
+    // MARK: Body
+
+    var body: some View {
+        VStack(spacing: 16) {
+            HStack {
+                Button("Cancel") { dismiss() }
+                    .font(ShuttlXFont.cardSubtitle)
+                    .frame(minWidth: 60, minHeight: 44, alignment: .leading)
+                Spacer()
+                Text(title)
+                    .font(ShuttlXFont.cardTitle.weight(.bold).monospacedDigit())
+                    .foregroundStyle(ShuttlXColor.textPrimary)
+                    .accessibilityAddTraits(.isHeader)
+                Spacer()
+                Button("Save") { onSave(choice); dismiss() }
+                    .font(ShuttlXFont.cardSubtitle.weight(.bold))
+                    .frame(minWidth: 60, minHeight: 44, alignment: .trailing)
+            }
+            .foregroundStyle(ShuttlXColor.ctaPrimary)
+
+            HStack(spacing: 8) {
+                ForEach(options, id: \.self) { tile($0) }
+            }
+
+            evidence
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .presentationDetents([.height(340), .large])
+        .presentationDragIndicator(.visible)
+        .presentationCornerRadius(24)
+        .presentationBackground(Color(.systemBackground))
+    }
+
+    private func tile(_ a: DetectedActivity) -> some View {
+        let on = choice == a
+        return Button { choice = a } label: {
+            VStack(spacing: 6) {
+                Circle().fill(a.themeColor).frame(width: 28, height: 28)
+                Text(TodayFormat.activityName(a))
+                    .font(ShuttlXFont.cardCaption.weight(.semibold))
+                    .foregroundStyle(ShuttlXColor.textPrimary)
+            }
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous)
+                .strokeBorder(on ? ShuttlXColor.ctaPrimary : .clear, lineWidth: 2))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(TodayFormat.activityName(a) + (on ? ", selected" : ""))
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var evidence: some View {
+        let items = chips
+        if guess != nil || !items.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                if let guess {
+                    (Text("ShuttlX thinks: \(TodayFormat.activityName(guess.activity))").fontWeight(.bold)
+                        .foregroundStyle(ShuttlXColor.textPrimary)
+                     + Text(" \u{00B7} \(guess.confidence == .high ? "high" : "low") confidence. Why:"))
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                } else {
+                    Text("Measured in this part:")
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                }
+                EvidenceFlow(spacing: 6) {
+                    ForEach(items, id: \.text) { c in
+                        Text(c.text)
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(ShuttlXColor.textPrimary)
+                            .padding(.horizontal, 9).padding(.vertical, 4)
+                            .background(Color(.tertiarySystemFill), in: Capsule())
+                            .accessibilityLabel(c.spoken)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityElement(children: .contain)
+        }
+    }
+}
+
+/// Minimal wrapping row layout for the evidence chips.
+private struct EvidenceFlow: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        arrange(proposal.width ?? .infinity, subviews).size
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let r = arrange(bounds.width, subviews)
+        for (i, p) in r.origins.enumerated() {
+            subviews[i].place(at: CGPoint(x: bounds.minX + p.x, y: bounds.minY + p.y), proposal: .unspecified)
+        }
+    }
+
+    private func arrange(_ width: CGFloat, _ subviews: Subviews) -> (size: CGSize, origins: [CGPoint]) {
+        var x: CGFloat = 0, y: CGFloat = 0, rowH: CGFloat = 0, maxX: CGFloat = 0
+        var origins: [CGPoint] = []
+        for v in subviews {
+            let s = v.sizeThatFits(.unspecified)
+            if x > 0, x + s.width > width { x = 0; y += rowH + spacing; rowH = 0 }
+            origins.append(CGPoint(x: x, y: y))
+            x += s.width + spacing; rowH = max(rowH, s.height); maxX = max(maxX, x - spacing)
+        }
+        return (CGSize(width: maxX, height: y + rowH), origins)
     }
 }
