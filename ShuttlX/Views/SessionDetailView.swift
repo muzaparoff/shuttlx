@@ -19,18 +19,16 @@ struct SessionDetailView: View {
                 statTrio
 
                 if !session.segments.isEmpty {
-                    ActivityRibbon(segments: segments)
-                    VStack(spacing: 10) {
+                    ActivityRibbon(segments: segments, height: 16)
+                    VStack(spacing: 0) {
                         ForEach(segments) { seg in
                             Button { fixing = seg } label: { SessionPartRow(segment: seg) }
                                 .buttonStyle(.plain)
                                 .accessibilityHint("Opens Fix a part")
                         }
                     }
-                    .themedCard()
-
-                    // Per-activity totals and calories (timeline bar + detail rows)
-                    ActivitySegmentsView(segments: segments, totalDuration: session.duration)
+                    .padding(.vertical, 6)
+                    .timelineCard()
                 }
 
                 // Interval results (if interval workout)
@@ -48,22 +46,23 @@ struct SessionDetailView: View {
             FixPartSheet(segment: seg) { overrides.set($0, for: seg) }
                 .presentationDetents([.medium])
         }
-        .navigationTitle("Session Details")
+        .navigationTitle("Session")
         .navigationBarTitleDisplayMode(.inline)
-        .themedScreenBackground()
+        .timelineScreenBackground()
     }
 
     // MARK: - Title Block
 
     private var timeRange: String {
-        let start = FormattingUtils.formatSessionDate(session.startDate)
-        return "\(start) – \((session.endDate ?? session.startDate.addingTimeInterval(session.duration)).formatted(date: .omitted, time: .shortened))"
+        let day = session.startDate.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
+        let end = session.endDate ?? session.startDate.addingTimeInterval(session.duration)
+        return "\(day) \u{00B7} \(TodayFormat.clock(session.startDate))\u{2013}\(TodayFormat.clock(end))"
     }
 
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(session.displayName)
-                .font(ShuttlXFont.cardTitle)
+            Text(session.timelineName)
+                .font(ShuttlXFont.metricMedium)
                 .foregroundStyle(ShuttlXColor.textPrimary)
             Text(timeRange)
                 .font(ShuttlXFont.cardSubtitle)
@@ -108,24 +107,6 @@ struct SessionDetailView: View {
 
     private var metricGrid: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            if let distance = session.distance, distance > 0 {
-                MetricCard(
-                    icon: "location.fill",
-                    value: FormattingUtils.formatDistance(distance),
-                    label: "Distance",
-                    color: ShuttlXColor.running
-                )
-            }
-
-            if let hr = session.averageHeartRate {
-                MetricCard(
-                    icon: "heart.fill",
-                    value: "\(Int(hr)) BPM",
-                    label: "Avg Heart Rate",
-                    color: ShuttlXColor.heartRate
-                )
-            }
-
             if let maxHR = session.maxHeartRate {
                 MetricCard(
                     icon: "heart.fill",
@@ -201,184 +182,6 @@ struct SessionDetailView: View {
 
 }
 
-// MARK: - Unified Activity Segments View
-
-struct ActivitySegmentsView: View {
-    let segments: [ActivitySegment]
-    let totalDuration: TimeInterval
-    @State private var showAllSegments = false
-
-    // MARK: - Per-phase calorie aggregation (Phase 4, 2026-08 run+walk plan)
-    //
-    // `activeEnergyCalories` (Apple's segment-summed activeEnergyBurned) is the
-    // primary display value — see the rationale comment on `ActivitySegment`.
-    // `estimatedCalories` (ShuttlX's phase-honest MET estimate) is surfaced as a
-    // secondary caption only when present and materially different, so older
-    // sessions or sessions with unknown body mass just show the one number they
-    // have — never a fabricated "0 cal".
-    private struct ActivityAggregate {
-        let activity: DetectedActivity
-        let duration: TimeInterval
-        let activeEnergyCalories: Double?
-        let estimatedCalories: Double?
-    }
-
-    /// Aggregated totals per activity type, sorted by duration descending
-    private var aggregated: [ActivityAggregate] {
-        let grouped = Dictionary(grouping: segments, by: \.activityType)
-        return grouped.map { activity, segs in
-            let duration = segs.reduce(0) { $0 + $1.duration }
-            let activeValues = segs.compactMap(\.activeEnergyCalories)
-            let estimatedValues = segs.compactMap(\.estimatedCalories)
-            return ActivityAggregate(
-                activity: activity,
-                duration: duration,
-                activeEnergyCalories: activeValues.isEmpty ? nil : activeValues.reduce(0, +),
-                estimatedCalories: estimatedValues.isEmpty ? nil : estimatedValues.reduce(0, +)
-            )
-        }.sorted { $0.duration > $1.duration }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("Activity")
-                .font(ShuttlXFont.sectionHeader)
-
-            // Timeline bar
-            GeometryReader { geometry in
-                HStack(spacing: 1) {
-                    ForEach(segments) { segment in
-                        let fraction = totalDuration > 0 ? segment.duration / totalDuration : 0
-                        RoundedRectangle(cornerRadius: 3)
-                            .fill(segment.activityType.themeColor)
-                            .frame(width: max(4, geometry.size.width * fraction))
-                    }
-                }
-            }
-            .frame(height: 12)
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-
-            // Aggregated summary rows — duration + per-phase calories
-            VStack(alignment: .leading, spacing: 6) {
-                ForEach(aggregated, id: \.activity) { item in
-                    VStack(alignment: .leading, spacing: 1) {
-                        HStack(spacing: 4) {
-                            Circle()
-                                .fill(item.activity.themeColor)
-                                .frame(width: 8, height: 8)
-                            Text(item.activity.displayName)
-                                .font(ShuttlXFont.cardCaption)
-                            Text(FormattingUtils.formatDuration(item.duration))
-                                .font(ShuttlXFont.cardCaption.monospacedDigit())
-                                .foregroundStyle(ShuttlXColor.textSecondary)
-
-                            if let cal = item.activeEnergyCalories {
-                                Text("\u{2022}")
-                                    .font(ShuttlXFont.cardCaption)
-                                    .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.7))
-                                Text("\(Int(cal.rounded())) cal")
-                                    .font(ShuttlXFont.cardCaption.monospacedDigit())
-                                    .foregroundStyle(ShuttlXColor.calories)
-                            }
-                        }
-
-                        // ShuttlX's own phase-honest MET estimate, shown only when it
-                        // exists and materially differs from Apple's primary number —
-                        // this is the differentiator: Apple costs the whole session
-                        // under one activity type, ShuttlX costs each phase on its own.
-                        if let estimate = item.estimatedCalories, shouldShowEstimate(estimate, primary: item.activeEnergyCalories) {
-                            Text("ShuttlX phase estimate: \(Int(estimate.rounded())) cal")
-                                .font(ShuttlXFont.microLabel)
-                                .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.8))
-                                .padding(.leading, 12)
-                        }
-                    }
-                    .accessibilityElement(children: .combine)
-                    .accessibilityLabel(accessibilityLabel(for: item))
-                }
-            }
-
-            // Expandable per-segment details
-            if segments.count > 3 {
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) { showAllSegments.toggle() }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(showAllSegments ? "Hide segments" : "Show all \(segments.count) segments")
-                            .font(ShuttlXFont.cardCaption)
-                        Image(systemName: showAllSegments ? "chevron.up" : "chevron.down")
-                            .font(ShuttlXFont.cardCaption)
-                    }
-                    .foregroundStyle(.secondary)
-                }
-                .accessibilityHint(showAllSegments ? "Hides detailed segment breakdown" : "Shows all \(segments.count) activity segments")
-
-                if showAllSegments {
-                    segmentDetailRows
-                }
-            }
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    private var segmentDetailRows: some View {
-        ForEach(segments) { segment in
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(segment.activityType.themeColor)
-                    .frame(width: 8, height: 8)
-
-                Image(systemName: segment.activityType.systemImage)
-                    .font(ShuttlXFont.cardCaption)
-                    .foregroundStyle(segment.activityType.themeColor)
-                    .frame(width: 20)
-
-                Text(segment.activityType.displayName)
-                    .font(ShuttlXFont.cardSubtitle)
-
-                Spacer()
-
-                Text(FormattingUtils.formatDuration(segment.duration))
-                    .font(ShuttlXFont.cardSubtitle.monospacedDigit())
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-
-                // Primary calorie number only, when known — no fabricated "0 cal"
-                // for older segments recorded before Phase 2's per-phase calories.
-                if let cal = segment.activeEnergyCalories {
-                    Text("\(Int(cal.rounded())) cal")
-                        .font(ShuttlXFont.cardCaption.monospacedDigit())
-                        .foregroundStyle(ShuttlXColor.calories)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel(segment.activeEnergyCalories.map {
-                "\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration)), \(Int($0.rounded())) calories"
-            } ?? "\(segment.activityType.displayName), \(FormattingUtils.formatDuration(segment.duration))")
-        }
-    }
-
-    // MARK: - Accessibility
-
-    private func accessibilityLabel(for item: ActivityAggregate) -> String {
-        var label = "\(item.activity.displayName), \(FormattingUtils.formatDuration(item.duration))"
-        if let cal = item.activeEnergyCalories {
-            label += ", \(Int(cal.rounded())) calories"
-        }
-        if let estimate = item.estimatedCalories, shouldShowEstimate(estimate, primary: item.activeEnergyCalories) {
-            label += ", ShuttlX phase estimate \(Int(estimate.rounded())) calories"
-        }
-        return label
-    }
-
-    /// Show ShuttlX's MET estimate only when it's the sole number available, or
-    /// when it differs meaningfully (>=5 kcal) from Apple's primary estimate —
-    /// keeps the common case (the two roughly agree) to a single glanceable number.
-    private func shouldShowEstimate(_ estimate: Double, primary: Double?) -> Bool {
-        guard let primary else { return true }
-        return abs(estimate - primary) >= 5
-    }
-}
-
 #Preview {
     NavigationStack {
         SessionDetailView(session: TrainingSession(
@@ -411,7 +214,7 @@ struct ActivitySegmentsView: View {
 
 /// "Fix a part": pick Running / Walking / Cycling for one part. The correction is stored
 /// beside the session (SegmentOverrideStore), never in sessions.json.
-private struct FixPartSheet: View {
+struct FixPartSheet: View {
     let segment: ActivitySegment   // already shows the effective type
     let onSave: (DetectedActivity) -> Void
     @Environment(\.dismiss) private var dismiss

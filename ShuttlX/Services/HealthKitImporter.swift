@@ -14,6 +14,8 @@ final class HealthKitImporter: ObservableObject {
     @Published private(set) var lastImportDate: Date?
     @Published private(set) var lastImportCount = 0
     @Published private(set) var status = "Idle"
+    /// Workouts read so far in the current import; nil when idle or nothing to read.
+    @Published private(set) var progress: (done: Int, total: Int)?
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "HealthKitImporter")
     private let store = HKHealthStore()
@@ -62,10 +64,14 @@ final class HealthKitImporter: ObservableObject {
 
     // MARK: - Import
 
+    #if DEBUG
+    func debugSetProgress(done: Int, total: Int) { progress = (done, total) }
+    #endif
+
     func importNow() async {
         guard !isRunning, let dataManager, HKHealthStore.isHealthDataAvailable() else { return }
         isRunning = true
-        defer { isRunning = false }
+        defer { isRunning = false; progress = nil }
         do {
             try await store.requestAuthorization(toShare: [], read: readTypes)
         } catch {
@@ -78,7 +84,12 @@ final class HealthKitImporter: ObservableObject {
         let known = dataManager.sessions.map { HealthImportRules.Known(id: $0.id, start: $0.startDate, duration: $0.duration) }
         var deferred: [String] = []
         var built: [TrainingSession] = []
-        for w in fetched.workouts where w.sourceRevision.source.bundleIdentifier.hasPrefix(sourcePrefix) {
+        let mine = fetched.workouts.filter { $0.sourceRevision.source.bundleIdentifier.hasPrefix(sourcePrefix) }
+        var seen = 0
+        progress = mine.isEmpty ? nil : (0, mine.count)
+        for w in mine {
+            seen += 1
+            defer { progress = (seen, mine.count) }
             let ext = (w.metadata?[HKMetadataKeyExternalUUID] as? String).flatMap(UUID.init(uuidString:))
             if HealthImportRules.isAlreadyPresent(externalUUID: ext, workoutUUID: w.uuid, start: w.startDate,
                                                   duration: w.duration, known: known) { continue }

@@ -4,6 +4,7 @@ import ShuttlXShared
 /// Horizontal ribbon of capsules sized by segment duration. Display only.
 struct ActivityRibbon: View {
     let segments: [ActivitySegment]
+    var height: CGFloat = 14
 
     private var total: TimeInterval { segments.reduce(0) { $0 + max(0, $1.duration) } }
 
@@ -18,7 +19,7 @@ struct ActivityRibbon: View {
                 }
             }
         }
-        .frame(height: 14)
+        .frame(height: height)
         .clipShape(Capsule())
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityText)
@@ -35,7 +36,7 @@ struct SessionPartRow: View {
     let segment: ActivitySegment
 
     private var timeText: String {
-        "\(segment.startDate.formatted(date: .omitted, time: .shortened)) · \(FormattingUtils.formatDuration(segment.duration))"
+        "\(TodayFormat.clock(segment.startDate)) · \(TodayFormat.short(segment.duration))"
     }
 
     private var distanceText: String? {
@@ -43,13 +44,18 @@ struct SessionPartRow: View {
         return FormattingUtils.formatDistance(km)
     }
 
+    private var paceText: String? {
+        guard let km = segment.distance, km > 0.05, segment.duration > 0 else { return nil }
+        return FormattingUtils.formatPace(segment.duration / km) + "/km"
+    }
+
     var body: some View {
         HStack(spacing: 10) {
             Capsule()
                 .fill(segment.activityType.themeColor)
-                .frame(width: 5, height: 36)
+                .frame(width: 10, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(segment.activityType.displayName)
+                Text(TodayFormat.activityName(segment.activityType))
                     .font(ShuttlXFont.cardSubtitle.weight(.semibold))
                     .foregroundStyle(ShuttlXColor.textPrimary)
                 Text(timeText)
@@ -58,12 +64,24 @@ struct SessionPartRow: View {
             }
             Spacer()
             if let distanceText {
-                Text(distanceText)
-                    .font(ShuttlXFont.cardSubtitle.monospacedDigit())
-                    .foregroundStyle(ShuttlXColor.textPrimary)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(distanceText)
+                        .font(ShuttlXFont.cardSubtitle.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(ShuttlXColor.textPrimary)
+                    if let paceText {
+                        Text(paceText)
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(ShuttlXColor.textSecondary)
+                    }
+                }
             }
+            Image(systemName: "chevron.right")
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
         }
+        .padding(.horizontal, 14).padding(.vertical, 9)
+        .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(segment.activityType.displayName), \(timeText)" + (distanceText.map { ", \($0)" } ?? ""))
+        .accessibilityLabel("\(segment.activityType.displayName), \(timeText)" + (distanceText.map { ", \($0)" } ?? "") + (paceText.map { ", \($0)" } ?? ""))
     }
 }

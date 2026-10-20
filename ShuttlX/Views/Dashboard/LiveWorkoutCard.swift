@@ -8,23 +8,6 @@ struct LiveWorkoutCard: View {
     @ObservedObject var sharedData: PhoneSyncCoordinator
     @State private var showStopConfirmation = false
 
-    private var activityIcon: String {
-        switch sharedData.liveCurrentActivity {
-        case "running": return "figure.run"
-        case "walking": return "figure.walk"
-        case "stationary": return "figure.stand"
-        default: return "figure.mixed.cardio"
-        }
-    }
-
-    private var activityColor: Color {
-        switch sharedData.liveCurrentActivity {
-        case "running": return ShuttlXColor.running
-        case "walking": return ShuttlXColor.walking
-        default: return .secondary
-        }
-    }
-
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0)) { context in
             let isStale: Bool = {
@@ -34,11 +17,11 @@ struct LiveWorkoutCard: View {
             content(isStale: isStale)
         }
         .confirmationDialog(
-            "End Workout?",
+            "End & Save?",
             isPresented: $showStopConfirmation,
             titleVisibility: .visible
         ) {
-            Button("End Workout", role: .destructive) {
+            Button("End & Save", role: .destructive) {
                 sharedData.stopWatchWorkout()
                 // Clear iOS state immediately — don't wait for watch confirmation
                 // (which arrives via workoutStopped notification after the watch
@@ -53,133 +36,135 @@ struct LiveWorkoutCard: View {
         }
     }
 
+    private var activityWord: String {
+        switch sharedData.liveCurrentActivity {
+        case "running": return "RUN"
+        case "walking": return "WALK"
+        case "cycling": return "CYCLE"
+        default: return "WORKOUT"
+        }
+    }
+
+    private var summaryLine: String {
+        var parts: [String] = []
+        if sharedData.liveDistance > 0 { parts.append(String(format: "%.1f km", sharedData.liveDistance)) }
+        if sharedData.livePace > 0 { parts.append(FormattingUtils.formatPace(sharedData.livePace) + "/km") }
+        if sharedData.liveCalories > 0 { parts.append("\u{2248} \(sharedData.liveCalories) cal estimate") }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
+    private var zoneWord: String? {
+        guard sharedData.liveHeartRate > 0 else { return nil }
+        return HeartSafetySettings.load().zoneWord(hr: sharedData.liveHeartRate, age: DeviceManager.shared.userAge)
+    }
+
+    private func pillButton(_ title: String, fill: Color, text: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(ShuttlXFont.cardCaption.weight(.semibold))
+                .foregroundStyle(text)
+                .frame(maxWidth: .infinity, minHeight: 34)
+                .background(fill, in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .accessibilityLabel(title)
+    }
+
+    private func togglePause() {
+        if sharedData.liveIsPaused { sharedData.resumeWatchWorkout() } else { sharedData.pauseWatchWorkout() }
+    }
+
     @ViewBuilder
     private func content(isStale: Bool) -> some View {
-        VStack(spacing: 12) {
-            // Header
-            HStack {
-                HStack(spacing: 6) {
-                    if isStale {
-                        Image(systemName: "antenna.radiowaves.left.and.right.slash")
-                            .font(.system(size: 9, weight: .medium))
-                            .foregroundStyle(.yellow)
-                        Text("Signal lost")
-                            .font(ShuttlXFont.cardTitle)
-                            .foregroundStyle(.yellow)
-                    } else {
-                        Circle()
-                            .fill(sharedData.liveIsPaused ? Color.orange : ShuttlXColor.running)
-                            .frame(width: 8, height: 8)
-                            .modifier(PulseModifier(animate: !sharedData.liveIsPaused))
-                        Text(sharedData.liveIsPaused ? "Paused" : "Live Workout")
-                            .font(ShuttlXFont.cardTitle)
-                    }
-                }
+        if sharedData.liveIsPaused && sharedData.livePauseReason == "noMotion" && !isStale {
+            autoPausedCard
+        } else {
+            liveCard(isStale: isStale)
+        }
+    }
 
-                Spacer()
-
-                Image(systemName: activityIcon)
-                    .font(.title3)
-                    .foregroundStyle(activityColor)
-            }
-
-            // Timer
-            Text(FormattingUtils.formatTimer(sharedData.liveElapsedTime))
-                .font(ShuttlXFont.timerDisplay)
-                .contentTransition(.numericText())
-                .foregroundStyle(isStale ? .secondary : .primary)
-                .frame(maxWidth: .infinity, alignment: .center)
-
-            // Metrics row
-            HStack(spacing: 16) {
-                if sharedData.liveHeartRate > 0 {
-                    LiveMetricPill(
-                        icon: "heart.fill",
-                        value: "\(sharedData.liveHeartRate)",
-                        color: isStale ? ShuttlXColor.heartRate.opacity(0.5) : ShuttlXColor.heartRate
-                    )
-                }
-
-                if sharedData.liveDistance > 0 {
-                    LiveMetricPill(
-                        icon: "location.fill",
-                        value: FormattingUtils.formatDistance(sharedData.liveDistance),
-                        color: isStale ? ShuttlXColor.running.opacity(0.5) : ShuttlXColor.running
-                    )
-                }
-
-                if sharedData.liveCalories > 0 {
-                    LiveMetricPill(
-                        icon: "flame.fill",
-                        value: "\(sharedData.liveCalories)",
-                        color: isStale ? ShuttlXColor.calories.opacity(0.5) : ShuttlXColor.calories
-                    )
-                }
-
-                if sharedData.livePace > 0 {
-                    LiveMetricPill(
-                        icon: "gauge.with.dots.needle.33percent",
-                        value: FormattingUtils.formatPace(sharedData.livePace),
-                        color: isStale ? ShuttlXColor.pace.opacity(0.5) : ShuttlXColor.pace
-                    )
-                }
-            }
-
-            Divider()
-                .opacity(0.3)
-
-            // Remote controls — pause/resume on left, stop on right
-            HStack {
-                Button {
-                    if sharedData.liveIsPaused {
-                        sharedData.resumeWatchWorkout()
-                    } else {
-                        sharedData.pauseWatchWorkout()
-                    }
-                } label: {
-                    Label(
-                        sharedData.liveIsPaused ? "Resume" : "Pause",
-                        systemImage: sharedData.liveIsPaused ? "play.fill" : "pause.fill"
-                    )
-                    .font(ShuttlXFont.cardTitle)
-                    .foregroundStyle(sharedData.liveIsPaused ? ShuttlXColor.ctaPrimary : .primary)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.primary.opacity(0.06))
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(isStale)
-
-                Button {
-                    showStopConfirmation = true
-                } label: {
-                    Label("End", systemImage: "stop.fill")
-                        .font(ShuttlXFont.cardTitle)
-                        .foregroundStyle(ShuttlXColor.ctaDestructive)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(ShuttlXColor.ctaDestructive.opacity(0.08))
-                        )
-                }
-                .buttonStyle(.plain)
-                .disabled(isStale)
+    private var autoPausedCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Label("PAUSED AUTOMATICALLY", systemImage: "pause.fill")
+                .font(ShuttlXFont.cardCaption.weight(.heavy))
+                .tracking(0.7)
+                .foregroundStyle(ShuttlXColor.ctaWarning)
+            Text("Still training?")
+                .font(ShuttlXFont.metricMedium)
+                .foregroundStyle(ShuttlXColor.textPrimary)
+            Text("Your watch did not move for a while, so the workout is paused. The clock stopped at \(FormattingUtils.formatTimer(sharedData.liveElapsedTime)).")
+                .font(ShuttlXFont.cardSubtitle.monospacedDigit())
+                .foregroundStyle(ShuttlXColor.textPrimary.opacity(0.75))
+            HStack(spacing: 8) {
+                pillButton("Resume", fill: ShuttlXColor.ctaPrimary, text: ShuttlXColor.iconOnCTA) { sharedData.resumeWatchWorkout() }
+                pillButton("End & Save", fill: ShuttlXColor.ctaDestructive.opacity(0.12), text: ShuttlXColor.ctaDestructive) { showStopConfirmation = true }
             }
         }
-        .padding(16)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill((isStale ? Color.yellow : ShuttlXColor.running).opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder((isStale ? Color.yellow : ShuttlXColor.running).opacity(0.3), lineWidth: 1)
-                )
-        )
-        .accessibilityElement(children: .combine)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(ShuttlXColor.ctaWarning.opacity(0.14), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .accessibilityElement(children: .contain)
+    }
+
+    private func liveCard(isStale: Bool) -> some View {
+        let tint = isStale ? Color.yellow : (sharedData.liveIsPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.running)
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                if isStale {
+                    Label("SIGNAL LOST", systemImage: "antenna.radiowaves.left.and.right.slash")
+                        .font(ShuttlXFont.cardCaption.weight(.heavy)).tracking(0.7).foregroundStyle(.yellow)
+                } else {
+                    HStack(spacing: 6) {
+                        Circle().fill(tint).frame(width: 8, height: 8)
+                            .modifier(PulseModifier(animate: !sharedData.liveIsPaused))
+                        Text(sharedData.liveIsPaused ? "PAUSED" : "\(activityWord) \u{00B7} LIVE")
+                            .font(ShuttlXFont.cardCaption.weight(.heavy)).tracking(0.7).foregroundStyle(tint)
+                    }
+                }
+                Spacer()
+                Label("Apple Watch", systemImage: "heart.fill")
+                    .font(ShuttlXFont.cardCaption.weight(.bold))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                    .padding(.horizontal, 9).padding(.vertical, 3)
+                    .background(Color(.tertiarySystemFill), in: Capsule())
+            }
+            HStack(alignment: .bottom) {
+                Text(FormattingUtils.formatTimer(sharedData.liveElapsedTime))
+                    .font(ShuttlXFont.timerDisplay)
+                    .contentTransition(.numericText())
+                    .foregroundStyle(isStale ? ShuttlXColor.textSecondary : ShuttlXColor.textPrimary)
+                Spacer()
+                if sharedData.liveHeartRate > 0 {
+                    VStack(alignment: .trailing, spacing: 0) {
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text("\(sharedData.liveHeartRate)")
+                                .font(ShuttlXFont.metricMedium.monospacedDigit())
+                                .foregroundStyle(ShuttlXColor.heartRate)
+                                .contentTransition(.numericText())
+                            Text("bpm").font(ShuttlXFont.cardCaption).foregroundStyle(ShuttlXColor.textSecondary)
+                        }
+                        if let zoneWord {
+                            Text(zoneWord)
+                                .font(ShuttlXFont.cardCaption.weight(.heavy))
+                                .foregroundStyle(zoneWord == "HARD" ? ShuttlXColor.ctaDestructive : ShuttlXColor.running)
+                        }
+                    }
+                }
+            }
+            if !summaryLine.isEmpty {
+                Text(summaryLine).font(ShuttlXFont.cardCaption.monospacedDigit()).foregroundStyle(ShuttlXColor.textSecondary)
+            }
+            HStack(spacing: 8) {
+                pillButton(sharedData.liveIsPaused ? "Resume" : "Pause",
+                           fill: ShuttlXColor.ctaPrimary.opacity(0.12), text: ShuttlXColor.ctaPrimary, disabled: isStale, action: togglePause)
+                pillButton("End & Save", fill: ShuttlXColor.ctaDestructive.opacity(0.12), text: ShuttlXColor.ctaDestructive, disabled: isStale) { showStopConfirmation = true }
+            }
+        }
+        .padding(14)
+        .timelineCard(radius: 20)
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(tint.opacity(0.35), lineWidth: 2))
+        .accessibilityElement(children: .contain)
         .accessibilityLabel(
             isStale
                 ? "Watch signal lost. Last known: \(FormattingUtils.formatTimeAccessible(sharedData.liveElapsedTime))"
@@ -189,24 +174,6 @@ struct LiveWorkoutCard: View {
 }
 
 // MARK: - Sub-components
-
-private struct LiveMetricPill: View {
-    let icon: String
-    let value: String
-    let color: Color
-
-    var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: icon)
-                .font(ShuttlXFont.microLabel)
-                .foregroundStyle(color)
-            Text(value)
-                .font(ShuttlXFont.cardCaption.monospacedDigit())
-                .contentTransition(.numericText())
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
 
 private struct PulseModifier: ViewModifier {
     let animate: Bool

@@ -193,8 +193,15 @@ struct ShuttlXApp: App {
                 // DataManager.handleReceivedSessions(_:) — same store the
                 // watch writes to.
                 workoutController.dataManager = dataManager
-                HealthKitImporter.shared.start(dataManager: dataManager)
-                await HealthKitImporter.shared.importNow()
+                #if DEBUG
+                let skipHealth = ProcessInfo.processInfo.environment["SHUTTLX_NO_HEALTH"] == "1"
+                #else
+                let skipHealth = false
+                #endif
+                if !skipHealth {
+                    HealthKitImporter.shared.start(dataManager: dataManager)
+                    await HealthKitImporter.shared.importNow()
+                }
                 // Mirror watch stops back to the iPhone: when the user stops
                 // on the Watch, the paired iPhone workout stops and saves too.
                 PhoneSyncCoordinator.shared.onRemoteWorkoutStopped = { [weak workoutController] in
@@ -203,8 +210,34 @@ struct ShuttlXApp: App {
                 #if DEBUG
                 // Screenshot seams (see the MARK above): seed demo sessions
                 // and/or select a launch tab.
+                let env = ProcessInfo.processInfo.environment
+                if let t = env["SHUTTLX_THEME"] { themeManager.selectTheme(t) }
                 if demoDataRequested {
-                    dataManager.activateDemoMode(sessions: ShuttlXDemoData.makeSessions())
+                    var demo = ShuttlXDemoData.makeSessions()
+                    if env["SHUTTLX_DEMO_TODAY"] == "1" { demo += ShuttlXDemoData.makeTodaySessions() }
+                    dataManager.activateDemoMode(sessions: demo)
+                    // SHUTTLX_DEMO_OPEN=1 opens today's morning session detail.
+                    if env["SHUTTLX_DEMO_OPEN"] == "1",
+                       let m = demo.first(where: { $0.route != nil && Calendar.current.isDateInToday($0.startDate) }) {
+                        deepLinkRouter.pendingSessionID = m.id
+                    }
+                }
+                // SHUTTLX_DEMO_LIVE=running|paused|autopaused fakes a live watch workout.
+                if let live = env["SHUTTLX_DEMO_LIVE"] {
+                    let c = sharedDataManager
+                    c.isWorkoutActiveOnWatch = true
+                    c.liveElapsedTime = 48 * 60 + 12
+                    c.liveHeartRate = 152
+                    c.liveDistance = 6.9
+                    c.livePace = 358
+                    c.liveCalories = 410
+                    c.liveCurrentActivity = "running"
+                    c.liveIsPaused = live != "running"
+                    c.livePauseReason = live == "autopaused" ? "noMotion" : nil
+                }
+                // SHUTTLX_DEMO_IMPORT=12/47 shows the Apple Health import card.
+                if let imp = env["SHUTTLX_DEMO_IMPORT"]?.split(separator: "/").compactMap({ Int($0) }), imp.count == 2 {
+                    HealthKitImporter.shared.debugSetProgress(done: imp[0], total: imp[1])
                 }
                 if let tab = launchTabRequest {
                     deepLinkRouter.pendingTab = tab
@@ -421,6 +454,40 @@ enum ShuttlXDemoData {
             session.programName = spec.name
             return session
         }
+    }
+
+    /// Mockup day: a Walk/Run/Walk morning with a GPS loop and an Evening ride without route.
+    static func makeTodaySessions(now: Date = Date()) -> [TrainingSession] {
+        let cal = Calendar.current
+        func at(_ h: Int, _ m: Int) -> Date { cal.date(bySettingHour: h, minute: m, second: 0, of: now) ?? now }
+        let start = at(7, 10)
+        let parts: [(DetectedActivity, Int, Double)] = [(.walking, 12, 0.9), (.running, 48, 8.1), (.walking, 10, 0.8)]
+        var cursor = start
+        var segs: [ActivitySegment] = []
+        for (a, min, km) in parts {
+            let end = cursor.addingTimeInterval(TimeInterval(min * 60))
+            segs.append(ActivitySegment(activityType: a, startDate: cursor, endDate: end, distance: km,
+                                        averageHeartRate: a == .running ? 152 : 118))
+            cursor = end
+        }
+        let total = 70 * 60.0
+        let route: [RoutePoint] = (0..<90).map { i in
+            let f = Double(i) / 89
+            let ang = f * 2 * .pi
+            return RoutePoint(latitude: 52.2053 + 0.006 * sin(ang) + 0.001 * sin(3 * ang),
+                              longitude: 0.1218 + 0.011 * (cos(ang) - 1) / 2 * 2,
+                              timestamp: start.addingTimeInterval(total * f))
+        }
+        var morning = TrainingSession(startDate: start, endDate: cursor, duration: total, averageHeartRate: 138,
+                                      maxHeartRate: 171, caloriesBurned: 640, distance: 9.8, segments: segs, route: route)
+        morning.sportType = .running
+        let rideStart = at(17, 40)
+        var ride = TrainingSession(startDate: rideStart, endDate: rideStart.addingTimeInterval(45 * 60), duration: 45 * 60,
+                                   averageHeartRate: 126, caloriesBurned: 140, distance: 14.2,
+                                   segments: [ActivitySegment(activityType: .cycling, startDate: rideStart,
+                                                              endDate: rideStart.addingTimeInterval(45 * 60), distance: 14.2)])
+        ride.sportType = .cycling
+        return [morning, ride]
     }
 
     private static func splits(distanceKm: Double, paceSecPerKm: Double) -> [KmSplitData]? {

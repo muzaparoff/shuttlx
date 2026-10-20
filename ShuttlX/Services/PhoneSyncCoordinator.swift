@@ -30,7 +30,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     @Published var liveMetricsLastUpdated: Date? = nil
 
     /// Set by a noMotion heartAlert; cleared once metrics report the workout running again.
-    private var livePauseReason: String?
+    @Published var livePauseReason: String?
     private var seenHeartAlerts = Set<String>()
     private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
@@ -483,6 +483,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         liveCurrentActivity = "unknown"
         liveWorkoutName = ""
         liveIsPaused = false
+        livePauseReason = nil
         livePace = 0
         liveRoutePoints = []
         liveMetricsLastUpdated = nil

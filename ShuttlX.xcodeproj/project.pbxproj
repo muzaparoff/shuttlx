@@ -29,7 +29,6 @@
 		A5923B01 /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
 		A5923B02 /* MetricCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A02 /* MetricCard.swift */; };
 		A5923B03 /* ActivityBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A03 /* ActivityBadge.swift */; };
-		A5923B04 /* StreakBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A04 /* StreakBadge.swift */; };
 		A5923B92 /* HistoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A92 /* HistoryView.swift */; };
 		A5923B93 /* HistoryMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A93 /* HistoryMapView.swift */; };
 		A5923B91 /* DayRibbon.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A91 /* DayRibbon.swift */; };
@@ -41,9 +40,9 @@
 		MX001B /* MixtapeTimerHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = MX001F /* MixtapeTimerHero.swift */; };
 
 		A5923E01 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D01 /* DashboardView.swift */; };
+		T0DA0001 /* TodayTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = T0DA0001F /* TodayTimeline.swift */; };
+		T0DA0002 /* TimelineStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = T0DA0002F /* TimelineStyle.swift */; };
 		A5923E02 /* LiveWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D02 /* LiveWorkoutCard.swift */; };
-		A5923E03 /* StartOnWatchCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D03 /* StartOnWatchCard.swift */; };
-		A5923E05 /* WeekSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D05 /* WeekSummaryCard.swift */; };
 		B5923011 /* ChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923001 /* ChartData.swift */; };
 		B5923012 /* WeeklyDistanceChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923002 /* WeeklyDistanceChart.swift */; };
 		B5923013 /* PaceTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923003 /* PaceTrendChart.swift */; };
@@ -265,15 +264,14 @@
 		A5923A01 /* ShuttlXTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXTheme.swift; sourceTree = "<group>"; };
 		A5923A02 /* MetricCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCard.swift; sourceTree = "<group>"; };
 		A5923A03 /* ActivityBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityBadge.swift; sourceTree = "<group>"; };
-		A5923A04 /* StreakBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreakBadge.swift; sourceTree = "<group>"; };
 		A5923A92 /* HistoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryView.swift; sourceTree = "<group>"; };
 		A5923A93 /* HistoryMapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HistoryMapView.swift; sourceTree = "<group>"; };
 		A5923A91 /* DayRibbon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayRibbon.swift; sourceTree = "<group>"; };
 		A5923A06 /* PressScaleButtonStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressScaleButtonStyle.swift; sourceTree = "<group>"; };
 		A5923D01 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		T0DA0001F /* TodayTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTimeline.swift; sourceTree = "<group>"; };
+		T0DA0002F /* TimelineStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineStyle.swift; sourceTree = "<group>"; };
 		A5923D02 /* LiveWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkoutCard.swift; sourceTree = "<group>"; };
-		A5923D03 /* StartOnWatchCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartOnWatchCard.swift; sourceTree = "<group>"; };
-		A5923D05 /* WeekSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeekSummaryCard.swift; sourceTree = "<group>"; };
 		B5923001 /* ChartData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartData.swift; sourceTree = "<group>"; };
 		B5923002 /* WeeklyDistanceChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyDistanceChart.swift; sourceTree = "<group>"; };
 		B5923003 /* PaceTrendChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceTrendChart.swift; sourceTree = "<group>"; };
@@ -578,6 +576,7 @@
 				TH000004 /* AppTheme.swift */,
 				TH000005 /* ThemeManager.swift */,
 				TH000006 /* ThemeModifiers.swift */,
+				T0DA0002F /* TimelineStyle.swift */,
 				TH000021 /* ThemeAssets.swift */,
 				TH000030 /* Themes */,
 				MX010G /* ThemeComponents */,
@@ -599,7 +598,6 @@
 			children = (
 				A5923A02 /* MetricCard.swift */,
 				A5923A03 /* ActivityBadge.swift */,
-				A5923A04 /* StreakBadge.swift */,
 				A5923A06 /* PressScaleButtonStyle.swift */,
 				A5923A91 /* DayRibbon.swift */,
 			);
@@ -617,8 +615,7 @@
 			isa = PBXGroup;
 			children = (
 				A5923D02 /* LiveWorkoutCard.swift */,
-				A5923D03 /* StartOnWatchCard.swift */,
-				A5923D05 /* WeekSummaryCard.swift */,
+				T0DA0001F /* TodayTimeline.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -990,6 +987,7 @@
 				TH000014 /* AppTheme.swift in Sources */,
 				TH000015 /* ThemeManager.swift in Sources */,
 				TH000016 /* ThemeModifiers.swift in Sources */,
+				T0DA0002 /* TimelineStyle.swift in Sources */,
 				TH000022 /* ThemeAssets.swift in Sources */,
 				TH000017 /* CleanTheme.swift in Sources */,
 				TH000019 /* MixtapeTheme.swift in Sources */,
@@ -1002,12 +1000,10 @@
 				A5923B02 /* MetricCard.swift in Sources */,
 				A5923B03 /* ActivityBadge.swift in Sources */,
 				A5923B91 /* DayRibbon.swift in Sources */,
-				A5923B04 /* StreakBadge.swift in Sources */,
 				A5923B06 /* PressScaleButtonStyle.swift in Sources */,
 				A5923E01 /* DashboardView.swift in Sources */,
 				A5923E02 /* LiveWorkoutCard.swift in Sources */,
-				A5923E03 /* StartOnWatchCard.swift in Sources */,
-				A5923E05 /* WeekSummaryCard.swift in Sources */,
+				T0DA0001 /* TodayTimeline.swift in Sources */,
 				B5923011 /* ChartData.swift in Sources */,
 				B5923012 /* WeeklyDistanceChart.swift in Sources */,
 				B5923013 /* PaceTrendChart.swift in Sources */,
