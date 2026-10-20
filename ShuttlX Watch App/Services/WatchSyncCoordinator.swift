@@ -13,6 +13,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var syncLog: [String] = []
     @Published var connectivityHealth: Double = 1.0
     @Published var workoutTemplates: [WorkoutTemplate] = []
+    /// Resolved heart limits + alert flags from the iPhone (no medication field). No UI yet.
+    @Published private(set) var heartSafety = HeartSafetySettings.load()
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchSyncCoordinator")
 
@@ -649,7 +651,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         self.handleRemoteStart(message: message)
                     default: break
                     }
-                case "syncTheme", "syncTemplates", "syncMaxHR":
+                case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety":
                     self.handleIncomingPayload(message)
                 default:
                     break
@@ -727,7 +729,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     default: break
                     }
                     replyHandler(["status": "ok"])
-                case "syncTheme", "syncTemplates", "syncMaxHR":
+                case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety":
                     self.handleIncomingPayload(message)
                     replyHandler(["status": "received"])
                 default:
@@ -1085,6 +1087,19 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 // 0 means "clear manual override"
                 HeartRateZoneCalculator.saveMaxHR(0)
                 logger.info("Max HR override cleared by iPhone")
+            }
+        }
+
+        // Process heart limits if present (resolved numbers + alert flags only)
+        if let base64 = payload["heartSafetyData"] as? String,
+           let data = Data(base64Encoded: base64) {
+            do {
+                let settings = try JSONDecoder().decode(HeartSafetySettings.self, from: data)
+                settings.save()
+                heartSafety = settings
+                logger.info("Heart limits synced from iPhone")
+            } catch {
+                logger.error("Failed to decode heart limits: \(error.localizedDescription)")
             }
         }
 

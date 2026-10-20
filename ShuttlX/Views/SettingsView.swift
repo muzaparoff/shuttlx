@@ -24,6 +24,9 @@ struct SettingsView: View {
     @State private var weightText: String = ""
     @State private var ageText: String = ""
     @State private var maxHRText: String = ""
+    @State private var heart = HeartSafetySettings.load()
+    @State private var upperLimitText = ""
+    @State private var lowLimitText = ""
 
     var body: some View {
         List {
@@ -253,6 +256,7 @@ struct SettingsView: View {
                         .frame(width: 80)
                         .onChange(of: ageText) { _, newValue in
                             deviceManager.userAge = Int(newValue)
+                            pushHeart()
                         }
                 }
                 .accessibilityElement(children: .combine)
@@ -290,6 +294,61 @@ struct SettingsView: View {
                 Text("Used for personalised heart rate zones. Auto-detected from HealthKit age when blank.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+            }
+
+            // Heart & alerts Section
+            Section {
+                Toggle("I take a beta-blocker", isOn: Binding(
+                    get: { heart.onBetaBlocker ?? false },
+                    set: { heart.onBetaBlocker = $0; pushHeart() }))
+                    .accessibilityHint("Heart rate runs lower on beta-blockers, so the estimated limit is lowered")
+
+                HStack {
+                    Text("Upper limit (BPM)")
+                    Spacer()
+                    TextField(heart.estimatedUpperLimit(age: deviceManager.userAge).map { "\($0) estimate" } ?? "Off",
+                              text: $upperLimitText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 110)
+                        .onChange(of: upperLimitText) { _, v in heart.upperLimit = Int(v); pushHeart() }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Upper heart rate limit in beats per minute")
+
+                HStack {
+                    Text("Low limit (BPM)")
+                    Spacer()
+                    TextField("Off", text: $lowLimitText)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 110)
+                        .onChange(of: lowLimitText) { _, v in heart.lowLimit = Int(v); pushHeart() }
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Low heart rate limit in beats per minute")
+
+                Toggle("Heart rate above limit", isOn: Binding(
+                    get: { heart.alertAboveLimit }, set: { heart.alertAboveLimit = $0; pushHeart() }))
+                Toggle("Heart rate below low limit", isOn: Binding(
+                    get: { heart.alertBelowLow && heart.lowLimit != nil },
+                    set: { heart.alertBelowLow = $0; pushHeart() }))
+                    .disabled(heart.lowLimit == nil)
+                Toggle("Heart signal lost", isOn: Binding(
+                    get: { heart.alertSignalLost }, set: { heart.alertSignalLost = $0; pushHeart() }))
+                Toggle("No motion", isOn: Binding(
+                    get: { heart.alertNoMotion }, set: { heart.alertNoMotion = $0; pushHeart() }))
+
+                if #available(iOS 26, *) {
+                    // unverified: needs device test. No public AirPods heart-rate API in the SDK
+                    // headers, so this stores intent only and has no runtime path yet.
+                    Toggle("Use AirPods heart rate", isOn: Binding(
+                        get: { heart.useAirPodsHeartRate }, set: { heart.useAirPodsHeartRate = $0; pushHeart() }))
+                }
+            } header: {
+                Text("Heart & alerts")
+            } footer: {
+                Text("Your own limit always wins over the estimate. Your medication answer stays on this device. Alerts are a reminder, not medical advice.")
             }
 
             // Appearance Section
@@ -493,6 +552,9 @@ struct SettingsView: View {
             if let age = deviceManager.userAge {
                 ageText = "\(age)"
             }
+            heart = HeartSafetySettings.load()
+            upperLimitText = heart.upperLimit.map(String.init) ?? ""
+            lowLimitText = heart.lowLimit.map(String.init) ?? ""
             // Load manually saved max HR (empty string when using auto-calculation)
             if let savedMaxHR = HeartRateZoneCalculator.loadSavedMaxHR(), savedMaxHR > 0 {
                 maxHRText = "\(Int(savedMaxHR.rounded()))"
@@ -544,6 +606,11 @@ struct SettingsView: View {
     private var watchStatusText: String {
         guard WCSession.isSupported() else { return "Not Supported" }
         return WCSession.default.isPaired ? "Paired" : "Not Paired"
+    }
+
+    private func pushHeart() {
+        heart.save()
+        sharedDataManager.sendHeartSafetyToWatch(heart, age: deviceManager.userAge)
     }
 
     /// Shows the Tanaka-formula estimate as the placeholder when no manual override is stored.

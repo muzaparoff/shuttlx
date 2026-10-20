@@ -132,6 +132,25 @@ enum HelpContent {
                          text: "The Watch picks up the new theme on its own; no steps needed there."),
             ]),
         HelpTopic(
+            id: "heart-limits",
+            icon: "heart.text.square",
+            title: "Heart limits & alerts",
+            body: """
+            Set an upper limit (and optionally a low limit) for your heart \
+            rate. Without one, ShuttlX shows an estimate, labelled as such, \
+            lowered if you take a beta-blocker. Your doctor's limit always \
+            wins. Your medication answer stays on this iPhone; only the \
+            resulting limits are sent to your Watch.
+            """,
+            steps: [
+                HelpStep(icon: "gear",
+                         text: "Open the Settings tab and find the Heart & alerts section."),
+                HelpStep(icon: "heart.fill",
+                         text: "Enter your upper limit, and a low limit if you want one. The low limit is off until you set it."),
+                HelpStep(icon: "bell.badge",
+                         text: "Choose which alerts you want: above limit, below low limit, signal lost, no motion."),
+            ]),
+        HelpTopic(
             id: "widgets",
             icon: "square.grid.2x2",
             title: "Widgets & complications",

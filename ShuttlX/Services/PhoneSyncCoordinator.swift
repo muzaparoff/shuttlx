@@ -817,6 +817,28 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         log("Max HR sent to Watch: \(maxHR == 0 ? "cleared" : "\(Int(maxHR)) BPM")")
     }
 
+    // MARK: - Heart Limits Sync
+
+    /// Sends resolved limits + alert flags only. The medication answer never leaves the phone
+    /// (`watchPayload` strips it), so this payload is safe to put in the shared context.
+    func sendHeartSafetyToWatch(_ settings: HeartSafetySettings, age: Int?) {
+        guard WCSession.isSupported(), session.isPaired else { return }
+        do {
+            let data = try JSONEncoder().encode(settings.watchPayload(age: age))
+            let payload: [String: Any] = ["heartSafetyData": data.base64EncodedString()]
+            if session.isReachable {
+                var message = payload
+                message["action"] = "syncHeartSafety"
+                session.sendMessage(message, replyHandler: nil, errorHandler: { [weak self] error in
+                    self?.log("Heart limits sendMessage failed: \(error.localizedDescription)")
+                })
+            }
+            updateCombinedApplicationContext(merging: payload)
+        } catch {
+            log("Failed to encode heart limits: \(error.localizedDescription)")
+        }
+    }
+
     // MARK: - Combined Application Context
 
     /// Merges new keys into the existing applicationContext to prevent overwrites.
@@ -874,6 +896,7 @@ extension PhoneSyncCoordinator {
             } else {
                 self.log("WC Session activated: \(activationState.rawValue)")
                 self.consecutiveFailures = 0
+                self.sendHeartSafetyToWatch(HeartSafetySettings.load(), age: DeviceManager.shared.userAge)
 
                 // After activation, try pulling sessions if Watch is reachable,
                 // then reconcile to catch any sessions that overflowed the inline

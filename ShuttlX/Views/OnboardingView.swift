@@ -1,18 +1,24 @@
 import SwiftUI
 import HealthKit
 import WatchConnectivity
+import ShuttlXShared
 
 struct OnboardingView: View {
     @EnvironmentObject var dataManager: DataManager
     @Binding var isFirstLaunch: Bool
     @State private var currentPage = 0
+    @State private var heart = HeartSafetySettings.load()
+    @State private var limitText = ""
+    @State private var lowText = ""
 
     var body: some View {
         VStack {
             TabView(selection: $currentPage) {
                 welcomePage.tag(0)
                 healthPage.tag(1)
-                watchPage.tag(2)
+                medicationPage.tag(2)
+                limitPage.tag(3)
+                watchPage.tag(4)
             }
             .tabViewStyle(.page)
             .indexViewStyle(.page(backgroundDisplayMode: .always))
@@ -111,7 +117,117 @@ struct OnboardingView: View {
         .padding()
     }
 
-    // MARK: - Page 3: Watch Pairing
+    // MARK: - Page 3: Beta-blocker
+
+    private var medicationPage: some View {
+        VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "pills.fill")
+                .font(ShuttlXFont.onboardingIcon)
+                .foregroundStyle(ShuttlXColor.heartRate)
+                .accessibilityHidden(true)
+
+            Text("Do you take a beta-blocker?")
+                .font(ShuttlXFont.metricLarge)
+                .multilineTextAlignment(.center)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("It makes your heart rate run lower, so your limit is adjusted. Your doctor's limit always wins. Stays on this device.")
+                .font(ShuttlXFont.cardSubtitle)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            Spacer()
+
+            // "Not sure" is treated as Yes.
+            ForEach([("Yes", true), ("No", false), ("Not sure", true)], id: \.0) { label, value in
+                Button {
+                    heart.onBetaBlocker = value
+                    heart.save()
+                    withAnimation { currentPage = 3 }
+                } label: {
+                    Text(label)
+                }
+                .buttonStyle(ShuttlXPrimaryCTAStyle())
+            }
+
+            Button {
+                withAnimation { currentPage = 3 }
+            } label: {
+                Text("Skip for Now")
+                    .font(ShuttlXFont.cardSubtitle)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityHint("Skip. You can answer later in Settings.")
+
+            Spacer().frame(height: 40)
+        }
+        .padding()
+    }
+
+    // MARK: - Page 4: Heart limit
+
+    private var limitPage: some View {
+        let age = DeviceManager.shared.userAge
+        let estimate = heart.estimatedUpperLimit(age: age)
+        return VStack(spacing: 24) {
+            Spacer()
+
+            Image(systemName: "heart.text.square.fill")
+                .font(ShuttlXFont.onboardingIcon)
+                .foregroundStyle(ShuttlXColor.heartRate)
+                .accessibilityHidden(true)
+
+            Text("Heart limit")
+                .font(ShuttlXFont.metricLarge)
+                .accessibilityAddTraits(.isHeader)
+
+            Text("Optional. Enter your doctor's limit if you have one.")
+                .font(ShuttlXFont.cardSubtitle)
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 12) {
+                TextField(estimate.map { "\($0) (estimate)" } ?? "Upper limit (BPM)", text: $limitText)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Upper heart rate limit in beats per minute")
+                TextField("Low limit (BPM), off by default", text: $lowText)
+                    .keyboardType(.numberPad)
+                    .textFieldStyle(.roundedBorder)
+                    .accessibilityLabel("Low heart rate limit in beats per minute, optional")
+            }
+            .padding(.horizontal)
+
+            Spacer()
+
+            Button {
+                heart.upperLimit = Int(limitText)
+                heart.lowLimit = Int(lowText)
+                heart.save()
+                PhoneSyncCoordinator.shared.sendHeartSafetyToWatch(heart, age: age)
+                withAnimation { currentPage = 4 }
+            } label: {
+                Text("Continue")
+            }
+            .buttonStyle(ShuttlXPrimaryCTAStyle())
+
+            Button {
+                withAnimation { currentPage = 4 }
+            } label: {
+                Text("Skip for Now")
+                    .font(ShuttlXFont.cardSubtitle)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityHint("Skip. You can set limits later in Settings.")
+
+            Spacer().frame(height: 40)
+        }
+        .padding()
+    }
+
+    // MARK: - Page 5: Watch Pairing
 
     private var watchPage: some View {
         VStack(spacing: 24) {
@@ -120,7 +236,7 @@ struct OnboardingView: View {
             Image(systemName: "applewatch")
                 .font(ShuttlXFont.onboardingIcon)
                 .foregroundStyle(.tint)
-                .symbolEffect(.bounce, value: currentPage == 2)
+                .symbolEffect(.bounce, value: currentPage == 4)
                 .accessibilityHidden(true)
 
             Text("Apple Watch")
