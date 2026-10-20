@@ -212,6 +212,19 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         }
     }
 
+    /// Watch effort answer. Arrives on sendMessage and/or transferUserInfo (may duplicate; applying is idempotent).
+    private func handleSessionEffort(_ payload: [String: Any]) {
+        guard let id = payload["sessionId"] as? String, let rpe = payload["effortRPE"] as? Int else {
+            log("updateSessionEffort ignored — bad payload")
+            return
+        }
+        guard let dataManager else {
+            log("updateSessionEffort ignored — dataManager nil")
+            return
+        }
+        dataManager.applyEffort(sessionId: id, rpe: rpe)
+    }
+
     // MARK: - Heart Alerts (watch -> phone notification)
 
     /// Arrives on both sendMessage and transferUserInfo (fallback may duplicate), so
@@ -1043,6 +1056,8 @@ extension PhoneSyncCoordinator {
                     }
                 case "heartAlert":
                     self.handleHeartAlert(userInfo)
+                case "updateSessionEffort":
+                    self.handleSessionEffort(userInfo)
                 case "workoutStopped":
                     self.confirmWatchWorkoutStopped()
                     self.log("Workout stopped on Watch (via transferUserInfo)")
@@ -1086,6 +1101,8 @@ extension PhoneSyncCoordinator {
                     self.handleLiveMetrics(message)
                 case "heartAlert":
                     self.handleHeartAlert(message)
+                case "updateSessionEffort":
+                    self.handleSessionEffort(message)
                 case "workoutStopped":
                     self.confirmWatchWorkoutStopped()
                 case "ping":

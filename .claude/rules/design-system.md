@@ -47,6 +47,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 
 ## Cards & Containers
 
+- Flat screens (Today, History, Trends and its detail screens, Session detail, `MetricCard`) use `.timelineCard()` + `.timelineScreenBackground()` (`Theme/TimelineStyle.swift`); `.themedCard()` remains for the glass look elsewhere
 - Use `.themedCard()` for all card containers — adapts per theme via `ThemeEffects.CardStyle`: `.glass` (Clean)
 - `.glassBackground(cornerRadius:)` still available as a fallback for Clean-only contexts
 - Never use `Divider()` between list items — use vertical spacing (`LazyVStack(spacing: 12)`)

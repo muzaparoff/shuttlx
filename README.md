@@ -16,10 +16,9 @@ A comprehensive fitness app for iOS and watchOS featuring distance-based interva
 - **🏝️ Live Activity**: Dynamic Island + Lock Screen during workouts
 - **📱 Widgets & Complications**: 4 iOS home-screen widgets + a Control Center control, 4 watch complications
 - **☁️ iCloud Sync**: Sign in with Apple + CloudKit cross-device sync
-- **💳 Subscriptions**: RevenueCat-backed in-app subscriptions (iOS only)
 - **❓ In-App Help**: Settings → Help (`ShuttlX/Views/HelpView.swift`)
 
-**Platforms**: iOS 18.0+ / watchOS 11.5+, SwiftUI. External SPM deps (iOS only): RevenueCat, TelemetryDeck — the watch target is Apple-frameworks-only.
+**Platforms**: iOS 18.0+ / watchOS 11.5+, SwiftUI. External SPM dep (iOS only): TelemetryDeck — the watch target is Apple-frameworks-only.
 
 ## 📂 **Project Structure**
 ```

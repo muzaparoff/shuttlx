@@ -183,8 +183,10 @@ enum HelpContent {
             icon: "lock",
             title: "Privacy & your health data",
             body: """
-            Your workouts are yours. Sessions are stored on your devices and, \
-            only if you sign in, in your own iCloud. Heart rate, distance, and \
+            Your workouts are yours. Sessions are stored on your iPhone and \
+            Apple Watch. If you are signed in with Apple, they are also synced to \
+            your own private iCloud, and Settings → Account lets you sign out or \
+            delete your account and iCloud data. Heart rate, distance, and \
             calories are read from HealthKit solely to run and record your \
             workouts, and finished sessions are saved back to Apple Health. \
             Health data is never sent to third parties; the optional \

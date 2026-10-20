@@ -20,6 +20,9 @@ struct AnalyticsView: View {
     @State private var formScore: Double = 0
 
     private var sessions: [TrainingSession] { dataManager.effectiveSessions }
+    #if DEBUG
+    @State private var seamDetail = false
+    #endif
 
     var body: some View {
         NavigationStack {
@@ -38,6 +41,17 @@ struct AnalyticsView: View {
             }
             .navigationTitle("Trends")
             .timelineScreenBackground()
+            #if DEBUG
+            // Screenshot seam: SHUTTLX_TRENDS_DETAIL=hr|records|more pushes that detail screen.
+            .navigationDestination(isPresented: $seamDetail) {
+                switch ProcessInfo.processInfo.environment["SHUTTLX_TRENDS_DETAIL"] {
+                case "records": detailScreen("Records") { recordsCards }
+                case "more": detailScreen("More") { moreCards }
+                default: detailScreen("Heart rate zones") { hrZonesCards }
+                }
+            }
+            .onAppear { seamDetail = ProcessInfo.processInfo.environment["SHUTTLX_TRENDS_DETAIL"] != nil }
+            #endif
         }
         .task(id: dataManager.effectiveVersion) {
             recomputeAnalytics()
@@ -92,7 +106,7 @@ struct AnalyticsView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
-        .themedScreenBackground()
+        .timelineScreenBackground()
     }
 
     @ViewBuilder private var hrZonesCards: some View {
@@ -151,7 +165,7 @@ struct AnalyticsView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(40)
-        .themedCard()
+        .timelineCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("No analytics data available. Complete a workout to begin.")
     }
@@ -182,7 +196,7 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .themedCard(accent: ShuttlXColor.forRecovery(recovery), headerLabel: "RECOVERY")
+        .timelineCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Recovery status: \(recovery.rawValue). Form score: \(String(format: "%.0f", formScore))")
     }
@@ -286,11 +300,7 @@ struct AnalyticsView: View {
                 }
             }
             .padding(16)
-            .themedCard(
-                accent: ShuttlXColor.running,
-                statusLine: (mode: "SPLIT", file: "runwalk.json", position: "6w"),
-                headerLabel: "RUN + WALK"
-            )
+            .timelineCard()
             .accessibilityElement(children: .combine)
             .accessibilityLabel(runWalkAccessibilitySummary)
         }
@@ -446,11 +456,7 @@ struct AnalyticsView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
             .padding(16)
-            .themedCard(
-                accent: ShuttlXColor.pace,
-                statusLine: (mode: "VO2", file: "fitness.json", position: "1:1"),
-                headerLabel: "VO2MAX"
-            )
+            .timelineCard()
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Estimated VO2 max: \(String(format: "%.1f", vo2)) milliliters per kilogram per minute. \(vo2maxCategory(vo2))")
         }
@@ -525,11 +531,7 @@ struct AnalyticsView: View {
             }
         }
         .padding(16)
-        .themedCard(
-            accent: ShuttlXColor.positive,
-            statusLine: (mode: "PR", file: "records.json", position: "4:1"),
-            headerLabel: "PERSONAL RECORDS"
-        )
+        .timelineCard()
     }
 
     // MARK: - Pace Zones Chart
@@ -579,11 +581,7 @@ struct AnalyticsView: View {
                 .accessibilityHidden(true)
             }
             .padding(16)
-            .themedCard(
-                accent: ShuttlXColor.pace,
-                statusLine: (mode: "PACE", file: "zones.json", position: "5:1"),
-                headerLabel: "PACE ZONES"
-            )
+            .timelineCard()
             .accessibilityElement(children: .combine)
             .accessibilityLabel("Pace zone distribution: \(a11yLabel)")
         }
@@ -646,7 +644,7 @@ struct AnalyticsView: View {
                 }
             }
             .padding(16)
-            .themedCard(accent: ShuttlXColor.hiking, headerLabel: "ELEVATION")
+            .timelineCard()
             .accessibilityElement(children: .contain)
         }
     }
@@ -687,7 +685,7 @@ private struct PRCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(12)
-        .themedCard(accent: color)
+        .timelineCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(title): \(value)")
     }

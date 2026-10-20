@@ -22,6 +22,8 @@ final class DeepLinkRouter: ObservableObject {
     @Published var pendingTab: Int?
     /// Set by `shuttlx://plan`; Today pushes the Programs screen and clears it.
     @Published var showPrograms = false
+    /// Set by `shuttlx://last-workout`; ContentView opens the newest session once sessions are loaded.
+    @Published var openLastWorkout = false
 }
 
 @main
@@ -197,7 +199,8 @@ struct ShuttlXApp: App {
                 // watch writes to.
                 workoutController.dataManager = dataManager
                 #if DEBUG
-                let skipHealth = ProcessInfo.processInfo.environment["SHUTTLX_NO_HEALTH"] == "1"
+                // Demo data is checked first so the Health permission sheet never opens over a demo run.
+                let skipHealth = demoDataRequested || ProcessInfo.processInfo.environment["SHUTTLX_NO_HEALTH"] == "1"
                 #else
                 let skipHealth = false
                 #endif
@@ -215,6 +218,8 @@ struct ShuttlXApp: App {
                 // and/or select a launch tab.
                 let env = ProcessInfo.processInfo.environment
                 if let t = env["SHUTTLX_THEME"] { themeManager.selectTheme(t) }
+                // SHUTTLX_DEMO_SIGNEDIN=1 shows the Settings Account section (in memory only, no keychain write).
+                if env["SHUTTLX_DEMO_SIGNEDIN"] == "1" { authManager.isSignedIn = true }
                 if demoDataRequested {
                     // SHUTTLX_DEMO_MONTH=1: ~20 sessions with GPS routes this month (History/Trends shots).
                     var demo = env["SHUTTLX_DEMO_MONTH"] == "1" ? ShuttlXDemoData.makeMonthSessions() : ShuttlXDemoData.makeSessions()
@@ -297,6 +302,9 @@ struct ShuttlXApp: App {
                     if workoutController.isActive {
                         workoutController.isPresentingTimer = true
                     }
+                case "last-workout":
+                    // shuttlx://last-workout — watch complication tap; opens the latest session's detail.
+                    deepLinkRouter.openLastWorkout = true
                 case "dashboard":
                     // shuttlx://dashboard — select the Today tab.
                     os_log(.info, log: deepLinkLog, "dashboard: selecting Today tab")

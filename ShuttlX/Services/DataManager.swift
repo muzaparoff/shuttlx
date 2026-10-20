@@ -106,17 +106,58 @@ class DataManager: ObservableObject {
             processedSessionIds.insert(session.id)
 
             if !sessions.contains(where: { $0.id == session.id }) {
+                var session = session
+                // An effort answer can beat its session to the phone; apply it now.
+                if let rpe = pendingEffort.take(sessionId: session.id.uuidString) {
+                    session.effortRPE = rpe
+                    savePendingEffort()
+                }
                 sessions.append(session)
                 hasChanges = true
-                trackWorkoutCompleted(session)
-                // A completed workout landing on the iPhone is a "happy moment" —
-                // the guarded prompt decides if/when to actually ask for a rating.
-                FeedbackPrompt.recordHappyMoment()
+                // Sessions imported from Apple Health are history, not a workout just finished:
+                // only watch/phone-originated sessions send telemetry or count toward the rating prompt.
+                if session.importedFromHealth != true {
+                    trackWorkoutCompleted(session)
+                    // A completed workout landing on the iPhone is a "happy moment" —
+                    // the guarded prompt decides if/when to actually ask for a rating.
+                    FeedbackPrompt.recordHappyMoment()
+                }
             }
         }
         if hasChanges {
             archiveOldestBeyondCap()
             saveSessionsToAppGroup()
+        }
+    }
+
+    // MARK: - Effort (watch post-workout RPE)
+
+    private static let pendingEffortKey = "pendingSessionEffort"
+    private lazy var pendingEffort: PendingSessionEffort = {
+        guard let data = UserDefaults.standard.data(forKey: Self.pendingEffortKey) else { return PendingSessionEffort() }
+        do { return try JSONDecoder().decode(PendingSessionEffort.self, from: data) } catch {
+            logger.error("Pending effort unreadable, starting empty: \(error.localizedDescription)")
+            return PendingSessionEffort()
+        }
+    }()
+
+    private func savePendingEffort() {
+        do { UserDefaults.standard.set(try JSONEncoder().encode(pendingEffort), forKey: Self.pendingEffortKey) } catch {
+            logger.error("Failed to save pending effort: \(error.localizedDescription)")
+        }
+    }
+
+    /// Stores the watch's effort answer on the session. If the session has not arrived yet, the answer waits
+    /// in a small persisted map and is applied when the session is ingested. Never leaves the phone.
+    func applyEffort(sessionId: String, rpe: Int) {
+        let rpe = min(max(rpe, 0), 10)
+        if let i = sessions.firstIndex(where: { $0.id.uuidString == sessionId }) {
+            sessions[i].effortRPE = rpe
+            saveSessionsToAppGroup()
+        } else {
+            pendingEffort.add(sessionId: sessionId, rpe: rpe)
+            savePendingEffort()
+            logger.info("Effort for unknown session kept pending")
         }
     }
 

@@ -121,3 +121,6 @@ Temporary Items
 
 # Claude Code transient scheduler lock
 .claude/scheduled_tasks.lock
+
+## Xcode build junk
+ShuttlX.xcodeproj/-Xcc/

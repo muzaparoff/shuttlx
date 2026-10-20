@@ -240,7 +240,7 @@ final class iPhoneWorkoutController: ObservableObject {
         startDisplayTimer()
         isActive = true
         isPaused = false
-        LiveActivityManager.shared.startActivity(activityType: workoutName)
+        LiveActivityManager.shared.startActivity(activityType: lastDetectedActivity.rawValue)
         logger.info("Workout started — mode=\(String(describing: self.mode))")
     }
 
@@ -462,9 +462,10 @@ final class iPhoneWorkoutController: ObservableObject {
             heartRate: heartRateMonitor.current,
             distance: totalDistance,
             calories: 0,
-            currentActivity: workoutName,
+            currentActivity: lastDetectedActivity.rawValue,   // "running" / "walking" / ... (was the workout's name)
             isPaused: isPaused,
-            pace: currentPace ?? 0
+            pace: currentPace ?? 0,
+            zoneWord: HeartSafetySettings.load().zoneWord(hr: heartRateMonitor.current, age: DeviceManager.shared.userAge)
         )
     }
 

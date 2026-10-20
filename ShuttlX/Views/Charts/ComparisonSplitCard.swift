@@ -104,7 +104,7 @@ struct ComparisonSplitCard: View {
             }
         }
         .padding(16)
-        .themedCard(accent: AnalyticsDataVizPalette.seriesBlue, headerLabel: "COMPARE")
+        .timelineCard()
     }
 
     // MARK: - Period toggle

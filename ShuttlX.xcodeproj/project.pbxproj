@@ -14,7 +14,6 @@
 		A5923507B /* DataManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507F /* DataManager.swift */; };
 		FB000001 /* FeedbackPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB000001F /* FeedbackPrompt.swift */; };
 		A5923508B /* PhoneSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508F /* PhoneSyncCoordinator.swift */; };
-		A5923511B /* SessionRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923511F /* SessionRowView.swift */; };
 		A5923512B /* ProgramListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923512F /* ProgramListView.swift */; };
 		A5923514B /* DebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923514F /* DebugView.swift */; };
 		A5923515B /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A5923515F /* PrivacyInfo.xcprivacy */; };
@@ -240,7 +239,6 @@
 		A5923508F /* PhoneSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneSyncCoordinator.swift; sourceTree = "<group>"; };
 		A5923509 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A592350A /* ShuttlX.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ShuttlX.entitlements; sourceTree = "<group>"; };
-		A5923511F /* SessionRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionRowView.swift; sourceTree = "<group>"; };
 		A5923512F /* ProgramListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProgramListView.swift; sourceTree = "<group>"; };
 		A5923514F /* DebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugView.swift; sourceTree = "<group>"; };
 		A5923515F /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -515,7 +513,6 @@
 			children = (
 				A5923A92 /* HistoryView.swift */,
 				A5923A93 /* HistoryMapView.swift */,
-				A5923511F /* SessionRowView.swift */,
 				A5923512F /* ProgramListView.swift */,
 				A5923531F /* SessionDetailView.swift */,
 				A5923514F /* DebugView.swift */,
@@ -937,7 +934,6 @@
 				A5923531 /* SessionDetailView.swift in Sources */,
 				A5923B92 /* HistoryView.swift in Sources */,
 				A5923B93 /* HistoryMapView.swift in Sources */,
-				A5923511B /* SessionRowView.swift in Sources */,
 				A5923512B /* ProgramListView.swift in Sources */,
 				A5923514B /* DebugView.swift in Sources */,
 				A5923A01B /* HeartAlertsView.swift in Sources */,

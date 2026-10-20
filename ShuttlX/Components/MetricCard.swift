@@ -32,7 +32,7 @@ struct MetricCard: View {
         }
         .frame(maxWidth: .infinity, minHeight: compact ? 0 : 88)
         .padding(compact ? 8 : 12)
-        .themedCard(accent: color)
+        .timelineCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value)")
     }

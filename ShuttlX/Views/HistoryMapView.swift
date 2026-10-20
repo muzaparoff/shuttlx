@@ -10,6 +10,14 @@ private struct RoutePiece: Identifiable {
     let coords: [CLLocationCoordinate2D]
 }
 
+/// "km 5 / 5'48"/km" label on the selected route.
+private struct KmMark: Identifiable {
+    let id: Int
+    let coord: CLLocationCoordinate2D
+    let km: Int
+    let pace: String?
+}
+
 /// Map mode of History (approved mockup, 2026-10): full-bleed map of every route in
 /// the chosen month, floating chips filtering by detected activity, a bottom sheet
 /// listing the trainings, and a selected-route state with "Open details" / "Same route".
@@ -25,6 +33,7 @@ struct HistoryMapView: View {
     @State private var expanded = false
     @State private var showLaps = false
 
+    private static let rowHeight: CGFloat = 58
     private static let locationManager = CLLocationManager()
     private let filterable: [DetectedActivity] = [.running, .walking, .cycling]
 
@@ -105,6 +114,33 @@ struct HistoryMapView: View {
 
     private func color(_ a: DetectedActivity) -> Color { a.themeColor }
 
+    /// A label every km (every 2nd, 5th... on long routes, so at most ~10 show), built from the GPS points' timestamps.
+    /// Pace is the time since the previous label, shown unless the whole session is cycling.
+    private func kmMarks(_ s: TrainingSession) -> [KmMark] {
+        guard let route = s.route, route.count >= 2 else { return [] }
+        let total = s.distance ?? 0
+        let stepKm = max(1, Int((total / 10).rounded(.up)))
+        let showPace = !s.displaySegments().allSatisfy { $0.activityType == .cycling }
+        var out: [KmMark] = []
+        var metres = 0.0
+        var nextKm = stepKm
+        var lastTime = route[0].timestamp
+        var prev = CLLocation(latitude: route[0].latitude, longitude: route[0].longitude)
+        for p in route.dropFirst() {
+            let here = CLLocation(latitude: p.latitude, longitude: p.longitude)
+            metres += here.distance(from: prev)
+            prev = here
+            if metres >= Double(nextKm) * 1000 {
+                let secPerKm = p.timestamp.timeIntervalSince(lastTime) / Double(stepKm)
+                out.append(KmMark(id: nextKm, coord: CLLocationCoordinate2D(latitude: p.latitude, longitude: p.longitude),
+                                  km: nextKm, pace: showPace && secPerKm > 0 ? FormattingUtils.formatPace(secPerKm) + "/km" : nil))
+                lastTime = p.timestamp
+                nextKm += stepKm
+            }
+        }
+        return out
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -142,6 +178,20 @@ struct HistoryMapView: View {
             }
             ForEach(all.filter { $0.sessionID == selectedID }) { p in
                 MapPolyline(coordinates: p.coords).stroke(color(p.activity), lineWidth: 5)
+            }
+            if let s = selected {
+                ForEach(kmMarks(s)) { m in
+                    Annotation("", coordinate: m.coord, anchor: .bottom) {
+                        VStack(spacing: 0) {
+                            Text("km \(m.km)").font(ShuttlXFont.microLabel.weight(.bold))
+                            if let pace = m.pace { Text(pace).font(ShuttlXFont.microLabel) }
+                        }
+                        .foregroundStyle(.black)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .accessibilityLabel("Kilometre \(m.km)" + (m.pace.map { ", pace \($0)" } ?? ""))
+                    }
+                }
             }
             if let start = selected?.route?.first {
                 Annotation("Start", coordinate: CLLocationCoordinate2D(latitude: start.latitude, longitude: start.longitude), anchor: .center) {
@@ -296,7 +346,7 @@ struct HistoryMapView: View {
                 .accessibilityAddTraits(.isButton)
             if let s = selected { detail(s) } else { list }
         }
-        .padding(.bottom, 92)   // clear the floating tab bar; the sheet background runs behind it
+        .padding(.bottom, 8)   // the tab bar already insets the safe area; the sheet background runs behind it
         .frame(maxWidth: .infinity)
         .background(
             UnevenRoundedRectangle(topLeadingRadius: 22, topTrailingRadius: 22, style: .continuous)
@@ -328,12 +378,13 @@ struct HistoryMapView: View {
                     .foregroundStyle(ShuttlXColor.textSecondary)
                     .padding(.vertical, 24)
             } else {
+                // Height follows the rows (3 collapsed, 7 expanded) so none is clipped and nothing is left empty below.
                 ScrollView {
                     LazyVStack(spacing: 0) {
                         ForEach(items) { s in row(s) }
                     }
                 }
-                .frame(height: expanded ? 400 : 140)
+                .frame(height: CGFloat(min(items.count, expanded ? 7 : 3)) * Self.rowHeight)
             }
         }
     }
@@ -370,7 +421,8 @@ struct HistoryMapView: View {
                     .foregroundStyle(ShuttlXColor.textSecondary)
             }
         }
-        .padding(.horizontal, 16).padding(.vertical, 6)
+        .padding(.horizontal, 16)
+        .frame(height: Self.rowHeight)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         if hasRoute(s) {

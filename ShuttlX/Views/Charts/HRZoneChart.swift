@@ -23,7 +23,7 @@ struct HRZoneChart: View {
             }
         }
         .padding(16)
-        .themedCard(accent: ShuttlXColor.heartRate, headerLabel: "HR ZONES")
+        .timelineCard()
         .accessibilityElement(children: .ignore)
         .accessibilityLabel({
             let summary = zones.map { "\($0.zone): \(String(format: "%.0f", $0.percentage)) percent" }.joined(separator: ", ")

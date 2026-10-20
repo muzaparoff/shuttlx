@@ -93,7 +93,7 @@ struct CalendarHeatmapCard: View {
             detailLine
         }
         .padding(16)
-        .themedCard(headerLabel: "CALENDAR")
+        .timelineCard()
     }
 
     // MARK: - Grid

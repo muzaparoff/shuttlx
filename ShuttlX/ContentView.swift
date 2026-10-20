@@ -63,6 +63,9 @@ struct ContentView: View {
         .onChange(of: deepLinkRouter.pendingSessionID) { _, _ in
             consumePendingSessionDeepLink()
         }
+        .onChange(of: deepLinkRouter.openLastWorkout) { _, _ in
+            consumePendingSessionDeepLink()
+        }
         .onChange(of: dataManager.effectiveSessions) { _, _ in
             // The session id may have arrived before sessions finished
             // loading from the App Group — retry here instead of dropping
@@ -81,6 +84,12 @@ struct ContentView: View {
     /// above can retry once it does, instead of the link being silently
     /// swallowed.
     private func consumePendingSessionDeepLink() {
+        // shuttlx://last-workout: resolve to the newest session; same keep-until-loaded rule as below.
+        if deepLinkRouter.openLastWorkout,
+           let latest = dataManager.effectiveSessions.max(by: { $0.startDate < $1.startDate }) {
+            deepLinkRouter.openLastWorkout = false
+            deepLinkRouter.pendingSessionID = latest.id
+        }
         guard let id = deepLinkRouter.pendingSessionID else { return }
         guard let session = dataManager.effectiveSessions.first(where: { $0.id == id }) else {
             return

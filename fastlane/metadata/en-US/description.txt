@@ -32,9 +32,9 @@ MULTI-SPORT SUPPORT
 
 Running, walking, cycling, swimming, hiking, elliptical, and cross training. Each sport connects to HealthKit with the correct activity type.
 
-2 VISUAL THEMES
+CLEAN, CALM DESIGN
 
-Clean and Mixtape. Every screen, card, and chart adapts to your chosen aesthetic. Your Watch matches your iPhone.
+The Clean theme keeps every screen, card, and chart easy to read. Your Watch matches your iPhone.
 
 WIDGETS & COMPLICATIONS
 

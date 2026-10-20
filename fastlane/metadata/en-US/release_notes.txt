@@ -1,6 +1,6 @@
 What's New in ShuttlX
 
-- 7 visual themes: Clean, Synthwave, Mixtape, Arcade, Classic Radio, VU Meter, and Neovim. Every screen adapts to your style.
+- One calm Clean theme across iPhone and Apple Watch.
 - Improved Apple Watch workout performance and battery efficiency
 - Training plan progress tracking refinements
 - Bug fixes and stability improvements

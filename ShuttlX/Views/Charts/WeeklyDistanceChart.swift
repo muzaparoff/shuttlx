@@ -25,7 +25,7 @@ struct WeeklyDistanceChart: View {
             }
         }
         .padding(16)
-        .themedCard(accent: ShuttlXColor.running, headerLabel: "DISTANCE")
+        .timelineCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel({
             let summary = summaries.map {

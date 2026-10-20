@@ -30,7 +30,7 @@ struct PaceTrendChart: View {
             }
         }
         .padding(16)
-        .themedCard(accent: ShuttlXColor.pace, headerLabel: "PACE TREND")
+        .timelineCard()
         .accessibilityElement(children: .combine)
         .accessibilityLabel({
             let summary = paceData.map {

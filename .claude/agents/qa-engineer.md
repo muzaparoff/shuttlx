@@ -14,7 +14,7 @@ You are a senior QA engineer testing **ShuttlX**, an interval-training + cardiac
 - **Modes**: Free Run, Interval (run/walk repeat), Gym Recovery (cardiac rehab station detection)
 - **Sync**: Watch → iPhone via WatchConnectivity (sendMessage + transferUserInfo + applicationContext)
 - **HealthKit**: workout sessions, HR samples, distance, calories
-- **Themes**: 7 selectable themes apply to all screens, fonts, backgrounds
+- **Themes**: one theme (Clean) applies to all screens, fonts, backgrounds
 - **Live Activity** on iOS lock screen + Dynamic Island during active workouts
 
 ## Test Charters (run all relevant ones for the change under test)
@@ -86,7 +86,6 @@ For each finding, emit one block. The lead reads these and assigns the suggested
 - HR / workout session / sync timing issue → `watch-debugger`
 - HealthKit data correctness → `healthkit-domain-expert`
 - Architecture / cross-cutting concern → `senior-architect`
-- Payment / IAP / RevenueCat → `ios-payment-auditor`
 
 ## When You're Done
 

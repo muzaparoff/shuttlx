@@ -110,7 +110,7 @@ struct WeeklyCarouselCard: View {
             }
         }
         .padding(16)
-        .themedCard(headerLabel: "WEEKLY RECAP")
+        .timelineCard()
         .onAppear {
             if scrolledWeekID == nil { scrolledWeekID = weeks.first?.id }
         }

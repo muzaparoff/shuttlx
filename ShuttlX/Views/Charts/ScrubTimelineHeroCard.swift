@@ -144,7 +144,7 @@ struct ScrubTimelineHeroCard: View {
             }
         }
         .padding(16)
-        .themedCard(accent: AnalyticsDataVizPalette.seriesBlue, headerLabel: "TIMELINE")
+        .timelineCard()
         // Keyed on preset + session count (mirrors AnalyticsView's own
         // `.task(id: dataManager.sessions.count)` convention) — never on
         // `manualIndex`, so dragging the scrubber never re-triggers bucketing.

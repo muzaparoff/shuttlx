@@ -9,6 +9,7 @@ struct SettingsView: View {
     @Environment(\.openURL) private var openURL
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var sharedDataManager: PhoneSyncCoordinator
+    @EnvironmentObject var authManager: AuthenticationManager
     @State private var showingHealthPermissionsInfo = false
     @State private var showingDeleteConfirmation = false
     @State private var showingSignOutConfirmation = false
@@ -140,6 +141,32 @@ struct SettingsView: View {
             }
             }
 
+            // Account (App Store 5.1.1(v)): only for users who are signed in, with in-app deletion.
+            if authManager.isSignedIn {
+                Section("Account") {
+                    HStack {
+                        Image(systemName: "person.crop.circle.fill")
+                            .foregroundStyle(.tint)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(authManager.userName ?? "Signed in with Apple")
+                            Text("iCloud sync is on")
+                                .font(ShuttlXFont.cardCaption)
+                                .foregroundStyle(ShuttlXColor.textSecondary)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+
+                    Button("Sign Out") { showingSignOutConfirmation = true }
+                        .accessibilityHint("Stops iCloud sync. Workouts on this iPhone are kept")
+
+                    Button("Delete Account", role: .destructive) { showingDeleteAccountConfirmation = true }
+                        .foregroundStyle(ShuttlXColor.ctaDestructive)
+                        .disabled(isDeletingAccount)
+                        .accessibilityHint("Permanently deletes your iCloud data and workouts on this iPhone")
+                }
+            }
+
             // Data Management Section
             Section("Data Management") {
                 Button("Clear All Training Sessions", role: .destructive) {
@@ -234,6 +261,32 @@ struct SettingsView: View {
             }
         } message: {
             Text("This will delete all your training history. This action cannot be undone.")
+        }
+        .alert("Sign Out", isPresented: $showingSignOutConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) { authManager.signOut() }
+        } message: {
+            Text("Your workouts on this iPhone are kept, but they will no longer sync to iCloud.")
+        }
+        .alert("Delete Account", isPresented: $showingDeleteAccountConfirmation) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete Account & Data", role: .destructive) {
+                isDeletingAccount = true
+                Task {
+                    do {
+                        try await authManager.deleteAccount(dataManager: dataManager, sharedDataManager: sharedDataManager)
+                        successMessage = "Account deleted"
+                    } catch {
+                        successMessage = "Could not delete the account. Check your connection and try again."
+                    }
+                    showSuccessMessage = true
+                    isDeletingAccount = false
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    showSuccessMessage = false
+                }
+            }
+        } message: {
+            Text("This permanently deletes your iCloud data and all workouts on this iPhone. It cannot be undone.")
         }
         .overlay(alignment: .top) {
             if showSuccessMessage {

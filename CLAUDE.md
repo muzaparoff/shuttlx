@@ -5,7 +5,7 @@ Interval training app for iOS (18.0+) and watchOS (11.5+) built with SwiftUI.
 **External dependencies (SPM):**
 - **TelemetryDeck** (`SwiftSDK`) — anonymous analytics (iOS only, no biometrics)
 
-It is declared in the iOS `PrivacyInfo.xcprivacy` (ProductInteraction, DeviceID). That manifest still lists PurchaseHistory, which no SDK in the app currently collects.  
+It is declared in the iOS `PrivacyInfo.xcprivacy` (ProductInteraction, DeviceID). The PurchaseHistory entry was removed (no code collects purchases).  
 The watchOS target remains Apple-frameworks-only.
 
 - **Bundle**: `com.shuttlx.ShuttlX` / `com.shuttlx.ShuttlX.watchkitapp`
@@ -80,6 +80,9 @@ Activity auto-switch (watch): GPS speed → SpeedActivityClassifier (hysteresis)
 Fix a part (iOS): SessionDetailView/FixPartSheet (type, Split, Merge, scrubber) → SegmentOverrideStore → segment_overrides.json (v2 envelope `SegmentEdits`: types + per-session partitions; v1 flat file still decodes; sessions.json never mutated)
   Pure logic `Shared/SegmentEdits.swift` (tested). DataManager.effectiveSessions = sessions + edits applied ONCE (Rest calories zeroed); every reader uses it, only persistence/CloudKit use raw `sessions`
   Session detail HR line: SessionHeartRateLoader queries HealthKit for the session range (not stored, never sent anywhere); hidden when no data
+Effort answer: watch `updateSessionEffort` (sendMessage + transferUserInfo) → PhoneSyncCoordinator.handleSessionEffort → DataManager.applyEffort sets `effortRPE` on the stored session; if the session has not arrived yet the answer waits in `PendingSessionEffort` (Shared/, bounded to 20, UserDefaults key `pendingSessionEffort`) and is applied on ingest. Never goes to Health or telemetry.
+Account (Settings → Account, only while signed in): Sign Out and Delete Account (confirmation alert → AuthenticationManager.deleteAccount: deletes the user's CloudKit session + template records, empties local sessions.json, clears keychain). There is currently no sign-in entry point in the UI (SignInView is unreferenced), so the section only appears for users still signed in from an earlier build.
+Imported (Health) sessions never fire TelemetryDeck `workoutCompleted` or the rating prompt (DataManager.handleReceivedSessions checks `importedFromHealth`).
 Live Activity controls: Pause/Resume and End are LiveActivityIntents (ShuttlX/Models/WorkoutControlIntents.swift)
 
 Theme sync:

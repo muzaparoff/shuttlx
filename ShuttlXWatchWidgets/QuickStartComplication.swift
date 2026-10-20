@@ -23,6 +23,15 @@ struct QuickStartEntry: TimelineEntry {
 struct QuickStartComplication: Widget {
     let kind = "QuickStartComplication"
 
+    // accessoryCorner exists on watchOS only; the script that builds this file for iOS fails on it otherwise.
+    private static var families: [WidgetFamily] {
+        #if os(watchOS)
+        [.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner]
+        #else
+        [.accessoryCircular, .accessoryRectangular, .accessoryInline]
+        #endif
+    }
+
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: QuickStartProvider()) { _ in
             QuickStartComplicationView()
@@ -31,7 +40,7 @@ struct QuickStartComplication: Widget {
         }
         .configurationDisplayName("Quick Start")
         .description("Tap to start a workout.")
-        .supportedFamilies([.accessoryCircular, .accessoryRectangular, .accessoryInline, .accessoryCorner])
+        .supportedFamilies(Self.families)
     }
 }
 
@@ -52,6 +61,7 @@ struct QuickStartComplicationView: View {
                     .font(.headline)
             }
             .accessibilityLabel("Start workout")
+        #if os(watchOS)
         case .accessoryCorner:
             // Corner slot: run glyph in the corner, curved "FREE RUN" label
             // hugging the bezel via .widgetLabel. System-tinted per watch face.
@@ -60,6 +70,7 @@ struct QuickStartComplicationView: View {
                 .widgetAccentable()
                 .widgetLabel("FREE RUN")
                 .accessibilityLabel("Start free run")
+        #endif
         default:
             ZStack {
                 AccessoryWidgetBackground()
