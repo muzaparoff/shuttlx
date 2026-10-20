@@ -43,6 +43,7 @@ struct ShuttlXApp: App {
     init() {
         let telemetryConfig = TelemetryDeck.Config(appID: "2323535F-7F18-45F3-ACA2-215164CD22BC")
         TelemetryDeck.initialize(config: telemetryConfig)
+        WorkoutControlBridge.send = { PhoneSyncCoordinator.shared.sendLiveActivityControl($0) }
     }
 
     var body: some Scene {

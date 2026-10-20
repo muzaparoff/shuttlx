@@ -71,7 +71,8 @@ class LiveActivityManager {
         calories: Int,
         currentActivity activityType: String,
         isPaused: Bool,
-        pace: TimeInterval
+        pace: TimeInterval,
+        pauseReason: String? = nil
     ) {
         // If no current activity (or previous start failed), try to start one first.
         if currentActivity == nil || startFailed {
@@ -100,6 +101,7 @@ class LiveActivityManager {
             currentActivity: activityType,
             isPaused: isPaused,
             pace: pace,
+            pauseReason: isPaused ? pauseReason : nil,
             timerReferenceDate: timerReferenceDate
         )
 

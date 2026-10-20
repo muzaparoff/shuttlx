@@ -2,11 +2,12 @@ import WatchConnectivity
 import Foundation
 import Combine
 import WidgetKit
+import UserNotifications
 import os.log
 import ShuttlXShared
 
 @MainActor
-class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
+class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUserNotificationCenterDelegate {
     static let shared = PhoneSyncCoordinator()
 
     @Published var syncedSessions: [TrainingSession] = []
@@ -28,6 +29,9 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var liveRoutePoints: [RoutePoint] = []
     @Published var liveMetricsLastUpdated: Date? = nil
 
+    /// Set by a noMotion heartAlert; cleared once metrics report the workout running again.
+    private var livePauseReason: String?
+    private var seenHeartAlerts = Set<String>()
     private var liveMetricsTimeoutTimer: Timer?
     private var consecutiveFailures: Int = 0
 
@@ -75,6 +79,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     private override init() {
         super.init()
+        UNUserNotificationCenter.current().delegate = self
         if WCSession.isSupported() {
             session.delegate = self
             session.activate()
@@ -207,6 +212,54 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    // MARK: - Heart Alerts (watch -> phone notification)
+
+    /// Arrives on both sendMessage and transferUserInfo (fallback may duplicate), so
+    /// dedupe by kind+ts and drop anything older than 60 s.
+    private func handleHeartAlert(_ payload: [String: Any]) {
+        guard let kindRaw = payload["kind"] as? String,
+              let kind = HeartAlert.Kind(rawValue: kindRaw),
+              let ts = payload["ts"] as? TimeInterval else { return }
+        let key = "\(kindRaw)-\(ts)"
+        guard Date().timeIntervalSince1970 - ts <= 60, seenHeartAlerts.insert(key).inserted else { return }
+        if seenHeartAlerts.count > 50 { seenHeartAlerts = [key] }
+
+        if kind == .noMotion { livePauseReason = "noMotion" }
+
+        let s = HeartSafetySettings.load()
+        let enabled: Bool
+        switch kind {
+        case .aboveLimit: enabled = s.alertAboveLimit
+        case .belowLow: enabled = s.alertBelowLow
+        case .signalLost: enabled = s.alertSignalLost
+        case .noMotion: enabled = s.alertNoMotion
+        }
+        guard enabled else { return }
+
+        let body = HeartAlert(kind: kind, value: payload["value"] as? Int).message
+        let center = UNUserNotificationCenter.current()
+        Task {
+            do {
+                // Lazy: the system prompt only appears the first time an alert arrives.
+                guard try await center.requestAuthorization(options: [.alert, .sound]) else { return }
+                let content = UNMutableNotificationContent()
+                content.title = "ShuttlX"
+                content.body = body
+                content.sound = .default
+                // ponytail: .active — .timeSensitive needs an entitlement the app doesn't have yet.
+                try await center.add(UNNotificationRequest(identifier: key, content: content, trigger: nil))
+            } catch {
+                logger.error("heartAlert notification failed: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    /// Show alerts while the app is in the foreground too.
+    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter,
+                                            willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        [.banner, .sound, .list]
+    }
+
     // MARK: - Live Workout Metrics
 
     func handleLiveMetrics(_ message: [String: Any]) {
@@ -269,6 +322,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             LiveActivityManager.shared.startActivity(activityType: liveWorkoutName)
         }
 
+        if !liveIsPaused { livePauseReason = nil }
         LiveActivityManager.shared.updateActivity(
             elapsedTime: liveElapsedTime,
             heartRate: liveHeartRate,
@@ -276,7 +330,8 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             calories: liveCalories,
             currentActivity: liveCurrentActivity,
             isPaused: liveIsPaused,
-            pace: livePace
+            pace: livePace,
+            pauseReason: livePauseReason
         )
 
         // When paused the watch stops broadcasting — don't time out the live
@@ -305,6 +360,11 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Called when the Watch stops its workout — used to stop the paired iPhone workout.
     var onRemoteWorkoutStopped: (() -> Void)?
+
+    /// Live Activity buttons (via `WorkoutControlBridge`).
+    func sendLiveActivityControl(_ command: String) {
+        command == "stop" ? stopWatchWorkout() : sendWorkoutControl(command)
+    }
 
     func pauseWatchWorkout() { sendWorkoutControl("pause") }
     func resumeWatchWorkout() { sendWorkoutControl("resume") }
@@ -978,6 +1038,8 @@ extension PhoneSyncCoordinator {
                         LiveActivityManager.shared.startActivity(activityType: activityType)
                         self.log("Workout started on Watch (via transferUserInfo) — Live Activity started")
                     }
+                case "heartAlert":
+                    self.handleHeartAlert(userInfo)
                 case "workoutStopped":
                     self.confirmWatchWorkoutStopped()
                     self.log("Workout stopped on Watch (via transferUserInfo)")
@@ -1019,6 +1081,8 @@ extension PhoneSyncCoordinator {
                     }
                 case "liveMetrics":
                     self.handleLiveMetrics(message)
+                case "heartAlert":
+                    self.handleHeartAlert(message)
                 case "workoutStopped":
                     self.confirmWatchWorkoutStopped()
                 case "ping":
@@ -1079,6 +1143,9 @@ extension PhoneSyncCoordinator {
                         self.log("Missing or invalid sessionData in message(reply)")
                         replyHandler(["error": "Missing sessionData"])
                     }
+                case "heartAlert":
+                    self.handleHeartAlert(message)
+                    replyHandler(["status": "received"])
                 case "liveMetrics":
                     self.handleLiveMetrics(message)
                     replyHandler(["status": "received"])

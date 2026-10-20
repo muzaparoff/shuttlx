@@ -1,6 +1,7 @@
 import SwiftUI
 import WidgetKit
 import ActivityKit
+import AppIntents
 
 struct LockScreenView: View {
     let context: ActivityViewContext<WorkoutActivityAttributes>
@@ -12,7 +13,7 @@ struct LockScreenView: View {
                     Circle()
                         .fill(context.state.isPaused ? .orange : .green)
                         .frame(width: 8, height: 8)
-                    Text(context.state.isPaused ? "Paused" : activityLabel(context.state.currentActivity))
+                    Text(context.state.isPaused ? (context.state.pauseReason == "noMotion" ? "Paused – no motion" : "Paused") : activityLabel(context.state.currentActivity))
                         .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                 }
@@ -49,6 +50,22 @@ struct LockScreenView: View {
                         .accessibilityLabel("Pace \(formatPace(context.state.pace)) per kilometre")
                 }
             }
+
+            HStack(spacing: 12) {
+                Button(intent: PauseResumeWorkoutIntent(resume: context.state.isPaused)) {
+                    Label(context.state.isPaused ? "Resume" : "Pause",
+                          systemImage: context.state.isPaused ? "play.fill" : "pause.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .tint(.green)
+                Button(intent: EndWorkoutIntent()) {
+                    Label("End", systemImage: "stop.fill")
+                        .frame(maxWidth: .infinity)
+                }
+                .tint(.red)
+            }
+            .buttonStyle(.bordered)
+            .font(.caption.weight(.semibold))
         }
         .padding()
         .activityBackgroundTint(.black.opacity(0.75))

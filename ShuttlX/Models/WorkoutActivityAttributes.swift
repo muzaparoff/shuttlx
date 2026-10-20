@@ -13,6 +13,8 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var currentActivity: String
         var isPaused: Bool
         var pace: TimeInterval
+        /// Why it is paused, e.g. "noMotion" (watch auto-pause). nil = user pause / running.
+        var pauseReason: String? = nil
 
         /// Start-date-adjusted-for-pauses reference for a system-rendered
         /// ticking timer (`Text(timerInterval:countsDown:)`). Computed each

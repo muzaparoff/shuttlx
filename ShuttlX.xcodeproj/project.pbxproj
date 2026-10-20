@@ -73,6 +73,8 @@
 		LA000010 /* ShuttlXLiveActivityBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000001 /* ShuttlXLiveActivityBundle.swift */; };
 		LA000011 /* ShuttlXLiveActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000002 /* ShuttlXLiveActivity.swift */; };
 		LA000012 /* LockScreenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000003 /* LockScreenView.swift */; };
+		LA000091 /* WorkoutControlIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000090 /* WorkoutControlIntents.swift */; };
+		LA000092 /* WorkoutControlIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000090 /* WorkoutControlIntents.swift */; };
 		LA000013 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
 		LA000014 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000004 /* WorkoutActivityAttributes.swift */; };
 		LA000015 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = LA000005 /* LiveActivityManager.swift */; };
@@ -301,6 +303,7 @@
 		LA000001 /* ShuttlXLiveActivityBundle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivityBundle.swift; sourceTree = "<group>"; };
 		LA000002 /* ShuttlXLiveActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShuttlXLiveActivity.swift; sourceTree = "<group>"; };
 		LA000003 /* LockScreenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LockScreenView.swift; sourceTree = "<group>"; };
+		LA000090 /* WorkoutControlIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutControlIntents.swift; sourceTree = "<group>"; };
 		LA000004 /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
 		LA000005 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		LA000006 /* ShuttlXLiveActivity.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ShuttlXLiveActivity.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -514,6 +517,7 @@
 				A5923530F /* DetectedActivity+Theme.swift */,
 				B5923001 /* ChartData.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
+				LA000090 /* WorkoutControlIntents.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
 				H5923001F /* WorkoutSport+Theme.swift */,
 			);
@@ -1020,6 +1024,7 @@
 				H5923001 /* WorkoutSport+Theme.swift in Sources */,
 				C5923012 /* RouteMapView.swift in Sources */,
 				LA000014 /* WorkoutActivityAttributes.swift in Sources */,
+				LA000091 /* WorkoutControlIntents.swift in Sources */,
 				LA000015 /* LiveActivityManager.swift in Sources */,
 				D5923001 /* WorkoutTemplate.swift in Sources */,
 				D5923002 /* TemplateManager.swift in Sources */,
@@ -1054,6 +1059,7 @@
 				LA000011 /* ShuttlXLiveActivity.swift in Sources */,
 				LA000012 /* LockScreenView.swift in Sources */,
 				LA000013 /* WorkoutActivityAttributes.swift in Sources */,
+				LA000092 /* WorkoutControlIntents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
