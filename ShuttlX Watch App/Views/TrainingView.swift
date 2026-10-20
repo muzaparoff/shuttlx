@@ -61,6 +61,17 @@ struct TrainingView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // Long-workout safety prompt sits above both tabs and swallows touches.
+        // An overlay (not fullScreenCover) so no system close button can dismiss
+        // it without an answer.
+        .overlay {
+            if workoutManager.safetyPromptVisible {
+                SafetyPromptView(
+                    onContinue: { workoutManager.continueAfterSafetyPrompt() },
+                    onEndAndSave: { workoutManager.finishAndSave() }
+                )
+            }
+        }
         .navigationBarHidden(true)
         .alert("Finish Workout", isPresented: $showingStopConfirmation) {
             Button("Save & Finish") {

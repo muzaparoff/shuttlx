@@ -117,9 +117,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // HealthKit live queries
     private var heartRateQuery: HKAnchoredObjectQuery?
-    private var caloriesQuery: HKAnchoredObjectQuery?
     private var heartRateAnchor: HKQueryAnchor?
-    private var caloriesAnchor: HKQueryAnchor?
+    /// End of the last builder `activeEnergyBurned` statistic — the start of the
+    /// next per-phase energy span fed to `metricsLedger`.
+    private var lastEnergyStatsEnd: Date?
     // No-HR watchdog: fires once if no sample arrives within the grace period.
     private var noHRTimer: DispatchSourceTimer?
     private var hasReceivedHRSample: Bool = false
@@ -158,6 +159,20 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // We prefer it over CMPedometer.distance when > 0, and fall back to the
     // pedometer reading during the brief warmup before the builder reports.
     var hkDistanceKm: Double = 0
+    /// Pause-excluded pedometer distance (km). Each start/resume restarts
+    /// CMPedometer from that moment and adds onto this, so steps and distance
+    /// walked while paused are never counted.
+    private var pedometerDistanceKm: Double = 0
+
+    /// Location type of the running HKWorkoutSession — indoor sessions never
+    /// start CoreLocation (battery, and GPS drift inflates nothing useful).
+    private var sessionLocationType: HKWorkoutSessionLocationType = .unknown
+    private var isIndoorWorkout: Bool { sessionLocationType == .indoor }
+
+    // MARK: Long-workout safety prompt
+    /// True while the full-screen "Still training?" prompt is up.
+    @Published private(set) var safetyPromptVisible = false
+    private var safetySchedule = SafetyPromptSchedule()
 
     // Live metrics broadcast
     private let broadcaster = LiveMetricsBroadcaster()
@@ -397,7 +412,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         ticksSinceHeartbeat = 0
         paceWindowSamples.removeAll(keepingCapacity: true)
         heartRateAnchor = nil
-        caloriesAnchor = nil
+        lastEnergyStatsEnd = nil
+        pedometerDistanceKm = 0
+        safetySchedule = SafetyPromptSchedule()
+        safetyPromptVisible = false
         accumulatedPauseTime = 0
         pauseStartDate = nil
         routePoints = []
@@ -438,7 +456,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startPedometerUpdates()
         }
         startHeartRateQuery()
-        startCaloriesQuery()
+        // Energy + distance come from the live builder (didCollectDataOf), which
+        // is scoped to THIS workout's data source — no separate energy query.
         requestLocationAndStartUpdates()
 
         logger.info("Workout started (sport: \(sport.displayName))")
@@ -554,10 +573,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopDisplayTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
-        // Heart rate and calorie queries are intentionally kept running through pause/resume
+        // The heart rate query is intentionally kept running through pause/resume
         // to avoid the HKAnchoredObjectQuery replay bug: stopping and restarting a query
         // causes the initial results handler to re-deliver all samples since the last anchor,
-        // double-counting calories/HR samples already processed.
+        // double-counting HR samples already processed.
         stopLocationUpdates()
 
         saveWorkoutDataToLocalStorage()
@@ -621,7 +640,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             startMotionUpdates()
             startPedometerUpdates()
         }
-        // Heart rate and calorie queries are kept running continuously — do not restart them
+        // The heart rate query is kept running continuously — do not restart it
         // here. Restarting an HKAnchoredObjectQuery replays all samples since the stored
         // anchor in the initial results handler, causing double-counting on every resume.
         startLocationUpdates()
@@ -634,7 +653,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         stopMotionUpdates()
         stopPedometerUpdates()
         stopHeartRateQuery()
-        stopCaloriesQuery()
         stopLocationUpdates()
 
         workoutSession?.end()
@@ -691,7 +709,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // largest per-workout allocation this class holds.
         metricsLedger.reset()
         heartRateAnchor = nil
-        caloriesAnchor = nil
+        lastEnergyStatsEnd = nil
+        pedometerDistanceKm = 0
+        sessionLocationType = .unknown
+        safetySchedule = SafetyPromptSchedule()
+        safetyPromptVisible = false
         broadcaster.reset()
         routePoints = []
         accumulatedPauseTime = 0
@@ -745,6 +767,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             configuration.activityType = sport.hkActivityType
             configuration.locationType = sport.hkLocationType
         }
+        sessionLocationType = configuration.locationType
 
         do {
             let session = try HKWorkoutSession(healthStore: healthStore, configuration: configuration)
@@ -875,6 +898,26 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         elapsedTime = wallClockElapsed
         currentSegmentTime = Date().timeIntervalSince(segStart)
 
+        // Long-workout safety prompt. Ticks only run while not paused, and the
+        // schedule works in active elapsed time, so pause freezes it entirely.
+        switch safetySchedule.evaluate(activeElapsed: wallClockElapsed) {
+        case .showPrompt:
+            logger.warning("Safety prompt shown at elapsed \(Int(wallClockElapsed))s")
+            safetyPromptVisible = true
+            #if os(watchOS)
+            WKInterfaceDevice.current().play(.notification)
+            #endif
+            // Checkpoint now — a wearer who walked away is the likeliest kill case.
+            lastCheckpointDate = Date()
+            saveWorkoutDataToLocalStorage()
+        case .autoEnd:
+            logger.warning("Safety prompt unanswered for \(Int(self.safetySchedule.responseTimeout))s — ending and saving (autoEnded)")
+            finishAndSave(autoEnded: true)
+            return
+        case .none:
+            break
+        }
+
         // Check debounce + corroboration for pending activity transitions
         // (no-op in interval mode — the classifier is never fed there).
         if workoutMode != .interval {
@@ -913,6 +956,25 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             lastCheckpointDate = now
             saveWorkoutDataToLocalStorage()
         }
+    }
+
+    // MARK: - Safety Prompt Actions
+
+    /// "Continue" on the safety prompt: hide it and re-arm it 60 min later.
+    func continueAfterSafetyPrompt() {
+        safetySchedule.acknowledge(activeElapsed: elapsedTime)
+        safetyPromptVisible = false
+        logger.info("Safety prompt: Continue at elapsed \(Int(self.elapsedTime))s")
+    }
+
+    /// Same sequence as TrainingView's "Save & Finish": summary first (stopWorkout
+    /// zeros published state), then save, then tear down.
+    func finishAndSave(autoEnded: Bool = false) {
+        guard isWorkoutActive else { return }
+        let summary = buildCurrentSummary()
+        saveWorkoutData(autoEnded: autoEnded)
+        pendingSummary = summary
+        stopWorkout()
     }
 
     // MARK: - Live Metrics Broadcast
@@ -1311,6 +1373,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Location Tracking
 
     private func requestLocationAndStartUpdates() {
+        guard !isIndoorWorkout else {
+            logger.info("Indoor workout — location updates not started")
+            return
+        }
         locationManager.delegate = self
         let status = locationManager.authorizationStatus
         if status == .notDetermined {
@@ -1323,6 +1389,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     func startLocationUpdates() {
+        // Single choke point: resume and the auth-change delegate land here too.
+        guard !isIndoorWorkout else { return }
         locationManager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
         locationManager.distanceFilter = 10
         locationManager.activityType = .fitness
@@ -1343,19 +1411,28 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             return
         }
 
-        guard let start = workoutStartTime else { return }
+        guard workoutStartTime != nil else { return }
 
-        pedometer.startUpdates(from: start) { [weak self] data, error in
+        // Count from NOW, on top of what was already counted. Restarting from the
+        // workout start (the old behaviour) made every resume re-import the steps
+        // and distance walked while paused. Offsets are captured by value so a
+        // late callback from a previous run can't mix with the new baseline.
+        let stepOffset = totalSteps
+        let distanceOffsetKm = pedometerDistanceKm
+        lastCadenceTimestamp = nil
+
+        pedometer.startUpdates(from: Date()) { [weak self] data, error in
             Task { @MainActor [weak self] in
                 guard let self = self, let data = data else { return }
-                self.totalSteps = data.numberOfSteps.intValue
+                self.totalSteps = stepOffset + data.numberOfSteps.intValue
                 if let dist = data.distance {
-                    let pedometerKm = dist.doubleValue / 1000.0
-                    // T-METRICS.4: prefer HKLiveWorkoutBuilder's fused distance when
-                    // it has begun reporting; otherwise use the pedometer reading.
-                    let chosenKm = self.hkDistanceKm > 0 ? self.hkDistanceKm : pedometerKm
-                    self.totalDistance = chosenKm
-                    self.updatePaceAndSplits(distanceKm: chosenKm)
+                    self.pedometerDistanceKm = distanceOffsetKm + dist.doubleValue / 1000.0
+                    // Fallback only: once HKLiveWorkoutBuilder reports distance
+                    // (applyBuilderDistance) it owns totalDistance + pace.
+                    if self.hkDistanceKm == 0 {
+                        self.totalDistance = self.pedometerDistanceKm
+                        self.updatePaceAndSplits(distanceKm: self.pedometerDistanceKm)
+                    }
                 }
                 let spm: Int? = {
                     if let cadence = data.currentCadence {
@@ -1577,86 +1654,40 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    // MARK: - Calories Query
+    // MARK: - Live Builder Metrics (distance + energy)
 
-    private func startCaloriesQuery() {
-        guard healthKitAuthorized else {
-            logger.warning("startCaloriesQuery skipped — HealthKit not authorized")
-            return
+    /// Builder distance (`statistics(for:)` sum) — Apple's fused, workout-scoped
+    /// distance for the session's sport. Owns `totalDistance` and the pace window
+    /// from the first non-zero value on; the pedometer stays the fallback.
+    func applyBuilderDistance(km: Double) {
+        guard isWorkoutActive, km > 0 else { return }
+        if hkDistanceKm == 0 {
+            // Source switch pedometer -> builder: the two readings differ, so a
+            // window mixing them would publish a bogus pace. Rebuild from here;
+            // updatePaceAndSplits keeps the last pace until 5s of samples exist.
+            paceWindowSamples.removeAll(keepingCapacity: true)
         }
-        guard let caloriesType = HKQuantityType.quantityType(forIdentifier: .activeEnergyBurned),
-              let startDate = workoutStartTime else { return }
-
-        stopCaloriesQuery()
-
-        // Time-only predicate — same rationale as the HR query: an HKDevice.local()
-        // filter can silently exclude the watch's own samples.
-        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: nil, options: .strictStartDate)
-
-        let query = HKAnchoredObjectQuery(
-            type: caloriesType,
-            predicate: predicate,
-            anchor: caloriesAnchor,
-            limit: HKObjectQueryNoLimit
-        ) { [weak self] _, samples, _, newAnchor, error in
-            if let error = error {
-                Task { @MainActor in
-                    self?.logger.error("Calories query error: \(error.localizedDescription)")
-                }
-                return
-            }
-            Task { @MainActor in
-                self?.caloriesAnchor = newAnchor
-            }
-            self?.processCaloriesSamples(samples)
-        }
-
-        query.updateHandler = { [weak self] _, samples, _, newAnchor, error in
-            if let error = error {
-                Task { @MainActor in
-                    self?.logger.error("Calories update error: \(error.localizedDescription)")
-                }
-                return
-            }
-            Task { @MainActor in
-                self?.caloriesAnchor = newAnchor
-            }
-            self?.processCaloriesSamples(samples)
-        }
-
-        caloriesQuery = query
-        healthStore.execute(query)
-        logger.info("Calories query started")
-    }
-
-    nonisolated private func processCaloriesSamples(_ samples: [HKSample]?) {
-        guard let quantitySamples = samples as? [HKQuantitySample], !quantitySamples.isEmpty else { return }
-
-        let kcalUnit = HKUnit.kilocalorie()
-        let kcalValues = quantitySamples.map { $0.quantity.doubleValue(for: kcalUnit) }
-        let batchTotal = kcalValues.reduce(0, +)
-        // Apple's energy samples are already personally calibrated (HR + motion +
-        // Health profile) and each carries its own start/end. Bucketing them by
-        // segment range is therefore free per-phase energy — CE5 / plan item 7.
-        let spans: [(start: Date, end: Date, kcal: Double)] = quantitySamples.map {
-            ($0.startDate, $0.endDate, $0.quantity.doubleValue(for: kcalUnit))
-        }
-
-        Task { @MainActor [weak self] in
-            guard let self = self else { return }
-            self.totalCaloriesAccumulated += batchTotal
-            self.calories = Int(self.totalCaloriesAccumulated)
-            for span in spans {
-                self.metricsLedger.recordEnergy(kcal: span.kcal, from: span.start, to: span.end)
-            }
+        hkDistanceKm = km
+        totalDistance = km
+        if !isPaused {
+            updatePaceAndSplits(distanceKm: km)
         }
     }
 
-    private func stopCaloriesQuery() {
-        if let query = caloriesQuery {
-            healthStore.stop(query)
-            caloriesQuery = nil
+    /// Builder `activeEnergyBurned` sum — only this workout's data source, unlike
+    /// the old unfiltered anchored query that also summed other apps/devices.
+    /// The increment since the previous statistic becomes one ledger span so
+    /// per-phase energy attribution keeps working.
+    func applyBuilderEnergy(totalKcal: Double, statsEnd: Date) {
+        guard isWorkoutActive else { return }
+        let delta = totalKcal - totalCaloriesAccumulated
+        if delta > 0 {
+            let spanStart = lastEnergyStatsEnd ?? workoutStartTime ?? statsEnd
+            metricsLedger.recordEnergy(kcal: delta, from: min(spanStart, statsEnd), to: statsEnd)
         }
+        lastEnergyStatsEnd = statsEnd
+        totalCaloriesAccumulated = totalKcal
+        calories = Int(totalKcal)
     }
 
     // MARK: - Persistence
@@ -1691,6 +1722,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         )
         // ShuttlX's own phase-aware total, alongside Apple's `caloriesBurned`.
         session.estimatedCalories = shuttlxEstimatedCalories(for: segmentsCopy)
+        // Mode/template identity so a recovered HK session can resume the SAME
+        // workout (interval engine, gym recovery) instead of a bare free run.
+        session.templateID = activeTemplate?.id
+        session.programName = workoutMode == .freeRun ? nil : workoutName
+        session.sportType = activeTemplate?.sportType
+        if workoutMode == .gymRecovery {
+            session.sessionMode = .gymRecovery
+            if !completedCaptures.isEmpty {
+                session.recoveryReport = RecoveryReport(sets: completedCaptures.count, captures: completedCaptures)
+            }
+        }
 
         persistence.checkpoint(session)
     }
@@ -1700,24 +1742,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         persistence.recoverCrashedWorkout()
     }
 
-    /// Save a recovered session if not already saved, and clear the backup
+    /// Hand a recovered backup to the sync pipeline, then clear it.
+    ///
+    /// ALWAYS sends: the old "already in sessions.json → skip" check confused
+    /// "stored on the watch" with "delivered to the iPhone" — sessions.json is
+    /// written at send time, so a kill before delivery left the session stranded
+    /// forever. iOS dedups by id, and `sendSessionToiOS` dedups the App Group
+    /// append and in-flight transfers, so a resend is safe.
     func saveRecoveredSession(_ session: TrainingSession) {
-        // Prevent duplicate: check if this session ID already exists in stored sessions
-        if let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
-            let url = containerURL.appendingPathComponent("sessions.json")
-            if FileManager.default.fileExists(atPath: url.path),
-               let data = try? Data(contentsOf: url),
-               let existing = try? JSONDecoder().decode([TrainingSession].self, from: data),
-               existing.contains(where: { $0.id == session.id }) {
-                logger.info("[HKSOT] recovered session \(session.id.uuidString) already in sessions.json — NOT resent")
-                logger.info("Recovered session \(session.id) already exists — skipping duplicate save")
-                persistence.clearBackup()
-                return
-            }
-        }
         sharedDataManager?.sendSessionToiOS(session)
         persistence.clearBackup()
-        logger.info("Recovered session sent to iOS and backup cleared")
+        logger.info("[HKSOT] recovered session \(session.id.uuidString) handed to sync pipeline, backup cleared")
     }
 
     // MARK: - Launch Recovery
@@ -1743,11 +1778,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
     }
 
-    /// Finalize an HKWorkoutSession orphaned by a crash or watchdog kill so its
-    /// collected data still reaches HealthKit. Without this, a workout whose
-    /// process died mid-run never writes an HKWorkout at all — the session stays
-    /// live inside HealthKit with no owner. Called once at app launch, and awaited
-    /// by any workout start that happens before it finishes.
+    /// Recover an HKWorkoutSession left live by a crash or watchdog kill.
+    ///
+    /// A `.running`/`.paused` session is RESUMED: delegates, builder and data
+    /// source are reattached and the workout continues (timer, sensors, 15s
+    /// checkpoint) under the same session id as the crash backup. Anything else
+    /// — or a resume that can't proceed — is finalized so its data still reaches
+    /// HealthKit (the previous behaviour for every case). Called once at launch
+    /// (onAppear and `handleActiveWorkoutRecovery`), awaited by any workout start.
     func recoverOrphanedHKSession() async {
         #if os(watchOS)
         guard let session = await recoverActiveWorkoutSession(timeout: 5) else { return }
@@ -1759,6 +1797,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         guard !isWorkoutActive, workoutSession == nil else {
             logger.warning("Orphaned HK session found while a workout is active — ignoring")
             return
+        }
+        if session.state == .running || session.state == .paused {
+            // Already granted (the session exists), so this resolves without UI;
+            // it also sets healthKitAuthorized, which the HR query requires.
+            if await requestHealthAuthorizationAsync(), !isWorkoutActive, workoutSession == nil {
+                resumeRecoveredSession(session)
+                return
+            }
+            logger.error("Recovered HK session could not be resumed (auth/race) — finalizing instead")
         }
         logger.warning("Recovered orphaned HKWorkoutSession (state \(session.state.rawValue)) — finalizing so the workout reaches Health")
         let builder = session.associatedWorkoutBuilder()
@@ -1774,6 +1821,142 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         #endif
     }
+
+    #if os(watchOS)
+    /// Continue a recovered session. Restores what the crash backup holds
+    /// (session id, segments, steps, splits, route, mode/template); HealthKit
+    /// rebuilds the rest — the HR query replays every sample since the start
+    /// (anchor nil) and the builder's statistics are cumulative for distance and
+    /// energy — so those accumulators are deliberately NOT seeded from the backup.
+    private func resumeRecoveredSession(_ session: HKWorkoutSession) {
+        let builder = session.associatedWorkoutBuilder()
+        let configuration = session.workoutConfiguration
+        let now = Date()
+        let start = builder.startDate ?? session.startDate ?? now
+        // Backup belongs to this session only if it started at (about) the same
+        // moment; checkpoint start is taken a hair before beginCollection.
+        let backup = persistence.recoverCrashedWorkout().flatMap {
+            abs($0.startDate.timeIntervalSince(start)) < 60 ? $0 : nil
+        }
+        let paused = session.state == .paused
+
+        workoutSession = session
+        session.delegate = self
+        workoutBuilder = builder
+        builder.delegate = self
+        builder.dataSource = HKLiveWorkoutDataSource(healthStore: healthStore, workoutConfiguration: configuration)
+        routeBuilder = HKWorkoutRouteBuilder(healthStore: healthStore, device: nil)
+        sessionLocationType = configuration.locationType
+
+        // Mode: gym recovery from the config/backup, interval if the template is
+        // still on the watch, otherwise free run.
+        recoverySegmenter = nil
+        completedCaptures = []
+        if configuration.activityType == .functionalStrengthTraining || backup?.sessionMode == .gymRecovery {
+            workoutMode = .gymRecovery
+            workoutName = "Gym Recovery"
+            intervalEngine = nil
+            activeTemplate = nil
+            recoverySegmenter = RecoverySegmenter(config: SegmenterConfig(profile: .cardiacRehab))
+            completedCaptures = backup?.recoveryReport?.captures ?? []
+        } else if let templateID = backup?.templateID,
+                  let template = sharedDataManager?.workoutTemplates.first(where: { $0.id == templateID }) {
+            workoutMode = .interval
+            workoutName = template.name
+            activeTemplate = template
+            let engine = IntervalEngine()
+            engine.configure(template: template)
+            // The first tick fast-forwards the engine to the wall-clock step.
+            intervalEngine = engine
+        } else {
+            if backup?.templateID != nil {
+                logger.warning("Recovered interval template not found on watch — resuming as free run")
+            }
+            workoutMode = .freeRun
+            workoutName = "Free Run"
+            intervalEngine = nil
+            activeTemplate = nil
+        }
+
+        // Active time is the builder's (it applies the session's pause events).
+        let wallSpan = now.timeIntervalSince(start)
+        let builderActive = builder.elapsedTime(at: now)
+        let active = (builderActive > 0 && builderActive <= wallSpan + 1)
+            ? min(builderActive, wallSpan)
+            : (backup?.duration ?? wallSpan)
+
+        workoutStartTime = start
+        currentSessionID = backup?.id ?? UUID()
+        accumulatedPauseTime = max(0, wallSpan - active)
+        pauseStartDate = paused ? now : nil
+        isPaused = paused
+        elapsedTime = active
+        timerReferenceDate = paused ? nil : start.addingTimeInterval(accumulatedPauseTime)
+
+        // Restored from the backup; everything else starts clean.
+        segments = backup?.segments ?? []
+        totalSteps = backup?.totalSteps ?? 0
+        pedometerDistanceKm = backup?.distance ?? 0
+        totalDistance = pedometerDistanceKm
+        hkDistanceKm = 0
+        routePoints = backup?.route ?? []
+        let splits = backup?.kmSplits ?? []
+        completedKmSplits = splits.map { KmSplit(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime) }
+        lastCompletedKm = splits.last?.kmNumber ?? 0
+        timeAtLastKm = splits.last?.cumulativeTime ?? 0
+        currentPace = nil
+        paceWindowSamples.removeAll(keepingCapacity: true)
+        heartRate = 0
+        heartRateSampleSum = 0
+        heartRateSampleCount = 0
+        maxHeartRateValue = 0
+        heartRateAnchor = nil
+        hasReceivedHRSample = false
+        noHeartRateDetected = false
+        totalCaloriesAccumulated = 0
+        calories = 0
+        lastEnergyStatsEnd = nil
+        metricsLedger.reset()
+        cadenceSampleSum = 0
+        cadenceSampleCount = 0
+        maxCadenceValue = 0
+        hasCadenceSample = false
+        currentActivity = .unknown
+        classifier.reset()
+        lastMotionReading = nil
+        lastIntervalStepIndex = nil
+        lastCheckpointDate = nil
+        lastTickDate = nil
+        safetySchedule = SafetyPromptSchedule()
+        safetyPromptVisible = false
+
+        // New segment from now; the backup's segments are already closed.
+        currentSegmentStartTime = now
+        currentSegmentTime = 0
+        segmentStartSteps = totalSteps
+        segmentStartDistance = totalDistance
+        awaitingSegmentOpen = true
+
+        isWorkoutActive = true
+        loadAnthropometrics()
+        // Set up front: a paused recovery reaches startLocationUpdates() via
+        // resume without ever passing requestLocationAndStartUpdates().
+        locationManager.delegate = self
+        startHeartRateQuery()
+        let sport = activeTemplate?.sportType ?? .running
+        if !paused {
+            startDisplayTimer()
+            if sport.supportsAutoDetection || workoutMode == .gymRecovery {
+                startMotionUpdates()
+                startPedometerUpdates()
+            }
+            requestLocationAndStartUpdates()
+        }
+        broadcaster.notifyWorkoutStarted(sport: sport)
+        saveWorkoutDataToLocalStorage()
+        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString))")
+    }
+    #endif
 
     #if os(watchOS)
     /// `recoverActiveWorkoutSession` with a hard deadline. A workout start now
@@ -1839,7 +2022,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         )
     }
 
-    func saveWorkoutData() {
+    func saveWorkoutData(autoEnded: Bool = false) {
         guard let startTime = workoutStartTime else { return }
 
         let segmentsCopy = finalizedSegments(logEnergy: true)
@@ -1894,6 +2077,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Set sport type from template
         session.sportType = activeTemplate?.sportType
+        if autoEnded { session.autoEnded = true }
 
         // Capture mutable copies for use in the async Task below
         let sessionToSend = session
@@ -1904,7 +2088,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Capture HKWorkout metadata values before entering the async context
         let capturedWorkoutName = workoutName
         let capturedSessionID = session.id.uuidString
-        let capturedIsIndoor = workoutMode == .gymRecovery || (activeTemplate?.sportType?.hkLocationType ?? .unknown) == .indoor
+        let capturedIsIndoor = isIndoorWorkout
         let capturedIntervalCount = activeTemplate?.intervals.count ?? 0
         // Phase 3 (interop): publish the SAME finalized phase timeline that is
         // persisted app-side, so HealthKit and TrainingSession.segments can never

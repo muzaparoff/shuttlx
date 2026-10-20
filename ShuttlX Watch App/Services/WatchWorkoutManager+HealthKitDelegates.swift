@@ -62,29 +62,39 @@ extension WatchWorkoutManager: HKWorkoutSessionDelegate {
 }
 
 // MARK: - HKLiveWorkoutBuilderDelegate (T-METRICS.4)
-// We mirror HKLiveWorkoutBuilder's `distanceWalkingRunning` sum statistic into
-// `hkDistanceKm`. The pedometer callback then prefers this value over its own
-// CMPedometer reading, since the builder's value is Apple's canonical fused
-// distance (pedometer + GPS + on-device motion classification — same value
-// shown by Apple Fitness and persisted on the resulting HKWorkout).
+// The builder's statistics are Apple's canonical, workout-scoped numbers (the
+// same values Apple Fitness shows and the saved HKWorkout carries). Distance
+// covers walking/running, cycling and swimming — whichever type the session's
+// configuration collects — and active energy replaces the old unfiltered
+// HKAnchoredObjectQuery. Statistics are read here on the delegate queue; only
+// the resulting values hop to the main actor.
 extension WatchWorkoutManager: HKLiveWorkoutBuilderDelegate {
     nonisolated func workoutBuilderDidCollectEvent(_ workoutBuilder: HKLiveWorkoutBuilder) {
-        // Events (pause/resume/lap/marker) — no-op for distance handling.
+        // Events (pause/resume/lap/marker) — no-op.
     }
 
     nonisolated func workoutBuilder(_ workoutBuilder: HKLiveWorkoutBuilder, didCollectDataOf collectedTypes: Set<HKSampleType>) {
-        guard let distanceType = HKQuantityType.quantityType(forIdentifier: .distanceWalkingRunning),
-              collectedTypes.contains(distanceType) else { return }
+        var distanceKm: Double?
+        for identifier in [HKQuantityTypeIdentifier.distanceWalkingRunning, .distanceCycling, .distanceSwimming] {
+            let type = HKQuantityType(identifier)
+            guard collectedTypes.contains(type),
+                  let sum = workoutBuilder.statistics(for: type)?.sumQuantity() else { continue }
+            distanceKm = sum.doubleValue(for: .meter()) / 1000.0
+        }
 
-        guard let stats = workoutBuilder.statistics(for: distanceType),
-              let sum = stats.sumQuantity() else { return }
+        var energy: (kcal: Double, end: Date)?
+        let energyType = HKQuantityType(.activeEnergyBurned)
+        if collectedTypes.contains(energyType),
+           let stats = workoutBuilder.statistics(for: energyType),
+           let sum = stats.sumQuantity() {
+            energy = (sum.doubleValue(for: .kilocalorie()), stats.endDate)
+        }
 
-        let meters = sum.doubleValue(for: .meter())
-        let km = meters / 1000.0
-
+        guard distanceKm != nil || energy != nil else { return }
         Task { @MainActor [weak self] in
             guard let self = self else { return }
-            self.hkDistanceKm = km
+            if let distanceKm { self.applyBuilderDistance(km: distanceKm) }
+            if let energy { self.applyBuilderEnergy(totalKcal: energy.kcal, statsEnd: energy.end) }
         }
     }
 }

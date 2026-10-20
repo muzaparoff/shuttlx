@@ -88,6 +88,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     var sessionMode: SessionMode?
     var recoveryReport: RecoveryReport?
 
+    // True when the watch ended the workout because the long-workout safety
+    // prompt went unanswered. Nil for every user-ended and legacy session.
+    var autoEnded: Bool?
+
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
     var programName: String?

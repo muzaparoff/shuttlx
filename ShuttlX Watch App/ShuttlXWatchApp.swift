@@ -1,9 +1,26 @@
 import SwiftUI
+import WatchKit
 import WidgetKit
 import os.log
 
+/// watchOS relaunches the app after a crash mid-workout and calls
+/// `handleActiveWorkoutRecovery()` — possibly in the background, before any view
+/// appears (so the onAppear recovery trigger alone could fire much later).
+/// `beginLaunchRecovery()` is idempotent; whichever caller is first wins.
+final class WatchAppDelegate: NSObject, WKApplicationDelegate {
+    /// Set by `ShuttlXWatchApp.init`, which runs before any delegate callback.
+    @MainActor static weak var workoutManager: WatchWorkoutManager?
+
+    func handleActiveWorkoutRecovery() {
+        Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "AppInitialization")
+            .warning("handleActiveWorkoutRecovery — recovering live HKWorkoutSession")
+        Self.workoutManager?.beginLaunchRecovery()
+    }
+}
+
 @main
 struct ShuttlXWatchApp: App {
+    @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var appDelegate
     @StateObject private var sharedDataManager: WatchSyncCoordinator
     @StateObject private var workoutManager: WatchWorkoutManager
     
@@ -16,6 +33,7 @@ struct ShuttlXWatchApp: App {
         let manager = WatchWorkoutManager()
         manager.setSharedDataManager(dataManager)
         dataManager.setWorkoutManager(manager)
+        WatchAppDelegate.workoutManager = manager
 
         self._sharedDataManager = StateObject(wrappedValue: dataManager)
         self._workoutManager = StateObject(wrappedValue: manager)

@@ -106,6 +106,13 @@ final class HealthKitAuthService {
             readTypes.insert(distanceType)
             writeTypes.insert(distanceType)
         }
+        // Cycling / swimming sessions report distance through the live builder
+        // only if these types are authorized (walking/running alone left them at 0).
+        for identifier in [HKQuantityTypeIdentifier.distanceCycling, .distanceSwimming] {
+            let type = HKQuantityType(identifier)
+            readTypes.insert(type)
+            writeTypes.insert(type)
+        }
         if let stepType = HKQuantityType.quantityType(forIdentifier: .stepCount) {
             readTypes.insert(stepType)
         }
