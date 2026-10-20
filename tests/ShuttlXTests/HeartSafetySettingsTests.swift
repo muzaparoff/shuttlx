@@ -35,6 +35,14 @@ final class HeartSafetySettingsTests: XCTestCase {
         XCTAssertFalse(json.contains("onBetaBlocker"))
     }
 
+    /// Watch path: it only has the resolved payload (no age), and zoneWord must still work.
+    func testZoneWordFromWatchPayloadNeedsNoAge() {
+        let p = HeartSafetySettings().watchPayload(age: 60) // estimate 160
+        XCTAssertEqual(p.zoneWord(hr: 100), "EASY")   // 0.625
+        XCTAssertEqual(p.zoneWord(hr: 130), "STEADY") // 0.81
+        XCTAssertEqual(p.zoneWord(hr: 150), "HARD")   // 0.94
+    }
+
     func testDecodesPartialJSONWithDefaults() throws {
         let s = try JSONDecoder().decode(HeartSafetySettings.self, from: Data("{\"upperLimit\":150}".utf8))
         XCTAssertEqual(s.upperLimit, 150)

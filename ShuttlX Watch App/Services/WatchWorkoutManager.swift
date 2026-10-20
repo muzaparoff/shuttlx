@@ -2159,7 +2159,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             splitsCount: lastCompletedKm,
             completedSets: workoutMode == .gymRecovery ? captures.count : nil,
             averageHRR1: avgHRR1,
-            bodyMassUnavailable: bodyMassUnavailable
+            bodyMassUnavailable: bodyMassUnavailable,
+            sessionID: currentSessionID
         )
     }
 

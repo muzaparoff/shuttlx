@@ -19,6 +19,8 @@ struct WorkoutSummary {
     /// MET calorie estimate was suppressed rather than run against a placeholder
     /// weight — Phase 2 / plan item 5.
     var bodyMassUnavailable: Bool = false
+    /// Id of the saved TrainingSession, so the effort answer can be attached to it.
+    var sessionID: UUID? = nil
 }
 
 // MARK: - Post-Workout Summary Screen
@@ -27,6 +29,8 @@ struct WorkoutSummaryView: View {
     let summary: WorkoutSummary
     let onDismiss: () -> Void
     @State private var showBadge = false
+    /// nil = skipped. Saved on disappear (Done), never to Health.
+    @State private var effort: Int? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -125,6 +129,10 @@ struct WorkoutSummaryView: View {
                     .accessibilityElement(children: .combine)
                 }
 
+                if summary.sessionID != nil {
+                    effortPicker
+                }
+
                 // Done button — primary CTA style
                 Button(action: onDismiss) {
                     Text("Done")
@@ -139,12 +147,39 @@ struct WorkoutSummaryView: View {
             .padding(.vertical)
         }
         .themedScreenBackground()
+        .onDisappear {
+            if let effort, let id = summary.sessionID {
+                WatchSyncCoordinator.shared.updateSessionEffort(id: id, effortRPE: effort)
+            }
+        }
         .onAppear {
             showBadge = true
             #if os(watchOS)
             WKInterfaceDevice.current().play(.success)
             #endif
         }
+    }
+
+    /// Skippable 0-10 effort question. Wheel picker = Digital Crown for free.
+    private var effortPicker: some View {
+        VStack(spacing: ShuttlXSpacing.xs) {
+            Text("How hard was it?")
+                .font(ShuttlXFont.cardCaption)
+                .foregroundColor(ShuttlXColor.textSecondary)
+            Picker("How hard was it?", selection: $effort) {
+                Text("Skip").tag(Int?.none)
+                ForEach(0...10, id: \.self) { n in
+                    Text(n == 0 ? "0 Rest" : n == 10 ? "10 Max" : "\(n)")
+                        .monospacedDigit()
+                        .tag(Int?.some(n))
+                }
+            }
+            .pickerStyle(.wheel)
+            .labelsHidden()
+            .frame(height: 56)
+            .accessibilityLabel("How hard was it? 0 rest to 10 max")
+        }
+        .padding(.horizontal)
     }
 
     private func summaryRow(icon: String, color: Color, label: String, value: String) -> some View {

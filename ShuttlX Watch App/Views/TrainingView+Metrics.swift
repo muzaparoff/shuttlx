@@ -78,9 +78,14 @@ extension TrainingView {
         let unitSize = max(11, h * 0.062)             // "BPM" / "/KM" suffix
         let compactUnitSize = max(9, h * 0.052)       // "KM" / "CAL" suffix
         let zoneArcWidth = max(30, h * 0.145)
+        // With a synced heart limit the one-word zone (EASY/STEADY/HARD) REPLACES the
+        // arc in the same suffix slot: same line, so zero vertical cost. Solved at the
+        // widest word (6 glyphs, ~45pt on 40mm) — the HR digits still hit the cap.
+        let zoneWord = heartZoneWord
+        let hrAccessoryWidth = zoneWord != nil ? 6 * 0.62 * unitSize : zoneArcWidth
         let frHeroSize = h * 0.20 * tier
         let frHRSize = fittedMetricSize(glyphs: 3, unit: "BPM", unitSize: unitSize,
-                                        accessoryWidth: zoneArcWidth,
+                                        accessoryWidth: hrAccessoryWidth,
                                         available: rowWidth, cap: h * 0.16 * tier)
         let frPaceSize = fittedMetricSize(glyphs: paceValueText.count, unit: "/KM",
                                           unitSize: unitSize, accessoryWidth: 0,
@@ -120,7 +125,7 @@ extension TrainingView {
                                  isInterval: isInterval,
                                  screenH: h)
                     .onChange(of: workoutManager.heartRate) { _, newHR in
-                        let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
+                        let isHigh = isHighHR(newHR)
                         if isHigh && !highIntensityHapticFired {
                             highIntensityHapticFired = true
                             #if os(watchOS)
@@ -237,13 +242,22 @@ extension TrainingView {
                                "BPM",
                                ShuttlXColor.forHRZone(workoutManager.heartRate),
                                frHRSize, unitSize) {
-                        HRZoneArc(zone: heartRateZoneNumber)
-                            .frame(width: zoneArcWidth, height: zoneArcWidth / 2)
-                            .padding(.leading, 4)
+                        if let zoneWord {
+                            Text(zoneWord)
+                                .font(.system(size: unitSize, weight: .heavy, design: .monospaced))
+                                .foregroundColor(zoneWordColor(zoneWord))
+                                .lineLimit(1)
+                                .fixedSize()
+                                .padding(.leading, 4)
+                        } else {
+                            HRZoneArc(zone: heartRateZoneNumber)
+                                .frame(width: zoneArcWidth, height: zoneArcWidth / 2)
+                                .padding(.leading, 4)
+                        }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel(workoutManager.heartRate > 0 ? "Heart rate \(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
+                    .accessibilityLabel(workoutManager.heartRate > 0 ? "Heart rate \(workoutManager.heartRate) beats per minute, \(zoneWord?.capitalized ?? "Zone \(heartRateZoneNumber)")" : "Heart rate no data")
                     .accessibilityAddTraits(.updatesFrequently)
                 }
 
@@ -336,7 +350,7 @@ extension TrainingView {
             // branch-specific (label column in interval, label-less in free run)
             // and both branches need the high-intensity notification.
             .onChange(of: workoutManager.heartRate) { _, newHR in
-                let isHigh = hrCalculator.isHighIntensityWarning(heartRate: Double(newHR))
+                let isHigh = isHighHR(newHR)
                 if isHigh && !highIntensityHapticFired {
                     highIntensityHapticFired = true
                     #if os(watchOS)
@@ -718,7 +732,32 @@ extension TrainingView {
     }
 
     var isHighIntensityWarning: Bool {
-        hrCalculator.isHighIntensityWarning(heartRate: Double(workoutManager.heartRate))
+        isHighHR(workoutManager.heartRate)
+    }
+
+    /// Heart-limit mode: with a synced limit (own or estimated, resolved on the phone)
+    /// the banner fires above THAT limit — the same number the heart alerts use — so
+    /// the screen and the alert never disagree. No limit: old max-HR calculator.
+    func isHighHR(_ hr: Int) -> Bool {
+        if let limit = WatchSyncCoordinator.shared.heartSafety.upperLimit {
+            return hr > 0 && hr > limit
+        }
+        return hrCalculator.isHighIntensityWarning(heartRate: Double(hr))
+    }
+
+    /// EASY / STEADY / HARD against the synced limit. nil without HR or a limit.
+    var heartZoneWord: String? {
+        let hr = workoutManager.heartRate
+        guard hr > 0 else { return nil }
+        return WatchSyncCoordinator.shared.heartSafety.zoneWord(hr: hr)
+    }
+
+    func zoneWordColor(_ word: String) -> Color {
+        switch word {
+        case "EASY": return ShuttlXColor.hrZone2
+        case "STEADY": return ShuttlXColor.hrZone3
+        default: return ShuttlXColor.hrZone5
+        }
     }
 
     /// True when a safety banner is claiming a row in the free-run stack.
@@ -771,7 +810,7 @@ extension TrainingView {
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
         .animation(.easeInOut(duration: 0.4), value: isHighIntensityWarning)
-        .accessibilityLabel("Heart rate high — ease off. Heart rate above 70 percent of maximum.")
+        .accessibilityLabel(WatchSyncCoordinator.shared.heartSafety.upperLimit.map { "Heart rate high — ease off. Heart rate above your limit of \($0)." } ?? "Heart rate high — ease off. Heart rate above 70 percent of maximum.")
         .accessibilityAddTraits(.updatesFrequently)
     }
 

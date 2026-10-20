@@ -187,6 +187,15 @@ struct SessionDetailView: View {
                     color: ShuttlXColor.pace
                 )
             }
+
+            if let effort = session.effortRPE {
+                MetricCard(
+                    icon: "gauge.with.needle",
+                    value: "Effort \(effort)/10",
+                    label: "How hard",
+                    color: ShuttlXColor.ctaPrimary
+                )
+            }
         }
     }
 

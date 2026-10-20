@@ -92,6 +92,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     // prompt went unanswered. Nil for every user-ended and legacy session.
     var autoEnded: Bool?
 
+    // Post-workout effort 0-10 (watch summary prompt). Nil = skipped / legacy.
+    // App-only: never written to Health metadata.
+    var effortRPE: Int?
+
     // True when the iPhone built this session from an Apple Health workout
     // (it never arrived over WatchConnectivity). Nil for everything else.
     var importedFromHealth: Bool?

@@ -548,6 +548,35 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    /// Post-workout effort (summary screen). The session was already sent at stop and
+    /// iOS dedups by id WITHOUT updating, so this only lands on the phone if the session
+    /// is still waiting in `pendingSessions`. Otherwise it stays watch-side.
+    func updateSessionEffort(id: UUID, effortRPE: Int) {
+        if let i = pendingSessions.firstIndex(where: { $0.id == id }) {
+            pendingSessions[i].effortRPE = effortRPE
+            savePendingSessionsToDisk()
+        }
+        guard let containerURL = Self.getWorkingContainer() else { return }
+        let logger = self.logger
+        // Same serial queue as the stop-time append, so this always runs after it.
+        Self.sessionStoreQueue.async {
+            let url = containerURL.appendingPathComponent("sessions.json")
+            var coordinatorError: NSError?
+            NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
+                do {
+                    var sessions = try JSONDecoder().decode([TrainingSession].self, from: Data(contentsOf: writeURL))
+                    guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
+                    sessions[i].effortRPE = effortRPE
+                    try JSONEncoder().encode(sessions).write(to: writeURL, options: [.atomic, .completeFileProtection])
+                    logger.info("Effort \(effortRPE)/10 saved for session \(id)")
+                } catch {
+                    logger.error("Failed to save effort: \(error.localizedDescription)")
+                }
+            }
+            if let coordinatorError { logger.error("Effort save coordination error: \(coordinatorError.localizedDescription)") }
+        }
+    }
+
     private nonisolated static func appendSessionToStore(_ session: TrainingSession, containerURL: URL, logger: Logger) {
         let sessionsURL = containerURL.appendingPathComponent("sessions.json")
         let coordinator = NSFileCoordinator()
