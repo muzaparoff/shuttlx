@@ -13,7 +13,6 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var syncLog: [String] = []
     @Published var connectivityHealth: Double = 1.0
     @Published var workoutTemplates: [WorkoutTemplate] = []
-    @Published var isPro: Bool = false
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchSyncCoordinator")
 
@@ -80,7 +79,16 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
+    /// STEP-1 diagnostics: dump the daemon's outstanding file transfers.
+    private func logOutstandingTransfers(_ context: String) {
+        let wc = WCSession.default
+        let transfers = wc.outstandingFileTransfers
+        let progress = transfers.map { String(format: "%.2f", $0.progress.fractionCompleted) }.joined(separator: ",")
+        logger.info("[HKSOT] \(context): outstandingFileTransfers=\(transfers.count) progress=[\(progress)] userInfoTransfers=\(wc.outstandingUserInfoTransfers.count) inFlight=\(self.inFlightSessionIDs.count) pending=\(self.pendingSessions.count) activation=\(wc.activationState.rawValue) reachable=\(wc.isReachable)")
+    }
+
     private func retryPendingSessions() {
+        logOutstandingTransfers("retry tick")
         guard !pendingSessions.isEmpty else { return }
 
         logger.info("Retrying \(self.pendingSessions.count) pending sessions")
@@ -289,6 +297,18 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         "sessionID": session.id.uuidString,
                         "timestamp": Date().timeIntervalSince1970
                     ]
+                    let attrs = try? FileManager.default.attributesOfItem(atPath: fileURL.path)
+                    let protection = (attrs?[.protectionKey] as? FileProtectionType)?.rawValue ?? "unknown"
+                    var readResult = "ok"
+                    do {
+                        let handle = try FileHandle(forReadingFrom: fileURL)
+                        defer { try? handle.close() }
+                        let first = try handle.read(upToCount: 1)
+                        readResult = "ok(\(first?.count ?? 0)B)"
+                    } catch {
+                        readResult = "FAILED \(error)"
+                    }
+                    self.logger.info("[HKSOT] transferFile pre-send session=\(session.id.uuidString) bytes=\(sessionData.count) protection=\(protection) firstByteRead=\(readResult) activation=\(WCSession.default.activationState.rawValue) reachable=\(WCSession.default.isReachable)")
                     WCSession.default.transferFile(fileURL, metadata: metadata)
                     // S-5: transferFile and transferUserInfo are independent channels with
                     // no ordering guarantee — iOS may not learn the session ID from the
@@ -560,6 +580,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 // Adopt whatever the WC daemon still holds from the previous launch
                 // so we don't enqueue a second copy of it below.
                 self.reconcileInFlightTransfers()
+                self.logOutstandingTransfers("launch/activated")
 
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { [weak self] in
                     Task { @MainActor in
@@ -733,6 +754,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 self.inFlightSessionIDs.remove(uuid)
             }
             if let error = error {
+                let ns = error as NSError
+                self.logger.error("[HKSOT] userInfoTransfer didFinish ERROR domain=\(ns.domain) code=\(ns.code) desc=\(ns.localizedDescription) action=\((userInfoTransfer.userInfo["action"] as? String) ?? "?")")
                 self.logger.error("UserInfo transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
                 if let sessionID = userInfoTransfer.userInfo["sessionID"] as? String,
@@ -753,6 +776,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     }
                 }
             } else {
+                self.logger.info("[HKSOT] userInfoTransfer didFinish OK action=\((userInfoTransfer.userInfo["action"] as? String) ?? "?")")
                 self.logger.info("UserInfo transfer completed")
                 self.consecutiveFailures = 0
                 self.lastSyncTime = Date()
@@ -775,6 +799,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 self.inFlightSessionIDs.remove(uuid)
             }
             if let error = error {
+                let ns = error as NSError
+                self.logger.error("[HKSOT] fileTransfer didFinish ERROR domain=\(ns.domain) code=\(ns.code) desc=\(ns.localizedDescription) session=\((fileTransfer.file.metadata?["sessionID"] as? String) ?? "?")")
                 self.logger.error("File transfer failed: \(error.localizedDescription)")
                 self.consecutiveFailures += 1
                 if let sessionID = fileTransfer.file.metadata?["sessionID"] as? String,
@@ -785,6 +811,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     }
                 }
             } else {
+                self.logger.info("[HKSOT] fileTransfer didFinish OK session=\((fileTransfer.file.metadata?["sessionID"] as? String) ?? "?")")
                 self.logger.info("File transfer completed successfully")
                 self.consecutiveFailures = 0
                 self.lastSyncTime = Date()
@@ -1042,12 +1069,6 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     // MARK: - Template Sync
 
     private func handleIncomingPayload(_ payload: [String: Any]) {
-        // Process subscription status if present
-        if let proStatus = payload["isPro"] as? Bool {
-            isPro = proStatus
-            logger.info("Subscription status synced from iPhone: \(proStatus ? "Pro" : "Free")")
-        }
-
         // Process theme if present (regardless of action key — applicationContext
         // merges both theme and template data with a single action key)
         if let themeID = payload["themeID"] as? String {

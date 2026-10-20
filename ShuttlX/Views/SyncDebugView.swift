@@ -1,14 +1,25 @@
 import SwiftUI
 import WatchConnectivity
+import HealthKit
+import os
 
 #if DEBUG
 struct SyncDebugView: View {
     @StateObject private var syncMonitor = SyncMonitor.shared
     @ObservedObject private var sharedDataManager: PhoneSyncCoordinator = .shared
+    @EnvironmentObject private var dataManager: DataManager
+    @State private var healthRows: [HealthRow] = []
+    @State private var healthStatus = "Not loaded"
+
+    private struct HealthRow: Identifiable {
+        let id: UUID
+        let start: Date
+        let duration: TimeInterval
+        let inApp: Bool
+    }
 
     var body: some View {
-        NavigationStack {
-            List {
+        List {
                 Section(header: Text("Session Status")) {
                     statusRow(title: "Activation State", value: syncMonitor.activationState)
                     statusRow(title: "Reachable", value: syncMonitor.isReachable ? "Yes" : "No",
@@ -27,6 +38,27 @@ struct SyncDebugView: View {
                     statusRow(title: "Status", value: syncMonitor.syncStatus)
                 }
 
+                Section(header: Text("Health vs app (60 days) — \(healthStatus)")) {
+                    Button("Reload from Health") { Task { await loadHealth() } }
+                    ForEach(healthRows) { row in
+                        HStack {
+                            VStack(alignment: .leading) {
+                                Text(row.start.formatted(date: .abbreviated, time: .shortened))
+                                Text("\(Int(row.duration / 60)) min").font(.footnote)
+                            }
+                            Spacer()
+                            Text(row.inApp ? "In app" : "Missing in app")
+                                .foregroundStyle(row.inApp ? ShuttlXColor.positive : ShuttlXColor.ctaDestructive)
+                        }
+                    }
+                }
+
+                Section(header: Text("Phone sync log (last 20)")) {
+                    ForEach(Array(sharedDataManager.syncLog.suffix(20).enumerated()), id: \.offset) { _, line in
+                        Text(line).font(.footnote)
+                    }
+                }
+
                 Section(header: Text("Actions")) {
                     Button("Clear Logs") {
                         syncMonitor.clearLogs()
@@ -43,14 +75,53 @@ struct SyncDebugView: View {
             }
             .scrollContentBackground(.hidden)
             .navigationTitle("Sync Debug")
-        }
         .themedScreenBackground()
+        .task { await loadHealth() }
         .onAppear {
             syncMonitor.startMonitoring()
         }
         .onDisappear {
             syncMonitor.stopMonitoring()
         }
+    }
+
+    /// Read-only: lists HKWorkouts from the last 60 days and matches each against
+    /// DataManager sessions (external UUID first, else start ±2 min and duration ±5%).
+    private func loadHealth() async {
+        let log = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SyncDebugView")
+        guard HKHealthStore.isHealthDataAvailable() else { healthStatus = "Health unavailable"; return }
+        let store = HKHealthStore()
+        do {
+            try await store.requestAuthorization(toShare: [], read: [HKObjectType.workoutType()])
+        } catch {
+            healthStatus = "Auth error: \(error.localizedDescription)"
+            log.error("[HKSOT] Health auth failed: \(error.localizedDescription)")
+            return
+        }
+        let since = Calendar.current.date(byAdding: .day, value: -60, to: Date()) ?? Date()
+        let predicate = HKQuery.predicateForSamples(withStart: since, end: nil, options: [])
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: false)
+        let workouts: [HKWorkout] = await withCheckedContinuation { cont in
+            let q = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: predicate,
+                                  limit: HKObjectQueryNoLimit, sortDescriptors: [sort]) { _, samples, error in
+                if let error { log.error("[HKSOT] HKSampleQuery failed: \(error.localizedDescription)") }
+                cont.resume(returning: (samples as? [HKWorkout]) ?? [])
+            }
+            store.execute(q)
+        }
+        let sessions = dataManager.sessions
+        healthRows = workouts.map { w in
+            let ext = (w.metadata?[HKMetadataKeyExternalUUID] as? String).flatMap(UUID.init(uuidString:))
+            let matched = sessions.contains { s in
+                if let ext, s.id == ext { return true }
+                return abs(s.startDate.timeIntervalSince(w.startDate)) <= 120
+                    && abs(s.duration - w.duration) <= max(w.duration, 1) * 0.05
+            }
+            return HealthRow(id: w.uuid, start: w.startDate, duration: w.duration, inApp: matched)
+        }
+        let missing = healthRows.filter { !$0.inApp }.count
+        healthStatus = "\(healthRows.count) in Health, \(missing) missing"
+        log.info("[HKSOT] Health vs app: \(self.healthStatus)")
     }
 
     private func statusRow(title: String, value: String, color: Color? = nil) -> some View {

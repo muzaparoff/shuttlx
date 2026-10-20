@@ -1709,6 +1709,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                let data = try? Data(contentsOf: url),
                let existing = try? JSONDecoder().decode([TrainingSession].self, from: data),
                existing.contains(where: { $0.id == session.id }) {
+                logger.info("[HKSOT] recovered session \(session.id.uuidString) already in sessions.json — NOT resent")
                 logger.info("Recovered session \(session.id) already exists — skipping duplicate save")
                 persistence.clearBackup()
                 return
@@ -1902,6 +1903,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let builderToFinish = workoutBuilder
         // Capture HKWorkout metadata values before entering the async context
         let capturedWorkoutName = workoutName
+        let capturedSessionID = session.id.uuidString
         let capturedIsIndoor = workoutMode == .gymRecovery || (activeTemplate?.sportType?.hkLocationType ?? .unknown) == .indoor
         let capturedIntervalCount = activeTemplate?.intervals.count ?? 0
         // Phase 3 (interop): publish the SAME finalized phase timeline that is
@@ -1942,7 +1944,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
                     // Attach metadata before closing the builder so it appears in Health.app
                     var hkMetadata: [String: Any] = [
-                        HKMetadataKeyIndoorWorkout: NSNumber(value: capturedIsIndoor)
+                        HKMetadataKeyIndoorWorkout: NSNumber(value: capturedIsIndoor),
+                        HKMetadataKeyExternalUUID: capturedSessionID
                     ]
                     if !capturedWorkoutName.isEmpty {
                         hkMetadata["templateName"] = capturedWorkoutName
