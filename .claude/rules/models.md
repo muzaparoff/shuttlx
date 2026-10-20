@@ -18,7 +18,7 @@ duplicated per target until the Phase 4 engine unification
 | Model | Path | Notes |
 |-------|------|-------|
 | ActivitySegment | `Shared/ActivitySegment.swift` | |
-| DetectedActivity | `Shared/DetectedActivity.swift` | color lives in per-target `DetectedActivity+Theme.swift` |
+| DetectedActivity (running/walking/cycling/stationary/unknown) | `Shared/DetectedActivity.swift` | color lives in per-target `DetectedActivity+Theme.swift` |
 | RoutePoint | `Shared/RoutePoint.swift` | |
 | TrainingPlan (+PlanDay/PlanWeek/PlanProgress/CompletedPlanDay) | `Shared/TrainingPlan.swift` | |
 | BuiltInPlans | `Shared/BuiltInPlans.swift` | |

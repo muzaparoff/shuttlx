@@ -10,6 +10,7 @@ extension DetectedActivity {
         switch self {
         case .running: return ShuttlXColor.running
         case .walking: return ShuttlXColor.walking
+        case .cycling: return ShuttlXColor.cycling
         case .stationary, .unknown: return ShuttlXColor.stationary
         }
     }

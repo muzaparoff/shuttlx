@@ -87,7 +87,7 @@ struct ActivityClassifier {
             if cadence <= stationaryCadenceCeiling { return .agrees }
             if cadence > stationaryCadenceContradiction { return .contradicts }
             return .inconclusive
-        case .unknown:
+        case .unknown, .cycling:   // cadence says nothing about cycling
             return .inconclusive
         }
     }

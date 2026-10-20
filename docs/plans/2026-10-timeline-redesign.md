@@ -34,6 +34,8 @@ Design reference: the published review page "ShuttlX Timeline Design" (private a
 7. **Watch one-word screen, heart-limit mode, effort prompt.**
 8. **Settings cut and Trends trim.**
 
+Step 4a status (2026-10-20, uncommitted): done on shared + iOS. `DetectedActivity.cycling`; `Shared/SpeedActivityClassifier` (in `Shared/ActivityClassifier.swift`, pure, plus 30 s / 60 s hysteresis, tests in `ActivityClassifierTests`); iOS `SegmentOverrideStore` (`segment_overrides.json`) and the "Fix a part" sheet in `SessionDetailView`. Not done: wiring the classifier into the watch (step 4b), tuning thresholds on real sessions.
+
 ## Rules for every step
 
 - Build both schemes after each change. Never pass `-sdk` to xcodebuild.

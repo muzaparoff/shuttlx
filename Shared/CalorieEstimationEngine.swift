@@ -89,6 +89,8 @@ public enum CalorieEstimationEngine {
             return isFootSport(sport) ? defaultMET(for: .running) : defaultMET(for: sport)
         case .walking:
             return isFootSport(sport) ? defaultMET(for: .walking) : defaultMET(for: sport)
+        case .cycling:
+            return defaultMET(for: .cycling)
         case .stationary:
             return stationaryMET
         case .unknown:

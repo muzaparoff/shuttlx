@@ -3,8 +3,11 @@ import ShuttlXShared
 
 struct SessionDetailView: View {
     let session: TrainingSession
+    @ObservedObject private var overrides = SegmentOverrideStore.shared
+    @State private var fixing: ActivitySegment?
 
     var body: some View {
+        let segments = overrides.applying(to: session.segments)
         ScrollView {
             VStack(spacing: 20) {
                 if let route = session.route, !route.isEmpty {
@@ -16,14 +19,18 @@ struct SessionDetailView: View {
                 statTrio
 
                 if !session.segments.isEmpty {
-                    ActivityRibbon(segments: session.segments)
+                    ActivityRibbon(segments: segments)
                     VStack(spacing: 10) {
-                        ForEach(session.segments) { SessionPartRow(segment: $0) }
+                        ForEach(segments) { seg in
+                            Button { fixing = seg } label: { SessionPartRow(segment: seg) }
+                                .buttonStyle(.plain)
+                                .accessibilityHint("Opens Fix a part")
+                        }
                     }
                     .themedCard()
 
                     // Per-activity totals and calories (timeline bar + detail rows)
-                    ActivitySegmentsView(segments: session.segments, totalDuration: session.duration)
+                    ActivitySegmentsView(segments: segments, totalDuration: session.duration)
                 }
 
                 // Interval results (if interval workout)
@@ -36,6 +43,10 @@ struct SessionDetailView: View {
 
             }
             .padding()
+        }
+        .sheet(item: $fixing) { seg in
+            FixPartSheet(segment: seg) { overrides.set($0, for: seg) }
+                .presentationDetents([.medium])
         }
         .navigationTitle("Session Details")
         .navigationBarTitleDisplayMode(.inline)
@@ -385,5 +396,51 @@ struct ActivitySegmentsView: View {
             ],
             kmSplits: nil
         ))
+    }
+}
+
+
+/// "Fix a part": pick Running / Walking / Cycling for one part. The correction is stored
+/// beside the session (SegmentOverrideStore), never in sessions.json.
+private struct FixPartSheet: View {
+    let segment: ActivitySegment   // already shows the effective type
+    let onSave: (DetectedActivity) -> Void
+    @Environment(\.dismiss) private var dismiss
+    @State private var choice: DetectedActivity
+
+    init(segment: ActivitySegment, onSave: @escaping (DetectedActivity) -> Void) {
+        self.segment = segment
+        self.onSave = onSave
+        _choice = State(initialValue: segment.activityType)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach([DetectedActivity.running, .walking, .cycling], id: \.self) { a in
+                    Button {
+                        choice = a
+                    } label: {
+                        HStack {
+                            Image(systemName: a.systemImage).foregroundStyle(a.themeColor).frame(width: 28)
+                            Text(a.displayName).font(ShuttlXFont.cardSubtitle).foregroundStyle(ShuttlXColor.textPrimary)
+                            Spacer()
+                            if choice == a { Image(systemName: "checkmark").foregroundStyle(ShuttlXColor.ctaPrimary) }
+                        }
+                    }
+                    .accessibilityLabel(a.displayName + (choice == a ? ", selected" : ""))
+                }
+            }
+            .scrollContentBackground(.hidden)
+            .themedScreenBackground()
+            .navigationTitle("Fix a part")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { onSave(choice); dismiss() }
+                }
+            }
+        }
     }
 }
