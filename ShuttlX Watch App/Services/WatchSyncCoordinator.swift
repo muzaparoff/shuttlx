@@ -199,6 +199,42 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     // MARK: - Session Sending
 
+    /// Mirror a heart alert to the iPhone (timeline step 5). Payload keys:
+    ///   "action": "heartAlert"
+    ///   "kind":   String — `HeartAlert.Kind` raw value: aboveLimit | belowLow | signalLost | noMotion
+    ///   "value":  Int    — the limit crossed (aboveLimit / belowLow only; absent otherwise)
+    ///   "ts":     Double — seconds since 1970 when the watch raised it. transferUserInfo
+    ///                      can deliver late (phone asleep/out of range): the phone should
+    ///                      drop alerts older than a few minutes.
+    /// Under 200 bytes, so sendMessage when reachable, else (or on error) transferUserInfo.
+    /// No retry loop: transferUserInfo is already durable, and a stale alert has no value.
+    func sendHeartAlert(_ alert: HeartAlert, at date: Date = Date()) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            logger.warning("heartAlert \(alert.kind.rawValue) not sent — WCSession not activated")
+            return
+        }
+        let kind = alert.kind.rawValue, value = alert.value, ts = date.timeIntervalSince1970
+        let payload = Self.heartAlertPayload(kind: kind, value: value, ts: ts)
+        guard WCSession.default.isReachable else {
+            WCSession.default.transferUserInfo(payload)
+            logger.info("heartAlert \(kind) queued via transferUserInfo")
+            return
+        }
+        WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
+            Task { @MainActor in
+                self?.logger.error("heartAlert sendMessage failed (\(error.localizedDescription)) — transferUserInfo")
+                WCSession.default.transferUserInfo(Self.heartAlertPayload(kind: kind, value: value, ts: ts))
+            }
+        }
+        logger.info("heartAlert \(kind) sent via sendMessage")
+    }
+
+    nonisolated static func heartAlertPayload(kind: String, value: Int?, ts: TimeInterval) -> [String: Any] {
+        var p: [String: Any] = ["action": "heartAlert", "kind": kind, "ts": ts]
+        if let value { p["value"] = value }
+        return p
+    }
+
     func sendSessionToiOS(_ session: TrainingSession) {
         // Anti-stacking guard: a transfer for this session is still sitting in the
         // WC daemon's outbox. Re-sending it now would add a duplicate payload to a
