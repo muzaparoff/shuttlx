@@ -136,6 +136,28 @@ enum HelpContent {
                          text: "Settings → Heart also switches the 0–10 effort question and Run / Walk auto-switch on the watch. Effort stays on with a beta-blocker."),
             ]),
         HelpTopic(
+            id: "fix-a-part",
+            icon: "slider.horizontal.below.rectangle",
+            title: "Fix a part of a workout",
+            body: """
+            ShuttlX cuts a workout into Run, Walk, Cycle and Rest parts by \
+            itself. If it got one wrong, correct it. Your change is stored \
+            beside the workout; the original and the Health workout are not \
+            touched. A part you set to Rest burns no calories.
+            """,
+            steps: [
+                HelpStep(icon: "hand.tap",
+                         text: "Open a workout and tap a part, or tap “Fix a part” on Today."),
+                HelpStep(icon: "circle.grid.2x2",
+                         text: "Pick Run, Walk, Cycle or Rest, then Save."),
+                HelpStep(icon: "scissors",
+                         text: "To cut a part in two, drag the handle on the bar to where it changes and tap Split."),
+                HelpStep(icon: "arrow.triangle.merge",
+                         text: "Tap “Merge with next” to join a part with the one after it."),
+                HelpStep(icon: "heart.fill",
+                         text: "The heart-rate line under the bar comes from Apple Health. It is hidden when Health has no heart-rate data for the workout."),
+            ]),
+        HelpTopic(
             id: "widgets",
             icon: "square.grid.2x2",
             title: "Widgets & complications",

@@ -63,7 +63,7 @@ struct ContentView: View {
         .onChange(of: deepLinkRouter.pendingSessionID) { _, _ in
             consumePendingSessionDeepLink()
         }
-        .onChange(of: dataManager.sessions) { _, _ in
+        .onChange(of: dataManager.effectiveSessions) { _, _ in
             // The session id may have arrived before sessions finished
             // loading from the App Group — retry here instead of dropping
             // it (see `consumePendingSessionDeepLink`).
@@ -76,13 +76,13 @@ struct ContentView: View {
 
     /// Consumes `shuttlx://session/{uuid}` deep links. Only clears
     /// `pendingSessionID` once the matching session is actually found and
-    /// presented — if `dataManager.sessions` hasn't loaded yet, the id is
-    /// left in place so the `onChange(of: dataManager.sessions)` observer
+    /// presented — if `dataManager.effectiveSessions` hasn't loaded yet, the id is
+    /// left in place so the `onChange(of: dataManager.effectiveSessions)` observer
     /// above can retry once it does, instead of the link being silently
     /// swallowed.
     private func consumePendingSessionDeepLink() {
         guard let id = deepLinkRouter.pendingSessionID else { return }
-        guard let session = dataManager.sessions.first(where: { $0.id == id }) else {
+        guard let session = dataManager.effectiveSessions.first(where: { $0.id == id }) else {
             return
         }
         deepLinkRouter.pendingSessionID = nil

@@ -51,9 +51,8 @@ struct ShuttlXWatchApp: App {
                 // timer at 1h+ without waiting. SHUTTLX_SNAPSHOT_AOD=1 forces the
                 // Always-On (reduced luminance) variant.
                 // SHUTTLX_SNAPSHOT_HR overrides the seeded heart rate (the seed of
-                // 138 is above 70% of the 190 fallback max, so it always shows the
-                // "Ease off" banner — pass e.g. 118 to capture the banner-free
-                // layout). SHUTTLX_SNAPSHOT_PACE overrides pace in sec/km, or
+                // 138 is STEADY against the 190 fallback max; with no synced limit
+                // the "Ease off" banner needs HARD, i.e. >= 90% — pass e.g. 175). SHUTTLX_SNAPSHOT_PACE overrides pace in sec/km, or
                 // "none" for the nil case that renders "—".
                 // SHUTTLX_SNAPSHOT_PAUSED=1 freezes the seeded workout the way
                 // pauseWorkout() does (isPaused + nil timerReferenceDate) so the
@@ -69,7 +68,8 @@ struct ShuttlXWatchApp: App {
                 // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused
                 // raises a workout overlay, SHUTTLX_SNAPSHOT_LIMIT=<bpm> fakes a synced
                 // heart limit (heart-limit mode), SHUTTLX_SNAPSHOT_TAB=<n> opens a page,
-                // SHUTTLX_SNAPSHOT_ACTIVITY=running|walking|cycling sets the tag.
+                // SHUTTLX_SNAPSHOT_ACTIVITY=running|walking|cycling sets the tag,
+                // SHUTTLX_SNAPSHOT_HEALTHFAIL=1 shows the summary's "Not saved to Health".
                 let screen = env["SHUTTLX_SNAPSHOT_SCREEN"]
                 if screen == "home" {
                     NavigationStack { StartTrainingView() }
@@ -87,7 +87,7 @@ struct ShuttlXWatchApp: App {
                     .environment(ThemeManager.shared)
                     .environmentObject(sharedDataManager)
                     .environmentObject(workoutManager)
-                    .task { workoutManager.applySummaryPreview() }
+                    .task { workoutManager.applySummaryPreview(healthSaveFailed: env["SHUTTLX_SNAPSHOT_HEALTHFAIL"] == "1") }
                 } else {
                 TrainingView()
                     .environment(ThemeManager.shared)

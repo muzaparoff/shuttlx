@@ -35,7 +35,6 @@ enum HistoryFormat {
 /// History tab: calendar / list / map over one shared month.
 struct HistoryView: View {
     @EnvironmentObject var dataManager: DataManager
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
     @State private var mode: HistoryMode = .calendar
     @State private var month = Date()
     @State private var selectedDay = Date()
@@ -57,7 +56,7 @@ struct HistoryView: View {
     }
 
     private var monthSessions: [TrainingSession] {
-        dataManager.sessions
+        dataManager.effectiveSessions
             .filter { cal.isDate($0.startDate, equalTo: month, toGranularity: .month) }
             .sorted { $0.startDate > $1.startDate }
     }
@@ -200,7 +199,7 @@ struct HistoryView: View {
     /// One dot per distinct activity in the day's sessions (effective types, so
     /// "Fix a part" corrections show), in the order Run, Walk, Cycle.
     private func dotActivities(_ sessions: [TrainingSession]) -> [DetectedActivity] {
-        let present = Set(sessions.flatMap { $0.displaySegments(overrides) }.map(\.activityType))
+        let present = Set(sessions.flatMap { $0.displaySegments() }.map(\.activityType))
         return [DetectedActivity.running, .walking, .cycling].filter(present.contains)
     }
 
@@ -260,10 +259,9 @@ struct HistoryView: View {
 /// Compact day row: vertical mini-ribbon, name, "time · duration · Run + Walk", distance.
 struct HistoryDayRow: View {
     let session: TrainingSession
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
 
     var body: some View {
-        let segs = session.displaySegments(overrides)
+        let segs = session.displaySegments()
         let total = max(1, segs.reduce(0) { $0 + max(0, $1.duration) })
         let sub = [TodayFormat.clock(session.startDate), TodayFormat.short(session.duration),
                    TodayFormat.activitySummary(segs)].joined(separator: " \u{00B7} ")

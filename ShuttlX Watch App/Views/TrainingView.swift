@@ -8,7 +8,6 @@ struct TrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @State var selectedTab = 0
     @State var showingStopConfirmation = false
-    @State var showingHealthKitError = false
     @State var pausePulse = false
     @State var showingAuthDeniedAlert = false
     /// Tracks whether the high-intensity warning haptic has already fired this threshold crossing.
@@ -139,16 +138,8 @@ struct TrainingView: View {
         } message: {
             Text("Save this training session?")
         }
-        .alert("Health App Save Failed", isPresented: $showingHealthKitError) {
-            Button("OK", role: .cancel) {
-                workoutManager.healthKitSaveError = nil
-            }
-        } message: {
-            Text(workoutManager.healthKitSaveError ?? "The workout was saved in ShuttlX but could not be written to the Health app.")
-        }
-        .onChange(of: workoutManager.healthKitSaveError) { _, newValue in
-            showingHealthKitError = newValue != nil
-        }
+        // A Health save failure is shown on WorkoutSummaryView ("Not saved to
+        // Health"): it is reported after the summary has replaced this view.
         .alert("Health Access Required", isPresented: Binding(
             get: { showingAuthDeniedAlert },
             set: { showingAuthDeniedAlert = $0 }

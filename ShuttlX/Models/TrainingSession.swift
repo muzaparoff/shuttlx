@@ -184,8 +184,11 @@ struct TrainingSession: Identifiable, Codable, Hashable {
         hasher.combine(startDate)
     }
 
+    // Identity plus the fields "Fix a part" can change. SwiftUI skips re-rendering a view whose Equatable
+    // input compares equal, so an id-only `==` froze every card after an edit. Hash stays id+start (still consistent).
     static func == (lhs: TrainingSession, rhs: TrainingSession) -> Bool {
         lhs.id == rhs.id && lhs.startDate == rhs.startDate
+            && lhs.segments == rhs.segments && lhs.caloriesBurned == rhs.caloriesBurned
     }
 }
 

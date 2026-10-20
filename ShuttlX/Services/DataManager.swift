@@ -8,7 +8,13 @@ import ShuttlXShared
 
 @MainActor
 class DataManager: ObservableObject {
-    @Published var sessions: [TrainingSession] = []
+    /// Recorded sessions exactly as stored. Persistence, CloudKit and sync use this; never write `effectiveSessions` back.
+    @Published var sessions: [TrainingSession] = [] { didSet { rebuildEffective() } }
+    /// `sessions` with the user's "Fix a part" edits applied (types, split, merge, Rest calories zeroed).
+    /// Every reader (Today, History, Trends, Analytics, detail) uses this; rebuilt on any change to either input.
+    @Published private(set) var effectiveSessions: [TrainingSession] = []
+    /// Bumps on every rebuild; cheap `.task(id:)` key for screens that derive from `effectiveSessions`.
+    private(set) var effectiveVersion = 0
     @Published var healthKitAuthorized = false
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "DataManager")
@@ -43,6 +49,24 @@ class DataManager: ObservableObject {
         checkHealthKitAuthorizationStatus()
         PhoneSyncCoordinator.shared.setDataManager(self)
         setupBindings()
+        // `$edits` emits before the value lands, so rebuild from the emitted value.
+        SegmentOverrideStore.shared.$edits
+            .sink { [weak self] in self?.rebuildEffective($0) }
+            .store(in: &cancellables)
+    }
+
+    private func rebuildEffective(_ given: SegmentEdits? = nil) {
+        let edits = given ?? SegmentOverrideStore.shared.edits
+        effectiveVersion &+= 1
+        effectiveSessions = sessions.map { session in
+            guard !session.segments.isEmpty else { return session }
+            var s = session
+            s.segments = edits.apply(to: session.segments, sessionID: session.id)
+            if let kcal = s.caloriesBurned {
+                s.caloriesBurned = max(0, kcal - SegmentEdits.caloriesRemoved(raw: session.segments, effective: s.segments))
+            }
+            return s
+        }
     }
 
     #if DEBUG

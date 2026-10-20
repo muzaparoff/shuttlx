@@ -419,6 +419,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         segments = []
         currentActivity = .unknown
         healthKitSaved = false
+        healthKitSaveError = nil
         clearActivitySwitch()
         autoSwitchSuppressedUntil = nil
         unusualHeartRate = nil
@@ -2470,7 +2471,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     /// Snapshot/QA only: the post-workout summary with a 3-part ribbon.
-    func applySummaryPreview() {
+    func applySummaryPreview(healthSaveFailed: Bool = false) {
         let start = Date().addingTimeInterval(-4212)
         let parts: [(DetectedActivity, TimeInterval)] = [(.walking, 720), (.running, 2880), (.walking, 612)]
         var t = start
@@ -2480,7 +2481,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             s.endDate = t
             return s
         }
-        healthKitSaved = true
+        healthKitSaved = !healthSaveFailed
+        healthKitSaveError = healthSaveFailed ? "Preview: save failed" : nil
         pendingSummary = WorkoutSummary(duration: 4212, distance: 9.8, avgHeartRate: 138, calories: 612,
                                         steps: 11_204, avgPace: 430, splitsCount: 9,
                                         sessionID: UUID(), segments: segs)

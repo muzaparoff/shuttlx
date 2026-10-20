@@ -478,8 +478,10 @@ enum ShuttlXDemoData {
         var segs: [ActivitySegment] = []
         for (a, min, km) in parts {
             let end = cursor.addingTimeInterval(TimeInterval(min * 60))
+            let kcal = Double(min) * (a == .running ? 11.4 : 7.8)
             segs.append(ActivitySegment(activityType: a, startDate: cursor, endDate: end, distance: km,
-                                        averageHeartRate: a == .running ? 152 : 118))
+                                        averageHeartRate: a == .running ? 152 : 118,
+                                        estimatedCalories: kcal, activeEnergyCalories: kcal))
             cursor = end
         }
         let total = 70 * 60.0

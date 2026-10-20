@@ -8,9 +8,10 @@ import ShuttlXShared
 // MARK: - Session helpers
 
 extension TrainingSession {
-    /// Parts to draw: the stored segments, or one synthetic part for the whole session.
-    @MainActor func displaySegments(_ overrides: SegmentOverrideStore) -> [ActivitySegment] {
-        if !segments.isEmpty { return overrides.applying(to: segments) }
+    /// Parts to draw: the segments (already effective when the session comes from `DataManager.effectiveSessions`),
+    /// or one synthetic part for the whole session.
+    func displaySegments() -> [ActivitySegment] {
+        if !segments.isEmpty { return segments }
         let activity: DetectedActivity = sportType == .cycling ? .cycling : sportType == .walking ? .walking : .running
         return [ActivitySegment(activityType: activity, startDate: startDate,
                                 endDate: endDate ?? startDate.addingTimeInterval(duration))]
@@ -72,7 +73,6 @@ enum TodayFormat {
 struct TodayWeekStrip: View {
     let sessions: [TrainingSession]
     @Binding var selected: Date
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
 
     private var calendar: Calendar {
         var c = Calendar.current
@@ -89,7 +89,7 @@ struct TodayWeekStrip: View {
         HStack {
             ForEach(days, id: \.self) { day in
                 let daySessions = sessions.filter { calendar.isDate($0.startDate, inSameDayAs: day) }
-                let segs = daySessions.flatMap { $0.displaySegments(overrides) }
+                let segs = daySessions.flatMap { $0.displaySegments() }
                 let isSelected = calendar.isDate(day, inSameDayAs: selected)
                 Button { selected = day } label: {
                     VStack(spacing: 4) {
@@ -152,10 +152,9 @@ struct PartsFoundBanner: View {
 
 struct TimelineSessionRow: View {
     let session: TrainingSession
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
 
     var body: some View {
-        let segs = session.displaySegments(overrides)
+        let segs = session.displaySegments()
         let total = max(1, segs.reduce(0) { $0 + max(0, $1.duration) })
         HStack(alignment: .top, spacing: 8) {
             Text(TodayFormat.clock(session.startDate))
@@ -356,10 +355,9 @@ struct TodayEmptyState: View {
 
 struct EarlierRow: View {
     let session: TrainingSession
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
 
     var body: some View {
-        let segs = session.displaySegments(overrides)
+        let segs = session.displaySegments()
         var sub = [session.startDate.formatted(.relative(presentation: .named, unitsStyle: .wide)).prefix(1).uppercased() + session.startDate.formatted(.relative(presentation: .named, unitsStyle: .wide)).dropFirst(), TodayFormat.short(session.duration)]
         if let km = session.distance, km > 0 { sub.append(String(format: "%.1f km", km)) }
         return NavigationLink(destination: SessionDetailView(session: session)) {

@@ -9,14 +9,14 @@ struct TemplateListView: View {
 
     /// Most recent session with no templateID (i.e. a free run)
     private var lastFreeRunSession: TrainingSession? {
-        dataManager.sessions
+        dataManager.effectiveSessions
             .filter { $0.templateID == nil && $0.sessionMode != .gymRecovery }
             .max(by: { $0.startDate < $1.startDate })
     }
 
     /// Most recent gym recovery session
     private var lastGymRecoverySession: TrainingSession? {
-        dataManager.sessions
+        dataManager.effectiveSessions
             .filter { $0.sessionMode == .gymRecovery }
             .max(by: { $0.startDate < $1.startDate })
     }

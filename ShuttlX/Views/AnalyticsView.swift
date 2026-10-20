@@ -19,7 +19,7 @@ struct AnalyticsView: View {
     @State private var fatigueScore: Double = 0
     @State private var formScore: Double = 0
 
-    private var sessions: [TrainingSession] { dataManager.sessions }
+    private var sessions: [TrainingSession] { dataManager.effectiveSessions }
 
     var body: some View {
         NavigationStack {
@@ -39,7 +39,7 @@ struct AnalyticsView: View {
             .navigationTitle("Trends")
             .timelineScreenBackground()
         }
-        .task(id: dataManager.sessions.count) {
+        .task(id: dataManager.effectiveVersion) {
             recomputeAnalytics()
         }
     }
@@ -119,7 +119,7 @@ struct AnalyticsView: View {
     // MARK: - Analytics Cache
 
     private func recomputeAnalytics() {
-        let currentSessions = dataManager.sessions
+        let currentSessions = dataManager.effectiveSessions
         weeklyTrend = AnalyticsEngine.weeklyTrend(sessions: currentSessions, weeks: 6)
         records = AnalyticsEngine.personalRecords(sessions: currentSessions)
         recovery = AnalyticsEngine.recoveryStatus(sessions: currentSessions)

@@ -1,28 +1,49 @@
 import SwiftUI
+import Charts
 import ShuttlXShared
 
+/// Which part of which session the Fix a part sheet edits.
+struct FixTarget: Identifiable {
+    let sessionID: UUID
+    let partID: UUID
+    var id: UUID { partID }
+}
+
 struct SessionDetailView: View {
+    /// Whatever the caller had; the screen reads the EFFECTIVE copy from `DataManager` so edits show at once.
     let session: TrainingSession
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
-    @State private var fixing: ActivitySegment?
+    @EnvironmentObject private var dataManager: DataManager
+    @State private var fixing: FixTarget?
+    @State private var heartRate: HeartRateSeries?
+
+    private var current: TrainingSession {
+        dataManager.effectiveSessions.first { $0.id == session.id } ?? session
+    }
 
     var body: some View {
-        let segments = overrides.applying(to: session.segments)
+        let session = current
+        let segments = session.segments
         ScrollView {
             VStack(spacing: 20) {
                 if let route = session.route, !route.isEmpty {
-                    RouteMapView(route: route, segments: session.segments, kmSplits: session.kmSplits,
+                    RouteMapView(route: route, segments: segments, kmSplits: session.kmSplits,
                                  showsHeader: false, height: 320)
                 }
 
                 titleBlock
                 statTrio
 
-                if !session.segments.isEmpty {
-                    ActivityRibbon(segments: segments, height: 16)
+                if !segments.isEmpty {
+                    VStack(spacing: 5) {
+                        ActivityRibbon(segments: segments, height: 16)
+                        if let heartRate {
+                            HeartRateLine(series: heartRate, start: session.startDate,
+                                          end: session.endDate ?? session.startDate.addingTimeInterval(session.duration))
+                        }
+                    }
                     VStack(spacing: 0) {
                         ForEach(segments) { seg in
-                            Button { fixing = seg } label: { SessionPartRow(segment: seg) }
+                            Button { fixing = FixTarget(sessionID: session.id, partID: seg.id) } label: { SessionPartRow(segment: seg) }
                                 .buttonStyle(.plain)
                                 .accessibilityHint("Opens Fix a part")
                         }
@@ -37,15 +58,14 @@ struct SessionDetailView: View {
                 }
 
                 // Metric cards grid
-                metricGrid
+                metricGrid(session)
 
             }
             .padding()
         }
-        .sheet(item: $fixing) { seg in
-            FixPartSheet(segment: seg, partNumber: segments.firstIndex { $0.id == seg.id }.map { $0 + 1 }) {
-                overrides.set($0, for: seg)
-            }
+        .task(id: session.id) { heartRate = await SessionHeartRateLoader.load(for: session) }
+        .sheet(item: $fixing) { target in
+            FixPartSheet(sessionID: target.sessionID, partID: target.partID, parts: segments)
         }
         #if DEBUG
         // Screenshot seam: SHUTTLX_DEMO_FIX=<part number> opens "Fix a part" on that part.
@@ -53,7 +73,7 @@ struct SessionDetailView: View {
             if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_FIX"], let n = Int(raw),
                segments.indices.contains(n - 1) {
                 try? await Task.sleep(for: .seconds(1))
-                fixing = segments[n - 1]
+                fixing = FixTarget(sessionID: session.id, partID: segments[n - 1].id)
             }
         }
         #endif
@@ -116,7 +136,7 @@ struct SessionDetailView: View {
 
     // MARK: - Metric Grid
 
-    private var metricGrid: some View {
+    private func metricGrid(_ session: TrainingSession) -> some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
             if let maxHR = session.maxHeartRate {
                 MetricCard(
@@ -219,28 +239,102 @@ struct SessionDetailView: View {
             ],
             kmSplits: nil
         ))
+        .environmentObject(DataManager())
+    }
+}
+
+/// Heart-rate line under the ribbon (approved mockup): same width as the ribbon, start / avg + peak / end below.
+private struct HeartRateLine: View {
+    let series: HeartRateSeries
+    let start: Date
+    let end: Date
+
+    var body: some View {
+        let lo = (series.points.map(\.bpm).min() ?? 0) - 5
+        let hi = series.peak + 5
+        VStack(spacing: 5) {
+            Chart(series.points) { p in
+                LineMark(x: .value("Time", p.date), y: .value("BPM", p.bpm))
+                    .interpolationMethod(.catmullRom)
+                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                    .foregroundStyle(ShuttlXColor.heartRate)
+            }
+            .chartXScale(domain: start...end)
+            .chartYScale(domain: lo...hi)
+            .chartXAxis(.hidden)
+            .chartYAxis(.hidden)
+            .frame(height: 64)
+            HStack {
+                Text(TodayFormat.clock(start))
+                Spacer()
+                Text("\u{2665} \(Int(series.average.rounded())) peak \(Int(series.peak.rounded()))")
+                Spacer()
+                Text(TodayFormat.clock(end))
+            }
+            .font(ShuttlXFont.cardCaption.monospacedDigit())
+            .foregroundStyle(ShuttlXColor.textSecondary)
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Heart rate over the session, average \(Int(series.average.rounded())), peak \(Int(series.peak.rounded())) beats per minute")
     }
 }
 
 
 /// "Fix a part" (approved mockup): dimmed bottom sheet, four tiles Run / Walk / Cycle / Rest, and the
-/// evidence ShuttlX has for the part. The correction is stored beside the session
-/// (SegmentOverrideStore), never in sessions.json. Rest = `DetectedActivity.stationary`.
-/// Not built (see wave 2a report): "Merge with next" (needs a sessions.json rewrite) and the scrubber.
+/// evidence ShuttlX has for the part, a scrubber over the whole session to split the part, and
+/// "Merge with next". Every change is stored beside the session (SegmentOverrideStore), never in
+/// sessions.json. Rest = `DetectedActivity.stationary`.
 struct FixPartSheet: View {
-    let segment: ActivitySegment   // already shows the effective type
-    var partNumber: Int?
-    let onSave: (DetectedActivity) -> Void
+    let sessionID: UUID
+    let partID: UUID
+    let parts: [ActivitySegment]   // the session's EFFECTIVE parts, in order
     @Environment(\.dismiss) private var dismiss
     @State private var choice: DetectedActivity
+    /// Where the split handle sits inside the part, 0...1 (mockup: starts in the middle).
+    @State private var handle: Double
 
     private let options: [DetectedActivity] = [.running, .walking, .cycling, .stationary]
 
-    init(segment: ActivitySegment, partNumber: Int? = nil, onSave: @escaping (DetectedActivity) -> Void) {
-        self.segment = segment
-        self.partNumber = partNumber
-        self.onSave = onSave
-        _choice = State(initialValue: segment.activityType == .unknown ? .stationary : segment.activityType)
+    init(sessionID: UUID, partID: UUID, parts: [ActivitySegment]) {
+        self.sessionID = sessionID
+        self.partID = partID
+        self.parts = parts
+        let seg = parts.first { $0.id == partID }
+        _choice = State(initialValue: seg.map { $0.activityType == .unknown ? .stationary : $0.activityType } ?? .stationary)
+        var h = 0.5
+        #if DEBUG
+        if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_FIX_HANDLE"], let v = Double(raw) { h = v }
+        #endif
+        _handle = State(initialValue: h)
+    }
+
+    private var index: Int? { parts.firstIndex { $0.id == partID } }
+    private var segment: ActivitySegment { index.map { parts[$0] } ?? ActivitySegment(activityType: .unknown, startDate: Date()) }
+    private var partNumber: Int? { index.map { $0 + 1 } }
+    private var partEnd: Date { segment.endDate ?? segment.startDate.addingTimeInterval(segment.duration) }
+    private var canSplit: Bool { segment.duration >= 2 * SegmentEdits.minPart }
+    private var canMerge: Bool { index.map { $0 + 1 < parts.count } ?? false }
+
+    /// Handle position clamped so both halves keep at least `minPart`.
+    private var splitDate: Date {
+        let lo = SegmentEdits.minPart / max(segment.duration, 1)
+        let f = min(max(handle, lo), 1 - lo)
+        return segment.startDate.addingTimeInterval((segment.duration * f).rounded())
+    }
+
+    /// The parts as the user sees them now (tile choice included), so Split / Merge keep it.
+    private var partsWithChoice: [ActivitySegment] {
+        parts.map { var p = $0; if p.id == partID { p.activityType = choice }; return p }
+    }
+
+    private func split() {
+        SegmentOverrideStore.shared.split(partID: partID, at: splitDate, parts: partsWithChoice, sessionID: sessionID)
+        dismiss()
+    }
+
+    private func merge() {
+        SegmentOverrideStore.shared.merge(partID: partID, parts: partsWithChoice, sessionID: sessionID)
+        dismiss()
     }
 
     private var title: String {
@@ -297,7 +391,10 @@ struct FixPartSheet: View {
                     .foregroundStyle(ShuttlXColor.textPrimary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
-                Button("Save") { onSave(choice); dismiss() }
+                Button("Save") {
+                    SegmentOverrideStore.shared.setType(choice, partID: partID, parts: parts, sessionID: sessionID)
+                    dismiss()
+                }
                     .font(ShuttlXFont.cardSubtitle.weight(.bold))
                     .frame(minWidth: 60, minHeight: 44, alignment: .trailing)
             }
@@ -308,14 +405,89 @@ struct FixPartSheet: View {
             }
 
             evidence
+            scrubber
+            actions
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.top, 14)
-        .presentationDetents([.height(340), .large])
+        #if DEBUG
+        // Screenshot seam: SHUTTLX_DEMO_FIX_ACTION=split|merge runs the action 2 s after the sheet opens.
+        .task {
+            guard let act = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_FIX_ACTION"] else { return }
+            try? await Task.sleep(for: .seconds(2))
+            if act == "split" { split() } else if act == "merge" { merge() }
+            else if act == "rest" {
+                SegmentOverrideStore.shared.setType(.stationary, partID: partID, parts: parts, sessionID: sessionID)
+                dismiss()
+            }
+        }
+        #endif
+        .presentationDetents([.height(440), .large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(24)
         .presentationBackground(Color(.systemBackground))
+    }
+
+    // MARK: Scrubber (whole session on one time axis; the handle moves inside the selected part)
+
+    private var scrubber: some View {
+        GeometryReader { geo in
+            let w = geo.size.width
+            let t0 = parts.first?.startDate ?? segment.startDate
+            let t1 = parts.last.flatMap { $0.endDate ?? $0.startDate.addingTimeInterval($0.duration) } ?? partEnd
+            let total = max(t1.timeIntervalSince(t0), 1)
+            let x: (Date) -> CGFloat = { w * CGFloat($0.timeIntervalSince(t0) / total) }
+            let hx = x(splitDate)
+            ZStack(alignment: .leading) {
+                ForEach(partsWithChoice) { p in
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(p.activityType.themeColor.opacity(p.id == partID ? 1 : 0.4))
+                        .frame(width: max(2, x(p.endDate ?? p.startDate.addingTimeInterval(p.duration)) - x(p.startDate) - 2), height: 16)
+                        .offset(x: x(p.startDate), y: 0)
+                }
+                if canSplit {
+                    Capsule().fill(ShuttlXColor.textPrimary)
+                        .frame(width: 4, height: 32)
+                        .offset(x: hx - 2)
+                }
+            }
+            .frame(height: 32)
+            .contentShape(Rectangle())
+            .gesture(DragGesture(minimumDistance: 0).onChanged { g in
+                guard canSplit else { return }
+                let secs = Double(g.location.x / w) * total + t0.timeIntervalSince1970
+                handle = (secs - segment.startDate.timeIntervalSince1970) / max(segment.duration, 1)
+            })
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Split point at \(TodayFormat.clock(splitDate))")
+            .accessibilityAdjustableAction { dir in
+                handle += (dir == .increment ? 0.1 : -0.1)
+            }
+        }
+        .frame(height: 32)
+        .padding(.vertical, 4)
+        .opacity(canSplit ? 1 : 0.5)
+    }
+
+    private var actions: some View {
+        HStack(spacing: 8) {
+            actionButton("Split at \(TodayFormat.clock(splitDate))", enabled: canSplit, action: split)
+            actionButton("Merge with next", enabled: canMerge, action: merge)
+        }
+    }
+
+    private func actionButton(_ title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(ShuttlXFont.cardSubtitle.weight(.semibold).monospacedDigit())
+                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(ShuttlXColor.ctaPrimary.opacity(0.14), in: Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+        .opacity(enabled ? 1 : 0.4)
     }
 
     private func tile(_ a: DetectedActivity) -> some View {

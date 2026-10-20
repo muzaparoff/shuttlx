@@ -86,12 +86,20 @@ struct WorkoutSummaryView: View {
                     }
                 }
                 .padding(.top, WatchScale.pt(12))
-                // Only after HealthKit confirmed finishWorkout(); otherwise nothing.
+                // Saved only after HealthKit confirmed finishWorkout(). The failure
+                // line replaces the old TrainingView alert, which was set after this
+                // screen had already replaced the workout and so never appeared.
                 if workoutManager.healthKitSaved {
                     Text("Saved to Health \u{2713}")
                         .font(.system(size: WatchScale.pt(11)))
                         .foregroundStyle(ShuttlXColor.textSecondary)
                         .padding(.top, WatchScale.pt(4))
+                } else if workoutManager.healthKitSaveError != nil {
+                    Text("Not saved to Health")
+                        .font(.system(size: WatchScale.pt(11), weight: .semibold))
+                        .foregroundStyle(ShuttlXColor.ctaWarning)
+                        .padding(.top, WatchScale.pt(4))
+                        .accessibilityLabel("Not saved to Health. The workout is kept in ShuttlX.")
                 }
                 Button("Done") {
                     #if os(watchOS)

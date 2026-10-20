@@ -8,7 +8,6 @@ struct DashboardView: View {
     @EnvironmentObject var workoutController: iPhoneWorkoutController
     @ObservedObject var sharedData = PhoneSyncCoordinator.shared
     @ObservedObject private var importer = HealthKitImporter.shared
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
     @EnvironmentObject var deepLinkRouter: DeepLinkRouter
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ThemeManager.self) private var themeManager
@@ -16,16 +15,19 @@ struct DashboardView: View {
     @State private var selectedDay = Date()
     @State private var dismissedParts = Set(UserDefaults.standard.stringArray(forKey: dismissedPartsKey) ?? [])
     @State private var pickingPartFor: TrainingSession?
-    @State private var fixing: ActivitySegment?
+    @State private var fixing: FixTarget?
+    #if DEBUG
+    @State private var seamFired = false
+    #endif
 
     private var daySessions: [TrainingSession] {
-        dataManager.sessions
+        dataManager.effectiveSessions
             .filter { Calendar.current.isDate($0.startDate, inSameDayAs: selectedDay) }
             .sorted { $0.startDate < $1.startDate }
     }
 
     private var isLive: Bool { sharedData.isWorkoutActiveOnWatch }
-    private var showEmpty: Bool { dataManager.sessions.isEmpty && !isLive }
+    private var showEmpty: Bool { dataManager.effectiveSessions.isEmpty && !isLive }
 
     private func consumePendingPrograms() {
         guard deepLinkRouter.showPrograms else { return }
@@ -98,10 +100,9 @@ struct DashboardView: View {
     @ViewBuilder
     private var dataContent: some View {
         statsRow
-        TodayWeekStrip(sessions: dataManager.sessions, selected: $selectedDay)
+        TodayWeekStrip(sessions: dataManager.effectiveSessions, selected: $selectedDay)
         if let s = bannerSession {
-            let segs = overrides.applying(to: s.segments)
-            PartsFoundBanner(session: s, segments: segs,
+            PartsFoundBanner(session: s, segments: s.segments,
                              onLooksRight: { dismissBanner(s) },
                              onFix: { pickingPartFor = s })
         }
@@ -125,7 +126,7 @@ struct DashboardView: View {
             LiveRouteView(routePoints: sharedData.liveRoutePoints, compact: true)
                 .transition(.opacity)
         }
-        let earlier = Array(dataManager.sessions.sorted { $0.startDate > $1.startDate }.prefix(3))
+        let earlier = Array(dataManager.effectiveSessions.sorted { $0.startDate > $1.startDate }.prefix(3))
         if !earlier.isEmpty {
             Text("Earlier")
                 .font(ShuttlXFont.microLabel).textCase(.uppercase)
@@ -166,20 +167,29 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showingPrograms) { ProgramsTabView() }
             .task { consumePendingPrograms() }
+            #if DEBUG
+            // Screenshot seam: SHUTTLX_DEMO_FIX_TODAY=<part number> opens Fix a part on that part of the banner session.
+            .task(id: dataManager.effectiveVersion) {
+                guard !seamFired, fixing == nil, let n = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_FIX_TODAY"].flatMap(Int.init),
+                      let s = bannerSession, s.segments.indices.contains(n - 1) else { return }
+                try? await Task.sleep(for: .seconds(1))
+                seamFired = true
+                fixing = FixTarget(sessionID: s.id, partID: s.segments[n - 1].id)
+            }
+            #endif
             .onChange(of: deepLinkRouter.showPrograms) { consumePendingPrograms() }
             .confirmationDialog("Fix a part", isPresented: Binding(get: { pickingPartFor != nil }, set: { if !$0 { pickingPartFor = nil } }), titleVisibility: .visible) {
                 if let s = pickingPartFor {
-                    ForEach(overrides.applying(to: s.segments)) { seg in
-                        Button("\(TodayFormat.activityName(seg.activityType)) \u{00B7} \(TodayFormat.clock(seg.startDate)) \u{00B7} \(TodayFormat.short(seg.duration))") { fixing = seg }
+                    ForEach(s.segments) { seg in
+                        Button("\(TodayFormat.activityName(seg.activityType)) \u{00B7} \(TodayFormat.clock(seg.startDate)) \u{00B7} \(TodayFormat.short(seg.duration))") {
+                            fixing = FixTarget(sessionID: s.id, partID: seg.id)
+                        }
                     }
                 }
             }
-            .sheet(item: $fixing) { seg in
-                // The dialog clears `pickingPartFor` when it dismisses, so find the part's session by id.
-                let parts = dataManager.sessions.first { $0.segments.contains { $0.id == seg.id } }?.segments ?? []
-                FixPartSheet(segment: seg, partNumber: parts.firstIndex { $0.id == seg.id }.map { $0 + 1 }) {
-                    overrides.set($0, for: seg)
-                }
+            .sheet(item: $fixing) { target in
+                FixPartSheet(sessionID: target.sessionID, partID: target.partID,
+                             parts: dataManager.effectiveSessions.first { $0.id == target.sessionID }?.segments ?? [])
             }
             .animation(reduceMotion ? nil : .spring(response: 0.4, dampingFraction: 0.8), value: isLive)
             .timelineScreenBackground()

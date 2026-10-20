@@ -18,7 +18,6 @@ struct HistoryMapView: View {
     @Binding var mode: HistoryMode
     @Binding var month: Date
 
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
     @State private var filter: DetectedActivity?
     @State private var selectedID: UUID?
     @State private var position: MapCameraPosition = .automatic
@@ -32,7 +31,7 @@ struct HistoryMapView: View {
     // MARK: - Data
 
     private func effectiveActivities(_ s: TrainingSession) -> Set<DetectedActivity> {
-        Set(s.displaySegments(overrides).map(\.activityType))
+        Set(s.displaySegments().map(\.activityType))
     }
 
     /// Sessions that pass the chip filter (matched on the DETECTED activity, overrides included).
@@ -54,7 +53,7 @@ struct HistoryMapView: View {
     /// Splits the (decimated) route by the effective activity at each point's timestamp.
     private func pieces(for s: TrainingSession) -> [RoutePiece] {
         guard let route = s.route, route.count >= 2 else { return [] }
-        let segs = s.displaySegments(overrides)
+        let segs = s.displaySegments()
         let step = max(1, route.count / 200)
         var idx = Array(stride(from: 0, to: route.count, by: step))
         if idx.last != route.count - 1 { idx.append(route.count - 1) }
@@ -341,7 +340,7 @@ struct HistoryMapView: View {
 
     @ViewBuilder
     private func row(_ s: TrainingSession) -> some View {
-        let segs = s.displaySegments(overrides)
+        let segs = s.displaySegments()
         let content = HStack(spacing: 10) {
             Group {
                 if hasRoute(s) {
@@ -394,7 +393,7 @@ struct HistoryMapView: View {
     // MARK: - Selected route
 
     private func detail(_ s: TrainingSession) -> some View {
-        let segs = s.displaySegments(overrides)
+        let segs = s.displaySegments()
         let group = sameRouteGroups.first { $0.contains { $0.id == s.id } }
         return VStack(spacing: 12) {
             HStack(alignment: .firstTextBaseline) {

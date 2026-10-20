@@ -22,7 +22,7 @@ globs:
 
 - Never silently fail: use `do/catch` with `os.log` for encode/decode errors
 - Always encode/decode inside `do { try } catch { Logger.error(...) }`
-- Corrections that must not touch `sessions.json` go in their own file: `SegmentOverrideStore` (`@MainActor`, single writer) keeps `segment_overrides.json`; effective type = `override ?? segment.activityType`
+- Corrections that must not touch `sessions.json` go in their own file: `SegmentOverrideStore` (`@MainActor`, single writer) keeps `segment_overrides.json`; effective parts = `SegmentEdits.apply(segments, sessionID)` (Shared, pure), applied once in `DataManager.effectiveSessions`; never write effective sessions back
 
 ## WatchConnectivity
 

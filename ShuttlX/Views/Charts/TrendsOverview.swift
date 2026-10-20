@@ -11,7 +11,6 @@ enum TrendsPeriod: String, CaseIterable {
 /// Activities are the EFFECTIVE types (SegmentOverrideStore corrections applied).
 struct TrendsOverview: View {
     let sessions: [TrainingSession]
-    @ObservedObject private var overrides = SegmentOverrideStore.shared
     @State private var period: TrendsPeriod = .month
 
     private struct Entry: Identifiable {
@@ -46,7 +45,7 @@ struct TrendsOverview: View {
     /// else everything goes to the longest part. Parts of type Rest never get distance.
     private func kmByActivity(_ s: TrainingSession) -> [DetectedActivity: Double] {
         guard let d = s.distance, d > 0 else { return [:] }
-        let segs = s.displaySegments(overrides).filter { shown.contains($0.activityType) }
+        let segs = s.displaySegments().filter { shown.contains($0.activityType) }
         var own: [DetectedActivity: Double] = [:]
         for g in segs { own[g.activityType, default: 0] += max(0, g.distance ?? 0) }
         let sum = own.values.reduce(0, +)
@@ -81,7 +80,7 @@ struct TrendsOverview: View {
 
     private var timeByActivity: [(activity: DetectedActivity, seconds: TimeInterval)] {
         var t: [DetectedActivity: TimeInterval] = [:]
-        for s in inPeriod { for g in s.displaySegments(overrides) where shown.contains(g.activityType) { t[g.activityType, default: 0] += max(0, g.duration) } }
+        for s in inPeriod { for g in s.displaySegments() where shown.contains(g.activityType) { t[g.activityType, default: 0] += max(0, g.duration) } }
         return shown.compactMap { a in t[a].map { (a, $0) } }.filter { $0.1 > 0 }
     }
 

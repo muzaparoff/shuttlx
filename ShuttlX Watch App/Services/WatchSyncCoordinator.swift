@@ -233,6 +233,36 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         logger.info("heartAlert \(kind) sent via sendMessage")
     }
 
+    /// Effort answer for an already-sent session. Payload keys:
+    ///   "action":    "updateSessionEffort"
+    ///   "sessionId": String — `TrainingSession.id.uuidString`
+    ///   "effortRPE": Int    — 0-10
+    /// Under 200 bytes: sendMessage when reachable, else (or on error) transferUserInfo,
+    /// which is durable, so no retry loop. Phone side only; never Health or telemetry.
+    func sendSessionEffort(id: UUID, effortRPE: Int) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            logger.warning("updateSessionEffort not sent — WCSession not activated")
+            return
+        }
+        let payload = Self.sessionEffortPayload(id: id, effortRPE: effortRPE)
+        guard WCSession.default.isReachable else {
+            WCSession.default.transferUserInfo(payload)
+            logger.info("updateSessionEffort queued via transferUserInfo")
+            return
+        }
+        WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
+            Task { @MainActor in
+                self?.logger.error("updateSessionEffort sendMessage failed (\(error.localizedDescription)) — transferUserInfo")
+                WCSession.default.transferUserInfo(Self.sessionEffortPayload(id: id, effortRPE: effortRPE))
+            }
+        }
+        logger.info("updateSessionEffort sent via sendMessage")
+    }
+
+    nonisolated static func sessionEffortPayload(id: UUID, effortRPE: Int) -> [String: Any] {
+        ["action": "updateSessionEffort", "sessionId": id.uuidString, "effortRPE": effortRPE]
+    }
+
     nonisolated static func heartAlertPayload(kind: String, value: Int?, ts: TimeInterval) -> [String: Any] {
         var p: [String: Any] = ["action": "heartAlert", "kind": kind, "ts": ts]
         if let value { p["value"] = value }
@@ -553,13 +583,15 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     /// Post-workout effort (summary screen). The session was already sent at stop and
-    /// iOS dedups by id WITHOUT updating, so this only lands on the phone if the session
-    /// is still waiting in `pendingSessions`. Otherwise it stays watch-side.
+    /// iOS dedups by id WITHOUT updating, so the effort also goes to the phone as its
+    /// own small `updateSessionEffort` message (see `sendSessionEffort`). A session still
+    /// waiting in `pendingSessions` carries it too.
     func updateSessionEffort(id: UUID, effortRPE: Int) {
         if let i = pendingSessions.firstIndex(where: { $0.id == id }) {
             pendingSessions[i].effortRPE = effortRPE
             savePendingSessionsToDisk()
         }
+        sendSessionEffort(id: id, effortRPE: effortRPE)
         guard let containerURL = Self.getWorkingContainer() else { return }
         let logger = self.logger
         // Same serial queue as the stop-time append, so this always runs after it.

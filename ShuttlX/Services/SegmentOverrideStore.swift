@@ -2,14 +2,14 @@ import Foundation
 import os.log
 import ShuttlXShared
 
-/// User corrections of a part's activity ("Fix a part"). Kept in its own file so
-/// `sessions.json` is never mutated; the effective type is `override ?? segment.activityType`.
-/// Single writer: main actor only.
+/// User corrections of a session's parts ("Fix a part": type, split, merge). Kept in its own file so
+/// `sessions.json` is never mutated. The logic is the pure `SegmentEdits` (ShuttlXShared); `DataManager`
+/// applies it once to build `effectiveSessions`. Single writer: main actor only.
 @MainActor
 final class SegmentOverrideStore: ObservableObject {
     static let shared = SegmentOverrideStore()
 
-    @Published private(set) var overrides: [UUID: DetectedActivity] = [:]
+    @Published private(set) var edits = SegmentEdits()
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "SegmentOverrideStore")
     private let url: URL? = FileManager.default
@@ -18,35 +18,41 @@ final class SegmentOverrideStore: ObservableObject {
 
     private init() { load() }
 
-    func effective(for segment: ActivitySegment) -> DetectedActivity {
-        overrides[segment.id] ?? segment.activityType
+    /// `parts` are the session's current EFFECTIVE parts (what the user is looking at).
+    func setType(_ activity: DetectedActivity, partID: UUID, parts: [ActivitySegment], sessionID: UUID) {
+        commit(edits.settingType(activity, partID: partID, parts: parts, sessionID: sessionID))
     }
 
-    /// Segments with overrides applied (same ids), for display.
-    func applying(to segments: [ActivitySegment]) -> [ActivitySegment] {
-        segments.map { seg in
-            guard let o = overrides[seg.id], o != seg.activityType else { return seg }
-            var copy = seg
-            copy.activityType = o
-            return copy
-        }
+    @discardableResult
+    func split(partID: UUID, at date: Date, parts: [ActivitySegment], sessionID: UUID) -> Bool {
+        guard let next = edits.splitting(partID: partID, at: date, parts: parts, sessionID: sessionID) else { return false }
+        commit(next)
+        return true
     }
 
-    func set(_ activity: DetectedActivity, for segment: ActivitySegment) {
-        if activity == segment.activityType {
-            overrides.removeValue(forKey: segment.id)
-        } else {
-            overrides[segment.id] = activity
-        }
+    @discardableResult
+    func merge(partID: UUID, parts: [ActivitySegment], sessionID: UUID) -> Bool {
+        guard let next = edits.merging(partID: partID, parts: parts, sessionID: sessionID) else { return false }
+        commit(next)
+        return true
+    }
+
+    private func commit(_ next: SegmentEdits) {
+        edits = next
         save()
     }
 
     private func load() {
         guard let url, FileManager.default.fileExists(atPath: url.path) else { return }
         do {
-            let raw = try JSONDecoder().decode([String: DetectedActivity].self, from: Data(contentsOf: url))
-            overrides = Dictionary(uniqueKeysWithValues: raw.compactMap { k, v in UUID(uuidString: k).map { ($0, v) } })
+            edits = try SegmentEdits.decode(Data(contentsOf: url))
         } catch {
+            // Keep the bytes: the next save would otherwise overwrite the user's corrections with an empty file.
+            let backup = url.deletingLastPathComponent()
+                .appendingPathComponent("segment_overrides_corrupt_\(Int(Date().timeIntervalSince1970)).json")
+            do { try FileManager.default.copyItem(at: url, to: backup) } catch {
+                logger.error("Backup of corrupt overrides failed: \(error.localizedDescription, privacy: .public)")
+            }
             logger.error("Load failed: \(error.localizedDescription, privacy: .public)")
         }
     }
@@ -54,8 +60,7 @@ final class SegmentOverrideStore: ObservableObject {
     private func save() {
         guard let url else { logger.error("App Group container unavailable"); return }
         do {
-            let raw = Dictionary(uniqueKeysWithValues: overrides.map { ($0.key.uuidString, $0.value) })
-            try JSONEncoder().encode(raw).write(to: url, options: .atomic)
+            try JSONEncoder().encode(edits).write(to: url, options: .atomic)
         } catch {
             logger.error("Save failed: \(error.localizedDescription, privacy: .public)")
         }

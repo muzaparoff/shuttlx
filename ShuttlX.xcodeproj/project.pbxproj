@@ -23,6 +23,7 @@
 		A5923517B /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923517F /* SettingsView.swift */; };
 		HV000001B /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = HV000001F /* HelpView.swift */; };
 		SO000001B /* SegmentOverrideStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = SO000001F /* SegmentOverrideStore.swift */; };
+		SHR00001B /* SessionHeartRateLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = SHR00001F /* SessionHeartRateLoader.swift */; };
 		HI000001B /* HealthKitImporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = HI000001F /* HealthKitImporter.swift */; };
 		A5923518B /* SyncDebugView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923518F /* SyncDebugView.swift */; };
 		A5923521B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A5923521F /* Assets.xcassets */; };
@@ -248,6 +249,7 @@
 		A5923517F /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		HV000001F /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		SO000001F /* SegmentOverrideStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SegmentOverrideStore.swift; sourceTree = "<group>"; };
+		SHR00001F /* SessionHeartRateLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionHeartRateLoader.swift; sourceTree = "<group>"; };
 		HI000001F /* HealthKitImporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitImporter.swift; sourceTree = "<group>"; };
 		A5923518F /* SyncDebugView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyncDebugView.swift; sourceTree = "<group>"; };
 		A5923521F /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -475,6 +477,7 @@
 				A5923507F /* DataManager.swift */,
 				HI000001F /* HealthKitImporter.swift */,
 				SO000001F /* SegmentOverrideStore.swift */,
+				SHR00001F /* SessionHeartRateLoader.swift */,
 				FB000001F /* FeedbackPrompt.swift */,
 				A5923508F /* PhoneSyncCoordinator.swift */,
 				LA000005 /* LiveActivityManager.swift */,
@@ -928,6 +931,7 @@
 				A5923507B /* DataManager.swift in Sources */,
 				HI000001B /* HealthKitImporter.swift in Sources */,
 				SO000001B /* SegmentOverrideStore.swift in Sources */,
+				SHR00001B /* SessionHeartRateLoader.swift in Sources */,
 				FB000001 /* FeedbackPrompt.swift in Sources */,
 				A5923508B /* PhoneSyncCoordinator.swift in Sources */,
 				A5923531 /* SessionDetailView.swift in Sources */,

@@ -77,7 +77,9 @@ Heart limits and alerts:
   No motion for 60 s (no HR, no motion) → auto-pause, reason "noMotion" → Live Activity "Paused – no motion"
 
 Activity auto-switch (watch): GPS speed → SpeedActivityClassifier (hysteresis) → checkSpeedActivity() in WatchWorkoutManager
-Fix a part (iOS): SessionDetailView → SegmentOverrideStore → segment_overrides.json (sessions.json never mutated)
+Fix a part (iOS): SessionDetailView/FixPartSheet (type, Split, Merge, scrubber) → SegmentOverrideStore → segment_overrides.json (v2 envelope `SegmentEdits`: types + per-session partitions; v1 flat file still decodes; sessions.json never mutated)
+  Pure logic `Shared/SegmentEdits.swift` (tested). DataManager.effectiveSessions = sessions + edits applied ONCE (Rest calories zeroed); every reader uses it, only persistence/CloudKit use raw `sessions`
+  Session detail HR line: SessionHeartRateLoader queries HealthKit for the session range (not stored, never sent anywhere); hidden when no data
 Live Activity controls: Pause/Resume and End are LiveActivityIntents (ShuttlX/Models/WorkoutControlIntents.swift)
 
 Theme sync:

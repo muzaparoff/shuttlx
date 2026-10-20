@@ -40,18 +40,13 @@ extension TrainingView {
     // (TrainingView+Running.swift) — the one-word layout from the timeline mockup.
 
     var fullWorkoutDisplayTab: some View {
-        let h = screenHeight
-        let heroSize = max(44, h * 0.26)              // step countdown hero
-        let valueSize = max(40, h * 0.19)             // HR (second tier)
-        let tertiarySize = max(16, h * 0.10)          // DIST / PACE / TIME / CAL two-up
-        let labelSize = max(10, h * 0.08)
-        let labelWidth = h * 0.20
-        let rowSpacing = h * 0.025
-        // HR digits are the only element in their row that yields; solved so
-        // three digits always fit next to the label, unit and zone arc.
-        let hrValueSize = fittedHRValueSize(valueSize: valueSize,
-                                            labelSize: labelSize,
-                                            labelWidth: labelWidth)
+        // Every size is mockup px via `WatchScale.pt`, then SOLVED against the row
+        // width — never scale-to-fit (see .claude/rules/watchos.md). Measured
+        // 2026-10-20 on 40mm: the old 0.08h header ran into the system clock and the
+        // TIME row sat on the page dots.
+        let rowWidth = screenWidth - 16                 // .padding(.horizontal, 8)
+        let labelSize = WatchScale.pt(11)
+        let bannerShown = isHighIntensityWarning || workoutManager.noHeartRateDetected
 
         return ZStack {
             // Step-type wash, hosted in its own view that observes the engine
@@ -60,91 +55,71 @@ extension TrainingView {
                 IntervalStepWash(engine: engine)
             }
 
-            VStack(alignment: .center, spacing: rowSpacing) {
-                // Header names the running program ("5K INTERVAL").
-                HStack(spacing: 6) {
-                    Text(workoutManager.workoutName.uppercased())
-                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
-                        .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                        .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.3 : 1.0)
-                        .animation(
-                            reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                            value: pausePulse
-                        )
-                    Spacer()
-                }
+            VStack(alignment: .leading, spacing: 0) {
+                // Program name ("5K INTERVAL") shares its line with the system clock
+                // (top right, ~0.31w on 40mm), so it is capped to the left 60%.
+                Text(workoutManager.workoutName.uppercased())
+                    .font(.system(size: labelSize, weight: .bold))
+                    .tracking(labelSize * 0.08)
+                    .foregroundColor(workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: screenWidth * 0.6, alignment: .leading)
+                    .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.3 : 1.0)
+                    .animation(
+                        reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
+                        value: pausePulse
+                    )
 
                 if let engine = workoutManager.intervalEngine {
-                    intervalCountdownHero(engine: engine, heroSize: heroSize, labelSize: labelSize)
+                    intervalCountdownHero(engine: engine, rowWidth: rowWidth, labelSize: labelSize,
+                                          showNext: !bannerShown)
+                        .padding(.top, WatchScale.pt(4))
                 } else {
                     ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
                                      elapsed: workoutManager.elapsedTime,
-                                     baseSize: heroSize,
-                                     availableWidth: screenWidth - (ShuttlXSpacing.xs * 2))
+                                     baseSize: WatchScale.pt(44),
+                                     availableWidth: rowWidth)
+                        .padding(.top, WatchScale.pt(4))
                 }
 
-                HStack {
-                    Text("HR")
-                        .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                        .foregroundColor(ShuttlXColor.textSecondary)
-                        .frame(width: labelWidth, alignment: .leading)
-                    Spacer()
-                    HStack(spacing: 4) {
-                        // Number big, "BPM" as a small trailing unit — the wide
-                        // element is just the digits, which always fit.
-                        Text(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate)" : "\u{2014}")
-                            .font(.system(size: hrValueSize, weight: .bold, design: .monospaced))
-                            .monospacedDigit()
-                            .foregroundColor(ShuttlXColor.forHRZone(workoutManager.heartRate))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                            .layoutPriority(1)
-                        Text("BPM")
-                            .font(.system(size: labelSize, weight: .bold, design: .monospaced))
-                            .foregroundColor(ShuttlXColor.textSecondary)
-                        HRZoneArc(zone: heartRateZoneNumber)
-                            .frame(width: 34, height: 17)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(workoutManager.heartRate > 0 ? "\(workoutManager.heartRate) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
-                .accessibilityValue(heartRateZoneNumber > 0 ? "Zone \(heartRateZoneNumber)" : "")
-                .accessibilityAddTraits(.updatesFrequently)
+                intervalHeartRateRow(labelSize: labelSize)
+                    .padding(.top, WatchScale.pt(5))
 
                 if isHighIntensityWarning {
-                    highIntensityWarningView(labelSize: labelSize)
+                    highIntensityWarningView(labelSize: labelSize).padding(.top, 3)
                 }
-
                 if workoutManager.noHeartRateDetected {
-                    noHeartRateBanner(labelSize: labelSize)
-                }
-
-                // DIST / PACE + elapsed TIME / CAL (the hero is the step countdown,
-                // so elapsed time is demoted here).
-                HStack(spacing: 8) {
-                    compactMetric("DIST", compactDistanceText, tertiarySize, labelSize,
-                                  a11y: "Distance \(accessibleDistance)")
-                        .background(kmSplitHighlight)
-                    compactMetric("PACE", paceText, tertiarySize, labelSize)
-                }
-                HStack(spacing: 8) {
-                    compactMetric("TIME", FormattingUtils.formatTimer(workoutManager.elapsedTime),
-                                  tertiarySize, labelSize)
-                    if workoutManager.calories > 0 {
-                        compactMetric("CAL", "\(workoutManager.calories)", tertiarySize, labelSize)
-                    } else {
-                        Color.clear.frame(maxWidth: .infinity)
-                    }
+                    noHeartRateBanner(labelSize: labelSize).padding(.top, 3)
                 }
 
                 Spacer(minLength: 0)
+
+                // DIST / PACE + elapsed TIME / CAL (the hero is the step countdown,
+                // so elapsed time is demoted here). One solved size per row.
+                let dist = compactDistanceText, pace = paceText
+                let time = FormattingUtils.formatTimer(workoutManager.elapsedTime)
+                let cal = workoutManager.calories > 0 ? "\(workoutManager.calories)" : "\u{2014}"
+                let topSize = twoUpValueSize(dist, pace, rowWidth: rowWidth, labelSize: labelSize)
+                let bottomSize = twoUpValueSize(time, cal, rowWidth: rowWidth, labelSize: labelSize)
+                HStack(spacing: 8) {
+                    compactMetric("DIST", dist, topSize, labelSize, a11y: "Distance \(accessibleDistance)")
+                        .background(kmSplitHighlight)
+                    compactMetric("PACE", pace, topSize, labelSize, a11y: accessiblePace)
+                }
+                HStack(spacing: 8) {
+                    compactMetric("TIME", time, bottomSize, labelSize,
+                                  a11y: "Elapsed \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
+                    compactMetric("CAL", cal, bottomSize, labelSize,
+                                  a11y: workoutManager.calories > 0 ? "\(workoutManager.calories) calories" : "Calories no data")
+                }
+                .padding(.top, WatchScale.pt(3))
             }
             .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
-            .padding(.horizontal, ShuttlXSpacing.xs)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(.horizontal, 8)
+            // Keep the last line clear of the TabView page dots.
+            .padding(.bottom, max(10, screenHeight * 0.055))
         }
         .overlay(alignment: .top) {
             if let engine = workoutManager.intervalEngine {
@@ -152,6 +127,39 @@ extension TrainingView {
                     .allowsHitTesting(false)
             }
         }
+    }
+
+    /// `[digits][BPM] ... [zone arc]` — digits solved for 3 glyphs, never scaled.
+    private func intervalHeartRateRow(labelSize: CGFloat) -> some View {
+        let hr = workoutManager.heartRate
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(hr > 0 ? "\(hr)" : "\u{2014}")
+                .font(.system(size: WatchScale.pt(26), weight: .bold, design: .monospaced))
+                .monospacedDigit()
+                .foregroundColor(ShuttlXColor.forHRZone(hr))
+                .fixedSize()
+            Text("BPM")
+                .font(.system(size: labelSize, weight: .bold))
+                .foregroundColor(ShuttlXColor.textSecondary)
+                .fixedSize()
+            Spacer(minLength: 4)
+            HRZoneArc(zone: heartRateZoneNumber)
+                .frame(width: 34, height: 17)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(hr > 0 ? "\(hr) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
+        .accessibilityAddTraits(.updatesFrequently)
+    }
+
+    /// Shared value size for one two-up row: both `[LABEL value]` halves fit at
+    /// the size of the longer value (min 4 glyphs so a row doesn't jump while
+    /// values grow). Cap pt(20).
+    private func twoUpValueSize(_ a: String, _ b: String, rowWidth: CGFloat, labelSize: CGFloat) -> CGFloat {
+        let advance: CGFloat = 0.62
+        let half = (rowWidth - 8) / 2
+        let labelWidth = 4 * advance * labelSize + 4
+        let glyphs = CGFloat(max(4, a.count, b.count))
+        return max(8, min(WatchScale.pt(20), (half - labelWidth - 2) / (glyphs * advance)))
     }
 
     /// Yellow-green highlight capsule shown briefly when a km split fires.
@@ -232,62 +240,21 @@ extension TrainingView {
         return max(10, min(cap, budget / (CGFloat(glyphs) * advance)))
     }
 
-    // Compact two-up metric (used in interval mode's tertiary rows).
-    // MARK: - HR Value Sizing
-
-    /// Point size for the BPM number, solved so three digits always render in full.
-    ///
-    /// The HR row is `[HR label][spacer][digits][BPM unit][zone arc]`. Everything
-    /// except the digits is fixed, so the digits get whatever is left. On a 40mm
-    /// screen the previous fixed `valueSize` (floor 40pt) needed ~72pt for "138"
-    /// while the row could only offer ~36pt; `minimumScaleFactor(0.6)` bottomed out
-    /// above that and SwiftUI truncated to "1…". Sizing up front removes the
-    /// dependency on scale-to-fit entirely.
-    ///
-    /// `glyphAdvanceRatio` was measured from a rendered 46mm frame ("138" at 47pt
-    /// spans ~66pt ⇒ 0.47em) and rounded up for margin.
-    func fittedHRValueSize(valueSize: CGFloat, labelSize: CGFloat, labelWidth: CGFloat) -> CGFloat {
-        let glyphAdvanceRatio: CGFloat = 0.52
-        let unitWidth = 3 * glyphAdvanceRatio * labelSize      // "BPM"
-        let arcWidth: CGFloat = 34                             // HRZoneArc, fixed
-        let gaps: CGFloat = 4 * 2 + 2                          // inner HStack spacing + slack
-        let available = screenWidth
-            - (ShuttlXSpacing.xs * 2)
-            - labelWidth
-            - unitWidth
-            - arcWidth
-            - gaps
-        let cap = available / (3 * glyphAdvanceRatio)          // always size for 3 digits
-        return max(16, min(valueSize, cap))
-    }
-
+    /// `[LABEL value]` half of an interval two-up row. `valueSize` comes from
+    /// `twoUpValueSize`, so both Texts render as asked (`fixedSize`, no scale factor).
     func compactMetric(_ label: String, _ value: String,
-                               _ valueSize: CGFloat, _ labelSize: CGFloat,
-                               a11y: String? = nil) -> some View {
-        HStack(spacing: 4) {
+                       _ valueSize: CGFloat, _ labelSize: CGFloat,
+                       a11y: String? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(label)
                 .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                 .foregroundColor(ShuttlXColor.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                // fixedSize + layoutPriority(0): the label is granted exactly its
-                // ideal width and never compressed. This is what makes the value's
-                // layoutPriority(1) safe — an earlier attempt at priority alone
-                // starved the label to "‥" because the label was still compressible.
-                .fixedSize(horizontal: true, vertical: false)
-                .layoutPriority(0)
+                .fixedSize()
             Text(value)
                 .font(.system(size: valueSize, weight: .bold, design: .monospaced))
                 .monospacedDigit()
                 .foregroundColor(ShuttlXColor.textPrimary)
-                .lineLimit(1)
-                // 0.4 floor: "2.15 km" needs ~0.48 to fit the half-width slot on
-                // 46mm; at the old 0.5 floor it clipped the " km" unit to "2.15…".
-                // On 40mm interval mode the slot is narrower still and the value was
-                // clipping to "3.42…" — the priority below lets it claim the space
-                // left by the (now incompressible) label and scale into it instead.
-                .minimumScaleFactor(0.4)
-                .layoutPriority(1)
+                .fixedSize()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -309,42 +276,48 @@ extension TrainingView {
     // a sweaty mid-treadmill glance reads it immediately. A thin capsule progress
     // bar beneath conveys remaining time pre-attentively without the battery cost
     // of a continuously redrawn radial ring.
-    func intervalCountdownHero(engine: IntervalEngine, heroSize: CGFloat, labelSize: CGFloat) -> some View {
+    ///
+    /// The phase column ("COOL / DOWN / 3/8") stacks one word per line so its
+    /// width is set by a 4-5 glyph word, and the countdown is solved against
+    /// what is left of the row. `showNext: false` drops the NEXT preview to pay
+    /// for a safety banner on 40mm.
+    func intervalCountdownHero(engine: IntervalEngine, rowWidth: CGFloat, labelSize: CGFloat,
+                               showNext: Bool) -> some View {
         let stepColor = engine.currentStep.map { ShuttlXColor.forStepType($0.type) } ?? ShuttlXColor.textPrimary
         let stepProgress: Double = {
             guard let step = engine.currentStep, step.duration > 0 else { return 0 }
             return 1.0 - (engine.currentStepTimeRemaining / step.duration)
         }()
+        let advance: CGFloat = 0.62
+        let phaseSize = WatchScale.pt(13)
+        let countdown = FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining))
+        let phaseWords = engine.currentStep.map { $0.type.displayName.uppercased().split(separator: " ").map(String.init) } ?? []
+        let counter = "\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)"
+        let phaseGlyphs = max(4, counter.count, phaseWords.map(\.count).max() ?? 0)
+        let phaseWidth = CGFloat(phaseGlyphs) * advance * phaseSize
+        let heroSize = max(16, min(WatchScale.pt(44),
+                                   (rowWidth - phaseWidth - 6) / (CGFloat(countdown.count) * advance)))
 
-        return VStack(spacing: 4) {
-            // Countdown + phase pill on the same row — saves vertical space and
-            // pairs the two most decision-critical bits (remaining time + which
-            // phase you're in).
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .center, spacing: 6) {
+                Text(countdown)
                     .font(.system(size: heroSize, weight: .bold, design: .monospaced))
                     .monospacedDigit()
                     .foregroundColor(stepColor)
                     .contentTransition(.numericText())
-                    .minimumScaleFactor(0.5)
-                    .lineLimit(1)
-                    .layoutPriority(1)   // the countdown is the hero — it claims its
-                                         // width first so the phase column yields,
-                                         // never the digits (was clipping to "01…").
-                if let step = engine.currentStep {
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(step.type.displayName.uppercased())
-                            .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                    .fixedSize()
+                VStack(alignment: .leading, spacing: 0) {
+                    ForEach(phaseWords, id: \.self) { word in
+                        Text(word)
+                            .font(.system(size: phaseSize, weight: .bold, design: .monospaced))
                             .foregroundColor(stepColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                        Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
-                            .font(.system(size: labelSize, weight: .regular, design: .monospaced))
-                            .foregroundColor(ShuttlXColor.textSecondary)
-                            .monospacedDigit()
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
+                            .fixedSize()
                     }
+                    Text(counter)
+                        .font(.system(size: phaseSize, weight: .regular, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                        .monospacedDigit()
+                        .fixedSize()
                 }
             }
 
@@ -359,31 +332,33 @@ extension TrainingView {
                 }
             }
             .frame(height: 3)
-            .frame(maxWidth: heroSize * 2.4)   // arc never wider than the digits
+            .padding(.top, WatchScale.pt(3))
 
             // Next-step preview — only when there is a next step
-            if let next = engine.nextStep {
+            if showNext, let next = engine.nextStep {
                 HStack(spacing: 4) {
                     Text("NEXT")
-                        .font(.system(size: labelSize * 0.85, weight: .bold, design: .monospaced))
+                        .font(.system(size: labelSize, weight: .bold, design: .monospaced))
                         .foregroundColor(ShuttlXColor.textSecondary.opacity(0.6))
                     Image(systemName: "chevron.right")
-                        .font(.system(size: labelSize * 0.7, weight: .semibold))
+                        .font(.system(size: labelSize * 0.8, weight: .semibold))
                         .foregroundColor(ShuttlXColor.textSecondary.opacity(0.5))
                     Text(next.type.displayName.uppercased())
-                        .font(.system(size: labelSize * 0.85, weight: .semibold, design: .monospaced))
+                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
                         .foregroundColor(ShuttlXColor.forStepType(next.type).opacity(0.75))
                     Text(formatStepDuration(next.duration))
-                        .font(.system(size: labelSize * 0.85, weight: .regular, design: .monospaced))
+                        .font(.system(size: labelSize, weight: .regular, design: .monospaced))
                         .foregroundColor(ShuttlXColor.textSecondary.opacity(0.6))
                         .monospacedDigit()
                 }
+                .fixedSize()
+                .padding(.top, WatchScale.pt(4))
                 .transition(.opacity)
                 .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: engine.currentStepIndex)
                 .accessibilityLabel("Next: \(next.type.displayName), \(formatStepDuration(next.duration))")
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .id(engine.currentStepIndex)
         .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.95)))
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: engine.currentStepIndex)
@@ -421,12 +396,16 @@ extension TrainingView {
 
     /// Heart-limit mode: with a synced limit (own or estimated, resolved on the phone)
     /// the banner fires above THAT limit — the same number the heart alerts use — so
-    /// the screen and the alert never disagree. No limit: old max-HR calculator.
+    /// the screen and the alert never disagree. No limit: 90% of the estimated
+    /// max HR — the exact HARD cut-off of `heartZoneWord`, so the banner never
+    /// shows next to STEADY.
     func isHighHR(_ hr: Int) -> Bool {
+        guard hr > 0 else { return false }
         if let limit = WatchSyncCoordinator.shared.heartSafety.upperLimit {
-            return hr > 0 && hr > limit
+            return hr > limit
         }
-        return hrCalculator.isHighIntensityWarning(heartRate: Double(hr))
+        let maxHR = Int(hrCalculator.estimatedMaxHR.rounded())
+        return HeartSafetySettings(upperLimit: maxHR).zoneWord(hr: hr) == "HARD"
     }
 
     /// HR the zone word is measured against: the synced heart limit, else the
@@ -491,7 +470,7 @@ extension TrainingView {
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
         .animation(.easeInOut(duration: 0.4), value: isHighIntensityWarning)
-        .accessibilityLabel(WatchSyncCoordinator.shared.heartSafety.upperLimit.map { "Heart rate high — ease off. Heart rate above your limit of \($0)." } ?? "Heart rate high — ease off. Heart rate above 70 percent of maximum.")
+        .accessibilityLabel(WatchSyncCoordinator.shared.heartSafety.upperLimit.map { "Heart rate high — ease off. Heart rate above your limit of \($0)." } ?? "Heart rate high — ease off. Heart rate above 90 percent of maximum.")
         .accessibilityAddTraits(.updatesFrequently)
     }
 
