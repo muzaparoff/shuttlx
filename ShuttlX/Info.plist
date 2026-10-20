@@ -27,7 +27,7 @@
 	<key>NSMotionUsageDescription</key>
 	<string>ShuttlX uses motion data to track your steps and detect activity type during workouts.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress.</string>
+	<string>ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress. ShuttlX also reads your ShuttlX workouts, including their routes, from Apple Health so a workout recorded on your Apple Watch still appears in your history if it did not sync directly.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>ShuttlX uses HealthKit to save your workout data and fitness activities to keep your health information up to date across all your devices.</string>
 	<key>UIApplicationSceneManifest</key>

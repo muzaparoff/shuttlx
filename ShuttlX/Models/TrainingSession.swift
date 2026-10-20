@@ -94,6 +94,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     // prompt went unanswered. Nil for every user-ended and legacy session.
     var autoEnded: Bool?
 
+    // True when the iPhone built this session from an Apple Health workout
+    // (it never arrived over WatchConnectivity). Nil for everything else.
+    var importedFromHealth: Bool?
+
     // Legacy fields for backward compatibility with old data
     var programID: UUID?
     var programName: String?

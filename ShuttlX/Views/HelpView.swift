@@ -167,6 +167,8 @@ enum HelpContent {
             steps: [
                 HelpStep(icon: "heart.fill",
                          text: "Manage access any time: Settings tab → Health Integration → “Why We Need Access”."),
+                HelpStep(icon: "heart.text.square",
+                         text: "If a Watch workout never synced to the iPhone, ShuttlX reads it back from Apple Health when you open the app. It shows a “From Health” badge in History."),
                 HelpStep(icon: "trash",
                          text: "Delete everything locally with “Clear All Training Sessions” in Settings → Data Management."),
             ]),

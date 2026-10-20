@@ -8,6 +8,7 @@ struct SyncDebugView: View {
     @StateObject private var syncMonitor = SyncMonitor.shared
     @ObservedObject private var sharedDataManager: PhoneSyncCoordinator = .shared
     @EnvironmentObject private var dataManager: DataManager
+    @ObservedObject private var importer = HealthKitImporter.shared
     @State private var healthRows: [HealthRow] = []
     @State private var healthStatus = "Not loaded"
 
@@ -39,6 +40,10 @@ struct SyncDebugView: View {
                 }
 
                 Section(header: Text("Health vs app (60 days) — \(healthStatus)")) {
+                    statusRow(title: "Last import", value: importer.lastImportDate.map { $0.formatted(date: .abbreviated, time: .shortened) } ?? "Never")
+                    statusRow(title: "Last import count", value: "\(importer.lastImportCount)")
+                    statusRow(title: "Importer", value: importer.status)
+                    Button("Import now") { Task { await importer.importNow() } }
                     Button("Reload from Health") { Task { await loadHealth() } }
                     ForEach(healthRows) { row in
                         HStack {

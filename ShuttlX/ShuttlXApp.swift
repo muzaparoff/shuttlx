@@ -64,6 +64,7 @@ struct ShuttlXApp: App {
             #endif
             if newPhase == .active {
                 dataManager.loadSessionsFromAppGroup()
+                Task { await HealthKitImporter.shared.importNow() }
                 sharedDataManager.reconcileWithDataManager()
                 sharedDataManager.reconcileSessionIDs()
                 if authManager.isSignedIn {
@@ -191,6 +192,8 @@ struct ShuttlXApp: App {
                 // DataManager.handleReceivedSessions(_:) — same store the
                 // watch writes to.
                 workoutController.dataManager = dataManager
+                HealthKitImporter.shared.start(dataManager: dataManager)
+                await HealthKitImporter.shared.importNow()
                 // Mirror watch stops back to the iPhone: when the user stops
                 // on the Watch, the paired iPhone workout stops and saves too.
                 PhoneSyncCoordinator.shared.onRemoteWorkoutStopped = { [weak workoutController] in

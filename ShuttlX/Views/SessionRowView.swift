@@ -37,6 +37,19 @@ struct SessionRowView: View {
                 }
             }
 
+            if session.importedFromHealth == true {
+                HStack(spacing: 4) {
+                    Image(systemName: "heart.text.square")
+                    Text("From Health")
+                }
+                .font(ShuttlXFont.cardCaption)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+                .background(ShuttlXColor.textSecondary.opacity(0.15), in: Capsule())
+                .accessibilityHidden(true)
+            }
+
             // Row 3: Compact metrics
             HStack(spacing: 12) {
                 if let calories = session.caloriesBurned {
@@ -85,6 +98,9 @@ struct SessionRowView: View {
         }
         if let heartRate = session.averageHeartRate {
             parts.append("average heart rate \(Int(heartRate)) BPM")
+        }
+        if session.importedFromHealth == true {
+            parts.append("imported from Apple Health")
         }
         return parts.joined(separator: ", ")
     }
