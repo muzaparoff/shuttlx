@@ -7,22 +7,23 @@ struct SessionDetailView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
-                // Duration header
-                durationHeader
-
-                // Activity badges
-                if session.totalRunningDuration > 0 || session.totalWalkingDuration > 0 {
-                    activityBadges
-                }
-
-                // Activity segments (timeline bar + detail rows)
-                if !session.segments.isEmpty {
-                    ActivitySegmentsView(segments: session.segments, totalDuration: session.duration)
-                }
-
-                // Route map
                 if let route = session.route, !route.isEmpty {
-                    RouteMapView(route: route, segments: session.segments, kmSplits: session.kmSplits)
+                    RouteMapView(route: route, segments: session.segments, kmSplits: session.kmSplits,
+                                 showsHeader: false, height: 320)
+                }
+
+                titleBlock
+                statTrio
+
+                if !session.segments.isEmpty {
+                    ActivityRibbon(segments: session.segments)
+                    VStack(spacing: 10) {
+                        ForEach(session.segments) { SessionPartRow(segment: $0) }
+                    }
+                    .themedCard()
+
+                    // Per-activity totals and calories (timeline bar + detail rows)
+                    ActivitySegmentsView(segments: session.segments, totalDuration: session.duration)
                 }
 
                 // Interval results (if interval workout)
@@ -41,47 +42,55 @@ struct SessionDetailView: View {
         .themedScreenBackground()
     }
 
-    // MARK: - Duration Header
+    // MARK: - Title Block
 
-    private var durationHeader: some View {
-        VStack(spacing: 4) {
-            if let name = session.programName {
-                Text(name)
-                    .font(ShuttlXFont.cardSubtitle.weight(.semibold))
-                    .foregroundStyle(ShuttlXColor.ctaPrimary)
-            }
-
-            if let sport = session.sportType {
-                Label(sport.displayName, systemImage: sport.systemImage)
-                    .font(ShuttlXFont.cardCaption.weight(.medium))
-                    .foregroundStyle(sport.themeColor)
-            }
-
-            Text(FormattingUtils.formatDuration(session.duration))
-                .font(ShuttlXFont.metricLarge)
-                .contentTransition(.numericText())
-
-            Text(FormattingUtils.formatSessionDate(session.startDate))
-                .font(ShuttlXFont.cardSubtitle)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 8)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Duration \(FormattingUtils.formatDuration(session.duration)), \(FormattingUtils.formatSessionDate(session.startDate))")
+    private var timeRange: String {
+        let start = FormattingUtils.formatSessionDate(session.startDate)
+        return "\(start) – \((session.endDate ?? session.startDate.addingTimeInterval(session.duration)).formatted(date: .omitted, time: .shortened))"
     }
 
-    // MARK: - Activity Badges
-
-    private var activityBadges: some View {
-        HStack(spacing: 8) {
-            if session.totalRunningDuration > 0 {
-                ActivityBadge(activity: .running, duration: session.totalRunningDuration)
-            }
-            if session.totalWalkingDuration > 0 {
-                ActivityBadge(activity: .walking, duration: session.totalWalkingDuration)
+    private var titleBlock: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(session.displayName)
+                .font(ShuttlXFont.cardTitle)
+                .foregroundStyle(ShuttlXColor.textPrimary)
+            Text(timeRange)
+                .font(ShuttlXFont.cardSubtitle)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+            if session.importedFromHealth == true {
+                Label("From Health", systemImage: "heart.text.square")
+                    .font(ShuttlXFont.cardCaption.weight(.medium))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+    }
+
+    // MARK: - Big numbers
+
+    private var statTrio: some View {
+        HStack(alignment: .top) {
+            stat(session.distance.flatMap { $0 > 0 ? FormattingUtils.formatDistance($0) : nil } ?? "–", "Distance")
+            stat(FormattingUtils.formatDuration(session.duration), "Time")
+            stat(session.averageHeartRate.map { "\(Int($0))" } ?? "–", "Avg BPM")
+        }
+    }
+
+    private func stat(_ value: String, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text(value)
+                .font(ShuttlXFont.metricMedium.monospacedDigit())
+                .foregroundStyle(ShuttlXColor.textPrimary)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+            Text(label)
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value)")
     }
 
     // MARK: - Metric Grid

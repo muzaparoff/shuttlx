@@ -6,11 +6,15 @@ struct RouteMapView: View {
     let route: [RoutePoint]
     let segments: [ActivitySegment]
     var kmSplits: [KmSplitData]? = nil
+    var showsHeader = true
+    var height: CGFloat = 240
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Route")
-                .font(ShuttlXFont.sectionHeader)
+            if showsHeader {
+                Text("Route")
+                    .font(ShuttlXFont.sectionHeader)
+            }
 
             Map {
                 // Color-coded polylines per segment
@@ -56,7 +60,7 @@ struct RouteMapView: View {
                 }
             }
             .mapStyle(.standard(elevation: .flat))
-            .frame(height: 240)
+            .frame(height: height)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .accessibilityLabel("Workout route map")
         }
