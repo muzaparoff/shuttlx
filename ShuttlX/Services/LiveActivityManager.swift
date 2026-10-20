@@ -14,6 +14,27 @@ class LiveActivityManager {
 
     private init() {}
 
+    // Ribbon bookkeeping: the watch doesn't broadcast segments, so the phone builds
+    // run-length parts from the activity it sees on each metrics update.
+    private var parts: [WorkoutActivityAttributes.Part] = []
+    private var lastElapsed: TimeInterval = 0
+
+    private func accumulate(elapsed: TimeInterval, activity: String, isPaused: Bool) {
+        defer { lastElapsed = elapsed }
+        let delta = Int((elapsed - lastElapsed).rounded())
+        // Ignore resets, pauses and implausible gaps (>2 min between updates).
+        guard !isPaused, delta > 0, delta < 120 else { return }
+        if let i = parts.indices.last, parts[i].activity == activity {
+            parts[i].seconds += delta
+        } else {
+            parts.append(.init(activity: activity, seconds: delta))
+        }
+        if parts.count > 24 { // ponytail: folds the oldest part into the next; ribbon loses early detail only
+            let a = parts.removeFirst()
+            parts[0].seconds += a.seconds
+        }
+    }
+
     /// Explicitly starts a Live Activity for the given workout type.
     /// If `Activity.request()` throws, the error is logged and `startFailed` is set
     /// so that subsequent calls (e.g. from `updateActivity`) can retry.
@@ -72,7 +93,9 @@ class LiveActivityManager {
         currentActivity activityType: String,
         isPaused: Bool,
         pace: TimeInterval,
-        pauseReason: String? = nil
+        pauseReason: String? = nil,
+        zoneWord: String? = nil,
+        demoParts: [WorkoutActivityAttributes.Part]? = nil // DEBUG screenshot seam only
     ) {
         // If no current activity (or previous start failed), try to start one first.
         if currentActivity == nil || startFailed {
@@ -92,6 +115,9 @@ class LiveActivityManager {
         // "resets" the countable window across a pause/resume since the next
         // post-resume update's elapsedTime already reflects the paused gap.
         let timerReferenceDate = Date().addingTimeInterval(-elapsedTime)
+        if let demoParts { parts = demoParts } else {
+            accumulate(elapsed: elapsedTime, activity: activityType, isPaused: isPaused)
+        }
 
         let state = WorkoutActivityAttributes.ContentState(
             elapsedTime: elapsedTime,
@@ -102,6 +128,8 @@ class LiveActivityManager {
             isPaused: isPaused,
             pace: pace,
             pauseReason: isPaused ? pauseReason : nil,
+            zoneWord: heartRate > 0 ? zoneWord : nil,
+            parts: parts.isEmpty ? nil : parts,
             timerReferenceDate: timerReferenceDate
         )
 
@@ -117,6 +145,8 @@ class LiveActivityManager {
 
     func endActivity() {
         startFailed = false
+        parts = []
+        lastElapsed = 0
 
         guard let activity = currentActivity else { return }
 

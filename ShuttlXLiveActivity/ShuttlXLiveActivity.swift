@@ -3,139 +3,82 @@ import WidgetKit
 import SwiftUI
 
 struct ShuttlXLiveActivity: Widget {
+    private static let url = URL(string: "shuttlx://workout/active")
+
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: WorkoutActivityAttributes.self) { context in
             LockScreenView(context: context)
         } dynamicIsland: { context in
-            DynamicIsland {
+            let state = context.state
+            return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
-                    HStack(spacing: 6) {
-                        Image(systemName: activityIcon(context.state.currentActivity))
-                            .foregroundStyle(activityColor(context.state.currentActivity))
-                        timerText(for: context, font: .system(.title2, design: .monospaced).weight(.semibold))
-                    }
-                    .widgetURL(URL(string: "shuttlx://workout/active"))
+                    LATimer(state: state)
+                        .font(.system(size: 30, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(state.isPaused ? .secondary : .primary)
+                        .widgetURL(Self.url)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    if context.state.heartRate > 0 {
-                        HStack(spacing: 4) {
-                            Image(systemName: "heart.fill")
-                                .foregroundStyle(.red)
-                            Text("\(context.state.heartRate)")
-                                .font(.system(.title3, design: .rounded).weight(.medium))
+                    if state.heartRate > 0 {
+                        HStack(alignment: .firstTextBaseline, spacing: 3) {
+                            Text("\(state.heartRate)")
+                                .font(.system(size: 24, weight: .bold))
+                                .foregroundStyle(LAStyle.heartRed)
+                            Text("bpm").font(.system(size: 11)).opacity(0.7)
+                            if let zone = state.zoneWord {
+                                Text(zone)
+                                    .font(.system(size: 12, weight: .heavy))
+                                    .foregroundStyle(LAStyle.zoneColor(zone))
+                                    .padding(.leading, 4)
+                            }
                         }
-                        .widgetURL(URL(string: "shuttlx://workout/active"))
+                        .accessibilityElement(children: .combine)
                     }
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    HStack(spacing: 16) {
-                        if context.state.distance > 0 {
-                            Label(formatDistance(context.state.distance), systemImage: "location.fill")
-                                .font(.caption)
-                                .foregroundStyle(.green)
-                        }
-                        if context.state.calories > 0 {
-                            Label("\(context.state.calories) cal", systemImage: "flame.fill")
-                                .font(.caption)
-                                .foregroundStyle(.orange)
-                        }
-                        if context.state.pace > 0 && context.state.pace < 3600 {
-                            Label(formatPace(context.state.pace), systemImage: "gauge.with.dots.needle.33percent")
-                                .font(.caption)
-                                .foregroundStyle(.purple)
-                        }
+                    VStack(spacing: 8) {
+                        LARibbon(state: state)
+                        LAButtons(state: state)
                     }
-                    .widgetURL(URL(string: "shuttlx://workout/active"))
                 }
             } compactLeading: {
-                Image(systemName: activityIcon(context.state.currentActivity))
-                    .foregroundStyle(context.state.isPaused ? .secondary : activityColor(context.state.currentActivity))
+                // "● 48:12" — dot in the activity colour, then the clock. Width-clamped:
+                // the timer is wider than a fixed string once past an hour.
+                HStack(spacing: 3) {
+                    Text("●")
+                        .font(.system(size: 9))
+                        .foregroundStyle(state.isPaused ? Color.orange : LAStyle.color(state.currentActivity))
+                    LATimer(state: state)
+                        .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: 52, alignment: .leading)
+                }
             } compactTrailing: {
-                // Constrained width: `Text(timerInterval:)` renders wider than
-                // a fixed "MM:SS" string once the workout crosses an hour, and
-                // the Dynamic Island compact region is tight — clamp with a
-                // fixed frame + minimumScaleFactor so it never gets truncated
-                // or pushes the compactLeading icon out.
-                timerText(for: context, font: .system(.body, design: .monospaced))
-                    .foregroundStyle(context.state.isPaused ? .secondary : .primary)
-                    .monospacedDigit()
-                    .minimumScaleFactor(0.7)
-                    .frame(maxWidth: 56, alignment: .trailing)
+                if state.heartRate > 0 {
+                    Text("♥ \(state.heartRate)")
+                        .font(.system(size: 13, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(LAStyle.heartRed)
+                }
             } minimal: {
-                Image(systemName: activityIcon(context.state.currentActivity))
-                    .foregroundStyle(.green)
+                Text("●")
+                    .foregroundStyle(state.isPaused ? Color.orange : LAStyle.color(state.currentActivity))
             }
-        }
-    }
-
-    // MARK: - Timer
-
-    /// System-rendered ticking timer while the workout is running — the OS
-    /// advances this itself between our updates (roughly every 3s from the
-    /// Watch), instead of the old pre-formatted string that only moved when
-    /// an `activity.update()` call landed. Falls back to a static formatted
-    /// string while paused, since `timerReferenceDate` isn't meaningful once
-    /// the Watch stops broadcasting.
-    @ViewBuilder
-    private func timerText(for context: ActivityViewContext<WorkoutActivityAttributes>, font: Font) -> some View {
-        // `Text(timerInterval:)` is greedy — it claims the full width
-        // proposed by its container and lays its digits out leading-aligned
-        // by default, which visibly shifts the expanded-leading Dynamic
-        // Island timer left. Center the glyphs explicitly; the paused-state
-        // static text gets the same treatment so pause/resume doesn't shift
-        // the digits. `compactTrailing` layers its own trailing frame on top
-        // of this at the call site and is unaffected.
-        Group {
-            if context.state.isPaused {
-                Text(formatTimer(context.state.elapsedTime))
-                    .contentTransition(.numericText())
-            } else {
-                Text(timerInterval: context.state.timerReferenceDate...Date.distantFuture, countsDown: false)
-            }
-        }
-        .font(font)
-        .multilineTextAlignment(.center)
-    }
-
-    // MARK: - Formatting Helpers
-
-    private func formatTimer(_ interval: TimeInterval) -> String {
-        let totalSeconds = Int(interval)
-        let h = totalSeconds / 3600
-        let m = (totalSeconds % 3600) / 60
-        let s = totalSeconds % 60
-        if h > 0 {
-            return String(format: "%d:%02d:%02d", h, m, s)
-        }
-        return String(format: "%02d:%02d", m, s)
-    }
-
-    private func formatDistance(_ km: Double) -> String {
-        if km < 1.0 { return "\(Int(km * 1000)) m" }
-        return String(format: "%.2f km", km)
-    }
-
-    private func formatPace(_ secondsPerKm: TimeInterval) -> String {
-        let totalSeconds = Int(secondsPerKm)
-        let m = totalSeconds / 60
-        let s = totalSeconds % 60
-        return String(format: "%d'%02d\"", m, s)
-    }
-
-    private func activityIcon(_ activity: String) -> String {
-        switch activity {
-        case "running": return "figure.run"
-        case "walking": return "figure.walk"
-        case "stationary": return "figure.stand"
-        default: return "figure.mixed.cardio"
-        }
-    }
-
-    private func activityColor(_ activity: String) -> Color {
-        switch activity {
-        case "running": return .green
-        case "walking": return .orange
-        default: return .secondary
+            .widgetURL(Self.url)
         }
     }
 }
+
+#if DEBUG
+private let previewState = LAState(
+    elapsedTime: 48 * 60 + 12, heartRate: 152, distance: 6.9, calories: 410,
+    currentActivity: "running", isPaused: false, pace: 358,
+    zoneWord: "STEADY",
+    parts: [.init(activity: "walking", seconds: 720), .init(activity: "running", seconds: 2160)],
+    timerReferenceDate: Date().addingTimeInterval(-2892))
+
+#Preview("Lock screen", as: .content, using: WorkoutActivityAttributes(workoutStartDate: Date(), activityType: "running")) {
+    ShuttlXLiveActivity()
+} contentStates: {
+    previewState
+}
+#endif

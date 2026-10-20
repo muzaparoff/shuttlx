@@ -238,6 +238,14 @@ struct ShuttlXApp: App {
                     c.liveCurrentActivity = "running"
                     c.liveIsPaused = live != "running"
                     c.livePauseReason = live == "autopaused" ? "noMotion" : nil
+                    // Also push a real Live Activity so the lock screen / island can be captured.
+                    LiveActivityManager.shared.cleanupStaleActivities()
+                    LiveActivityManager.shared.startActivity(activityType: "running")
+                    LiveActivityManager.shared.updateActivity(
+                        elapsedTime: c.liveElapsedTime, heartRate: c.liveHeartRate, distance: c.liveDistance,
+                        calories: c.liveCalories, currentActivity: "running", isPaused: c.liveIsPaused,
+                        pace: c.livePace, pauseReason: c.livePauseReason, zoneWord: "STEADY",
+                        demoParts: [.init(activity: "walking", seconds: 720), .init(activity: "running", seconds: 2160)])
                 }
                 // SHUTTLX_DEMO_IMPORT=12/47 shows the Apple Health import card.
                 if let imp = env["SHUTTLX_DEMO_IMPORT"]?.split(separator: "/").compactMap({ Int($0) }), imp.count == 2 {

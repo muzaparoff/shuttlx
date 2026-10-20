@@ -5,6 +5,11 @@ struct WorkoutActivityAttributes: ActivityAttributes {
     let workoutStartDate: Date
     let activityType: String
 
+    struct Part: Codable, Hashable {
+        var activity: String   // "running" / "walking" / other
+        var seconds: Int
+    }
+
     struct ContentState: Codable, Hashable {
         var elapsedTime: TimeInterval
         var heartRate: Int
@@ -15,6 +20,10 @@ struct WorkoutActivityAttributes: ActivityAttributes {
         var pace: TimeInterval
         /// Why it is paused, e.g. "noMotion" (watch auto-pause). nil = user pause / running.
         var pauseReason: String? = nil
+        /// EASY / STEADY / HARD from `HeartSafetySettings`; nil when no limit or no HR.
+        var zoneWord: String? = nil
+        /// Ribbon of parts so far (run-length, merged, capped at 24 so the payload stays ~1 KB).
+        var parts: [Part]? = nil
 
         /// Start-date-adjusted-for-pauses reference for a system-rendered
         /// ticking timer (`Text(timerInterval:countsDown:)`). Computed each

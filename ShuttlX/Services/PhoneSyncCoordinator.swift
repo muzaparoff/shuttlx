@@ -332,7 +332,8 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             currentActivity: liveCurrentActivity,
             isPaused: liveIsPaused,
             pace: livePace,
-            pauseReason: livePauseReason
+            pauseReason: livePauseReason,
+            zoneWord: HeartSafetySettings.load().zoneWord(hr: liveHeartRate, age: DeviceManager.shared.userAge)
         )
 
         // When paused the watch stops broadcasting — don't time out the live
