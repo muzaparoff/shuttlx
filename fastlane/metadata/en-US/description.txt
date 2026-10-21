@@ -52,10 +52,6 @@ BUILT FOR RUNNERS WHO WANT MORE
 
 Most running apps either cost $15/month for AI coaching you do not need or give you a basic stopwatch. ShuttlX fills the gap: serious interval training tools, real analytics, deep Watch integration, and a design you actually enjoy looking at.
 
-SHUTTLX PRO
-
-Optional auto-renewing subscription unlocks the full feature set. Choose Monthly, Yearly, or a one-time Lifetime unlock. Exact price for your region is shown in the app before purchase. Subscriptions renew automatically unless canceled at least 24 hours before the end of the current period; manage or cancel anytime in your Apple ID account settings.
-
 Terms of Use (EULA): https://www.apple.com/legal/internet-services/itunes/dev/stdeula/
 Privacy Policy: https://muzaparoff.github.io/shuttlx/privacy-policy.html
 

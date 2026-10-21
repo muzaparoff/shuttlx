@@ -127,17 +127,17 @@ build_target() {
     
     echo "Command line invocation:"
     if [ "$clean_first" = true ]; then
-        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean)"
-        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)"
+        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -scheme \"$target\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO clean)"
+        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -scheme \"$target\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)"
     else
-        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -target \"$target\" -sdk \"$sdk\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)"
+        echo "    (cd \"$PROJECT_ROOT\" && /Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -project ShuttlX.xcodeproj -scheme \"$target\" -destination \"$destination\" CODE_SIGN_IDENTITY= CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO build)"
     fi
     echo ""
     
     # Clean first if requested
     if [ "$clean_first" = true ]; then
         echo "🧹 Cleaning $platform_name target..."
-        (cd "$PROJECT_ROOT" && ${TIMEOUT_CMD:+$TIMEOUT_CMD $BUILD_TIMEOUT} xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \
+        (cd "$PROJECT_ROOT" && ${TIMEOUT_CMD:+$TIMEOUT_CMD $BUILD_TIMEOUT} xcodebuild -project ShuttlX.xcodeproj -scheme "$target" -destination "$destination" \
             CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \
             clean 2>&1 | tee "/tmp/clean_${platform_name}.log")
         local clean_exit_code=$?
@@ -164,7 +164,7 @@ build_target() {
     
     cat > "$temp_script" << EOF
 #!/bin/bash
-${TIMEOUT_CMD:+$TIMEOUT_CMD $BUILD_TIMEOUT} xcodebuild -project ShuttlX.xcodeproj -target "$target" -sdk "$sdk" -destination "$destination" \\
+${TIMEOUT_CMD:+$TIMEOUT_CMD $BUILD_TIMEOUT} xcodebuild -project ShuttlX.xcodeproj -scheme "$target" -destination "$destination" \\
     CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO \\
     $debug_flags \\
     $build_action
@@ -504,7 +504,7 @@ if [ "$BUILD" = true ]; then
     if [ "$IOS_ONLY" != true ]; then
         echo "\n⌚ Building watchOS target first..."
         
-        if build_target "ShuttlX Watch App" "watchsimulator" "platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=26.2" "watchOS"; then
+        if build_target "ShuttlX Watch App" "watchsimulator" "generic/platform=watchOS Simulator" "watchOS"; then
             
             # Detect and preserve watchOS app
             WATCHOS_APP_PATH="build/Release-watchsimulator/ShuttlX Watch App.app"
@@ -534,7 +534,7 @@ if [ "$BUILD" = true ]; then
             fi
         fi
         
-        if build_target "ShuttlX" "iphonesimulator" "platform=iOS Simulator,name=iPhone 17 Pro,OS=26.2" "iOS"; then
+        if build_target "ShuttlX" "iphonesimulator" "generic/platform=iOS Simulator" "iOS"; then
             
             # Detect iOS app
             IOS_APP_PATH="build/Release-iphonesimulator/ShuttlX.app"
