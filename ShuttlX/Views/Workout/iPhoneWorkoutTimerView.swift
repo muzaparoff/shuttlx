@@ -59,7 +59,9 @@ struct iPhoneWorkoutTimerView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Save this workout to your history?")
+            Text(controller.watchLinked
+                 ? "Save this workout to your history? Your Apple Watch stops too, and its recording is the one kept."
+                 : "Save this workout to your history?")
         }
         .alert("Cancel Workout?", isPresented: $showingCancelConfirmation) {
             Button("Discard", role: .destructive) {
@@ -68,7 +70,9 @@ struct iPhoneWorkoutTimerView: View {
             }
             Button("Keep Going", role: .cancel) {}
         } message: {
-            Text("This will end the workout without saving.")
+            Text(controller.watchLinked
+                 ? "This ends the workout without saving here. Your Apple Watch stops too and keeps its own recording."
+                 : "This will end the workout without saving.")
         }
     }
 

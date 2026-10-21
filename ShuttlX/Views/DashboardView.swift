@@ -12,6 +12,8 @@ struct DashboardView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ThemeManager.self) private var themeManager
     @State private var showingPrograms = false
+    @State private var noHeartLimit = false
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedDay = Date()
     @State private var dismissedParts = Set(UserDefaults.standard.stringArray(forKey: dismissedPartsKey) ?? [])
     @State private var pickingPartFor: TrainingSession?
@@ -42,6 +44,31 @@ struct DashboardView: View {
         if isLive { return "\(date) \u{00B7} workout \(sharedData.liveIsPaused ? "paused" : "running")" }
         let n = daySessions.count
         return "\(date) \u{00B7} \(n) \(n == 1 ? "session" : "sessions")"
+    }
+
+    /// Re-read on appear and when the app returns to the foreground (the limit is edited in Settings).
+    private func refreshLimitWarning() {
+        noHeartLimit = HeartSafetySettings.load().hasNoLimit(age: DeviceManager.shared.userAge)
+    }
+
+    private var limitWarning: some View {
+        Button { deepLinkRouter.pendingTab = 3 } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(ShuttlXColor.ctaWarning)
+                    .accessibilityHidden(true)
+                Text("No heart limit set. The watch will not warn you.")
+                    .font(ShuttlXFont.cardCaption.weight(.semibold))
+                    .foregroundStyle(ShuttlXColor.textPrimary)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: 0)
+                Text("Set").font(ShuttlXFont.cardCaption.weight(.bold)).foregroundStyle(ShuttlXColor.ctaPrimary)
+            }
+            .padding(.horizontal, 12).padding(.vertical, 10)
+            .background(ShuttlXColor.ctaWarning.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("No heart limit set. The watch will not warn you about a high heart rate.")
+        .accessibilityHint("Opens Settings, where you can set a limit")
     }
 
     private var programsRow: some View {
@@ -141,6 +168,7 @@ struct DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
+                    if noHeartLimit { limitWarning }
                     if showEmpty {
                         TodayEmptyState(importer: importer)
                             .containerRelativeFrame(.vertical) { h, _ in h * 0.7 }
@@ -167,6 +195,8 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showingPrograms) { ProgramsTabView() }
             .task { consumePendingPrograms() }
+            .onAppear { refreshLimitWarning() }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { refreshLimitWarning() } }
             #if DEBUG
             // Screenshot seam: SHUTTLX_DEMO_FIX_TODAY=<part number> opens Fix a part on that part of the banner session.
             .task(id: dataManager.effectiveVersion) {

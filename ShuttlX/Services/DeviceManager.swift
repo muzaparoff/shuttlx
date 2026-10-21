@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import os.log
 import ShuttlXShared
 
@@ -30,12 +31,17 @@ class DeviceManager: ObservableObject {
         }
     }
 
+    private let ageFromHealthKey = "userAgeFromHealth"
+
+    /// Age the user typed (Settings, onboarding) or that was derived from the Health date of birth.
+    /// Setting it here counts as typed; use `setAgeFromHealth` for the derived value.
     var userAge: Int? {
         get {
             let val = userDefaults?.integer(forKey: ageKey) ?? 0
             return val > 0 ? val : nil
         }
         set {
+            userDefaults?.removeObject(forKey: ageFromHealthKey)
             if let age = newValue, age > 0 {
                 userDefaults?.set(age, forKey: ageKey)
             } else {
@@ -44,12 +50,33 @@ class DeviceManager: ObservableObject {
         }
     }
 
+    /// True while the stored age was derived from Health (so it may be refreshed on a birthday).
+    var userAgeIsFromHealth: Bool { userDefaults?.bool(forKey: ageFromHealthKey) ?? false }
+
+    /// Stores the age derived from the Health date of birth, unless the user typed their own.
+    /// Returns true when the stored age changed.
+    @discardableResult
+    func setAgeFromHealth(_ age: Int) -> Bool {
+        guard userAge == nil || userAgeIsFromHealth, userAge != age else { return false }
+        userDefaults?.set(age, forKey: ageKey)
+        userDefaults?.set(true, forKey: ageFromHealthKey)
+        return true
+    }
+
     private var userDefaults: UserDefaults? {
         UserDefaults(suiteName: appGroupIdentifier)
     }
 
+    private var wipeObserver: AnyCancellable?
+
     private init() {
         loadDevices()
+        wipeObserver = NotificationCenter.default.publisher(for: .localUserDataWiped)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.devices = ExerciseDevice.builtInDevices
+                self?.saveDevices()
+            }
     }
 
     // MARK: - CRUD
@@ -92,7 +119,12 @@ class DeviceManager: ObservableObject {
 
         do {
             let data = try Data(contentsOf: url)
-            var loaded = try JSONDecoder().decode([ExerciseDevice].self, from: data)
+            let decoded = LenientJSON.decodeArray(ExerciseDevice.self, from: data)
+            if decoded.skipped > 0 || decoded.wholeFileUndecodable {
+                let backup = try StoreFile.backupCorrupt(url)
+                logger.error("exercise_devices.json: \(decoded.skipped) unreadable device(s); original kept as \(backup.lastPathComponent)")
+            }
+            var loaded = decoded.elements
 
             // Ensure built-in devices are always present
             for builtIn in ExerciseDevice.builtInDevices {
@@ -103,9 +135,9 @@ class DeviceManager: ObservableObject {
             devices = loaded
             logger.info("Loaded \(self.devices.count) device(s)")
         } catch {
+            // Unreadable bytes (not a decode problem): keep the file, do not overwrite it with defaults.
             logger.error("Failed to load devices: \(error.localizedDescription)")
             devices = ExerciseDevice.builtInDevices
-            saveDevices()
         }
     }
 
@@ -114,7 +146,7 @@ class DeviceManager: ObservableObject {
         let url = containerURL.appendingPathComponent(fileName)
         do {
             let data = try JSONEncoder().encode(devices)
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            try data.write(to: url, options: StoreFile.writeOptions)
         } catch {
             logger.error("Failed to save devices: \(error.localizedDescription)")
         }

@@ -67,8 +67,10 @@ struct ShuttlXApp: App {
             // disturbed and the real user data must not be touched.
             if screenshotSeamsActive { return }
             #endif
+            if newPhase == .background, workoutController.isActive { workoutController.writeCheckpoint() }
             if newPhase == .active {
                 dataManager.loadSessionsFromAppGroup()
+                // The importer decides itself whether it may run (onboarding done, Health already asked).
                 Task { await HealthKitImporter.shared.importNow() }
                 sharedDataManager.reconcileWithDataManager()
                 sharedDataManager.reconcileSessionIDs()
@@ -204,10 +206,16 @@ struct ShuttlXApp: App {
                 #else
                 let skipHealth = false
                 #endif
+                // Never before onboarding is finished or Health was asked: the importer checks that itself and
+                // never opens a Health sheet. Existing users get the one-time request in Settings -> Health.
                 if !skipHealth {
-                    HealthKitImporter.shared.start(dataManager: dataManager)
+                    dataManager.clearFrozenMaxHRIfNeeded()
+                    if !isFirstLaunch { dataManager.refreshAgeFromHealth() }
+                    await HealthKitImporter.shared.start(dataManager: dataManager)
                     await HealthKitImporter.shared.importNow()
                 }
+                // An earlier run was killed mid-workout: offer to save what the checkpoint holds.
+                workoutController.loadInterruptedWorkout()
                 // Mirror watch stops back to the iPhone: when the user stops
                 // on the Watch, the paired iPhone workout stops and saves too.
                 PhoneSyncCoordinator.shared.onRemoteWorkoutStopped = { [weak workoutController] in
@@ -278,6 +286,28 @@ struct ShuttlXApp: App {
                     sharedDataManager.clearLiveWorkoutState()
                 }
                 #endif
+            }
+            .onChange(of: isFirstLaunch) { _, firstLaunch in
+                // Onboarding just finished: Health was asked there, so the importer may start now.
+                guard !firstLaunch else { return }
+                #if DEBUG
+                if demoDataRequested { return }
+                #endif
+                Task {
+                    dataManager.refreshAgeFromHealth()
+                    await HealthKitImporter.shared.start(dataManager: dataManager)
+                    await HealthKitImporter.shared.importNow()
+                }
+            }
+            .alert("Workout interrupted", isPresented: Binding(
+                get: { workoutController.interruptedWorkout != nil },
+                set: { if !$0 { workoutController.interruptedWorkout = nil } })) {
+                Button("Save it") { workoutController.saveInterruptedWorkout() }
+                Button("Discard", role: .destructive) { workoutController.discardInterruptedWorkout() }
+            } message: {
+                if let cp = workoutController.interruptedWorkout {
+                    Text("ShuttlX was closed during a workout that started \(cp.session.startDate.formatted(date: .abbreviated, time: .shortened)). It recorded \(FormattingUtils.formatTimer(cp.session.duration)). Save what was recorded?")
+                }
             }
             .onOpenURL { url in
                 os_log(.info, log: deepLinkLog, "onOpenURL fired: %{public}@", url.absoluteString)

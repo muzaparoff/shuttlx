@@ -57,6 +57,7 @@ class AuthenticationManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() {
+        CloudKitSyncManager.shared.resetSyncState()
         deleteFromKeychain()
         deleteNameFromKeychain()
         isSignedIn = false
@@ -72,9 +73,8 @@ class AuthenticationManager: ObservableObject {
         // 1. Delete CloudKit data
         try await CloudKitSyncManager.shared.deleteAllUserData()
 
-        // 2. Clear local sessions
-        sharedDataManager.purgeAllSessionsFromStorage()
-        dataManager.sessions = []
+        // 2. Erase local user data (runs only if the CloudKit step above succeeded) and tell the watch
+        dataManager.wipeLocalUserData(.everything)
 
         // 3. Sign out (clears keychain + name keychain item)
         signOut()

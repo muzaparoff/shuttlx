@@ -28,18 +28,21 @@ extension TrainingView {
 
     private var oneWordPage: some View {
         let activity = workoutManager.currentActivity
-        let tagColor = activity == .unknown ? ShuttlXColor.textSecondary : activity.themeColor
+        let paused = workoutManager.isPaused
+        let tagColor = paused ? ShuttlXColor.ctaWarning
+            : activity == .unknown ? ShuttlXColor.textSecondary : activity.themeColor
         let hr = workoutManager.heartRate
         let word = heartZoneWord
         let bannerShown = isHighIntensityWarning || workoutManager.noHeartRateDetected
         let labelSize = max(10, screenHeight * 0.08)
 
         return VStack(alignment: .leading, spacing: 0) {
-            Text("\u{25CF} \(activity.watchTag)")
+            // Paused: the word, not just the amber clock (colour alone is not a state).
+            Text(paused ? "\u{23F8}\u{FE0E} PAUSED" : "\u{25CF} \(activity.watchTag)")
                 .font(.system(size: WatchScale.pt(11), weight: .bold))
                 .tracking(WatchScale.pt(11) * 0.08)
                 .foregroundStyle(tagColor)
-                .accessibilityLabel(activity == .unknown ? workoutManager.workoutName : activity.displayName)
+                .accessibilityLabel(paused ? "Paused" : activity == .unknown ? workoutManager.workoutName : activity.displayName)
 
             // The toast gets its own row under the tag (the tag shares its line
             // with the system clock); the hint below steps aside to pay for it.
@@ -208,5 +211,8 @@ extension TrainingView {
         .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 4)
         .background(ShuttlXColor.ctaWarning, in: RoundedRectangle(cornerRadius: 18))
         .transition(.opacity)
+        .task(id: sw.id) {
+            AccessibilityNotification.Announcement("\(sw.to.nowText). Undo available.").post()
+        }
     }
 }

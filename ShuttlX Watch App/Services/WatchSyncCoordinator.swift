@@ -754,6 +754,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     }
                 case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety":
                     self.handleIncomingPayload(message)
+                case "purgeSessions":
+                    self.handlePurgeRequest(message)
                 default:
                     break
                 }
@@ -832,6 +834,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     replyHandler(["status": "ok"])
                 case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety":
                     self.handleIncomingPayload(message)
+                    replyHandler(["status": "received"])
+                case "purgeSessions":
+                    self.handlePurgeRequest(message)
                     replyHandler(["status": "received"])
                 default:
                     replyHandler(["error": "Unknown action"])
@@ -938,6 +943,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                let command = userInfo["command"] as? String {
                 self.dispatchWorkoutControl(command: command, sentAt: userInfo["sentAt"] as? TimeInterval, message: userInfo)
                 return  // dedicated payload — no other keys to process
+            }
+            if (userInfo["action"] as? String) == "purgeSessions" {
+                self.handlePurgeRequest(userInfo)
+                return
             }
             self.handleIncomingPayload(userInfo)
         }
@@ -1166,6 +1175,127 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 self.sendSessionToiOS(session)
             }
             self.updateConnectivityHealth()
+        }
+    }
+
+    // MARK: - Purge ("delete my data" on the iPhone)
+
+    private static let lastPurgeTSKey = "lastAppliedPurgeTS"
+    private static let deferredPurgeKey = "deferredPurge"
+
+    /// `["action": "purgeSessions", "scope": "all" | "sessions", "ts": Double]`, via
+    /// sendMessage or transferUserInfo (the phone may send both; the second is stale).
+    /// Deletes what ENDED before `ts` — a workout recorded after the request, or the
+    /// one running when it arrived, is kept. Never runs during a workout: it is
+    /// stored and applied when the workout ends (or on the next launch).
+    private func handlePurgeRequest(_ payload: [String: Any]) {
+        guard let ts = payload["ts"] as? Double,
+              let scope = payload["scope"] as? String, scope == "all" || scope == "sessions" else {
+            logger.error("purgeSessions ignored — bad payload \(payload.keys.sorted())")
+            return
+        }
+        let defaults = UserDefaults.standard
+        guard ts > defaults.double(forKey: Self.lastPurgeTSKey) else {
+            logger.info("purgeSessions ignored — stale ts \(ts)")
+            return
+        }
+        // Merge with a request already waiting: newest ts, widest scope.
+        var request: [String: Any] = ["scope": scope, "ts": ts]
+        if let waiting = defaults.dictionary(forKey: Self.deferredPurgeKey),
+           let wTS = waiting["ts"] as? Double, let wScope = waiting["scope"] as? String {
+            request = ["scope": (wScope == "all" || scope == "all") ? "all" : "sessions", "ts": max(ts, wTS)]
+        }
+        defaults.set(request, forKey: Self.deferredPurgeKey)
+        logger.info("purgeSessions received (scope \(scope)) — stored")
+        applyDeferredPurgeIfPossible()
+    }
+
+    /// Runs a stored purge unless a workout is starting or running. Called on
+    /// receipt, at the end of every workout and after launch recovery.
+    func applyDeferredPurgeIfPossible() {
+        guard let request = UserDefaults.standard.dictionary(forKey: Self.deferredPurgeKey),
+              let ts = request["ts"] as? Double, let scope = request["scope"] as? String else { return }
+        let wm = workoutManager
+        Task { @MainActor [weak self] in
+            // Launch recovery may still resume a killed workout — wait for it.
+            await wm?.launchRecoveryTask?.value
+            guard let self else { return }
+            if let wm, wm.isWorkoutActive || wm.isStarting {
+                self.logger.info("purgeSessions deferred — workout in progress")
+                return
+            }
+            self.performPurge(scope: scope, ts: ts)
+        }
+    }
+
+    private func performPurge(scope: String, ts: Double) {
+        let defaults = UserDefaults.standard
+        // Applied once: a re-entrant call (receipt + workout end) finds nothing stored.
+        defaults.removeObject(forKey: Self.deferredPurgeKey)
+        defaults.set(max(ts, defaults.double(forKey: Self.lastPurgeTSKey)), forKey: Self.lastPurgeTSKey)
+        // A phone clock ahead of the watch must not reach sessions recorded after it.
+        let cutoff = min(Date(timeIntervalSince1970: ts), Date())
+        let endedBefore: @Sendable (TrainingSession) -> Bool = { ($0.endDate ?? $0.startDate) < cutoff }
+
+        let pendingIDs = Set(pendingSessions.filter(endedBefore).map(\.id))
+        pendingSessions.removeAll(where: endedBefore)
+        savePendingSessionsToDisk()
+
+        if scope == "all" {
+            workoutTemplates = []
+            if let url = Self.getWorkingContainer()?.appendingPathComponent("workout_templates.json") {
+                try? FileManager.default.removeItem(at: url)
+            }
+            loadFallbackTemplates()   // built-in sample, not phone data
+        }
+
+        // The crash backup is untouched: none exists outside a workout once launch
+        // recovery has run (it sends + clears it), and an ACTIVE one is never purged.
+        guard let containerURL = Self.getWorkingContainer() else { return }
+        let logger = self.logger
+        // Same serial queue as the stop-time append, so a just-saved session lands first.
+        Self.sessionStoreQueue.async {
+            let url = containerURL.appendingPathComponent("sessions.json")
+            var storeIDs = Set<UUID>()
+            var coordinatorError: NSError?
+            NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
+                guard FileManager.default.fileExists(atPath: writeURL.path) else { return }
+                do {
+                    let sessions = try JSONDecoder().decode([TrainingSession].self, from: Data(contentsOf: writeURL))
+                    let kept = sessions.filter { !endedBefore($0) }
+                    storeIDs = Set(sessions.filter(endedBefore).map(\.id))
+                    try JSONEncoder().encode(kept).write(to: writeURL, options: [.atomic, .completeFileProtection])
+                    logger.info("purgeSessions: removed \(storeIDs.count) of \(sessions.count) stored session(s)")
+                } catch {
+                    // Unreadable store holds nothing we can keep apart by date: remove it.
+                    try? FileManager.default.removeItem(at: writeURL)
+                    logger.error("purgeSessions: sessions.json unreadable (\(error.localizedDescription)) — removed")
+                }
+            }
+            if let coordinatorError { logger.error("purgeSessions coordination error: \(coordinatorError.localizedDescription)") }
+            // Old corrupt-store copies are stored sessions too.
+            let dir = containerURL
+            for file in (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
+            where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
+                try? FileManager.default.removeItem(at: file)
+            }
+            let removedIDs = pendingIDs.union(storeIDs)
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                // Queued sends of purged sessions would put them back on the phone.
+                for transfer in WCSession.default.outstandingUserInfoTransfers {
+                    if let id = (transfer.userInfo["sessionID"] as? String).flatMap(UUID.init(uuidString:)),
+                       removedIDs.contains(id) { transfer.cancel() }
+                }
+                for transfer in WCSession.default.outstandingFileTransfers {
+                    if let id = (transfer.file.metadata?["sessionID"] as? String).flatMap(UUID.init(uuidString:)),
+                       removedIDs.contains(id) { transfer.cancel() }
+                }
+                self.inFlightSessionIDs.subtract(removedIDs)
+                WidgetCenter.shared.reloadAllTimelines()
+                self.updateSyncStatus("Workout history cleared")
+                self.logger.info("purgeSessions applied (scope \(scope)): \(removedIDs.count) session(s)")
+            }
         }
     }
 

@@ -20,7 +20,7 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
     public var alertNoMotion: Bool
     /// Intent only. unverified: needs device test (no public AirPods HR API in the SDK headers).
     public var useAirPodsHeartRate: Bool
-    /// Alert on a rise of >= 40 bpm within 10 s.
+    /// Alert on a rise of >= 40 bpm within 10 s. Off by default: it can false-alarm (October 2026).
     public var alertSuddenJump: Bool
     /// Seconds without heart rate and motion before auto-pause: 30 / 60 / 120.
     public var noMotionSeconds: Int
@@ -34,15 +34,21 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
     /// MEDICATION NOTES: phone only, stripped from `watchPayload`.
     public var medicineName: String?
     public var dailyDose: String?
+    /// Saved-data version. 0 = saved before versioning (sudden jump was on by default); see `currentVersion`.
+    public var settingsVersion: Int
+
+    /// 1: sudden-jump default changed from on to off; older saved settings are migrated once on decode.
+    public static let currentVersion = 1
 
     public init(onBetaBlocker: Bool? = nil, upperLimit: Int? = nil, lowLimit: Int? = nil,
                 alertAboveLimit: Bool = true, alertBelowLow: Bool = true,
                 alertSignalLost: Bool = true, alertNoMotion: Bool = true,
                 useAirPodsHeartRate: Bool = false,
-                alertSuddenJump: Bool = true, noMotionSeconds: Int = 60,
+                alertSuddenJump: Bool = false, noMotionSeconds: Int = 60,
                 effortOnly: Bool = false, showEffortOnWatch: Bool = true,
                 autoSwitchActivity: Bool = true, heartRateSource: HeartRateSource = .best,
-                medicineName: String? = nil, dailyDose: String? = nil) {
+                medicineName: String? = nil, dailyDose: String? = nil,
+                settingsVersion: Int = HeartSafetySettings.currentVersion) {
         self.onBetaBlocker = onBetaBlocker
         self.upperLimit = upperLimit
         self.lowLimit = lowLimit
@@ -59,11 +65,15 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
         self.heartRateSource = heartRateSource
         self.medicineName = medicineName
         self.dailyDose = dailyDose
+        self.settingsVersion = settingsVersion
     }
 
     // Tolerant decoding: every key optional so older/newer JSON still loads.
     public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
+        // One-time migration: settings saved before versioning had sudden jump ON by default. The user never
+        // chose that, so it becomes OFF; a later explicit choice is saved with the new version and kept.
+        let saved = try c.decodeIfPresent(Int.self, forKey: .settingsVersion) ?? 0
         self.init(
             onBetaBlocker: try c.decodeIfPresent(Bool.self, forKey: .onBetaBlocker),
             upperLimit: try c.decodeIfPresent(Int.self, forKey: .upperLimit),
@@ -73,23 +83,27 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
             alertSignalLost: try c.decodeIfPresent(Bool.self, forKey: .alertSignalLost) ?? true,
             alertNoMotion: try c.decodeIfPresent(Bool.self, forKey: .alertNoMotion) ?? true,
             useAirPodsHeartRate: try c.decodeIfPresent(Bool.self, forKey: .useAirPodsHeartRate) ?? false,
-            alertSuddenJump: try c.decodeIfPresent(Bool.self, forKey: .alertSuddenJump) ?? true,
+            alertSuddenJump: saved < 1 ? false : (try c.decodeIfPresent(Bool.self, forKey: .alertSuddenJump) ?? false),
             noMotionSeconds: try c.decodeIfPresent(Int.self, forKey: .noMotionSeconds) ?? 60,
             effortOnly: try c.decodeIfPresent(Bool.self, forKey: .effortOnly) ?? false,
             showEffortOnWatch: try c.decodeIfPresent(Bool.self, forKey: .showEffortOnWatch) ?? true,
             autoSwitchActivity: try c.decodeIfPresent(Bool.self, forKey: .autoSwitchActivity) ?? true,
             heartRateSource: (try? c.decodeIfPresent(HeartRateSource.self, forKey: .heartRateSource)) ?? .best,
             medicineName: try c.decodeIfPresent(String.self, forKey: .medicineName),
-            dailyDose: try c.decodeIfPresent(String.self, forKey: .dailyDose))
+            dailyDose: try c.decodeIfPresent(String.self, forKey: .dailyDose),
+            settingsVersion: max(saved, Self.currentVersion))
     }
 
     // MARK: Limits
 
-    /// Estimate only: (220 - age), times 0.81 on a beta-blocker. nil without an age.
+    /// Estimate only, see `HeartLimits`: 85 % of (220 - age), times 0.81 on a beta-blocker. nil without a valid age.
     public func estimatedUpperLimit(age: Int?) -> Int? {
-        guard let age, age > 0 else { return nil }
-        let base = Double(220 - age)
-        return Int((onBetaBlocker == true ? base * 0.81 : base).rounded())
+        HeartLimits.estimate(age: age, betaBlocker: onBetaBlocker)
+    }
+
+    /// True when no upper limit is in force and the user did not choose "effort only".
+    public func hasNoLimit(age: Int?) -> Bool {
+        !effortOnly && effectiveUpperLimit(age: age) == nil
     }
 
     /// The user's own limit always wins over the estimate.
@@ -132,6 +146,14 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
         guard let data = UserDefaults(suiteName: suite)?.data(forKey: defaultsKey),
               let s = try? JSONDecoder().decode(HeartSafetySettings.self, from: data)
         else { return HeartSafetySettings() }
+        return s.sanitized()
+    }
+
+    /// Drops saved limits outside the accepted ranges (older builds saved every keystroke, e.g. "1" or "12").
+    public func sanitized() -> HeartSafetySettings {
+        var s = self
+        if let u = s.upperLimit, !HeartLimits.upperRange.contains(u) { s.upperLimit = nil }
+        if let l = s.lowLimit, !HeartLimits.lowRange(upper: s.upperLimit).contains(l) { s.lowLimit = nil }
         return s
     }
 

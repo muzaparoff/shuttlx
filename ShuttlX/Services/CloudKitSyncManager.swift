@@ -38,12 +38,23 @@ class CloudKitSyncManager: ObservableObject {
         }
     }
 
+    /// Set while Delete Account is running; blocks new syncs. Cleared by `resetSyncState()` (sign out) or a failed delete.
+    private var isDeleting = false
+    private var syncTask: Task<Void, Never>?
+
     private init() {}
+
+    /// Sign out / account deletion: forget where the last pull stopped so a later sign-in starts clean.
+    func resetSyncState() {
+        pullSinceDate = nil
+        lastSyncDate = nil
+        isDeleting = false
+    }
 
     // MARK: - Full Sync
 
     func performFullSync(dataManager: DataManager, completion: (() -> Void)? = nil) {
-        guard !isSyncing else {
+        guard !isSyncing, !isDeleting else {
             completion?()
             return
         }
@@ -60,7 +71,7 @@ class CloudKitSyncManager: ObservableObject {
         // executor is not guaranteed to be the main actor in Swift 5.9+, so a
         // bare `Task {}` could deliver completion?() off-main and cause UI updates
         // in callers (SettingsView, etc.) to mutate state from a background thread.
-        Task { @MainActor in
+        syncTask = Task { @MainActor in
             do {
                 let remoteSessions = try await pullSessions()
                 let localSessions = dataManager.sessions
@@ -345,54 +356,115 @@ class CloudKitSyncManager: ObservableObject {
 
     // MARK: - Delete All User Data
 
+    enum DeleteError: LocalizedError {
+        case fetchFailed(recordType: String, count: Int, first: Error)
+        case deleteFailed(recordType: String, count: Int, first: Error)
+        case recordsRemain(recordType: String, count: Int)
+
+        var errorDescription: String? {
+            switch self {
+            case let .fetchFailed(type, count, first): return "\(count) \(type) record(s) could not be listed: \(first.localizedDescription)"
+            case let .deleteFailed(type, count, first): return "\(count) \(type) record(s) could not be deleted: \(first.localizedDescription)"
+            case let .recordsRemain(type, count): return "\(count) \(type) record(s) are still in iCloud"
+            }
+        }
+    }
+
+    /// Deletes every session and template record, or throws. Succeeds only when a fresh query finds none left.
+    /// Stops any running sync first and keeps new ones blocked until `resetSyncState()` (sign out) runs.
     func deleteAllUserData() async throws {
-        // Delete all sessions
-        let sessionsQuery = CKQuery(recordType: sessionsRecordType, predicate: NSPredicate(value: true))
-        try await deleteAllRecords(matching: sessionsQuery)
-
-        // Delete all templates
-        let templatesQuery = CKQuery(recordType: templatesRecordType, predicate: NSPredicate(value: true))
-        try await deleteAllRecords(matching: templatesQuery)
-
+        isDeleting = true
+        syncTask?.cancel()
+        await syncTask?.value
+        do {
+            for type in [sessionsRecordType, templatesRecordType] {
+                try await deleteAllRecords(ofType: type)
+            }
+        } catch {
+            isDeleting = false   // nothing is signed out; let normal sync resume
+            throw error
+        }
         lastSyncDate = nil
         pullSinceDate = nil
-        logger.info("All CloudKit user data deleted")
+        logger.info("All CloudKit user data deleted and verified")
     }
 
-    private func deleteAllRecords(matching query: CKQuery) async throws {
-        var cursor: CKQueryOperation.Cursor?
-
-        let (results, nextCursor) = try await database.records(matching: query, resultsLimit: 400)
-        let ids = results.compactMap { try? $0.1.get().recordID }
-        if !ids.isEmpty {
-            try await deleteRecordBatch(ids)
-        }
-        cursor = nextCursor
-
-        while let currentCursor = cursor {
-            let (pageResults, pageCursor) = try await database.records(continuingMatchFrom: currentCursor, resultsLimit: 400)
-            let pageIDs = pageResults.compactMap { try? $0.1.get().recordID }
-            if !pageIDs.isEmpty {
-                try await deleteRecordBatch(pageIDs)
+    /// Two delete passes at most; each ends with a re-query. Index lag can make the first re-query show leftovers.
+    private func deleteAllRecords(ofType type: String) async throws {
+        var lastError: Error?
+        for pass in 1...2 {
+            do {
+                let listing = try await listRecordIDs(ofType: type)
+                if let first = listing.errors.first {
+                    // Delete what we can see, then report the listing failure.
+                    try await deleteRecordIDs(listing.ids, type: type)
+                    throw DeleteError.fetchFailed(recordType: type, count: listing.errors.count, first: first)
+                }
+                try await deleteRecordIDs(listing.ids, type: type)
+                let remaining = try await listRecordIDs(ofType: type)
+                if let first = remaining.errors.first {
+                    throw DeleteError.fetchFailed(recordType: type, count: remaining.errors.count, first: first)
+                }
+                if remaining.ids.isEmpty { return }
+                lastError = DeleteError.recordsRemain(recordType: type, count: remaining.ids.count)
+                logger.error("CloudKit delete pass \(pass): \(remaining.ids.count) \(type) record(s) remain")
+            } catch {
+                lastError = error
+                logger.error("CloudKit delete pass \(pass) for \(type) failed: \(error.localizedDescription)")
             }
-            cursor = pageCursor
         }
+        throw lastError ?? DeleteError.recordsRemain(recordType: type, count: -1)
     }
 
-    private func deleteRecordBatch(_ recordIDs: [CKRecord.ID]) async throws {
-        let operation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: recordIDs)
-        operation.qualityOfService = .userInitiated
-
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            operation.modifyRecordsResultBlock = { result in
+    /// Every record id of a type. Per-record fetch errors are returned, never dropped.
+    private func listRecordIDs(ofType type: String) async throws -> (ids: [CKRecord.ID], errors: [Error]) {
+        let query = CKQuery(recordType: type, predicate: NSPredicate(value: true))
+        var ids: [CKRecord.ID] = []
+        var errors: [Error] = []
+        func absorb(_ results: [(CKRecord.ID, Result<CKRecord, Error>)]) {
+            for (id, result) in results {
                 switch result {
-                case .success:
-                    continuation.resume()
-                case .failure(let error):
-                    continuation.resume(throwing: error)
+                case .success: ids.append(id)
+                case .failure(let error): errors.append(error)
                 }
             }
-            database.add(operation)
+        }
+        var (results, cursor) = try await database.records(matching: query, desiredKeys: [], resultsLimit: 400)
+        absorb(results)
+        while let current = cursor {
+            (results, cursor) = try await database.records(continuingMatchFrom: current, desiredKeys: [], resultsLimit: 400)
+            absorb(results)
+        }
+        return (ids, errors)
+    }
+
+    private final class FailureBox: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [Error] = []
+        func add(_ e: Error) { lock.lock(); items.append(e); lock.unlock() }
+        var all: [Error] { lock.lock(); defer { lock.unlock() }; return items }
+    }
+
+    private func deleteRecordIDs(_ ids: [CKRecord.ID], type: String) async throws {
+        for batch in ids.chunked(into: 400) {
+            let failures = FailureBox()
+            let operation = CKModifyRecordsOperation(recordsToSave: nil, recordIDsToDelete: batch)
+            operation.qualityOfService = .userInitiated
+            operation.perRecordDeleteBlock = { _, result in
+                if case .failure(let error) = result, (error as? CKError)?.code != .unknownItem { failures.add(error) }
+            }
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                operation.modifyRecordsResultBlock = { result in
+                    switch result {
+                    case .success: continuation.resume()
+                    case .failure(let error): continuation.resume(throwing: error)
+                    }
+                }
+                database.add(operation)
+            }
+            if let first = failures.all.first {
+                throw DeleteError.deleteFailed(recordType: type, count: failures.all.count, first: first)
+            }
         }
     }
 

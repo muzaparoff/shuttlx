@@ -1,5 +1,7 @@
 import Foundation
+import Combine
 import os.log
+import ShuttlXShared
 
 @MainActor
 class TemplateManager: ObservableObject {
@@ -9,8 +11,16 @@ class TemplateManager: ObservableObject {
     private let appGroupIdentifier = "group.com.shuttlx.shared"
     private let fileName = "workout_templates.json"
 
+    private var wipeObserver: AnyCancellable?
+
     init() {
         loadTemplates()
+        wipeObserver = NotificationCenter.default.publisher(for: .localUserDataWiped)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.templates = []
+                self?.syncToWatch()
+            }
     }
 
     // MARK: - CRUD
@@ -49,7 +59,13 @@ class TemplateManager: ObservableObject {
 
         do {
             let data = try Data(contentsOf: url)
-            templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+            let decoded = LenientJSON.decodeArray(WorkoutTemplate.self, from: data)
+            if decoded.skipped > 0 || decoded.wholeFileUndecodable {
+                // The next save rewrites the file without the bad records: keep the original first.
+                let backup = try StoreFile.backupCorrupt(url)
+                logger.error("workout_templates.json: \(decoded.skipped) unreadable template(s); original kept as \(backup.lastPathComponent)")
+            }
+            templates = decoded.elements
             logger.info("Loaded \(self.templates.count) template(s)")
         } catch {
             logger.error("Failed to load templates: \(error.localizedDescription)")
@@ -61,7 +77,7 @@ class TemplateManager: ObservableObject {
 
         do {
             let data = try JSONEncoder().encode(templates)
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            try data.write(to: url, options: StoreFile.writeOptions)
             logger.info("Saved \(self.templates.count) template(s)")
         } catch {
             logger.error("Failed to save templates: \(error.localizedDescription)")

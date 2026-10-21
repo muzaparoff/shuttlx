@@ -55,19 +55,6 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     private var lastAutoPullDate: Date?
     private let autoPullDebounceInterval: TimeInterval = 300
 
-    private let sessionsKey = "sessions.json"
-    private let appGroupIdentifier = "group.com.shuttlx.shared"
-    private var sharedContainer: URL? {
-        FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier)
-    }
-
-    private var fallbackContainer: URL? {
-        guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else {
-            return nil
-        }
-        return docsURL.appendingPathComponent("SharedData")
-    }
-
     private var lastPingTime: Date?
     private var backgroundSyncTimer: Timer?
     private weak var dataManager: DataManager?
@@ -84,7 +71,6 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             session.delegate = self
             session.activate()
         }
-        loadSessionsFromSharedStorage()
         setupBackgroundTasks()
         LiveActivityManager.shared.cleanupStaleActivities()
     }
@@ -192,24 +178,76 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
 
     // MARK: - Session Handling
 
-    func handleReceivedSession(_ session: TrainingSession) {
-        if !syncedSessions.contains(where: { $0.id == session.id }) {
-            syncedSessions.append(session)
-            // Persist immediately so sessions survive app termination before DataManager saves
-            saveSessionsToSharedStorage(syncedSessions)
-            log("New session received and saved: \(session.id)")
-            consecutiveFailures = 0
-            lastSyncTime = Date()
-            updateConnectivityHealth()
+    /// A session id the app already ingested (or the user cleared away).
+    private func isKnown(_ id: UUID) -> Bool {
+        guard let dataManager else { return syncedSessions.contains(where: { $0.id == id }) }
+        // A copy that was only imported from Apple Health does not count: the watch session replaces it.
+        return dataManager.hasSession(id) && !dataManager.canTakeSession(id)
+    }
 
-            // Forward to DataManager which saves to App Group + reloads widgets
-            if let dataManager = dataManager {
-                dataManager.handleReceivedSessions([session])
-            } else {
-                log("Warning: dataManager nil — buffering session \(session.id)")
-                pendingForDataManager.append(session)
+    /// Entry for every session that arrives over WatchConnectivity. This class never writes sessions.json:
+    /// the session goes to the pending inbox (crash safety while DataManager may not be alive) and is then
+    /// forwarded to DataManager, the only writer, which acknowledges the inbox entry after saving.
+    /// Returns how many were new.
+    @discardableResult
+    private func ingest(_ sessions: [TrainingSession]) -> Int {
+        let cutoff = SessionIngestRules.clearedAt()
+        var seen = Set<UUID>()
+        let fresh = sessions.filter { s in
+            guard seen.insert(s.id).inserted, !isKnown(s.id) else { return false }
+            let end = s.endDate ?? s.startDate.addingTimeInterval(s.duration)
+            return !SessionIngestRules.isStale(end: end, clearedAt: cutoff)
+        }
+        guard !fresh.isEmpty else { return 0 }
+
+        let inbox = DataManager.pendingInbox()
+        for session in fresh {
+            do { try inbox?.add(session) } catch {
+                log("Could not write session \(session.id) to the pending inbox: \(error.localizedDescription)")
+            }
+            if !syncedSessions.contains(where: { $0.id == session.id }) { syncedSessions.append(session) }
+        }
+        if let dataManager {
+            dataManager.handleReceivedSessions(fresh)
+        } else {
+            log("Warning: dataManager nil — buffering \(fresh.count) session(s)")
+            pendingForDataManager.append(contentsOf: fresh)
+        }
+        return fresh.count
+    }
+
+    func handleReceivedSession(_ session: TrainingSession) {
+        guard ingest([session]) > 0 else { return }
+        log("New session received: \(session.id)")
+        consecutiveFailures = 0
+        lastSyncTime = Date()
+        updateConnectivityHealth()
+    }
+
+    /// Drops the in-memory relay (after a wipe) so a stale list cannot be re-forwarded.
+    func clearRelay() {
+        syncedSessions = []
+        pendingForDataManager = []
+    }
+
+    // MARK: - Watch purge
+
+    /// Tells the watch to drop its copies after the user wiped data on the phone. transferUserInfo is queued
+    /// by the OS until delivered; sendMessage is added when the watch is reachable. The watch also receives the
+    /// phone's clear time with every reconcile so it cannot resurrect old history by resending.
+    func sendPurgeToWatch(_ scope: PurgeSessionsMessage.Scope) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            log("Purge not sent to the watch — session not active")
+            return
+        }
+        let payload = PurgeSessionsMessage(scope: scope).payload
+        WCSession.default.transferUserInfo(payload)
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
+                Task { @MainActor in self?.log("Purge sendMessage failed (transferUserInfo is queued): \(error.localizedDescription)") }
             }
         }
+        log("Purge (\(scope.rawValue)) sent to the watch")
     }
 
     /// Watch effort answer. Arrives on sendMessage and/or transferUserInfo (may duplicate; applying is idempotent).
@@ -219,7 +257,9 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             return
         }
         guard let dataManager else {
-            log("updateSessionEffort ignored — dataManager nil")
+            // Cold start: the answer can beat DataManager. Keep it; it is applied when the session is ingested.
+            DataManager.queuePendingEffort(sessionId: id, rpe: rpe)
+            log("updateSessionEffort kept pending — dataManager nil")
             return
         }
         dataManager.applyEffort(sessionId: id, rpe: rpe)
@@ -234,7 +274,9 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
               let kind = HeartAlert.Kind(rawValue: kindRaw),
               let ts = payload["ts"] as? TimeInterval else { return }
         let key = "\(kindRaw)-\(ts)"
-        guard Date().timeIntervalSince1970 - ts <= 60, seenHeartAlerts.insert(key).inserted else { return }
+        // Older than 60 s, or more than 5 s in the future (wrong watch clock): not shown.
+        guard HeartLimits.isFreshAlert(ts: ts, now: Date().timeIntervalSince1970),
+              seenHeartAlerts.insert(key).inserted else { return }
         if seenHeartAlerts.count > 50 { seenHeartAlerts = [key] }
 
         if kind == .noMotion { livePauseReason = "noMotion" }
@@ -253,9 +295,14 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         let body = HeartAlert(kind: kind, value: payload["value"] as? Int).message
         let center = UNUserNotificationCenter.current()
         Task {
+            // Permission is asked in onboarding and when an alert is switched on, never here (a system
+            // prompt in the middle of a workout is the wrong moment). Without it the watch haptic still fires.
+            let settings = await center.notificationSettings()
+            guard settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional else {
+                logger.info("heartAlert notification skipped — notifications not allowed")
+                return
+            }
             do {
-                // Lazy: the system prompt only appears the first time an alert arrives.
-                guard try await center.requestAuthorization(options: [.alert, .sound]) else { return }
                 let content = UNMutableNotificationContent()
                 content.title = "ShuttlX"
                 content.body = body
@@ -265,6 +312,19 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             } catch {
                 logger.error("heartAlert notification failed: \(error.localizedDescription)")
             }
+        }
+    }
+
+    /// Asks for notification permission (alerts + sound). Called from onboarding and when the user turns an
+    /// alert on. Returns whether notifications are allowed afterwards.
+    @discardableResult
+    static func requestNotificationAuthorization() async -> Bool {
+        do {
+            return try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound])
+        } catch {
+            Logger(subsystem: "com.shuttlx.ShuttlX", category: "PhoneSyncCoordinator")
+                .error("Notification authorization failed: \(error.localizedDescription)")
+            return false
         }
     }
 
@@ -399,10 +459,13 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     /// Sends a remote-start command to the Watch so both devices run in sync.
     /// Uses the same dual-channel pattern as pause/resume/stop but with a 30s
     /// stale window — a start that arrives late via transferUserInfo is useless.
-    func startWatchWorkout(mode: String, template: WorkoutTemplate? = nil) {
+    /// Returns true when the command was sent and a watch with the app is paired, so the caller may treat
+    /// the watch as recording the same workout (and send it pause / resume / stop).
+    @discardableResult
+    func startWatchWorkout(mode: String, template: WorkoutTemplate? = nil) -> Bool {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
             log("workoutControl 'start' skipped — WCSession not activated")
-            return
+            return false
         }
         // A new workout invalidates any stale pending stop from a prior one.
         pendingStopSentAt = nil
@@ -426,6 +489,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         }
         WCSession.default.transferUserInfo(message)
         log("workoutControl 'start' sent — mode=\(mode)")
+        return WCSession.default.isPaired && WCSession.default.isWatchAppInstalled
     }
 
     /// Sends a pause/resume/stop command to the Watch on two channels:
@@ -510,146 +574,20 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         }
     }
 
-    // MARK: - Session Storage
+    // MARK: - Session Storage (read-only here; DataManager owns sessions.json)
 
-    /// Serial background queue for sessions.json writes — encoding the full
-    /// history must never block the main actor (stall grows with history size).
-    private nonisolated static let sessionStoreQueue = DispatchQueue(label: "com.shuttlx.phone-session-store", qos: .utility)
-
-    private func saveSessionsToSharedStorage(_ sessions: [TrainingSession]) {
-        guard let containerURL = getWorkingContainer() else { return }
-
-        let url = containerURL.appendingPathComponent(sessionsKey)
-        Self.sessionStoreQueue.async { [weak self] in
-            let coordinator = NSFileCoordinator()
-            var coordinatorError: NSError?
-            coordinator.coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
-                do {
-                    let data = try JSONEncoder().encode(sessions)
-                    try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
-                } catch {
-                    Task { @MainActor [weak self] in
-                        self?.log("Failed to save sessions: \(error.localizedDescription)")
-                    }
-                }
-            }
-            if let coordinatorError {
-                Task { @MainActor [weak self] in
-                    self?.log("File coordination error saving sessions: \(coordinatorError.localizedDescription)")
-                }
-            }
-        }
-    }
-
-    private func loadSessionsFromSharedStorage(completion: (() -> Void)? = nil) {
-        readSessionsFromDisk { [weak self] sessions in
-            if let self, !sessions.isEmpty {
-                self.syncedSessions = sessions
-            }
-            completion?()
-        }
-    }
-
-    /// Reads + decodes sessions.json on the store queue — decode cost grows with
-    /// history size (GPS-heavy histories reach several MB) and this runs on every
-    /// app resume. Completion is delivered on the main actor.
-    private func readSessionsFromDisk(_ completion: @escaping ([TrainingSession]) -> Void) {
-        guard let containerURL = getWorkingContainer() else { completion([]); return }
-
-        let url = containerURL.appendingPathComponent(sessionsKey)
-        guard FileManager.default.fileExists(atPath: url.path) else { completion([]); return }
-
-        Self.sessionStoreQueue.async { [weak self] in
-            var result: [TrainingSession] = []
-            let coordinator = NSFileCoordinator()
-            var coordinatorError: NSError?
-            coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
-                do {
-                    let data = try Data(contentsOf: readURL)
-                    result = try JSONDecoder().decode([TrainingSession].self, from: data)
-                } catch {
-                    // Preserve corrupt file for potential recovery — never silently drop history
-                    let backupURL = url.deletingLastPathComponent()
-                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                    try? FileManager.default.copyItem(at: readURL, to: backupURL)
-                    Task { @MainActor [weak self] in
-                        self?.log("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
-                        self?.log("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                        self?.purgeOldCorruptBackups(in: url.deletingLastPathComponent())
-                    }
-                }
-            }
-            if let coordinatorError {
-                Task { @MainActor [weak self] in
-                    self?.log("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
-                }
-            }
-            Task { @MainActor in completion(result) }
-        }
-    }
-
+    /// Debug read of sessions.json (DebugView). Per-record decode, no side effects.
     func loadSessionsFromAppGroup() -> [TrainingSession] {
-        guard let containerURL = getWorkingContainer() else { return [] }
-
-        let url = containerURL.appendingPathComponent(sessionsKey)
-        guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-
-        var result: [TrainingSession] = []
-        let coordinator = NSFileCoordinator()
-        var coordinatorError: NSError?
-        coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
-            do {
-                let data = try Data(contentsOf: readURL)
-                result = try JSONDecoder().decode([TrainingSession].self, from: data)
-            } catch {
-                self.log("CRITICAL: Failed to decode sessions.json: \(error.localizedDescription)")
-                // Preserve corrupt file for potential recovery — never silently drop history
-                let backupURL = url.deletingLastPathComponent()
-                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                try? FileManager.default.copyItem(at: readURL, to: backupURL)
-                self.log("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                self.purgeOldCorruptBackups(in: url.deletingLastPathComponent())
-            }
-        }
-        if let coordinatorError {
-            log("File coordination error loading sessions: \(coordinatorError.localizedDescription)")
-        }
-        return result
-    }
-
-    private func purgeOldCorruptBackups(in directory: URL) {
-        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else { return }
-        for file in files where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
-            let created = (try? file.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantFuture
-            if created < cutoff {
-                try? FileManager.default.removeItem(at: file)
-                log("Removed stale corrupt backup: \(file.lastPathComponent)")
-            }
-        }
+        guard let url = DataManager.workingContainer()?.appendingPathComponent("sessions.json"),
+              let data = try? Data(contentsOf: url) else { return [] }
+        return LenientJSON.decodeArray(TrainingSession.self, from: data).elements
     }
 
     // MARK: - Public Debug
 
     func purgeAllSessionsFromStorage() {
-        syncedSessions = []
-
-        if let containerURL = getWorkingContainer() {
-            let sessionsURL = containerURL.appendingPathComponent(sessionsKey)
-            let coordinator = NSFileCoordinator()
-            var coordinatorError: NSError?
-            coordinator.coordinate(writingItemAt: sessionsURL, options: .forReplacing, error: &coordinatorError) { writeURL in
-                do {
-                    let data = try JSONEncoder().encode([TrainingSession]())
-                    try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
-                } catch {
-                    self.logger.error("Failed to purge sessions: \(error.localizedDescription)")
-                }
-            }
-            if let coordinatorError {
-                logger.error("File coordination error purging sessions: \(coordinatorError.localizedDescription)")
-            }
-        }
+        dataManager?.wipeLocalUserData(.trainingData)
+        clearRelay()
     }
 
     func checkConnectivity() -> String {
@@ -664,11 +602,6 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         Last Sync: \(lastSyncTime?.description ?? "Never")
         Consecutive Failures: \(consecutiveFailures)
         """
-    }
-
-    func clearAndReloadSessions() {
-        let allSessions = Set(loadSessionsFromAppGroup())
-        syncedSessions = Array(allSessions)
     }
 
     /// Request all sessions from Watch via sendMessage with automatic retries.
@@ -745,15 +678,8 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
            let sessionsData = Data(base64Encoded: sessionsDataString) {
             do {
                 let sessions = try JSONDecoder().decode([TrainingSession].self, from: sessionsData)
-                var newCount = 0
-                for session in sessions {
-                    if !syncedSessions.contains(where: { $0.id == session.id }) {
-                        syncedSessions.append(session)
-                        newCount += 1
-                    }
-                }
+                let newCount = ingest(sessions)
                 if newCount > 0 {
-                    dataManager?.handleReceivedSessions(sessions)
                     log("Pulled \(newCount) new session(s) from Watch")
                 }
                 if oversizedCount > 0 {
@@ -777,19 +703,15 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
 
     /// Called when app comes to foreground — reconcile any missing sessions
     func reconcileWithDataManager() {
-        // Reload from disk first — picks up sessions saved while app was
-        // backgrounded. The read is async (off-main decode); the reconcile
-        // steps must run only after it has applied to syncedSessions.
-        loadSessionsFromSharedStorage { [weak self] in
-            guard let self else { return }
-            self.checkForNewSessions()
+        // Pick up the pending inbox (sessions that arrived while the app was not running), then reconcile.
+        dataManager?.loadSessionsFromAppGroup()
+        checkForNewSessions()
 
-            // Always attempt pull — sendMessage's errorHandler handles unreachable case,
-            // isReachable can be stale
-            self.requestSessionsFromWatch { [weak self] count in
-                if count > 0 {
-                    self?.log("Reconciliation pulled \(count) session(s)")
-                }
+        // Always attempt pull — sendMessage's errorHandler handles unreachable case,
+        // isReachable can be stale
+        requestSessionsFromWatch { [weak self] count in
+            if count > 0 {
+                self?.log("Reconciliation pulled \(count) session(s)")
             }
         }
     }
@@ -797,12 +719,15 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     /// Sends known session IDs to Watch so Watch can re-send any missing ones
     func reconcileSessionIDs() {
         guard let dataManager = dataManager else { return }
-        let knownIDs = dataManager.sessions.map { $0.id.uuidString }
+        // Health-imported copies are not "known": the watch should still send its own version of those.
+        let knownIDs = dataManager.sessions.filter { $0.importedFromHealth != true }.map { $0.id.uuidString }
 
-        let message: [String: Any] = [
+        var message: [String: Any] = [
             "action": "reconcileSessions",
             "knownSessionIDs": knownIDs
         ]
+        // Lets the watch skip anything that ended before the user's last clear (late resends).
+        if let clearedAt = SessionIngestRules.clearedAt() { message["clearedAt"] = clearedAt.timeIntervalSince1970 }
 
         WCSession.default.sendMessage(message, replyHandler: { [weak self] reply in
             Task { @MainActor in
@@ -893,6 +818,16 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         log("Max HR sent to Watch: \(maxHR == 0 ? "cleared" : "\(Int(maxHR)) BPM")")
     }
 
+    /// An older build froze the Health-derived estimate as a "manual" max HR. `DataManager` clears it on the
+    /// phone and sets this flag; the reset reaches the watch as soon as a session is active and a watch is paired.
+    static let maxHRResetPendingKey = "maxHRResetPendingToWatch"
+    func sendPendingMaxHRResetIfNeeded() {
+        guard UserDefaults.standard.bool(forKey: Self.maxHRResetPendingKey),
+              WCSession.isSupported(), session.activationState == .activated, session.isPaired else { return }
+        UserDefaults.standard.set(false, forKey: Self.maxHRResetPendingKey)
+        sendMaxHRToWatch(0)
+    }
+
     // MARK: - Heart Limits Sync
 
     /// Sends resolved limits + alert flags only. The medication answer never leaves the phone
@@ -947,19 +882,6 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         }
     }
 
-    private func getWorkingContainer() -> URL? {
-        if let container = sharedContainer {
-            return container
-        }
-
-        guard let fallback = fallbackContainer else { return nil }
-        do {
-            try FileManager.default.createDirectory(at: fallback, withIntermediateDirectories: true)
-            return fallback
-        } catch {
-            return nil
-        }
-    }
 }
 
 // MARK: - WCSessionDelegate
@@ -973,6 +895,7 @@ extension PhoneSyncCoordinator {
                 self.log("WC Session activated: \(activationState.rawValue)")
                 self.consecutiveFailures = 0
                 self.sendHeartSafetyToWatch(HeartSafetySettings.load(), age: DeviceManager.shared.userAge)
+                self.sendPendingMaxHRResetIfNeeded()
 
                 // After activation, try pulling sessions if Watch is reachable,
                 // then reconcile to catch any sessions that overflowed the inline
@@ -1066,7 +989,7 @@ extension PhoneSyncCoordinator {
                     // 3s liveMetrics updates) to transferUserInfo. Handle it here.
                     if let idString = userInfo["sessionID"] as? String,
                        let id = UUID(uuidString: idString),
-                       !self.syncedSessions.contains(where: { $0.id == id }) {
+                       !self.isKnown(id) {
                         self.log("lastSessionID \(idString) not in synced list — requesting from watch")
                         self.requestSessionsFromWatch { _ in }
                     }
@@ -1131,7 +1054,7 @@ extension PhoneSyncCoordinator {
                 // transferUserInfo (didReceiveUserInfo) instead — that case is the live path.
                 if let idString = applicationContext["sessionID"] as? String,
                    let id = UUID(uuidString: idString),
-                   !self.syncedSessions.contains(where: { $0.id == id }) {
+                   !self.isKnown(id) {
                     self.log("lastSessionID \(idString) via applicationContext — requesting from watch")
                     self.requestSessionsFromWatch { _ in }
                 }

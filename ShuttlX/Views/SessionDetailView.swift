@@ -259,7 +259,7 @@ private struct HeartRateLine: View {
                     .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
                     .foregroundStyle(ShuttlXColor.heartRate)
             }
-            .chartXScale(domain: start...end)
+            .chartXScale(domain: min(start, end)...max(start, end))   // start > end must not trap
             .chartYScale(domain: lo...hi)
             .chartXAxis(.hidden)
             .chartYAxis(.hidden)
@@ -289,7 +289,8 @@ struct FixPartSheet: View {
     let partID: UUID
     let parts: [ActivitySegment]   // the session's EFFECTIVE parts, in order
     @Environment(\.dismiss) private var dismiss
-    @State private var choice: DetectedActivity
+    /// nil = no tile chosen (the part is `.unknown`, which is not Rest); Save stays off until one is picked.
+    @State private var choice: DetectedActivity?
     /// Where the split handle sits inside the part, 0...1 (mockup: starts in the middle).
     @State private var handle: Double
 
@@ -300,7 +301,7 @@ struct FixPartSheet: View {
         self.partID = partID
         self.parts = parts
         let seg = parts.first { $0.id == partID }
-        _choice = State(initialValue: seg.map { $0.activityType == .unknown ? .stationary : $0.activityType } ?? .stationary)
+        _choice = State(initialValue: seg.flatMap { $0.activityType == .unknown ? nil : $0.activityType })
         var h = 0.5
         #if DEBUG
         if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_FIX_HANDLE"], let v = Double(raw) { h = v }
@@ -324,7 +325,13 @@ struct FixPartSheet: View {
 
     /// The parts as the user sees them now (tile choice included), so Split / Merge keep it.
     private var partsWithChoice: [ActivitySegment] {
-        parts.map { var p = $0; if p.id == partID { p.activityType = choice }; return p }
+        parts.map { var p = $0; if p.id == partID, let choice { p.activityType = choice }; return p }
+    }
+
+    /// Save is on only when the choice differs from the part's current effective type.
+    private var canSave: Bool {
+        guard let choice else { return false }
+        return choice != segment.activityType
     }
 
     private func split() {
@@ -392,11 +399,14 @@ struct FixPartSheet: View {
                     .accessibilityAddTraits(.isHeader)
                 Spacer()
                 Button("Save") {
+                    guard let choice, canSave else { return }
                     SegmentOverrideStore.shared.setType(choice, partID: partID, parts: parts, sessionID: sessionID)
                     dismiss()
                 }
                     .font(ShuttlXFont.cardSubtitle.weight(.bold))
                     .frame(minWidth: 60, minHeight: 44, alignment: .trailing)
+                    .disabled(!canSave)
+                    .accessibilityHint(canSave ? "" : "Choose a different type to save")
             }
             .foregroundStyle(ShuttlXColor.ctaPrimary)
 

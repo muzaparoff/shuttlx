@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A59CF0020B /* PhoneWorkoutCheckpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = A59CF0020F /* PhoneWorkoutCheckpoint.swift */; };
+		A59CF0010B /* CommitIntField.swift in Sources */ = {isa = PBXBuildFile; fileRef = A59CF0010F /* CommitIntField.swift */; };
 		A56D91122E0940EF00E19F06 /* ShuttlX Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		A5923502 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923508 /* ContentView.swift */; };
 		A5923503 /* ShuttlXApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923507 /* ShuttlXApp.swift */; };
@@ -225,6 +227,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		A59CF0020F /* PhoneWorkoutCheckpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWorkoutCheckpoint.swift; sourceTree = "<group>"; };
+		A59CF0010F /* CommitIntField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitIntField.swift; sourceTree = "<group>"; };
 		A56D91082E0940ED00E19F06 /* ShuttlX Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "ShuttlX Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A59234DE /* ShuttlX.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ShuttlX.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A5923505F /* TrainingSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingSession.swift; sourceTree = "<group>"; };
@@ -475,6 +479,7 @@
 				A5923507F /* DataManager.swift */,
 				HI000001F /* HealthKitImporter.swift */,
 				SO000001F /* SegmentOverrideStore.swift */,
+				A59CF0020F /* PhoneWorkoutCheckpoint.swift */,
 				SHR00001F /* SessionHeartRateLoader.swift */,
 				FB000001F /* FeedbackPrompt.swift */,
 				A5923508F /* PhoneSyncCoordinator.swift */,
@@ -576,6 +581,7 @@
 				A5923A03 /* ActivityBadge.swift */,
 				A5923A06 /* PressScaleButtonStyle.swift */,
 				A5923A91 /* DayRibbon.swift */,
+				A59CF0010F /* CommitIntField.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -928,6 +934,8 @@
 				A5923507B /* DataManager.swift in Sources */,
 				HI000001B /* HealthKitImporter.swift in Sources */,
 				SO000001B /* SegmentOverrideStore.swift in Sources */,
+				A59CF0010B /* CommitIntField.swift in Sources */,
+				A59CF0020B /* PhoneWorkoutCheckpoint.swift in Sources */,
 				SHR00001B /* SessionHeartRateLoader.swift in Sources */,
 				FB000001 /* FeedbackPrompt.swift in Sources */,
 				A5923508B /* PhoneSyncCoordinator.swift in Sources */,

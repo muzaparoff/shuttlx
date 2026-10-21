@@ -37,6 +37,9 @@ final class SegmentOverrideStore: ObservableObject {
         return true
     }
 
+    /// Wipe: forget every correction (the file is removed by `DataManager.wipeLocalUserData`).
+    func wipe() { edits = SegmentEdits() }
+
     private func commit(_ next: SegmentEdits) {
         edits = next
         save()
@@ -48,9 +51,7 @@ final class SegmentOverrideStore: ObservableObject {
             edits = try SegmentEdits.decode(Data(contentsOf: url))
         } catch {
             // Keep the bytes: the next save would otherwise overwrite the user's corrections with an empty file.
-            let backup = url.deletingLastPathComponent()
-                .appendingPathComponent("segment_overrides_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-            do { try FileManager.default.copyItem(at: url, to: backup) } catch {
+            do { try StoreFile.backupCorrupt(url) } catch {
                 logger.error("Backup of corrupt overrides failed: \(error.localizedDescription, privacy: .public)")
             }
             logger.error("Load failed: \(error.localizedDescription, privacy: .public)")
@@ -60,7 +61,7 @@ final class SegmentOverrideStore: ObservableObject {
     private func save() {
         guard let url else { logger.error("App Group container unavailable"); return }
         do {
-            try JSONEncoder().encode(edits).write(to: url, options: .atomic)
+            try JSONEncoder().encode(edits).write(to: url, options: StoreFile.writeOptions)
         } catch {
             logger.error("Save failed: \(error.localizedDescription, privacy: .public)")
         }

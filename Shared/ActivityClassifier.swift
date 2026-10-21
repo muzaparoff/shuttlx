@@ -14,6 +14,11 @@ public enum SpeedActivityClassifier {
 
     /// Minimum window the inputs must be averaged over.
     public static let minWindow: TimeInterval = 30
+    /// With no cadence there is no step evidence either way, so only a speed no one
+    /// sustains on foot counts as cycling: 6.5 m/s = 23.4 km/h.
+    public static let unknownCadenceCyclingSpeed: Double = 6.5
+    /// A CoreMotion reading older than this no longer says what the wearer is doing.
+    public static let motionFreshness: TimeInterval = 60
 
     /// - Parameters: sustained `speed` (m/s) and `cadence` (steps/min, nil if unknown)
     ///   averaged over `window` seconds. Returns nil while the window is too short.
@@ -21,7 +26,9 @@ public enum SpeedActivityClassifier {
         guard window >= minWindow, speed.isFinite, speed >= 0 else { return nil }
         if speed < 0.3 { return Result(activity: .stationary, confidence: .high) }
         if speed > 7 { return Result(activity: .cycling, confidence: .high) }
-        if speed > 3.5, cadence.map({ $0 < 60 }) ?? true {
+        if let cadence {
+            if speed > 3.5, cadence < 60 { return Result(activity: .cycling, confidence: .high) }
+        } else if speed >= unknownCadenceCyclingSpeed {
             return Result(activity: .cycling, confidence: .high)
         }
         let run = (cadence ?? 0) >= 140 || speed >= 2.2
@@ -29,8 +36,37 @@ public enum SpeedActivityClassifier {
         return Result(activity: run ? .running : .walking, confidence: ambiguous ? .low : .high)
     }
 
+    /// Mean GPS speed of the fixes in the last `window` seconds of `points` (oldest
+    /// first). Walks backwards and stops at the window edge, so the per-tick call
+    /// allocates nothing. nil until the history reaches past the window, or with
+    /// fewer than `minFixes` speed fixes inside it (a fresh resume must not classify
+    /// on 2-3 fixes).
+    public static func averageSpeed(of points: [RoutePoint], now: Date,
+                                    window: TimeInterval = minWindow,
+                                    minFixes: Int = 15) -> (speed: Double, fixes: Int)? {
+        var sum = 0.0, fixes = 0, spansWindow = false
+        for point in points.reversed() {
+            if now.timeIntervalSince(point.timestamp) > window { spansWindow = true; break }
+            if let speed = point.speed { sum += speed; fixes += 1 }
+        }
+        guard spansWindow, fixes >= minFixes else { return nil }
+        return (sum / Double(fixes), fixes)
+    }
+
+    /// Speed has just handed the segment back from cycling to on foot. Returns the
+    /// run/walk to commit straight away from `speedVerdict` when CoreMotion has no
+    /// fresh reading (it calls back only on a change, so it may never speak again),
+    /// or nil when its fresh reading should re-earn run/walk instead.
+    public static func footFallback(speedVerdict: DetectedActivity, motionReadingAt: Date?,
+                                    now: Date) -> DetectedActivity? {
+        if let at = motionReadingAt, now.timeIntervalSince(at) <= motionFreshness { return nil }
+        return speedVerdict == .running ? .running : .walking
+    }
+
     /// A new class must hold 30 s before it replaces the committed one; 60 s when the
-    /// switch crosses cycling <-> on-foot. The first reading commits immediately.
+    /// switch crosses cycling <-> on-foot. The first on-foot reading commits
+    /// immediately; a first cycling reading never does — it must hold 60 s like any
+    /// other switch into cycling.
     public struct Hysteresis: Sendable {
         public private(set) var committed: DetectedActivity?
         private var pending: DetectedActivity?
@@ -39,15 +75,22 @@ public enum SpeedActivityClassifier {
         public init() {}
 
         @discardableResult
-        public mutating func ingest(_ activity: DetectedActivity, at now: Date) -> DetectedActivity {
-            guard let current = committed else { committed = activity; return activity }
+        public mutating func ingest(_ activity: DetectedActivity, at now: Date) -> DetectedActivity? {
+            guard let current = committed else {
+                guard activity == .cycling else { committed = activity; pending = nil; pendingSince = nil; return activity }
+                if pending != .cycling { pending = .cycling; pendingSince = now }
+                if let since = pendingSince, now.timeIntervalSince(since) >= 60 {
+                    committed = .cycling; pending = nil; pendingSince = nil
+                }
+                return committed
+            }
             guard activity != current else { pending = nil; pendingSince = nil; return current }
             if pending != activity { pending = activity; pendingSince = now }
             let hold: TimeInterval = (activity == .cycling) != (current == .cycling) ? 60 : 30
             if let since = pendingSince, now.timeIntervalSince(since) >= hold {
                 committed = activity; pending = nil; pendingSince = nil
             }
-            return committed ?? activity
+            return committed
         }
     }
 }

@@ -9,7 +9,7 @@ struct SafetyPromptView: View {
     let onEndAndSave: () -> Void
 
     var body: some View {
-        WatchPromptCard {
+        WatchPromptCard(announcement: "Still training? The workout ends and saves in 5 minutes if there's no answer.") {
             Text("Still training?")
                 .font(.system(size: WatchScale.pt(19), weight: .heavy))
             Text("Ends and saves in 5 min if there's no answer.")
@@ -35,7 +35,7 @@ struct AutoPausedView: View {
     let onEndAndSave: () -> Void
 
     var body: some View {
-        WatchPromptCard {
+        WatchPromptCard(announcement: "Workout paused. No heart rate for \(seconds) seconds. Still training?") {
             Text("\u{23F8} PAUSED")
                 .font(.system(size: WatchScale.pt(11), weight: .bold))
                 .tracking(WatchScale.pt(11) * 0.08)
@@ -58,7 +58,8 @@ struct AutoPausedView: View {
     }
 }
 
-/// Sudden heart-rate jump (HeartAlertEvaluator `.suddenJump`). Stays until tapped.
+/// Sudden heart-rate jump (HeartAlertEvaluator `.suddenJump`, two samples). Amber,
+/// not red: an instruction to check, not an alarm. Stays until tapped.
 struct UnusualHeartRateView: View {
     let bpm: Int
     let rise: Int
@@ -66,24 +67,26 @@ struct UnusualHeartRateView: View {
     let onPause: () -> Void
 
     var body: some View {
-        WatchPromptCard(background: LinearGradient(
-            stops: [.init(color: ShuttlXColor.heartRate.opacity(0.22), location: 0),
+        WatchPromptCard(announcement: "Check your heart rate. \(bpm) beats per minute, up \(rise) quickly.",
+                        background: LinearGradient(
+            stops: [.init(color: ShuttlXColor.ctaWarning.opacity(0.22), location: 0),
                     .init(color: .black, location: 0.7)],
             startPoint: .top, endPoint: .bottom)) {
-            Text("UNUSUAL HEART RATE")
-                .font(.system(size: WatchScale.pt(11), weight: .bold))
-                .tracking(WatchScale.pt(11) * 0.08)
-                .foregroundStyle(ShuttlXColor.heartRate)
+            Text("Check your heart rate")
+                .font(.system(size: WatchScale.pt(15), weight: .heavy))
+                .foregroundStyle(ShuttlXColor.ctaWarning)
                 .lineLimit(1)
                 .fixedSize()
             Text("\(bpm)")
                 .font(.system(size: WatchScale.pt(52), weight: .semibold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(ShuttlXColor.heartRate)
+                .foregroundStyle(ShuttlXColor.ctaWarning)
                 .fixedSize()
                 .padding(.top, WatchScale.pt(6))
-            Text("+\(rise) in 10 s")
+                .accessibilityLabel("\(bpm) beats per minute")
+            Text("BPM \u{00B7} up \(rise) quickly")
                 .font(.system(size: WatchScale.pt(12), weight: .bold))
+                .foregroundStyle(ShuttlXColor.textSecondary)
         } buttons: {
             HStack(spacing: 6) {
                 Button("OK", action: onOK)
@@ -93,20 +96,22 @@ struct UnusualHeartRateView: View {
                     .accessibilityHint("Pauses the workout")
             }
         }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Unusual heart rate \(bpm), up \(rise) in 10 seconds")
     }
 }
 
 /// Centered message + full-width pill buttons over an opaque background that
 /// swallows touches (an overlay, not a sheet, so no system close button).
+/// Modal for VoiceOver (the workout underneath is hidden by TrainingView), and
+/// `announcement` is spoken when it appears.
 struct WatchPromptCard<Message: View, Buttons: View, Background: View>: View {
+    let announcement: String
     let background: Background
     @ViewBuilder let message: Message
     @ViewBuilder let buttons: Buttons
 
-    init(background: Background = Color.black,
+    init(announcement: String, background: Background = Color.black,
          @ViewBuilder message: () -> Message, @ViewBuilder buttons: () -> Buttons) {
+        self.announcement = announcement
         self.background = background
         self.message = message()
         self.buttons = buttons()
@@ -125,5 +130,8 @@ struct WatchPromptCard<Message: View, Buttons: View, Background: View>: View {
         // Opaque base: the card must hide the workout underneath it.
         .background(ZStack { Color.black; background }.ignoresSafeArea())
         .contentShape(Rectangle())
+        .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isModal)
+        .onAppear { AccessibilityNotification.Announcement(announcement).post() }
     }
 }

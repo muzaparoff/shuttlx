@@ -20,7 +20,11 @@ struct SettingsView: View {
     @State private var showDebug = false
     @ObservedObject var deviceManager = DeviceManager.shared
     @State private var weightText: String = ""
-    @State private var ageText: String = ""
+    @State private var age: Int?
+    @State private var ageHint: String?
+    @State private var weightHint: String?
+    @FocusState private var weightFocused: Bool
+    @Environment(\.scenePhase) private var scenePhase
     @State private var heart = HeartSafetySettings.load()
     #if DEBUG
     @State private var seamHeartAlerts = false   // SHUTTLX_SHOW_HEART=1 screenshot seam
@@ -36,6 +40,19 @@ struct SettingsView: View {
 
     var body: some View {
         List {
+            if let notice = dataManager.storageNotice {
+                Section {
+                    Text(notice)
+                        .font(.footnote)
+                        .accessibilityLabel("Storage warning: \(notice)")
+                    if dataManager.savesBlockedByCorruption {
+                        Button("Start a new history and resume saving") { dataManager.resumeSavingAfterCorruption() }
+                            .accessibilityHint("Keeps the unreadable file as a backup and saves new workouts to a new file")
+                    } else {
+                        Button("Dismiss") { dataManager.dismissStorageNotice() }
+                    }
+                }
+            }
             if !Self.seamSkipTop {   // SHUTTLX_SCROLL_BOTTOM=1 screenshot seam (false in release)
             // Health & Watch
             Section("Health & Watch") {
@@ -60,13 +77,26 @@ struct SettingsView: View {
                 .accessibilityLabel("HealthKit Status")
                 .accessibilityValue(dataManager.healthKitAuthorized ? "Allowed" : "Not allowed")
 
-                if !dataManager.healthKitAuthorized {
-                    Button("Request HealthKit Access") {
+                if dataManager.healthAccessDenied {
+                    // iOS shows the Health sheet only once; after "Don't allow" only Settings can turn it back on.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Health access is off for ShuttlX. In Settings, open Apps, then Health, then turn on the data ShuttlX may use.")
+                            .font(ShuttlXFont.cardCaption)
+                            .foregroundStyle(.secondary)
+                        Button("Open Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                        }
+                        .accessibilityHint("Opens the iPhone Settings for ShuttlX")
+                    }
+                } else if !dataManager.healthKitAuthorized || dataManager.healthReadAccessNeeded {
+                    Button(dataManager.healthKitAuthorized ? "Allow reading past workouts" : "Request HealthKit Access") {
                         Task {
                             await dataManager.requestHealthKitPermissions()
                         }
                     }
-                    .accessibilityHint("Opens the HealthKit permission dialog")
+                    .accessibilityHint(dataManager.healthKitAuthorized
+                        ? "Opens the Health permission dialog once, so workouts that did not sync from the watch can be read back"
+                        : "Opens the HealthKit permission dialog")
                 }
 
                 Button("Why We Need Access") {
@@ -77,6 +107,24 @@ struct SettingsView: View {
 
             // Heart
             Section("Heart") {
+                if heart.hasNoLimit(age: age) {
+                    NavigationLink {
+                        HeartAlertsView()
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("No heart limit set").fontWeight(.semibold)
+                                Text("The watch cannot warn you about a high heart rate. Tap to set one.")
+                                    .font(ShuttlXFont.cardCaption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(ShuttlXColor.ctaWarning)
+                        }
+                    }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityHint("Opens Heart and alerts")
+                }
                 NavigationLink {
                     HeartAlertsView()
                 } label: {
@@ -117,27 +165,29 @@ struct SettingsView: View {
                         .keyboardType(.decimalPad)
                         .multilineTextAlignment(.trailing)
                         .frame(width: 80)
-                        .onChange(of: weightText) { _, newValue in
-                            deviceManager.userWeightKg = Double(newValue)
-                        }
+                        .focused($weightFocused)
+                        .onSubmit(commitWeight)
+                        .onChange(of: weightFocused) { _, focused in if !focused { commitWeight() } }
+                        .onDisappear { if weightFocused { commitWeight() } }
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Weight in kilograms")
+                FieldHint(text: weightHint)
 
                 HStack {
                     Text("Age")
                     Spacer()
-                    TextField("30", text: $ageText)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .frame(width: 80)
-                        .onChange(of: ageText) { _, newValue in
-                            deviceManager.userAge = Int(newValue)
-                            pushHeart()
-                        }
+                    CommitIntField(placeholder: "30", value: age, range: HeartLimits.ageRange, unit: "years", hint: $ageHint) { v in
+                        deviceManager.userAge = v
+                        age = v
+                        pushHeart()
+                    }
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 80)
                 }
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Age in years")
+                FieldHint(text: ageHint)
             }
             }
 
@@ -250,9 +300,7 @@ struct SettingsView: View {
         .alert("Clear All Training Sessions", isPresented: $showingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete All", role: .destructive) {
-                PhoneSyncCoordinator.shared.purgeAllSessionsFromStorage()
-                dataManager.sessions = []
-                dataManager.saveSessionsToAppGroup()
+                dataManager.wipeLocalUserData(.trainingData)
                 successMessage = "All sessions cleared!"
                 showSuccessMessage = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
@@ -260,7 +308,7 @@ struct SettingsView: View {
                 }
             }
         } message: {
-            Text("This will delete all your training history. This action cannot be undone.")
+            Text("This deletes every workout on this iPhone, your edits to workout parts, and the Apple Health import history, and asks your Apple Watch to remove its copies. Your templates, plans and settings stay. Workouts in Apple Health and iCloud are not deleted, and they will not come back here. This cannot be undone.")
         }
         .alert("Sign Out", isPresented: $showingSignOutConfirmation) {
             Button("Cancel", role: .cancel) {}
@@ -286,7 +334,7 @@ struct SettingsView: View {
                 }
             }
         } message: {
-            Text("This permanently deletes your iCloud data and all workouts on this iPhone. It cannot be undone.")
+            Text("This permanently deletes your workouts and templates in iCloud. It then erases from this iPhone: all workouts, your edits to workout parts, templates, training plans and progress, exercise devices, heart limits and your medication answer, weight and age, and the Apple Health import history. Your Apple Watch is asked to remove its copies. Workouts saved in Apple Health are not deleted. This cannot be undone.")
         }
         .overlay(alignment: .top) {
             if showSuccessMessage {
@@ -309,10 +357,13 @@ struct SettingsView: View {
             if let weight = deviceManager.userWeightKg {
                 weightText = String(format: "%.1f", weight)
             }
-            if let age = deviceManager.userAge {
-                ageText = "\(age)"
-            }
+            age = deviceManager.userAge
             heart = HeartSafetySettings.load()
+        }
+        .task { await dataManager.refreshHealthAccessState() }
+        .onChange(of: scenePhase) { _, phase in
+            // Back from iPhone Settings: pick up a changed Health permission.
+            if phase == .active { Task { await dataManager.refreshHealthAccessState() } }
         }
     }
 
@@ -362,14 +413,34 @@ struct SettingsView: View {
         return WCSession.default.isPaired ? "Connected" : "Not paired"
     }
 
+    /// Weight commits when editing ends. "72,5" and "72.5" both work; out-of-range values are clamped.
+    private func commitWeight() {
+        let t = weightText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty {
+            deviceManager.userWeightKg = nil
+            weightHint = nil
+            return
+        }
+        guard let v = HeartLimits.decimal(t) else {
+            weightText = deviceManager.userWeightKg.map { String(format: "%.1f", $0) } ?? ""
+            weightHint = "Not changed. Enter your weight in kg, for example 72.5."
+            return
+        }
+        let r = HeartLimits.weightRange
+        let c = min(max(v, r.lowerBound), r.upperBound)
+        deviceManager.userWeightKg = c
+        weightText = String(format: "%.1f", c)
+        weightHint = c != v ? "Changed to \(Int(c)) kg. Allowed: \(Int(r.lowerBound)) to \(Int(r.upperBound)) kg." : nil
+    }
+
     private func pushHeart() {
         heart.save()
-        sharedDataManager.sendHeartSafetyToWatch(heart, age: deviceManager.userAge)
+        sharedDataManager.sendHeartSafetyToWatch(heart, age: age)
     }
 
     private var heartLimitSummary: String {
         if heart.effortOnly { return "Effort only" }
-        return heart.effectiveUpperLimit(age: deviceManager.userAge).map { "\($0) bpm" } ?? "Not set"
+        return heart.effectiveUpperLimit(age: age).map { "\($0) bpm" } ?? "Not set"
     }
 
     private func statusDot(_ good: Bool) -> some View {

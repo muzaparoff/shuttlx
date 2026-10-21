@@ -16,8 +16,11 @@ final class WorkoutPersistence: Sendable {
 
     /// Encode + write the backup off the calling actor. Safe to call every tick;
     /// the caller throttles cadence.
-    func checkpoint(_ session: TrainingSession) {
+    func checkpoint(_ session: TrainingSession, autoPauseReason: String? = nil) {
         queue.async { [logger] in
+            // Sidecar (not a TrainingSession field): the model is duplicated per
+            // target and this only matters for resuming the paused overlay.
+            UserDefaults.standard.set(autoPauseReason, forKey: Self.autoPauseReasonKey)
             do {
                 let data = try JSONEncoder().encode(session)
                 guard let backupURL = Self.backupURL() else {
@@ -50,8 +53,16 @@ final class WorkoutPersistence: Sendable {
         }
     }
 
+    /// `autoPauseReason` of the last checkpoint ("noMotion"), nil if none.
+    func recoveredAutoPauseReason() -> String? {
+        UserDefaults.standard.string(forKey: Self.autoPauseReasonKey)
+    }
+
+    private static let autoPauseReasonKey = "activeWorkoutAutoPauseReason"
+
     func clearBackup() {
         queue.async {
+            UserDefaults.standard.removeObject(forKey: Self.autoPauseReasonKey)
             guard let backupURL = Self.backupURL() else { return }
             try? FileManager.default.removeItem(at: backupURL)
         }

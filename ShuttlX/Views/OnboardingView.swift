@@ -7,12 +7,16 @@ struct OnboardingView: View {
     @Binding var isFirstLaunch: Bool
     @State private var currentPage = 0
     @State private var heart = HeartSafetySettings.load()
-    @State private var limitText = ""
+    @State private var doctorLimit: Int?
+    @State private var age: Int?
+    @State private var askAge = false
+    @State private var limitHint: String?
+    @State private var ageHint: String?
+    @State private var finishing = false
     @State private var betaChoice: BetaChoice?
     @State private var limitChoice = LimitChoice.doctor
     @State private var medicineText = ""
     @State private var doseText = ""
-    @FocusState private var limitFocused: Bool
 
     init(isFirstLaunch: Binding<Bool>) {
         _isFirstLaunch = isFirstLaunch
@@ -21,7 +25,9 @@ struct OnboardingView: View {
         _betaChoice = State(initialValue: h.onBetaBlocker.map { $0 ? .yes : .no })
         _medicineText = State(initialValue: h.medicineName ?? "")
         _doseText = State(initialValue: h.dailyDose ?? "")
-        _limitText = State(initialValue: h.upperLimit.map(String.init) ?? "")
+        _doctorLimit = State(initialValue: h.upperLimit)
+        _age = State(initialValue: DeviceManager.shared.userAge)
+        _askAge = State(initialValue: DeviceManager.shared.userAge == nil)
         _limitChoice = State(initialValue: h.effortOnly ? .effortOnly : .doctor)
         #if DEBUG
         // Screenshot seam: SHUTTLX_ONBOARDING_STEP=2|3 opens that step directly.
@@ -40,6 +46,12 @@ struct OnboardingView: View {
                 limitPage.tag(3)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
+        }
+        .onChange(of: currentPage) { _, page in
+            // Health may have supplied the age on page 1; ask for it on the limit page only if still unknown.
+            guard page == 3 else { return }
+            age = DeviceManager.shared.userAge
+            askAge = askAge || age == nil
         }
         .timelineScreenBackground()
         .accessibilityElement(children: .contain)
@@ -229,8 +241,18 @@ struct OnboardingView: View {
 
     // MARK: - Step 3 of 3: Heart limit
 
+    /// What the chosen option would give right now; nil means Done stays disabled.
+    private var chosenLimit: Int? {
+        switch limitChoice {
+        case .doctor: return doctorLimit
+        case .estimate: return heart.estimatedUpperLimit(age: age)
+        case .effortOnly: return nil
+        }
+    }
+
+    private var canFinish: Bool { limitChoice == .effortOnly || chosenLimit != nil }
+
     private var limitPage: some View {
-        let age = DeviceManager.shared.userAge
         let estimate = heart.estimatedUpperLimit(age: age)
         return VStack(alignment: .leading, spacing: 12) {
             Text("Step 3 of 3")
@@ -248,21 +270,53 @@ struct OnboardingView: View {
                 .padding(.horizontal, 20)
 
             List {
+                if askAge {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text("Your age").fontWeight(.semibold)
+                            Spacer()
+                            CommitIntField(placeholder: "Age", value: age, range: HeartLimits.ageRange, unit: "years", hint: $ageHint) { v in
+                                DeviceManager.shared.userAge = v
+                                age = v
+                            }
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 90)
+                            Text("years").foregroundStyle(.secondary)
+                        }
+                        .accessibilityElement(children: .combine)
+                        .accessibilityLabel("Your age in years")
+                        FieldHint(text: ageHint)
+                    }
+                    .padding(.vertical, 4)
+                }
                 limitRow(.doctor, title: "My doctor gave me a limit") {
-                    HStack(alignment: .firstTextBaseline, spacing: 6) {
-                        TextField("125", text: $limitText)
-                            .keyboardType(.numberPad)
-                            .focused($limitFocused)
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(alignment: .firstTextBaseline, spacing: 6) {
+                            CommitIntField(placeholder: "125", value: doctorLimit, range: HeartLimits.upperRange, unit: "bpm", hint: $limitHint,
+                                           onFocus: { limitChoice = .doctor }) { v in
+                                doctorLimit = v
+                            }
                             .font(ShuttlXFont.metricLarge.monospacedDigit())
                             .fixedSize()
                             .accessibilityLabel("Heart rate limit in beats per minute")
-                        Text("bpm").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                            Text("bpm").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                        }
+                        FieldHint(text: limitHint)
                     }
                 }
                 limitRow(.estimate, title: "Estimate it for me") {
-                    if let estimate {
-                        Text("≈ \(estimate) bpm max for age \(age ?? 0)\(heart.onBetaBlocker == true ? " on a beta-blocker" : ""). An estimate, not a prescription.")
-                            .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                    VStack(alignment: .leading, spacing: 4) {
+                        if let estimate, let age {
+                            Text("\(estimate) bpm: 85% of the predicted maximum for age \(age)\(heart.onBetaBlocker == true ? ", lowered for a beta-blocker" : ""). An estimate, not a prescription.")
+                                .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                            if heart.onBetaBlocker == nil {
+                                Text("You skipped the beta-blocker question, so this assumes you do not take one. Go back to answer it.")
+                                    .font(ShuttlXFont.cardCaption).foregroundStyle(ShuttlXColor.ctaWarning)
+                            }
+                        } else {
+                            Text("Enter your age above to get an estimate.")
+                                .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                        }
                     }
                 }
                 limitRow(.effortOnly, title: "Use effort only") {
@@ -279,27 +333,39 @@ struct OnboardingView: View {
                 .padding(.horizontal, 20)
 
             Button {
-                heart.effortOnly = limitChoice == .effortOnly
-                heart.upperLimit = limitChoice == .doctor ? Int(limitText) : nil
-                heart.save()
-                PhoneSyncCoordinator.shared.sendHeartSafetyToWatch(heart, age: age)
-                isFirstLaunch = false
+                finish()
             } label: {
                 Text("Done")
             }
             .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
+            .disabled(!canFinish || finishing)
+            .opacity(canFinish ? 1 : 0.4)
             .padding(.horizontal, 16)
-            .accessibilityHint("Completes onboarding and opens the app")
+            .accessibilityHint(canFinish ? "Completes onboarding and opens the app" : "Enter a limit, or choose estimate or effort only, to continue")
 
             Spacer().frame(height: 40)
         }
         .padding(.top, 8)
-        .onChange(of: limitFocused) { _, focused in if focused { limitChoice = .doctor } }
         .toolbar {
             ToolbarItemGroup(placement: .keyboard) {
                 Spacer()
-                Button("Done") { limitFocused = false }
+                Button("Done") { UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil) }
             }
+        }
+    }
+
+    /// Done: the chosen option always yields a limit (or effort only); then the notification permission
+    /// is asked once, here, so alerts can reach the phone later.
+    private func finish() {
+        guard canFinish else { return }
+        finishing = true
+        heart.effortOnly = limitChoice == .effortOnly
+        heart.upperLimit = limitChoice == .doctor ? doctorLimit : nil
+        heart.save()
+        PhoneSyncCoordinator.shared.sendHeartSafetyToWatch(heart, age: age)
+        Task {
+            await PhoneSyncCoordinator.requestNotificationAuthorization()
+            isFirstLaunch = false
         }
     }
 

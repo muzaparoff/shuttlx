@@ -123,6 +123,25 @@ final class iPhoneWorkoutController: ObservableObject {
 
     weak var dataManager: DataManager?
 
+    // MARK: - Watch link, steps offset, checkpoint
+
+    /// A workout recorded on the iPhone shorter than this is not saved (an accidental start).
+    static let minimumSavedDuration: TimeInterval = 5
+
+    /// Stable id from start to save: the checkpoint, the placeholder and the final session share it.
+    private var sessionID = UUID()
+    /// The watch was asked to record this same workout. Then pause/resume/stop reach it, and the watch
+    /// session is authoritative: ours is stored only as a placeholder that the watch session replaces.
+    private(set) var watchLinked = false
+    private var lastCheckpointAt = Date()
+    /// Steps / pedometer km before the current pedometer run (a pause restarts the pedometer from the resume time).
+    private var stepOffset = 0
+    private var pedometerKmOffset = 0.0
+    private var pedometerKm = 0.0
+
+    /// Set at launch when the previous run was interrupted mid-workout; the app offers to save or discard it.
+    @Published var interruptedWorkout: PhoneWorkoutCheckpoint?
+
     // MARK: - Convenience start-and-present helpers (used by entry-point views)
 
     /// Start a free-run workout AND present the timer view. Use from buttons
@@ -151,7 +170,7 @@ final class iPhoneWorkoutController: ObservableObject {
     /// Saves and dismisses the timer, mirroring what the user would do manually.
     func remoteStop() {
         guard isActive else { return }
-        _ = finish()
+        _ = finish(notifyWatch: false)   // the watch stopped first; do not send it a second stop
         isPresentingTimer = false
     }
 
@@ -160,7 +179,7 @@ final class iPhoneWorkoutController: ObservableObject {
         mode = .freeRun
         workoutName = "Free Run"
         beginCommonStart()
-        PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun")
+        watchLinked = PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun")
     }
 
     func startInterval(template: WorkoutTemplate) {
@@ -188,7 +207,7 @@ final class iPhoneWorkoutController: ObservableObject {
             .store(in: &intervalEngineCancellables)
 
         beginCommonStart()
-        PhoneSyncCoordinator.shared.startWatchWorkout(mode: "interval", template: template)
+        watchLinked = PhoneSyncCoordinator.shared.startWatchWorkout(mode: "interval", template: template)
     }
 
     func startGymRecovery() {
@@ -211,13 +230,19 @@ final class iPhoneWorkoutController: ObservableObject {
         completedCaptures = []
         startMotionUpdates()
         beginCommonStart()
-        PhoneSyncCoordinator.shared.startWatchWorkout(mode: "gymRecovery")
+        watchLinked = PhoneSyncCoordinator.shared.startWatchWorkout(mode: "gymRecovery")
     }
 
     private func beginCommonStart() {
         haptics.prepare()
         let now = Date()
         workoutStartTime = now
+        sessionID = UUID()
+        watchLinked = false
+        lastCheckpointAt = now
+        stepOffset = 0
+        pedometerKmOffset = 0
+        pedometerKm = 0
         accumulatedPauseTime = 0
         pauseStartDate = nil
         elapsedTime = 0
@@ -250,8 +275,13 @@ final class iPhoneWorkoutController: ObservableObject {
         pauseStartDate = Date()
         stopDisplayTimer()
         pedometer.stopUpdates()
-        locationManager.stopUpdatingLocation()
+        // The next pedometer run starts at the resume time; what was counted so far is the offset.
+        stepOffset = totalSteps
+        pedometerKmOffset = pedometerKm
+        stopLocationUpdates()
         if mode == .gymRecovery { motion.stopActivityUpdates() }
+        if watchLinked { PhoneSyncCoordinator.shared.pauseWatchWorkout() }
+        writeCheckpoint()
     }
 
     func resume() {
@@ -261,24 +291,30 @@ final class iPhoneWorkoutController: ObservableObject {
             pauseStartDate = nil
         }
         isPaused = false
-        if let start = workoutStartTime { startPedometer(from: start) }
+        // Steps and distance taken while paused are not counted: restart from now.
+        startPedometer(from: Date())
+        lastCadenceTimestamp = nil
+        lastGPSLocation = nil   // the first fix after the pause must not add the ground covered while paused
         if mode != .gymRecovery { startLocationUpdates() }
         if mode == .gymRecovery { startMotionUpdates() }
         startDisplayTimer()
+        if watchLinked { PhoneSyncCoordinator.shared.resumeWatchWorkout() }
     }
 
-    /// Builds the `TrainingSession`, hands it to `DataManager`, tears down all
-    /// sensors. Returns the session so the view can present a summary.
-    @discardableResult
-    func finish() -> TrainingSession? {
-        guard isActive, let startTime = workoutStartTime else { return nil }
-        let totalPause = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
-        let duration = Date().timeIntervalSince(startTime) - totalPause
+    private func activeDuration(at now: Date) -> TimeInterval {
+        guard let start = workoutStartTime else { return 0 }
+        let paused = accumulatedPauseTime + (pauseStartDate.map { now.timeIntervalSince($0) } ?? 0)
+        return max(0, now.timeIntervalSince(start) - paused)
+    }
 
+    /// The session as recorded so far (no side effects, used by finish and by the checkpoint).
+    private func snapshotSession(at now: Date) -> TrainingSession? {
+        guard let startTime = workoutStartTime else { return nil }
         var session = TrainingSession(
+            id: sessionID,
             startDate: startTime,
-            endDate: Date(),
-            duration: duration,
+            endDate: now,
+            duration: activeDuration(at: now),
             averageHeartRate: heartRateMonitor.sampleCount > 0 ? Double(heartRateMonitor.average) : nil,
             maxHeartRate: heartRateMonitor.maxBPM > 0 ? Double(heartRateMonitor.maxBPM) : nil,
             caloriesBurned: nil,    // calories not yet tracked iPhone-side; HKWorkout writer will fill
@@ -288,6 +324,57 @@ final class iPhoneWorkoutController: ObservableObject {
             route: routePoints.isEmpty ? nil : routePoints,
             kmSplits: nil
         )
+        if mode == .interval {
+            session.templateID = activeTemplate?.id
+            session.programName = activeTemplate?.name
+        } else if mode == .gymRecovery {
+            session.sessionMode = .gymRecovery
+            session.programName = "Gym Recovery"
+            session.recoveryReport = RecoveryReport(
+                sets: completedCaptures.count,
+                captures: completedCaptures,
+                avgWorkHR: nil,
+                avgRestHR: nil
+            )
+        }
+        return session
+    }
+
+    /// Writes the recovery file (15 s cadence from `tick`, on pause, and when the app goes to the background).
+    func writeCheckpoint() {
+        let now = Date()
+        lastCheckpointAt = now
+        guard isActive, let session = snapshotSession(at: now) else { return }
+        PhoneWorkoutCheckpoint(session: session, watchLinked: watchLinked, savedAt: now).writeAsync()
+    }
+
+    /// Tells the watch to stop (it saves its own session). Safe when it is not recording: the command is a no-op there.
+    private func stopWatchIfLinked(_ notify: Bool) {
+        if notify, watchLinked { PhoneSyncCoordinator.shared.stopWatchWorkout() }
+    }
+
+    /// Builds the `TrainingSession`, hands it to `DataManager`, tears down all
+    /// sensors. Returns the session so the view can present a summary.
+    ///
+    /// With a linked watch the WATCH session is the authoritative record:
+    /// - the watch is told to stop (`notifyWatch`; false when the watch itself stopped first),
+    /// - a session of the same workout that already arrived (watch or Health) means ours is not saved,
+    /// - otherwise ours is saved as a placeholder that the watch session replaces when it arrives
+    ///   (`DataManager.handleReceivedSessions`), so there is never a second entry and a watch that
+    ///   never delivers still leaves the phone's record.
+    /// A workout shorter than `minimumSavedDuration` is not saved.
+    @discardableResult
+    func finish(notifyWatch: Bool = true) -> TrainingSession? {
+        guard isActive else { return nil }
+        let now = Date()
+        guard var session = snapshotSession(at: now) else { return nil }
+        stopWatchIfLinked(notifyWatch)
+
+        guard session.duration >= Self.minimumSavedDuration else {
+            logger.info("Workout shorter than \(Self.minimumSavedDuration)s not saved")
+            tearDown()
+            return nil
+        }
 
         if mode == .interval, let engine = intervalEngine {
             let result = engine.stop(finalDistance: totalDistance)
@@ -303,26 +390,61 @@ final class iPhoneWorkoutController: ObservableObject {
                     distance: ir.distance
                 )
             }
-        } else if mode == .gymRecovery {
-            session.sessionMode = .gymRecovery
-            session.programName = "Gym Recovery"
-            session.recoveryReport = RecoveryReport(
-                sets: completedCaptures.count,
-                captures: completedCaptures,
-                avgWorkHR: nil,
-                avgRestHR: nil
-            )
         }
 
-        dataManager?.handleReceivedSessions([session])
+        if let dataManager {
+            if watchLinked {
+                if dataManager.watchRecordedAlready(session) {
+                    logger.info("Watch already recorded this workout — phone session not saved")
+                } else {
+                    dataManager.markPhonePlaceholder(session.id)
+                    dataManager.handleReceivedSessions([session])
+                }
+            } else {
+                dataManager.handleReceivedSessions([session])
+            }
+        } else {
+            logger.error("finish(): no DataManager — session \(session.id) kept only in the checkpoint")
+            writeCheckpoint()
+            tearDownKeepingCheckpoint()
+            return session
+        }
         tearDown()
         return session
     }
 
-    /// Discards the in-progress workout. No `TrainingSession` is saved.
+    /// Discards the in-progress workout. No `TrainingSession` is saved on the phone. A linked watch is told to
+    /// stop too, and it keeps its own record (there is no remote-discard command).
     func cancel() {
         guard isActive else { return }
+        stopWatchIfLinked(true)
         tearDown()
+    }
+
+    // MARK: - Recovery after a kill
+
+    /// Called once at launch (after `dataManager` is set). Looks for a checkpoint of an interrupted workout.
+    func loadInterruptedWorkout() {
+        guard !isActive, interruptedWorkout == nil else { return }
+        interruptedWorkout = PhoneWorkoutCheckpoint.load()
+    }
+
+    func saveInterruptedWorkout() {
+        guard let cp = interruptedWorkout else { return }
+        interruptedWorkout = nil
+        guard cp.session.duration >= Self.minimumSavedDuration else { PhoneWorkoutCheckpoint.removeAsync(); return }
+        guard let dataManager else { logger.error("Recovered workout not saved: no DataManager"); return }
+        if cp.watchLinked {
+            if dataManager.watchRecordedAlready(cp.session) { PhoneWorkoutCheckpoint.removeAsync(); return }
+            dataManager.markPhonePlaceholder(cp.session.id)
+        }
+        dataManager.handleReceivedSessions([cp.session])
+        PhoneWorkoutCheckpoint.removeAsync()
+    }
+
+    func discardInterruptedWorkout() {
+        interruptedWorkout = nil
+        PhoneWorkoutCheckpoint.removeAsync()
     }
 
     // MARK: - Manual station control (gymRecovery)
@@ -363,17 +485,29 @@ final class iPhoneWorkoutController: ObservableObject {
         for _ in 0..<remaining {
             engine.tick(heartRate: heartRateMonitor.current, distance: totalDistance)
         }
+        // While paused the display timer is stopped, so `tick()` would never notice the last step ended and
+        // the workout would sit finished-but-open. Finish from here.
+        if engine.isComplete { finish() }
     }
 
     // MARK: - Teardown
 
     private func tearDown() {
+        PhoneWorkoutCheckpoint.removeAsync()
+        tearDownKeepingCheckpoint()
+    }
+
+    private func tearDownKeepingCheckpoint() {
         LiveActivityManager.shared.endActivity()
         stopDisplayTimer()
         heartRateMonitor.stop()
         pedometer.stopUpdates()
-        locationManager.stopUpdatingLocation()
+        stopLocationUpdates()
         motion.stopActivityUpdates()
+        watchLinked = false
+        stepOffset = 0
+        pedometerKmOffset = 0
+        pedometerKm = 0
         intervalEngineCancellables.removeAll()
         intervalEngine = nil
         recoverySegmenter = nil
@@ -456,6 +590,7 @@ final class iPhoneWorkoutController: ObservableObject {
         }
 
         elapsedTime = Date().timeIntervalSince(start) - accumulatedPauseTime
+        if Date().timeIntervalSince(lastCheckpointAt) >= PhoneWorkoutCheckpoint.interval { writeCheckpoint() }
 
         LiveActivityManager.shared.updateActivity(
             elapsedTime: elapsedTime,
@@ -506,15 +641,16 @@ final class iPhoneWorkoutController: ObservableObject {
         guard CMPedometer.isStepCountingAvailable() else { return }
         pedometer.startUpdates(from: start) { [weak self] data, _ in
             Task { @MainActor [weak self] in
-                guard let self = self, let data = data else { return }
-                self.totalSteps = data.numberOfSteps.intValue
+                guard let self = self, let data = data, !self.isPaused else { return }
+                // The pedometer run starts at workout start or at the last resume; earlier runs are the offset.
+                self.totalSteps = self.stepOffset + data.numberOfSteps.intValue
                 if let dist = data.distance {
-                    let pedometerKm = dist.doubleValue / 1000.0
+                    self.pedometerKm = self.pedometerKmOffset + dist.doubleValue / 1000.0
                     // Prefer GPS distance when the fix quality is confirmed usable;
                     // fall back to pedometer otherwise (treadmill, indoor, poor signal).
                     self.totalDistance = self.gpsHasUsableFix
                         ? self.gpsAccumulatedDistanceKm
-                        : pedometerKm
+                        : self.pedometerKm
                     self.updateRollingPace()
                 }
                 if let cadence = data.currentCadence {
@@ -589,7 +725,7 @@ final class iPhoneWorkoutController: ObservableObject {
     private func startLocationUpdates() {
         let delegate = locationDelegate ?? LocationProxy { [weak self] location in
             Task { @MainActor [weak self] in
-                guard let self = self else { return }
+                guard let self = self, self.isActive, !self.isPaused else { return }
 
                 // Always record the route point for the map.
                 self.routePoints.append(
@@ -642,7 +778,18 @@ final class iPhoneWorkoutController: ObservableObject {
         if locationManager.authorizationStatus == .notDetermined {
             locationManager.requestWhenInUseAuthorization()
         }
+        // Outdoor workouts keep recording the route with the screen off (UIBackgroundModes: location).
+        // Only while a workout is active; `stopLocationUpdates` switches it off again.
+        locationManager.pausesLocationUpdatesAutomatically = false
+        locationManager.allowsBackgroundLocationUpdates = true
+        locationManager.showsBackgroundLocationIndicator = true
         locationManager.startUpdatingLocation()
+    }
+
+    private func stopLocationUpdates() {
+        locationManager.stopUpdatingLocation()
+        locationManager.allowsBackgroundLocationUpdates = false
+        locationManager.showsBackgroundLocationIndicator = false
     }
 
     #if DEBUG

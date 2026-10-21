@@ -5,9 +5,9 @@ final class HeartSafetySettingsTests: XCTestCase {
     func testEstimateAndBetaBlocker() {
         var s = HeartSafetySettings()
         XCTAssertNil(s.effectiveUpperLimit(age: nil))
-        XCTAssertEqual(s.effectiveUpperLimit(age: 60), 160)
+        XCTAssertEqual(s.effectiveUpperLimit(age: 60), 136)  // 0.85 * 160
         s.onBetaBlocker = true
-        XCTAssertEqual(s.effectiveUpperLimit(age: 60), 130) // 160 * 0.81 = 129.6
+        XCTAssertEqual(s.effectiveUpperLimit(age: 60), 110)  // 0.85 * 160 * 0.81 = 110.16
     }
 
     func testOwnLimitWins() {
@@ -28,7 +28,7 @@ final class HeartSafetySettingsTests: XCTestCase {
         let s = HeartSafetySettings(onBetaBlocker: true, lowLimit: 50, useAirPodsHeartRate: true)
         let p = s.watchPayload(age: 60)
         XCTAssertNil(p.onBetaBlocker)
-        XCTAssertEqual(p.upperLimit, 130)
+        XCTAssertEqual(p.upperLimit, 110)
         XCTAssertEqual(p.lowLimit, 50)
         XCTAssertFalse(p.useAirPodsHeartRate)
         let json = String(data: try JSONEncoder().encode(p), encoding: .utf8) ?? ""
@@ -37,10 +37,10 @@ final class HeartSafetySettingsTests: XCTestCase {
 
     /// Watch path: it only has the resolved payload (no age), and zoneWord must still work.
     func testZoneWordFromWatchPayloadNeedsNoAge() {
-        let p = HeartSafetySettings().watchPayload(age: 60) // estimate 160
-        XCTAssertEqual(p.zoneWord(hr: 100), "EASY")   // 0.625
-        XCTAssertEqual(p.zoneWord(hr: 130), "STEADY") // 0.81
-        XCTAssertEqual(p.zoneWord(hr: 150), "HARD")   // 0.94
+        let p = HeartSafetySettings().watchPayload(age: 60) // estimate 136
+        XCTAssertEqual(p.zoneWord(hr: 90), "EASY")    // 0.66
+        XCTAssertEqual(p.zoneWord(hr: 110), "STEADY") // 0.81
+        XCTAssertEqual(p.zoneWord(hr: 125), "HARD")   // 0.92
     }
 
     func testDecodesPartialJSONWithDefaults() throws {
@@ -75,8 +75,50 @@ final class HeartSafetySettingsTests: XCTestCase {
 
     func testNewFieldsDefaultWhenMissing() throws {
         let s = try JSONDecoder().decode(HeartSafetySettings.self, from: Data("{}".utf8))
-        XCTAssertTrue(s.showEffortOnWatch && s.autoSwitchActivity && s.alertSuddenJump)
+        XCTAssertTrue(s.showEffortOnWatch && s.autoSwitchActivity)
+        XCTAssertFalse(s.alertSuddenJump)   // off by default since settingsVersion 1
         XCTAssertEqual(s.noMotionSeconds, 60)
         XCTAssertEqual(s.heartRateSource, .best)
+    }
+}
+
+final class HeartSafetyMigrationTests: XCTestCase {
+    private func decode(_ json: String) throws -> HeartSafetySettings {
+        try JSONDecoder().decode(HeartSafetySettings.self, from: Data(json.utf8))
+    }
+
+    func testNewInstallsHaveSuddenJumpOff() {
+        XCTAssertFalse(HeartSafetySettings().alertSuddenJump)
+        XCTAssertEqual(HeartSafetySettings().settingsVersion, HeartSafetySettings.currentVersion)
+    }
+
+    /// Saved before versioning: the old default was ON, the user never chose it.
+    func testLegacyDefaultOnIsMigratedToOff() throws {
+        XCTAssertFalse(try decode("{\"alertSuddenJump\":true,\"upperLimit\":140}").alertSuddenJump)
+        XCTAssertFalse(try decode("{\"upperLimit\":140}").alertSuddenJump)
+    }
+
+    /// After the migration the version is saved, so a later explicit ON is kept across load/save cycles.
+    func testExplicitLaterChoiceSurvives() throws {
+        var s = try decode("{\"alertSuddenJump\":true}")
+        s.alertSuddenJump = true
+        let again = try JSONDecoder().decode(HeartSafetySettings.self, from: JSONEncoder().encode(s))
+        XCTAssertTrue(again.alertSuddenJump)
+        XCTAssertEqual(again.settingsVersion, HeartSafetySettings.currentVersion)
+    }
+
+    func testSanitizedDropsOutOfRangeLimits() {
+        XCTAssertNil(HeartSafetySettings(upperLimit: 12).sanitized().upperLimit)
+        XCTAssertNil(HeartSafetySettings(upperLimit: 400).sanitized().upperLimit)
+        XCTAssertEqual(HeartSafetySettings(upperLimit: 150).sanitized().upperLimit, 150)
+        XCTAssertNil(HeartSafetySettings(upperLimit: 120, lowLimit: 115).sanitized().lowLimit)   // gap < 10
+        XCTAssertEqual(HeartSafetySettings(upperLimit: 120, lowLimit: 50).sanitized().lowLimit, 50)
+    }
+
+    func testHasNoLimit() {
+        XCTAssertTrue(HeartSafetySettings().hasNoLimit(age: nil))
+        XCTAssertFalse(HeartSafetySettings().hasNoLimit(age: 50))
+        XCTAssertFalse(HeartSafetySettings(effortOnly: true).hasNoLimit(age: nil))
+        XCTAssertFalse(HeartSafetySettings(upperLimit: 130).hasNoLimit(age: nil))
     }
 }

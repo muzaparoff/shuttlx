@@ -157,8 +157,8 @@ struct LiveWorkoutCard: View {
             }
             HStack(spacing: 8) {
                 pillButton(sharedData.liveIsPaused ? "Resume" : "Pause",
-                           fill: ShuttlXColor.ctaPrimary.opacity(0.12), text: ShuttlXColor.ctaPrimary, disabled: isStale, action: togglePause)
-                pillButton("End & Save", fill: ShuttlXColor.ctaDestructive.opacity(0.12), text: ShuttlXColor.ctaDestructive, disabled: isStale) { showStopConfirmation = true }
+                           fill: ShuttlXColor.ctaPrimary.opacity(0.12), text: ShuttlXColor.ctaPrimary, action: togglePause)
+                pillButton("End & Save", fill: ShuttlXColor.ctaDestructive.opacity(0.12), text: ShuttlXColor.ctaDestructive) { showStopConfirmation = true }
             }
         }
         .padding(14)

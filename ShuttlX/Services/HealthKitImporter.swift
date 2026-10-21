@@ -39,10 +39,11 @@ final class HealthKitImporter: ObservableObject {
 
     // MARK: - Lifecycle
 
-    /// Call once at launch. Starts the observer (foreground only; no background delivery).
-    func start(dataManager: DataManager) {
+    /// Starts the observer (foreground only; no background delivery) once the importer may run.
+    /// It never shows a Health sheet: access is requested by onboarding or Settings -> Health only.
+    func start(dataManager: DataManager) async {
         self.dataManager = dataManager
-        guard HKHealthStore.isHealthDataAvailable(), observer == nil else { return }
+        guard observer == nil, await mayRun() else { return }
         let q = HKObserverQuery(sampleType: HKObjectType.workoutType(), predicate: nil) { [weak self] _, completion, error in
             if let error { Logger(subsystem: "com.shuttlx.ShuttlX", category: "HealthKitImporter").error("Observer error: \(error.localizedDescription)") }
             Task { @MainActor in
@@ -54,12 +55,30 @@ final class HealthKitImporter: ObservableObject {
         store.execute(q)
     }
 
-    private var readTypes: Set<HKObjectType> {
+    /// Everything the import reads. Onboarding and Settings request these together with sharing, in ONE sheet.
+    nonisolated static var readTypes: Set<HKObjectType> {
         var types: Set<HKObjectType> = [HKObjectType.workoutType(), HKSeriesType.workoutRoute()]
         let ids: [HKQuantityTypeIdentifier] = [.heartRate, .activeEnergyBurned, .distanceWalkingRunning,
                                                .distanceCycling, .distanceSwimming, .stepCount]
         for id in ids { if let t = HKQuantityType.quantityType(forIdentifier: id) { types.insert(t) } }
         return types
+    }
+
+    /// Runs only after onboarding is finished AND Health has already been asked for every type read here
+    /// (`.unnecessary`). Before that the importer would pop a second Health sheet over onboarding.
+    private func mayRun() async -> Bool {
+        #if DEBUG
+        let env = ProcessInfo.processInfo.environment
+        if env["SHUTTLX_DEMO_DATA"] == "1" || env["SHUTTLX_NO_HEALTH"] == "1" { return false }   // demo / skipHealth seams
+        #endif
+        guard defaults.object(forKey: "isFirstLaunch") as? Bool == false,   // @AppStorage("isFirstLaunch")
+              HKHealthStore.isHealthDataAvailable() else { return false }
+        do {
+            return try await store.statusForAuthorizationRequest(toShare: [], read: Self.readTypes) == .unnecessary
+        } catch {
+            logger.error("Health request status failed: \(error.localizedDescription)")
+            return false
+        }
     }
 
     // MARK: - Import
@@ -69,16 +88,10 @@ final class HealthKitImporter: ObservableObject {
     #endif
 
     func importNow() async {
-        guard !isRunning, let dataManager, HKHealthStore.isHealthDataAvailable() else { return }
+        guard !isRunning, let dataManager else { return }
         isRunning = true
         defer { isRunning = false; progress = nil }
-        do {
-            try await store.requestAuthorization(toShare: [], read: readTypes)
-        } catch {
-            status = "Auth error"
-            logger.error("Health read authorization failed: \(error.localizedDescription)")
-            return
-        }
+        guard await mayRun() else { status = "Waiting for Health access"; return }
 
         let fetched = await fetchNewWorkouts()
         let known = dataManager.sessions.map { HealthImportRules.Known(id: $0.id, start: $0.startDate, duration: $0.duration) }

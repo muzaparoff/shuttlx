@@ -65,6 +65,8 @@ struct TrainingView: View {
             }
             .tabViewStyle(PageTabViewStyle())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // VoiceOver must not reach the workout behind a prompt card.
+            .accessibilityHidden(overlayShowing)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         // Long-workout safety prompt sits above both tabs and swallows touches.
@@ -172,5 +174,11 @@ struct TrainingView: View {
     }
 
     var isFreeRunLayout: Bool { workoutManager.workoutMode == .freeRun }
+
+    /// Same conditions as the `.overlay` above.
+    private var overlayShowing: Bool {
+        workoutManager.safetyPromptVisible || workoutManager.unusualHeartRate != nil
+            || (workoutManager.isPaused && workoutManager.autoPauseReason != nil)
+    }
 
 }

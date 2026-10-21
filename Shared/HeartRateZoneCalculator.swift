@@ -136,8 +136,16 @@ public struct HeartRateZoneCalculator: Codable, Sendable {
 
     /// Creates a calculator pre-populated from App Group UserDefaults.
     /// Falls back to the fallback max HR when nothing is stored.
+    ///
+    /// `userMaxHeartRate` holds ONLY a value the user typed. The age (formula input) comes from the
+    /// argument, else from the App Group `userAge`, so the estimate is never frozen into the override.
     public static func fromSharedDefaults(age: Int? = nil) -> HeartRateZoneCalculator {
         let savedMaxHR = loadSavedMaxHR()
-        return HeartRateZoneCalculator(age: age, manualMaxHR: savedMaxHR)
+        var resolvedAge = age
+        if resolvedAge == nil {
+            let stored = UserDefaults(suiteName: "group.com.shuttlx.shared")?.integer(forKey: "userAge") ?? 0
+            resolvedAge = HeartLimits.ageRange.contains(stored) ? stored : nil
+        }
+        return HeartRateZoneCalculator(age: resolvedAge, manualMaxHR: savedMaxHR)
     }
 }

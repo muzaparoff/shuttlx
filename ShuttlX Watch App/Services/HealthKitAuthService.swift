@@ -123,6 +123,9 @@ final class HealthKitAuthService {
         }
 
         writeTypes.insert(HKWorkoutType.workoutType())
+        // HKWorkoutRouteBuilder.finishRoute needs share access to the route series;
+        // without it the GPS route never reaches Health ("Failed to finalize route").
+        writeTypes.insert(HKSeriesType.workoutRoute())
         return (readTypes, writeTypes)
     }
 

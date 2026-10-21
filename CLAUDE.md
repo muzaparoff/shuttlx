@@ -71,7 +71,7 @@ Watch complication deep-link flow:
 iOS tabs (ContentView): Today · History (calendar / list / map modes) · Trends · Settings
   Programs & plans is a row on Today (DashboardView → ProgramsTabView). `shuttlx://plan` selects Today and pushes Programs.
 
-Heart limits and alerts:
+Heart limits and alerts (numbers/ranges: Shared/HeartLimits.swift; estimate = 85% of 220-age, x0.81 on a beta-blocker; details in .claude/rules/services.md):
   iPhone: HeartSafetySettings (App Group UserDefaults) → syncHeartSafety → watch
     (resolved upper limit + alert flags only; the medication answer stays on the phone)
   Watch: HeartAlertEvaluator (above limit / below low limit / signal lost / no motion; the `suddenJump` check is still wired, see `.claude/rules/watchos.md`)
@@ -111,6 +111,10 @@ Theme sync:
 ## Data Storage
 
 - JSON files in App Group container: `sessions.json`, `workout_templates.json`, `exercise_devices.json`, `segment_overrides.json` (iOS "Fix a part" corrections)
+- **`sessions.json` has ONE writer: iOS `DataManager`** (encode + write on `storeQueue`, coalesced; saves wait for the first load). `PhoneSyncCoordinator` never writes it: it adds received sessions to the `pending_sessions/<uuid>.json` inbox (crash safety), then forwards to `DataManager`, which drains the inbox on load and acknowledges entries after a successful save
+- Decoding is per record (`LenientJSON`, `Shared/StoreSupport.swift`): bad records are skipped and the original is kept as `<name>_corrupt_<ms>.json`. If the whole file is unreadable, saves are blocked and Settings shows `DataManager.storageNotice` until the user taps "Start a new history"
+- App Group JSON is written with `StoreFile.writeOptions` (`.completeFileProtectionUntilFirstUserAuthentication`) so background wakes and widgets can use it. `heartSafetySettings` storage is unchanged
+- `DataManager.wipeLocalUserData(.trainingData | .everything)` is the only wipe (Clear All Training Sessions / Delete Account). It sets the persisted `sessionsClearedAt` cutoff (sessions that ended before it are ignored on ingest) and sends the watch `["action":"purgeSessions","scope":"all"|"sessions","ts":Double]` (`PurgeSessionsMessage`); `reconcileSessions` carries `clearedAt`
 - Theme selection: App Group UserDefaults key `selectedThemeID`
 - Heart limits and alert switches: App Group UserDefaults key `heartSafetySettings` (JSON)
 - Effort answers waiting for their session: UserDefaults key `pendingSessionEffort` (`PendingSessionEffort`, bounded to 20)

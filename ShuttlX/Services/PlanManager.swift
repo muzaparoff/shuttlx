@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import os.log
 import ShuttlXShared
 
@@ -12,10 +13,19 @@ class PlanManager: ObservableObject {
     private let plansFileName = "training_plans.json"
     private let progressFileName = "plan_progress.json"
 
+    private var wipeObserver: AnyCancellable?
+
     init() {
         loadPlans()
         loadProgress()
         seedBuiltInPlansIfNeeded()
+        wipeObserver = NotificationCenter.default.publisher(for: .localUserDataWiped)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.plans = []
+                self?.progresses = []
+                self?.seedBuiltInPlansIfNeeded()
+            }
     }
 
     // MARK: - CRUD
@@ -92,7 +102,12 @@ class PlanManager: ObservableObject {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             let data = try Data(contentsOf: url)
-            plans = try JSONDecoder().decode([TrainingPlan].self, from: data)
+            let decoded = LenientJSON.decodeArray(TrainingPlan.self, from: data)
+            if decoded.skipped > 0 || decoded.wholeFileUndecodable {
+                let backup = try StoreFile.backupCorrupt(url)
+                logger.error("training_plans.json: \(decoded.skipped) unreadable plan(s); original kept as \(backup.lastPathComponent)")
+            }
+            plans = decoded.elements
             logger.info("Loaded \(self.plans.count) plan(s)")
         } catch {
             logger.error("Failed to load plans: \(error.localizedDescription)")
@@ -103,7 +118,7 @@ class PlanManager: ObservableObject {
         guard let url = fileURL(plansFileName) else { return }
         do {
             let data = try JSONEncoder().encode(plans)
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            try data.write(to: url, options: StoreFile.writeOptions)
             logger.info("Saved \(self.plans.count) plan(s)")
         } catch {
             logger.error("Failed to save plans: \(error.localizedDescription)")
@@ -115,7 +130,12 @@ class PlanManager: ObservableObject {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         do {
             let data = try Data(contentsOf: url)
-            progresses = try JSONDecoder().decode([PlanProgress].self, from: data)
+            let decoded = LenientJSON.decodeArray(PlanProgress.self, from: data)
+            if decoded.skipped > 0 || decoded.wholeFileUndecodable {
+                let backup = try StoreFile.backupCorrupt(url)
+                logger.error("plan_progress.json: \(decoded.skipped) unreadable record(s); original kept as \(backup.lastPathComponent)")
+            }
+            progresses = decoded.elements
         } catch {
             logger.error("Failed to load progress: \(error.localizedDescription)")
         }
@@ -125,7 +145,7 @@ class PlanManager: ObservableObject {
         guard let url = fileURL(progressFileName) else { return }
         do {
             let data = try JSONEncoder().encode(progresses)
-            try data.write(to: url, options: [.atomic, .completeFileProtection])
+            try data.write(to: url, options: StoreFile.writeOptions)
         } catch {
             logger.error("Failed to save progress: \(error.localizedDescription)")
         }

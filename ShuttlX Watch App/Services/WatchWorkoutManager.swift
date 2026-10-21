@@ -181,9 +181,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastHRSampleDate: Date?
     /// Last time steps or distance grew, or CoreMotion reported moving.
     private var lastMotionDate: Date?
+    /// Evaluates above-limit / signal-lost every 5 s while paused (the display tick is stopped).
+    private var pausedAlertTimer: DispatchSourceTimer?
+    /// Pause spans HealthKit recorded before a crash. The resumed HR query replays
+    /// every sample since the start; samples inside these spans stay out of avg/peak.
+    private var recoveredPauses: [DateInterval] = []
     /// "noMotion" while the workout is auto-paused by the presence heuristic; nil otherwise.
     @Published private(set) var autoPauseReason: String?
-    /// Full-screen "Unusual heart rate" card (suddenJump). Stays until dismissed.
+    /// Full-screen amber "Check your heart rate" card (suddenJump). Stays until dismissed.
     struct UnusualHeartRate: Equatable { let bpm: Int; let rise: Int }
     @Published private(set) var unusualHeartRate: UnusualHeartRate?
     /// True once the HKWorkout of the last finished workout was written to Health.
@@ -258,6 +263,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// Most recent motion reading, kept in interval mode purely so the
     /// instrumentation can report where detection disagreed with the plan.
     private var lastMotionReading: (activity: DetectedActivity, confidence: ActivityClassifier.Confidence)?
+    /// When `lastMotionReading` arrived — a stale one can't hand a segment back from cycling.
+    private var lastMotionReadingAt: Date?
+    /// GPS speed is classified every `speedCheckInterval`, not every tick.
+    private var lastSpeedCheckAt: Date?
+    private static let speedCheckInterval: TimeInterval = 5
+    /// The speed classifier's own run/walk from its last on-foot reading.
+    private var lastSpeedFootVerdict: DetectedActivity = .walking
     /// Interval-mode segment reconciliation: the `IntervalEngine` step index the
     /// current segment was opened for (CE7).
     private var lastIntervalStepIndex: Int?
@@ -394,6 +406,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Clear any previous start-phase error — the user is making a new attempt.
         startupError = nil
+        // Ask now, while the app is frontmost: watchOS can only prompt then, and a
+        // heart alert fires later with the wrist down. Not awaited (start is never
+        // blocked); a no-op once the wearer has answered.
+        Self.requestNotificationPermission()
 
         let now = Date()
         workoutStartTime = now
@@ -430,10 +446,14 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         segmentStartDistance = 0
         hasCadenceSample = false
         lastMotionReading = nil
+        lastMotionReadingAt = nil
+        lastSpeedCheckAt = nil
+        lastSpeedFootVerdict = .walking
         lastIntervalStepIndex = nil
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
+        recoveredPauses = []
         hasReceivedHRSample = false
         noHeartRateDetected = false
         resetHeartAlertState()
@@ -609,6 +629,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         broadcastLiveMetricsIfNeeded()
 
         stopDisplayTimer()
+        startPausedAlertTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
         // The heart rate query is intentionally kept running through pause/resume
@@ -631,6 +652,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// See applyPauseState() for why this is split out.
     func applyResumeState() {
         isPaused = false
+        stopPausedAlertTimer()
         // Fresh 30/60 s grace after any resume; the reason only labels this pause.
         heartAlerts.reset()
         autoPauseReason = nil
@@ -692,6 +714,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         guard isWorkoutActive else { return }
 
         stopDisplayTimer()
+        stopPausedAlertTimer()
         stopMotionUpdates()
         stopPedometerUpdates()
         stopHeartRateQuery()
@@ -741,10 +764,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         segmentStartDistance = 0
         hasCadenceSample = false
         lastMotionReading = nil
+        lastMotionReadingAt = nil
+        lastSpeedCheckAt = nil
         lastIntervalStepIndex = nil
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
+        recoveredPauses = []
         cadenceSampleSum = 0
         cadenceSampleCount = 0
         maxCadenceValue = 0
@@ -788,6 +814,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Clear backup so a Discard path doesn't trigger a false crash-recovery prompt
         // on next launch. (Save path also clears it on confirmed save — idempotent.)
         persistence.clearBackup()
+
+        // A phone "delete my data" that arrived mid-workout runs now.
+        (sharedDataManager ?? WatchSyncCoordinator.shared).applyDeferredPurgeIfPossible()
     }
 
     // MARK: - HKWorkoutSession
@@ -1041,33 +1070,63 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         autoPauseReason = nil
     }
 
-    /// Runs on every unpaused tick. Returns true when it auto-paused the workout.
+    /// Runs on every unpaused tick, and every 5 s while paused (`paused: true`, see
+    /// `HeartAlertEvaluator`). Returns true when it auto-paused the workout.
     /// ponytail: presence = "no HR sample AND no steps/distance/CoreMotion movement
     /// for 60 s" — a heuristic, there is no public wrist-detection API.
-    private func evaluateHeartAlerts() -> Bool {
+    private func evaluateHeartAlerts(paused: Bool = false) -> Bool {
         let settings = (sharedDataManager ?? WatchSyncCoordinator.shared).heartSafety
         let now = Date()
+        var flags = HeartAlertFlags(settings)
+        // Without CoreMotion + pedometer there is no motion evidence at all, so "no
+        // motion" would just mean "no heart rate" and pause a working wearer.
+        if !hasMotionSensing { flags.noMotion = false }
         let alerts = heartAlerts.tick(now: now, hr: heartRate, lastHRDate: lastHRSampleDate,
                                       lastMotionDate: lastMotionDate,
-                                      limits: HeartAlertLimits(settings), flags: HeartAlertFlags(settings))
+                                      limits: HeartAlertLimits(settings), flags: flags, paused: paused)
         guard !alerts.isEmpty else { return false }
         let hrAge = lastHRSampleDate.map { Int(now.timeIntervalSince($0)) } ?? -1
         let motionAge = lastMotionDate.map { Int(now.timeIntervalSince($0)) } ?? -1
         for alert in alerts {
-            logger.warning("HEART ALERT \(alert.kind.rawValue) value=\(alert.value ?? -1) hr=\(self.heartRate) hrAge=\(hrAge)s motionAge=\(motionAge)s elapsed=\(Int(self.elapsedTime))s")
+            logger.warning("HEART ALERT \(alert.kind.rawValue)\(paused ? " (paused)" : "") value=\(alert.value ?? -1) hr=\(self.heartRate) hrAge=\(hrAge)s motionAge=\(motionAge)s elapsed=\(Int(self.elapsedTime))s")
             deliverHeartAlert(alert)
             if alert.kind == .suddenJump {
+                // Amber "Check your heart rate" card. deliverHeartAlert already played
+                // the .notification haptic: an instruction, not an alarm (.failure).
                 unusualHeartRate = UnusualHeartRate(bpm: heartRate, rise: alert.value ?? HeartAlertEvaluator.jumpBpm)
-                #if os(watchOS)
-                WKInterfaceDevice.current().play(.failure)  // stronger than the generic .notification
-                #endif
             }
         }
-        guard alerts.contains(where: { $0.kind == .noMotion }) else { return false }
+        guard !paused, alerts.contains(where: { $0.kind == .noMotion }) else { return false }
         logger.warning("AUTO-PAUSE noMotion at elapsed \(Int(self.elapsedTime))s (hrAge=\(hrAge)s motionAge=\(motionAge)s)")
         autoPauseReason = "noMotion"
         pauseWorkout()
         return true
+    }
+
+    /// CoreMotion + pedometer run for this workout (`startMotionUpdates` gate).
+    /// Elliptical, cross-training, cycling, swimming, hiking and other: no.
+    private var hasMotionSensing: Bool {
+        workoutMode == .gymRecovery || (activeTemplate?.sportType ?? .running).supportsAutoDetection
+    }
+
+    private func startPausedAlertTimer() {
+        stopPausedAlertTimer()
+        let t = DispatchSource.makeTimerSource(queue: .main)
+        let every = HeartAlertEvaluator.pausedTickInterval
+        t.schedule(deadline: .now() + every, repeating: every, leeway: .seconds(1))
+        t.setEventHandler { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self, self.isWorkoutActive, self.isPaused else { return }
+                _ = self.evaluateHeartAlerts(paused: true)
+            }
+        }
+        pausedAlertTimer = t
+        t.resume()
+    }
+
+    private func stopPausedAlertTimer() {
+        pausedAlertTimer?.cancel()
+        pausedAlertTimer = nil
     }
 
     /// "OK" on the unusual-heart-rate card. "Pause" calls pauseWorkout() first.
@@ -1078,23 +1137,24 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private func deliverHeartAlert(_ alert: HeartAlert) {
         #if os(watchOS)
         WKInterfaceDevice.current().play(.notification)
-        let frontmost = WKApplication.shared().applicationState == .active
-        Self.postHeartAlertNotification(alert.message, id: "heartAlert.\(alert.kind.rawValue)", post: !frontmost)
+        if WKApplication.shared().applicationState != .active {
+            Self.postHeartAlertNotification(alert.message, id: "heartAlert.\(alert.kind.rawValue)")
+        }
         #endif
         (sharedDataManager ?? WatchSyncCoordinator.shared).sendHeartAlert(alert)
     }
 
-    /// Asks for permission lazily on the first alert (it can only prompt while
-    /// frontmost); posts only if granted. Denied = silently skipped.
-    nonisolated private static func postHeartAlertNotification(_ text: String, id: String, post: Bool) {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, _ in
-            guard granted, post else { return }
-            let content = UNMutableNotificationContent()
-            content.title = "ShuttlX"
-            content.body = text
-            content.sound = .default
-            UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
-        }
+    nonisolated private static func requestNotificationPermission() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
+    }
+
+    /// Permission was asked at workout start; without it `add` fails and nothing shows.
+    nonisolated private static func postHeartAlertNotification(_ text: String, id: String) {
+        let content = UNMutableNotificationContent()
+        content.title = "ShuttlX"
+        content.body = text
+        content.sound = .default
+        UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: id, content: content, trigger: nil))
     }
 
     // MARK: - Live Metrics Broadcast
@@ -1204,6 +1264,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         if detected != .unknown {
             lastMotionReading = (detected, confidence)
+            lastMotionReadingAt = Date()
         }
         if activity.walking || activity.running || activity.cycling { lastMotionDate = Date() }
 
@@ -1248,30 +1309,28 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     /// Step 4b: GPS-speed cycling <-> on-foot switch for outdoor free runs. Runs on
-    /// the 1 s display tick; reads speeds already stored on `routePoints`.
+    /// the 1 s display tick; classifies the speeds already stored on `routePoints`
+    /// every `speedCheckInterval`.
     private func checkSpeedActivity() {
         guard workoutMode == .freeRun, !isIndoorWorkout,
               (activeTemplate?.sportType ?? .running).supportsAutoDetection,
               (sharedDataManager ?? WatchSyncCoordinator.shared).heartSafety.autoSwitchActivity else { return }
         let now = Date()
-        let window = SpeedActivityClassifier.minWindow
         let wasCycling = isCyclingBySpeed
 
-        // Need GPS history older than the window, and >= 15 speed fixes inside it
-        // (so a fresh resume doesn't classify on 2-3 fixes).
-        let tail = routePoints.suffix(120)
-        if let oldest = tail.first, now.timeIntervalSince(oldest.timestamp) >= window {
-            let speeds = tail.filter { now.timeIntervalSince($0.timestamp) <= window }.compactMap(\.speed)
-            if speeds.count >= 15 {
-                let avg = speeds.reduce(0, +) / Double(speeds.count)
+        if lastSpeedCheckAt.map({ now.timeIntervalSince($0) >= Self.speedCheckInterval }) ?? true {
+            lastSpeedCheckAt = now
+            // Needs GPS history older than the window and >= 15 speed fixes inside it.
+            if let avg = SpeedActivityClassifier.averageSpeed(of: routePoints, now: now) {
                 let cadence = cadenceForClassification.map(Double.init)
                 // A stop (red light) says nothing about the mode — don't ingest it.
-                if let result = SpeedActivityClassifier.classify(speed: avg, cadence: cadence, window: window),
+                if let result = SpeedActivityClassifier.classify(speed: avg.speed, cadence: cadence),
                    result.activity != .stationary {
+                    if result.activity != .cycling { lastSpeedFootVerdict = result.activity }
                     let mode: DetectedActivity = result.activity == .cycling ? .cycling : .walking
                     let committed = speedHysteresis.ingest(mode, at: now)
                     if (committed == .cycling) != wasCycling {
-                        logger.info("SEG SPEED [free-run] \(wasCycling ? "cycling" : "foot") -> \(committed == .cycling ? "cycling" : "foot") avg=\(String(format: "%.1f", avg))m/s cadence=\(cadence.map { String(Int($0)) } ?? "n/a") fixes=\(speeds.count)")
+                        logger.info("SEG SPEED [free-run] \(wasCycling ? "cycling" : "foot") -> \(committed == .cycling ? "cycling" : "foot") avg=\(String(format: "%.1f", avg.speed))m/s cadence=\(cadence.map { String(Int($0)) } ?? "n/a") fixes=\(avg.fixes)")
                     }
                 }
             }
@@ -1287,10 +1346,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 heldFor: 60, isReconfirmation: currentActivity == .cycling,
                 forcedByTimeout: false))
         } else if wasCycling {
-            // Back on foot: CoreMotion re-earns run/walk. Replay its last reading,
-            // since it may not call back again if its state didn't change.
+            // Back on foot. CoreMotion re-earns run/walk from a fresh reading (replayed,
+            // since it may not call back again if its state didn't change). Without
+            // one, the speed classifier's own run/walk commits now — otherwise the
+            // segment would stay CYCLE until CoreMotion happens to speak.
             classifier.requireReconfirmation()
-            if let last = lastMotionReading {
+            if let foot = SpeedActivityClassifier.footFallback(speedVerdict: lastSpeedFootVerdict,
+                                                               motionReadingAt: lastMotionReadingAt, now: now) {
+                logger.info("SEG SPEED [free-run] no fresh motion reading — committing speed verdict \(foot.rawValue)")
+                classifier.override(to: foot)
+                commitActivityTransition(ActivityClassifier.Decision(
+                    activity: foot, previous: currentActivity,
+                    minConfidence: .medium, maxConfidence: .medium,
+                    cadence: cadenceForClassification, cadenceCheck: .inconclusive,
+                    heldFor: 60, isReconfirmation: false, forcedByTimeout: false))
+            } else if let last = lastMotionReading {
                 classifier.ingest(activity: last.activity, confidence: last.confidence, now: now)
             }
         }
@@ -1851,19 +1921,22 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             if let newestEnd, newestEnd > (self.lastHRSampleDate ?? .distantPast) {
                 self.lastHRSampleDate = newestEnd
             }
-            // Only include samples taken while workout is not paused
-            if !self.isPaused {
-                self.heartRateSampleSum += bpmValues.reduce(0, +)
-                self.heartRateSampleCount += bpmValues.count
-                for sample in timedValues {
+            for sample in timedValues {
+                // A pause recorded before a crash (replayed after resume) excludes
+                // the sample from avg AND peak.
+                if self.recoveredPauses.contains(where: { $0.contains(sample.date) }) { continue }
+                // Only include samples taken while workout is not paused
+                if !self.isPaused {
+                    self.heartRateSampleSum += sample.bpm
+                    self.heartRateSampleCount += 1
                     self.metricsLedger.recordHeartRate(bpm: sample.bpm, at: sample.date)
+                }
+                if sample.bpm > self.maxHeartRateValue {
+                    self.maxHeartRateValue = sample.bpm
                 }
             }
             if let latestBPM = bpmValues.last {
                 self.heartRate = Int(latestBPM.rounded())
-            }
-            if let maxBPM = bpmValues.max(), maxBPM > self.maxHeartRateValue {
-                self.maxHeartRateValue = maxBPM
             }
         }
     }
@@ -1958,7 +2031,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             }
         }
 
-        persistence.checkpoint(session)
+        persistence.checkpoint(session, autoPauseReason: autoPauseReason)
     }
 
     /// Check for a crashed workout backup and recover the session
@@ -1999,6 +2072,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 self.saveRecoveredSession(recovered)
             }
             self.logger.info("Launch recovery complete")
+            self.sharedDataManager?.applyDeferredPurgeIfPossible()
         }
     }
 
@@ -2036,8 +2110,23 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         if session.state == .running || session.state == .paused {
             session.end()
         }
+        // The workout ended (for data purposes) at its last checkpoint, not now: an
+        // orphan found hours later must not record the hours in between. The ids let
+        // the iPhone's Health importer match it to the backup sent right after this.
+        let start = builder.startDate ?? session.startDate ?? Date()
+        let backup = persistence.recoverCrashedWorkout().flatMap { abs($0.startDate.timeIntervalSince(start)) < 60 ? $0 : nil }
+        let end = backup?.endDate.map { min(max($0, start), Date()) } ?? Date()
+        if let backup {
+            do {
+                try await builder.addMetadata([HKMetadataKeyExternalUUID: backup.id.uuidString,
+                                               Self.sessionIDMetadataKey: backup.id.uuidString])
+            } catch {
+                logger.error("Recovered HK session: metadata not added (\(error.localizedDescription)) — finalizing anyway")
+            }
+        }
+        logger.info("Finalizing orphan at \(backup != nil ? "last checkpoint" : "now (no matching backup)") \(end), backup \(backup?.id.uuidString ?? "none")")
         do {
-            try await builder.endCollection(at: Date())
+            try await builder.endCollection(at: end)
             let workout = try await builder.finishWorkout()
             logger.info("Orphaned workout finalized to HealthKit: \(workout?.uuid.uuidString ?? "unknown")")
         } catch {
@@ -2046,7 +2135,30 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         #endif
     }
 
+    /// ShuttlX session id on the HKWorkout, next to HKMetadataKeyExternalUUID.
+    nonisolated static let sessionIDMetadataKey = "com.shuttlx.sessionID"
+
     #if os(watchOS)
+    /// Pause spans from the builder's pause/resume events (manual and motion), the
+    /// open one ending at `now`.
+    private static func pauseIntervals(_ events: [HKWorkoutEvent], until now: Date) -> [DateInterval] {
+        var out: [DateInterval] = []
+        var openedAt: Date?
+        for event in events.sorted(by: { $0.dateInterval.start < $1.dateInterval.start }) {
+            switch event.type {
+            case .pause, .motionPaused:
+                if openedAt == nil { openedAt = event.dateInterval.start }
+            case .resume, .motionResumed:
+                if let s = openedAt { out.append(DateInterval(start: s, end: max(s, event.dateInterval.start))) }
+                openedAt = nil
+            default:
+                break
+            }
+        }
+        if let s = openedAt { out.append(DateInterval(start: s, end: max(s, now))) }
+        return out
+    }
+
     /// Continue a recovered session. Restores what the crash backup holds
     /// (session id, segments, steps, splits, route, mode/template); HealthKit
     /// rebuilds the rest — the HR query replays every sample since the start
@@ -2119,6 +2231,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Restored from the backup; everything else starts clean.
         segments = backup?.segments ?? []
+        // Kill -> relaunch: nobody knows what the wearer did. Its own unknown part,
+        // not stretched onto the last recorded one.
+        if let gapStart = backup?.endDate, now.timeIntervalSince(gapStart) > 1 {
+            segments.append(ActivitySegment(activityType: .unknown, startDate: gapStart, endDate: now))
+        }
         totalSteps = backup?.totalSteps ?? 0
         pedometerDistanceKm = backup?.distance ?? 0
         totalDistance = pedometerDistanceKm
@@ -2138,10 +2255,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         hasReceivedHRSample = false
         noHeartRateDetected = false
         resetHeartAlertState()
+        // The overlay that explains an auto-pause survives the kill with the pause.
+        autoPauseReason = paused ? persistence.recoveredAutoPauseReason() : nil
         totalCaloriesAccumulated = 0
         calories = 0
         lastEnergyStatsEnd = nil
         metricsLedger.reset()
+        // The replayed HR query re-delivers samples from earlier pauses too; keep them
+        // out of avg/peak and the per-phase ledger.
+        recoveredPauses = Self.pauseIntervals(builder.workoutEvents, until: now)
+        for pause in recoveredPauses { metricsLedger.recordPause(from: pause.start, to: pause.end) }
         cadenceSampleSum = 0
         cadenceSampleCount = 0
         maxCadenceValue = 0
@@ -2150,6 +2273,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         classifier.reset()
         speedHysteresis = SpeedActivityClassifier.Hysteresis()
         lastMotionReading = nil
+        lastMotionReadingAt = nil
+        lastSpeedCheckAt = nil
+        lastSpeedFootVerdict = .walking
         lastIntervalStepIndex = nil
         lastCheckpointDate = nil
         lastTickDate = nil
@@ -2177,10 +2303,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 startPedometerUpdates()
             }
             requestLocationAndStartUpdates()
+        } else {
+            startPausedAlertTimer()
         }
         broadcaster.notifyWorkoutStarted(sport: sport)
         saveWorkoutDataToLocalStorage()
-        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString))")
+        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, pauses \(self.recoveredPauses.count), autoPause \(self.autoPauseReason ?? "none"), backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString))")
     }
     #endif
 
@@ -2357,7 +2485,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     // Attach metadata before closing the builder so it appears in Health.app
                     var hkMetadata: [String: Any] = [
                         HKMetadataKeyIndoorWorkout: NSNumber(value: capturedIsIndoor),
-                        HKMetadataKeyExternalUUID: capturedSessionID
+                        HKMetadataKeyExternalUUID: capturedSessionID,
+                        Self.sessionIDMetadataKey: capturedSessionID
                     ]
                     if !capturedWorkoutName.isEmpty {
                         hkMetadata["templateName"] = capturedWorkoutName
@@ -2461,7 +2590,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             currentActivity = .walking
             activitySwitch = ActivitySwitch(from: .running, to: .walking)
         case "unusual":
-            unusualHeartRate = UnusualHeartRate(bpm: 141, rise: 38)
+            unusualHeartRate = UnusualHeartRate(bpm: 141, rise: 41)
         case "autopaused":
             applyPausedPreviewState()
             autoPauseReason = "noMotion"

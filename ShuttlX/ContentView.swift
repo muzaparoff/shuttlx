@@ -66,7 +66,7 @@ struct ContentView: View {
         .onChange(of: deepLinkRouter.openLastWorkout) { _, _ in
             consumePendingSessionDeepLink()
         }
-        .onChange(of: dataManager.effectiveSessions) { _, _ in
+        .onChange(of: dataManager.effectiveVersion) { _, _ in
             // The session id may have arrived before sessions finished
             // loading from the App Group — retry here instead of dropping
             // it (see `consumePendingSessionDeepLink`).

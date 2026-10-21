@@ -50,6 +50,10 @@ enum HelpContent {
                          text: "Tap the green pause button to pause; tap the red stop button to finish."),
                 HelpStep(icon: "iphone.and.arrow.right.inward",
                          text: "The completed session appears on your iPhone in the History tab within moments."),
+                HelpStep(icon: "iphone",
+                         text: "If you start a workout on the iPhone, the Watch starts too. Pause, resume and finish on the iPhone reach the Watch, and the Watch recording is the one kept in History. If the Watch recording never arrives, the iPhone recording stays."),
+                HelpStep(icon: "location",
+                         text: "Outdoor workouts started on the iPhone keep tracking your route when the screen is off. The iPhone shows a blue location indicator while it does."),
             ]),
         HelpTopic(
             id: "custom-template",
@@ -119,19 +123,22 @@ enum HelpContent {
             title: "Heart limits & alerts",
             body: """
             Set an upper limit (and optionally a low limit) for your heart \
-            rate. Without one, ShuttlX shows an estimate, labelled as such, \
-            lowered if you take a beta-blocker. Your doctor's limit always \
-            wins. Your medication answer stays on this iPhone; only the \
+            rate. Without one, ShuttlX can estimate it from your age: 85% of \
+            the predicted maximum (220 minus your age), lowered further if you \
+            take a beta-blocker. It is an estimate, not a prescription. Your \
+            doctor's limit always wins. Your medication answer stays on this iPhone; only the \
             resulting limits are sent to your Watch. You can also choose \
             "Use effort only": a 0–10 effort scale and no heart-rate limit.
             """,
             steps: [
                 HelpStep(icon: "gear",
-                         text: "During setup, answer the beta-blocker question and choose your heart limit. You can skip both."),
+                         text: "During setup, answer the beta-blocker question (you can skip it) and choose your heart limit: your doctor's number, an estimate from your age, or effort only. Setup asks for your age if Health does not know it, and asks once to allow notifications."),
                 HelpStep(icon: "heart.fill",
-                         text: "Later: Settings → Heart → Heart limit opens Heart & alerts, where you change your limit, low limit and medication notes."),
+                         text: "Later: Settings → Heart → Heart limit opens Heart & alerts, where you change your limit, age, low limit and medication notes. Numbers are saved when you finish typing; one outside the allowed range is moved to the nearest allowed value and you are told. Max heart rate is Auto unless you type your own; Reset returns to Auto."),
+                HelpStep(icon: "exclamationmark.triangle",
+                         text: "If no limit is set and effort only is off, Today and Settings show “No heart limit set”: the watch cannot warn you until you set one."),
                 HelpStep(icon: "bell.badge",
-                         text: "Choose which alerts you want: above limit, below low limit, sudden jump, signal lost. Pause when no heart rate has its own switch and delay (30, 60 or 120 s)."),
+                         text: "Choose which alerts you want: above limit, below low limit, signal lost, and the sudden rise alert (+40 bpm in 10 s, off by default because it can false alarm). Pause when no heart rate has its own switch and delay (30, 60 or 120 s)."),
                 HelpStep(icon: "applewatch",
                          text: "Settings → Heart also switches the 0–10 effort question and Run / Walk auto-switch on the watch. Effort stays on with a beta-blocker."),
             ]),
@@ -184,9 +191,10 @@ enum HelpContent {
             title: "Privacy & your health data",
             body: """
             Your workouts are yours. Sessions are stored on your iPhone and \
-            Apple Watch. If you are signed in with Apple, they are also synced to \
-            your own private iCloud, and Settings → Account lets you sign out or \
-            delete your account and iCloud data. Heart rate, distance, and \
+            Apple Watch. iCloud backup is not available in this version. If you \
+            signed in with Apple in an earlier version, your workouts are still \
+            synced to your private iCloud and Settings → Account lets you sign \
+            out or delete your account and iCloud data. Heart rate, distance, and \
             calories are read from HealthKit solely to run and record your \
             workouts, and finished sessions are saved back to Apple Health. \
             Health data is never sent to third parties; the optional \
@@ -194,7 +202,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "heart.fill",
-                         text: "Manage access any time: Settings tab → Health & Watch → “Why We Need Access”."),
+                         text: "Manage access any time: Settings tab → Health & Watch → “Why We Need Access”. If Health access was switched off, Settings shows how to turn it back on in iPhone Settings."),
                 HelpStep(icon: "heart.text.square",
                          text: "If a Watch workout never synced to the iPhone, ShuttlX reads it back from Apple Health when you open the app. It shows a “From Health” badge in History."),
                 HelpStep(icon: "trash",
