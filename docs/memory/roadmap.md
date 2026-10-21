@@ -33,15 +33,15 @@
 - [x] Sign in with Apple + CloudKit sync (basic pull/push, no push-triggered)
 
 ### UI & Theming
-- [x] Selectable themes (currently 1: Clean — Mixtape and the other themes were deleted app-wide)
+- [x] Clean is the only theme now (July 2026 reduced 7 → 2; October 2026 deleted Mixtape). The theme system still supports adding themes (`AppTheme.all` + `ThemeID.valid`)
 - [x] ThemeManager @Observable singleton, dual-target mirrored files
-- [x] .themedCard(), .lcdPanel() modifiers; CardStyle .glass/.lcd
+- [x] .themedCard()
 - [x] Theme sync iPhone → Watch via applicationContext
 
 ### Live Activity & Widgets
 - [x] Dynamic Island + Lock Screen live activity during workout
-- [x] 2 iOS widgets (Small: streak, Medium: stats)
-- [x] 3 Watch complications (LastWorkout, WeeklyProgress, QuickStart)
+- [x] iOS widgets: StartTrainingWidget, QuickStartControl, WeeklyGoalRingWidget, SmallWidget (streak), MediumWidget (stats)
+- [x] 4 Watch complications (LastWorkout, WeeklyProgress, QuickStart, TodayWorkout)
 
 ### Maps & Routes
 - [x] Live route map during workout, post-workout route with km pace markers
@@ -61,9 +61,9 @@
 
 ### Priority 2: Quick Wins
 4. **Cadence (SPM)** — CMPedometer data already captured, just compute steps/minute and display. Low effort, high value.
-5. **Auto-Pause** — pause workout at stoplights/stops, resume on movement. Top user complaint when missing.
-6. ~~**Custom Fonts** — bundle 7-segment & pixel OFL fonts~~ — MOOT: the themes that needed them were deleted in the July 2026 theme reduction.
-7. **Pace/HR Alerts** — configurable alerts when pace or HR exits target zone.
+5. **Auto-Pause** — partly done: watch pauses after 60 s with no HR and no motion (heuristic, device test pending).
+6. **Custom Fonts** — dropped: the Casio and Arcade themes that needed them were deleted.
+7. **Pace/HR Alerts** — partly done: heart-limit alerts (above / below low limit / signal lost / no motion) shipped in October 2026. Pace alerts not done.
 
 ### Priority 3: Growth
 8. **Multi-Sport Sensors** — cycling cadence, swim stroke count, hiking altitude gain. Model supports 8 sports but only run/walk have real sensor stacks.
@@ -87,3 +87,4 @@
 | 2026-03-03 | Dynamic theme system: 4 themes | ✅ Done (Build 29) |
 | 2026-03-03 | Watch home screen redesign | ✅ Done (Build 30-32) |
 | 2026-03-03 | iOS Free Run as built-in program | ✅ Done (Build 33) |
+| 2026-10-20 | Timeline redesign: four tabs, History calendar/list/map, Today timeline, watch mockup screens, heart alerts, effort | ✅ Done in code (v1.10.0); device tests pending. Open items in docs/plans/2026-10-timeline-redesign.md |

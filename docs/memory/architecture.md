@@ -1,154 +1,43 @@
 ---
 name: Architecture & File Map
-description: Current file structure, LOC, key service/view/model files, data flow
+description: Current file structure per target (October 2026, v1.10.0), key service/view/model files, data flow
 type: project
 ---
 
 # ShuttlX Architecture
 
-## File Map (120+ files, ~13,300 LOC)
+## File Map (164 Swift files, ~27,700 non-blank lines, tests excluded)
 
-### iOS Target (65 files, ~7,900 LOC)
+Counts from ripgrep, October 2026 (v1.10.0). Per-file line counts were dropped: the old table was stale. Key file sizes: WatchWorkoutManager ~2,290, PhoneSyncCoordinator ~1,115, WatchSyncCoordinator ~1,220, TrainingView ~166 (+Metrics ~700, +Controls, +Running).
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| **App** | | |
-| ShuttlXApp.swift | 40 | App entry, environment setup |
-| ContentView.swift | 66 | Tab bar: Dashboard / Programs / History / Settings |
-| **Services/** | | |
-| PhoneSyncCoordinator.swift | ~1,130 | WatchConnectivity sync, live metrics (renamed from SharedDataManager, July 2026) |
-| iPhoneWorkoutController.swift | 780+ | Core iOS workout engine, HealthKit, pace rolling-window |
-| AnalyticsEngine.swift | 413 | Data analytics, trends, weekly stats |
-| CloudKitSyncManager.swift | 247 | CloudKit sync |
-| DataManager.swift | 153 | Session persistence, HealthKit queries |
-| PlanManager.swift | 148 | Training plan CRUD |
-| AuthenticationManager.swift | 137 | Sign-in/auth flow |
-| LiveActivityManager.swift | 136 | Lock Screen / Dynamic Island |
-| TemplateManager.swift | 78 | Template CRUD + auto-sync to Watch |
-| WidgetDataProvider.swift | 57 | Widget data bridge |
-| **Models/** (8 shared with watchOS) | | |
-| TrainingSession.swift | 148 | Session model (segments, intervals, route) |
-| TrainingPlan.swift | 114 | Multi-week plan definition |
-| BuiltInPlans.swift | 107 | Preset training plans |
-| WorkoutTemplate.swift | 95 | Interval program definition |
-| WorkoutSport.swift | 88 | Sport type enum + metadata |
-| ActivitySegment.swift | 60 | Running/walking/stationary tracking |
-| RoutePoint.swift | 19 | GPS coordinate |
-| ExerciseDevice.swift | 70+ | Device type enum + metadata (6 built-in + custom) |
-| ChartData.swift | 81 | Chart helpers (iOS only) |
-| WorkoutActivityAttributes.swift | 17 | Live Activity attributes (iOS only) |
-| **Theme/** (Clean is the only theme — Mixtape deleted Oct 2026) | | |
-| ThemeManager.swift | 47 | @Observable theme manager, persistence, ids validated by `ShuttlXShared.ThemeID` (`["clean"]`) |
-| AppTheme.swift | 28 | Theme struct: colors + fonts + effects + chartStyle |
-| ThemeColors.swift | 113 | ~40 color tokens per theme |
-| ThemeFonts.swift | 40 | ~20 font tokens per theme |
-| ThemeEffects.swift | 31 | Visual effects config, CardStyle `.glass` |
-| ThemeChartStyle.swift | 70 | Per-theme chart styling (iOS only) |
-| ThemeModifiers.swift | 190 | View modifiers: themedCard, cleanMeshBackground |
-| ThemeAssets.swift | 429 | Clean timer frame + completion badge |
-| ShuttlXTheme.swift | 171 | ShuttlXColor/ShuttlXFont bridge enums |
-| IntervalTypeThemeHelpers.swift | 99 | Interval-type theming helpers (iOS only) |
-| Themes/CleanTheme.swift | 106 | Clean theme definition |
-| **Views/** | | |
-| Workout/iPhoneWorkoutTimerView.swift | 420+ | Active workout timer + metrics + hero dispatch |
-| AnalyticsView.swift | 514 | Analytics & trends |
-| TrainingHistoryView.swift | 234 | Session list with filter/sort |
-| SettingsView.swift | 322 | App settings |
-| SessionDetailView.swift | 269 | Full session breakdown |
-| TemplateEditorView.swift | 257 | Create/edit intervals |
-| OnboardingView.swift | 214 | First-launch flow |
-| PlanDetailView.swift | 191 | Plan details & preview |
-| SyncDebugView.swift | 170 | Debug sync |
-| PlanEditorView.swift | 170 | Create/edit plans |
-| TemplateListView.swift | 165 | Template list + empty state |
-| IntervalResultsView.swift | 137 | Per-interval performance |
-| RouteMapView.swift | 182 | GPS route on map |
-| DashboardView.swift | 124 | Home dashboard |
-| SessionRowView.swift | 122 | Session list row |
-| DebugView.swift | 122 | Debug tools |
-| ProgramsTabView.swift | 111 | Programs/plans tab |
-| PlanListView.swift | 109 | Training plans list |
-| ElevationProfileView.swift | 142 | Elevation chart |
-| SignInView.swift | 85 | Login screen |
-| LiveRouteView.swift | 69 | Route during workout |
-| ProgramListView.swift | 61 | Quick programs |
-| **Dashboard Cards** | | |
-| Dashboard/LiveWorkoutCard.swift | 133 | Real-time watch metrics |
-| Dashboard/WeekSummaryCard.swift | 108 | Weekly stats |
-| Dashboard/StartOnWatchCard.swift | 45 | Start CTA |
-| Dashboard/LastWorkoutCard.swift | 86 | Recent session |
-| Dashboard/PlanProgressCard.swift | 66 | Plan progress |
-| Dashboard/FreeRunCard.swift | 150+ | Free Run quick-start card (iOS) |
-| **Charts** | | |
-| Charts/WeekStripView.swift | 94 | Week overview strip |
-| Charts/PaceTrendChart.swift | 73 | Pace trends |
-| Charts/WeeklyDistanceChart.swift | 63 | Distance per week |
-| Charts/HRZoneChart.swift | 56 | Heart rate zones |
-| **Utilities** | | |
-| Utilities/FormattingUtils.swift | 66 | String/number formatting |
-| Components/MetricCard.swift | 38 | Metric display card |
-| Components/ActivityBadge.swift | 28 | Activity type pill |
-| Components/StreakBadge.swift | 23 | Streak display |
+### iOS target (82 files, ~15,200 lines)
 
-### watchOS Target (38+ files, ~4,600 LOC)
+- **App**: ShuttlXApp.swift (DeepLinkRouter, onOpenURL), ContentView.swift (tabs Today · History · Trends · Settings)
+- **Services/**: DataManager (sessions + `effectiveSessions`), PhoneSyncCoordinator (WCSession), iPhoneWorkoutController, iOSHeartRateMonitor, AnalyticsEngine, CloudKitSyncManager, AuthenticationManager, LiveActivityManager, TemplateManager, PlanManager, DeviceManager, WidgetDataProvider (reads raw sessions.json), SegmentOverrideStore, SessionHeartRateLoader, HealthKitImporter, CalorieEstimationEngine (iOS overloads), FeedbackPrompt, iPhoneHapticPlayer
+- **Models/**: TrainingSession, WorkoutTemplate, WorkoutSport+Theme, DetectedActivity+Theme, ChartData, WorkoutActivityAttributes, WorkoutControlIntents (Live Activity intents)
+- **Theme/**: ShuttlXTheme, ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, ThemeChartStyle, TimelineStyle, IntervalTypeThemeHelpers, Themes/CleanTheme
+- **Components/**: DayRibbon (ActivityRibbon, SessionPartRow), MetricCard, ActivityBadge, PressScaleButtonStyle
+- **Views/**: DashboardView (Today), Dashboard/TodayTimeline, Dashboard/LiveWorkoutCard, Workout/iPhoneWorkoutTimerView, HistoryView (calendar / list / map), HistoryMapView, SessionDetailView (FixPartSheet, HR chart), AnalyticsView, Charts/ (TrendsOverview, WeekStripView, CalendarHeatmapCard, ScrubTimelineHeroCard, WeeklyCarouselCard, ComparisonSplitCard, HRZoneChart, PaceTrendChart, WeeklyDistanceChart, ThemedLineChart, ThemedBarChart), SettingsView, HeartAlertsView ("Heart & alerts"), OnboardingView, HelpView, ProgramsTabView (pushed from Today), ProgramListView, TemplateListView, TemplateEditorView, PlanListView, PlanDetailView, PlanEditorView, RouteMapView, LiveRouteView, ElevationProfileView, IntervalResultsView, DeviceListView (no entry point in code), DevicePickerView, SignInView (unreferenced), DebugView, SyncDebugView
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| **App** | | |
-| ShuttlXWatchApp.swift | 53 | Watch app entry, theme injection |
-| ContentView.swift | 38 | Root navigation |
-| **Services/** | | |
-| WatchWorkoutManager.swift | 944 | Core watch workout engine, HealthKit, sensors, pace rolling-window |
-| WatchSyncCoordinator.swift | ~1,200 | Watch-side WatchConnectivity (renamed from SharedDataManager, July 2026) |
-| IntervalEngine.swift | 134 | Interval countdown state machine |
-| **Models/** (8 shared with iOS) | | |
-| ActivitySegment.swift | 60 | Running/walking/stationary tracking |
-| BuiltInPlans.swift | 107 | Preset training plans |
-| RoutePoint.swift | 19 | GPS coordinate |
-| TrainingPlan.swift | 114 | Multi-week plan definition |
-| TrainingSession.swift | 148 | Session model |
-| WorkoutSport.swift | 88 | Sport type enum |
-| WorkoutTemplate.swift | 95 | Interval program definition |
-| ExerciseDevice.swift | 70+ | Device type enum |
-| **Theme/** (Clean only, mirrored from iOS) | | |
-| ThemeManager.swift | ~47 | @Observable theme manager (same as iOS) |
-| AppTheme.swift | ~28 | Theme struct (same as iOS) |
-| ThemeColors.swift | ~113 | ~40 color tokens (same as iOS) |
-| ThemeFonts.swift | ~40 | ~20 font tokens (watch-sized) |
-| ThemeEffects.swift | ~31 | Visual effects (watch variant) |
-| ThemeModifiers.swift | ~190 | View modifiers (watch-sized) |
-| ThemeAssets.swift | — | Shared Canvas decorations (watch-sized) |
-| ShuttlXTheme.swift | — | Bridge enums (watch) |
-| Themes/CleanTheme.swift | ~106 | Clean theme definition (watch-sized) |
-| **Views/** | | |
-| TrainingView.swift | 357 | Active workout UI (timer + metrics + hero overlays + controls) |
-| ProgramSelectionView.swift | 200 | Program picker |
-| DebugView.swift | 113 | Watch debug console |
-| **Utilities** | | |
-| Utilities/FormattingUtils.swift | 50 | Watch formatting |
-| Components/MetricCard.swift | 28 | Watch metric card |
-| **Widgets/** | | |
-| ShuttlXWatchWidgets.swift | 10 | Widget bundle entry |
-| LastWorkoutComplication.swift | 89 | Last workout complication |
-| WeeklyProgressComplication.swift | 58 | Weekly progress |
-| QuickStartComplication.swift | 47 | Quick start |
-| WatchWidgetDataProvider.swift | 33 | Widget data provider |
+### watchOS target (40 files, ~8,900 lines)
 
-### Live Activity Extension (3 files, ~226 LOC)
+- **App**: ShuttlXWatchApp.swift (WatchAppDelegate, launch recovery), ContentView.swift
+- **Services/**: WatchWorkoutManager (+LocationDelegate, +HealthKitDelegates), WatchSyncCoordinator, IntervalEngine (watch copy), ActivityClassifier (watch-only), RecoverySegmenter, HealthKitAuthService, WorkoutPersistence, LiveMetricsBroadcaster, SegmentMetricsLedger, WorkoutPhaseHealthKitWriter, SegmentHygiene
+- **Models/**: TrainingSession, WorkoutTemplate, WorkoutSport+Theme, DetectedActivity+Theme
+- **Theme/**: ShuttlXTheme, ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, Themes/CleanTheme
+- **Components/**: MetricCard, WatchScreenParts
+- **Views/**: TrainingView (+Controls, +Metrics, +Running), SafetyPromptView (SafetyPromptView, UnusualHeartRateView, WatchPromptCard), WorkoutSummaryView (EffortView), ProgramSelectionView (ProgramsListView), RecoveryWorkoutView, IntervalStepWash, DebugView
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| ShuttlXLiveActivityBundle.swift | 9 | Bundle entry |
-| ShuttlXLiveActivity.swift | 105 | Main Live Activity view |
-| LockScreenView.swift | 112 | Lock screen widget |
+### Shared (SPM `ShuttlXShared`, 22 files, ~2,000 lines)
 
-### Widgets Extension (3 files, ~264 LOC)
+- **Models**: ActivitySegment, DetectedActivity, RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport, SessionMode, HeartRateZoneCalculator, HeartSafetySettings, HeartAlertEvaluator, ActivityClassifier (SpeedActivityClassifier), SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, ThemeID, FormattingUtils, CalorieEstimationEngine
+- **Engines**: IntervalEngine (canonical, iOS consumes it), RecoverySegmenter, HapticPlayer
 
-| File | Lines | Purpose |
-|------|-------|---------|
-| ShuttlXWidgetsBundle.swift | 10 | Bundle entry |
-| SmallWidget.swift | 94 | Home screen widget (small) |
-| MediumWidget.swift | 160 | Home screen widget (medium) |
+### Live Activity (3 files) and widgets
+
+- **ShuttlXLiveActivity/**: ShuttlXLiveActivity (Dynamic Island regions + lock screen), LockScreenView, bundle. Dynamic Island rendering on device is unverified.
+- **ShuttlXWidgets/** (iOS, 11): StartTrainingWidget (W1), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget; Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents)
+- **ShuttlXWatchWidgets/** (6): QuickStartComplication, LastWorkoutComplication, WeeklyProgressComplication, TodayWorkoutComplication, WatchWidgetDataProvider, bundle
 
 ## Data Flow
 
@@ -158,36 +47,18 @@ iPhone creates template → TemplateManager.save()
   → Watch receives → stores in WatchSyncCoordinator.workoutTemplates
 
 Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
-  → HealthKit session + DispatchSourceTimer + sensors (CMPedometer, CMMotionActivity)
-  → Every 1s: IntervalEngine.tick() + metrics computed (HR, pace rolling-window, distance, cadence)
-  → Broadcast live metrics to iPhone via WCSession
+  → HealthKit session + timer + sensors
+  → Every 1s: IntervalEngine.tick() + broadcast live metrics to iPhone
   → On complete: saveWorkoutData() → TrainingSession sent via WCSession
 
-iPhone receives session → PhoneSyncCoordinator → DataManager → persists → UI updates
-  → AnalyticsEngine processes trends, computes VO2max/TSB/PRs
-  → WidgetDataProvider refreshes widgets
-  → LiveActivityManager updates Dynamic Island during active workout
+iPhone receives session → PhoneSyncCoordinator → DataManager (sessions = stored, effectiveSessions = + SegmentEdits) → UI updates
+  → AnalyticsEngine processes trends
+  → Widgets read raw sessions.json via WidgetDataProvider (Fix a part edits not applied there)
 
-Theme changes:
-  iPhone: Settings → ThemeManager.shared.selectTheme(id) → UserDefaults (App Group)
-    → PhoneSyncCoordinator.sendThemeToWatch() via applicationContext
-  Watch: receives → ThemeManager.shared.selectedThemeID → UI re-renders
+Effort: watch updateSessionEffort → PhoneSyncCoordinator.handleSessionEffort → DataManager.applyEffort
+  (parked in PendingSessionEffort if the session has not arrived)
 ```
 
-## Key Architectural Patterns
+## Frameworks Used (zero external deps)
 
-### Controllers vs. Managers
-- **iPhoneWorkoutController** — stateful workout engine for iOS (HealthKit, timers, metrics)
-- **WatchWorkoutManager** — stateful workout engine for watch (HealthKit, sensors, metrics)
-- Both compute metrics independently with equivalent algorithms (pace rolling-window, cadence fallback, etc.)
-
-### Theme Dispatch
-- iOS: Switch on `themeManager.current.id` in `iPhoneWorkoutTimerView` to select hero component
-- watchOS: Conditional `if themeManager.current.id == "<name>"` blocks in `TrainingView.fullWorkoutDisplayTab`
-
-### Dual-Target Model Duplication
-8 models are currently duplicated between `ShuttlX/Models/` and `ShuttlX Watch App/Models/`. Tracked as tech debt; Phase 5 (Watch/iOS unification) will move to shared SPM package.
-
-## Frameworks Used
-
-SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, Combine, os.log, WatchKit, CloudKit, AuthenticationServices
+SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, AppIntents, UserNotifications, Combine, os.log, WatchKit, WidgetKit, MapKit, Charts, CloudKit, AuthenticationServices, StoreKit (requestReview only). iOS SPM: TelemetryDeck only.

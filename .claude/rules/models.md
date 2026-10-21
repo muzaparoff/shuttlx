@@ -27,7 +27,13 @@ duplicated per target until the Phase 4 engine unification
 | SessionMode | `Shared/SessionMode.swift` | |
 | HeartRateZoneCalculator | `Shared/HeartRateZoneCalculator.swift` | |
 | HeartSafetySettings | `Shared/HeartSafetySettings.swift` | HEALTH DATA: `onBetaBlocker` is device-only. `watchPayload(age:)` strips it and resolves the upper limit. `zoneWord`: EASY < 70% / STEADY < 90% / HARD |
-| HeartAlertEvaluator (+ `HeartAlert`) | `Shared/HeartAlertEvaluator.swift` | Kinds: aboveLimit, belowLow, signalLost, noMotion (60 s without HR and without motion) |
+| HeartAlertEvaluator (+ `HeartAlert`) | `Shared/HeartAlertEvaluator.swift` | Kinds: aboveLimit, belowLow, signalLost, noMotion (60 s without HR and without motion), suddenJump (+40 bpm in 10 s; still emitted, see `watchos.md`) |
+| SegmentEdits | `Shared/SegmentEdits.swift` | "Fix a part" corrections for `segment_overrides.json`: v2 envelope (types + per-session partitions), v1 flat map still decodes. Pure `apply`, split, merge, `caloriesRemoved`, `minPart`. Applied once in `DataManager.effectiveSessions` |
+| PendingSessionEffort | `Shared/PendingSessionEffort.swift` | Effort answers that arrived before their session; bounded to `cap` = 20 (oldest dropped); persisted under `pendingSessionEffort` |
+| HealthImportRules | `Shared/HealthImportRules.swift` | Dedup and grace-period rules for the iOS Health import; session ids from the external workout UUID |
+| SafetyPromptSchedule | `Shared/SafetyPromptSchedule.swift` | Pure schedule for the 3h50m active-time prompt (re-arm, 5 min timeout) |
+| CalorieEstimationEngine | `Shared/CalorieEstimationEngine.swift` | MET math. iOS adds the `TrainingSession` overloads in `ShuttlX/Services/CalorieEstimationEngine.swift` |
+| ThemeID | `Shared/ThemeID.swift` | `valid` = `["clean"]`; unknown saved or synced ids fall back to clean |
 | SpeedActivityClassifier (+ `Hysteresis`) | `Shared/ActivityClassifier.swift` | GPS speed + cadence → running / walking / cycling. 30 s min window; 60 s hold into or out of cycling, 30 s otherwise. Named apart from the watch-only `ActivityClassifier` |
 | FormattingUtils | `Shared/FormattingUtils.swift` | |
 

@@ -65,7 +65,7 @@ globs:
 
 ## Heart Alerts, Auto-Pause, Activity Switch
 
-- **Alerts** (`HeartAlertEvaluator`, run from the workout tick): above limit, below low limit, signal lost, no motion. The sudden-jump alert is removed. A haptic always fires; a watch notification posts only when the app is not frontmost; every alert goes to the phone as `heartAlert`.
+- **Alerts** (`HeartAlertEvaluator`, run from the workout tick): above limit, below low limit, signal lost, no motion, and `suddenJump` (+40 bpm in 10 s, `alertSuddenJump`, default on). The timeline plan says the sudden-jump alert is dropped; the code still emits it and shows `UnusualHeartRateView` for it. Owner decision pending. A haptic always fires; a watch notification posts only when the app is not frontmost; every alert goes to the phone as `heartAlert`.
 - **No-motion auto-pause**: 60 s without an HR sample and without motion pauses the workout with reason `noMotion` (`autoPauseReason`). It is a heuristic: there is no public wrist-detection API. *Unverified: behaviour with the watch off the wrist (device test pending).*
 - **Zone word**: with a synced heart limit, the one-word zone (EASY / STEADY / HARD, cut-offs at 70% and 90% of the limit) takes the arc's slot beside the BPM value. Without a limit the arc stays.
 - **Activity auto-switch**: `checkSpeedActivity()` classifies on-foot vs cycling from GPS speed and cadence (`SpeedActivityClassifier`, with hysteresis). *Unverified: thresholds are not yet tuned on real sessions.*

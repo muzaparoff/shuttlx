@@ -12,18 +12,18 @@ The watchOS target remains Apple-frameworks-only.
 - **Team**: `83HPSY452Y`
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
-- **Codebase**: ~13,500 LOC across 145 Swift files
+- **Codebase**: ~27,700 non-blank lines across 164 Swift files (app targets + Shared, tests excluded)
 - **CI**: thin GitHub Actions callers of the shared `muzaparoff/appstore-kit@v1` reusable workflows (`.github/workflows/`): `test.yml` runs CI on push to main and auto-bumps the semver tag from conventional commits; the `v*` tag triggers `deploy.yml` → archive, sign, upload to TestFlight. `store-release.yml` (manual) stages the App Store listing from `fastlane/metadata` + `marketing/appstore/final`. Fastlane the tool is NOT part of CI; `scripts/bump_version.sh` no longer exists — versioning is fully automatic
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | ~74 | PhoneSyncCoordinator (~1,130), HistoryView + HistoryMapView, DayRibbon (`Components/`), AnalyticsView, DeviceManager, CalorieEstimationEngine, ThemeManager + theme files, HelpView |
-| watchOS | `ShuttlX Watch App` | ~38 | WatchWorkoutManager (~1,680, being decomposed — see HealthKitAuthService/WorkoutPersistence/LiveMetricsBroadcaster), WatchSyncCoordinator (~1,200), TrainingView (122 + 2 extension files: +Controls, +Metrics), ThemeManager + theme files |
-| Shared (SPM) | `ShuttlXShared` | 13 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer |
-| Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity, LockScreenView |
-| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
+| iOS | `ShuttlX` | 82 | PhoneSyncCoordinator (~1,115), DashboardView + TodayTimeline (Today), HistoryView + HistoryMapView, SessionDetailView (FixPartSheet), DayRibbon (`Components/`), AnalyticsView + Charts/ (TrendsOverview), DataManager (effectiveSessions), SettingsView + HeartAlertsView, DeviceManager, CalorieEstimationEngine (MET math in Shared), ThemeManager + theme files, HelpView |
+| watchOS | `ShuttlX Watch App` | 40 | WatchWorkoutManager (~2,290, being decomposed — extracted: HealthKitAuthService, WorkoutPersistence, LiveMetricsBroadcaster, SegmentMetricsLedger, WorkoutPhaseHealthKitWriter, SegmentHygiene, +LocationDelegate, +HealthKitDelegates), WatchSyncCoordinator (~1,220), TrainingView (166 + 3 extension files: +Controls, +Metrics, +Running), WorkoutSummaryView (EffortView), ThemeManager + theme files |
+| Shared (SPM) | `ShuttlXShared` | 22 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer, SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, HeartAlertEvaluator, HeartSafetySettings, SpeedActivityClassifier, ThemeID |
+| Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity (Dynamic Island + lock screen regions), LockScreenView |
+| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget (read raw `sessions.json` via WidgetDataProvider) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
 | watchOS Widgets | `ShuttlXWatchWidgets` | 6 | QuickStartComplication (now with accessoryCorner), LastWorkoutComplication, WeeklyProgressComplication, TodayWorkoutComplication, WatchWidgetDataProvider |
 
 ## Build Commands
@@ -32,7 +32,7 @@ The watchOS target remains Apple-frameworks-only.
 # Build both platforms (simulator)
 bash tests/build_and_test_both_platforms.sh --clean --build
 
-# Build for physical device
+# Build for physical device (iOS `ShuttlX` scheme, Release, generic iOS destination; no watch target)
 bash tests/build_for_physical_device.sh
 
 # iOS only (destination only — passing -sdk breaks SPM deps of companion targets)
@@ -41,6 +41,8 @@ xcodebuild -project ShuttlX.xcodeproj -scheme ShuttlX -destination 'generic/plat
 # watchOS only
 xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination 'generic/platform=watchOS Simulator' build
 ```
+
+Both build scripts select targets by `-scheme` and `-destination` only (no `-sdk`).
 
 ## Architecture
 
@@ -72,7 +74,7 @@ iOS tabs (ContentView): Today · History (calendar / list / map modes) · Trends
 Heart limits and alerts:
   iPhone: HeartSafetySettings (App Group UserDefaults) → syncHeartSafety → watch
     (resolved upper limit + alert flags only; the medication answer stays on the phone)
-  Watch: HeartAlertEvaluator (above limit / below low limit / signal lost / no motion)
+  Watch: HeartAlertEvaluator (above limit / below low limit / signal lost / no motion; the `suddenJump` check is still wired, see `.claude/rules/watchos.md`)
     → local notification when not frontmost; heartAlert message → PhoneSyncCoordinator → phone notification
   No motion for 60 s (no HR, no motion) → auto-pause, reason "noMotion" → Live Activity "Paused – no motion"
 
@@ -82,6 +84,8 @@ Fix a part (iOS): SessionDetailView/FixPartSheet (type, Split, Merge, scrubber) 
   Session detail HR line: SessionHeartRateLoader queries HealthKit for the session range (not stored, never sent anywhere); hidden when no data
 Effort answer: watch `updateSessionEffort` (sendMessage + transferUserInfo) → PhoneSyncCoordinator.handleSessionEffort → DataManager.applyEffort sets `effortRPE` on the stored session; if the session has not arrived yet the answer waits in `PendingSessionEffort` (Shared/, bounded to 20, UserDefaults key `pendingSessionEffort`) and is applied on ingest. Never goes to Health or telemetry.
 Account (Settings → Account, only while signed in): Sign Out and Delete Account (confirmation alert → AuthenticationManager.deleteAccount: deletes the user's CloudKit session + template records, empties local sessions.json, clears keychain). There is currently no sign-in entry point in the UI (SignInView is unreferenced), so the section only appears for users still signed in from an earlier build.
+Settings (iOS) sections: Health & Watch · Heart (limit + "Heart & alerts" screen, effort-on-watch and activity auto-switch toggles) · Body Metrics · Account (signed-in only) · Data Management · Help · About. No theme picker, no Exercise Devices entry point (`DeviceListView` has none). Debug (Sync Debug) appears after a 1 s long-press on About's Version row.
+Health import (iOS): HealthKitImporter (read-only; started at launch, observer + anchor) → HealthImportRules (dedup against existing sessions, grace period) → DataManager; imported sessions carry `importedFromHealth`.
 Imported (Health) sessions never fire TelemetryDeck `workoutCompleted` or the rating prompt (DataManager.handleReceivedSessions checks `importedFromHealth`).
 Live Activity controls: Pause/Resume and End are LiveActivityIntents (ShuttlX/Models/WorkoutControlIntents.swift)
 
@@ -109,8 +113,10 @@ Theme sync:
 - JSON files in App Group container: `sessions.json`, `workout_templates.json`, `exercise_devices.json`, `segment_overrides.json` (iOS "Fix a part" corrections)
 - Theme selection: App Group UserDefaults key `selectedThemeID`
 - Heart limits and alert switches: App Group UserDefaults key `heartSafetySettings` (JSON)
+- Effort answers waiting for their session: UserDefaults key `pendingSessionEffort` (`PendingSessionEffort`, bounded to 20)
+- `segment_overrides.json` is a v2 `SegmentEdits` envelope (types + per-session partitions); the v1 flat type map still decodes
 - Sync: WatchConnectivity (`sendMessage` + `transferUserInfo` + `applicationContext`)
-- HealthKit: workout sessions, heart rate, distance, calories
+- HealthKit: workout sessions, heart rate, distance, calories. iOS reads Health workouts (import) and per-session heart rate (chart) read-only; the watch writes the live session
 
 ## Development Rules
 
@@ -257,4 +263,4 @@ Auto-memory at `~/.claude/projects/-Users-sergeymuzyukin-github-shuttlx/memory/`
 
 ## Frameworks Used
 
-SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, AppIntents, UserNotifications, Combine, os.log, WatchKit
+SwiftUI, HealthKit, WatchConnectivity, CoreLocation, CoreMotion, ActivityKit, AppIntents, UserNotifications, Combine, os.log, WatchKit, WidgetKit, MapKit, Charts, CloudKit, AuthenticationServices, StoreKit (`AppStore.requestReview` only; no StoreKit purchases)

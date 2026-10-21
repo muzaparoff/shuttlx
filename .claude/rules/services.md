@@ -40,6 +40,7 @@ globs:
 - `requestAuthorization()` must handle denial gracefully (no force unwraps on types)
 - Background delivery requires `com.apple.developer.healthkit.background-delivery` entitlement
 - Workout sessions: save on pause/stop, implement crash recovery
+- iOS Health reads are read-only: `HealthKitImporter` requests `toShare: []`; `SessionHeartRateLoader` runs a statistics query over one session's range and stores nothing. `DataManager` is the iOS path that requests share types
 
 ## Deep Links
 
