@@ -250,4 +250,18 @@ final class HeartAlertEvaluatorTests: XCTestCase {
         samples[30] = 136; samples[32] = 137   // 2 s apart, then back to 95 at 35
         XCTAssertEqual(jumpRun(&e, to: 60, samples: samples), [])
     }
+
+    /// A lone spike must not be confirmed by a sample minutes later (no samples between).
+    func testJumpStartExpiresAfterWindow() {
+        var e = HeartAlertEvaluator()
+        let samples = [0: 80, 3: 80, 6: 125, 186: 125]
+        XCTAssertEqual(jumpRun(&e, to: 190, samples: samples), [])
+    }
+
+    /// Confirmation inside the window still fires after the expiry change.
+    func testJumpConfirmedWithinWindowStillFires() {
+        var e = HeartAlertEvaluator()
+        let samples = [0: 80, 3: 80, 6: 125, 15: 126]
+        XCTAssertEqual(jumpRun(&e, to: 20, samples: samples), [15])
+    }
 }

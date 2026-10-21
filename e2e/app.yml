@@ -1,0 +1,12 @@
+project: shuttlx
+xcodeproj: ShuttlX.xcodeproj
+scheme: ShuttlX
+bundle_id: com.shuttlx.ShuttlX
+device: iPhone 17e
+runtime: latest
+permissions: [location, notifications]
+suites:
+  smoke:     {engine: maestro, flows: e2e/flows/smoke,     budget: 5m}
+  workout10: {engine: maestro, flows: e2e/flows/workout10, budget: 14m}
+  discard:   {engine: maestro, flows: e2e/flows/discard,   budget: 6m}
+limits: {sims: 2, flow: 10m, suite: 25m, run: 90m, retries: 1}

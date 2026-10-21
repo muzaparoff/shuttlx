@@ -31,6 +31,7 @@ duplicated per target until the Phase 4 engine unification
 | SegmentEdits | `Shared/SegmentEdits.swift` | "Fix a part" corrections for `segment_overrides.json`: v2 envelope (types + per-session partitions), v1 flat map still decodes. Pure `apply`, split, merge, `caloriesRemoved`, `minPart`. Applied once in `DataManager.effectiveSessions` |
 | PendingSessionEffort | `Shared/PendingSessionEffort.swift` | Effort answers that arrived before their session; bounded to `cap` = 20 (oldest dropped); persisted under `pendingSessionEffort` |
 | HealthImportRules | `Shared/HealthImportRules.swift` | Dedup and grace-period rules for the iOS Health import; session ids from the external workout UUID |
+| WatchLinkRules | `Shared/WatchLinkRules.swift` | Phone/watch start handshake reply parsing (`phoneSessionId`) and the stale `workoutStopped` rule |
 | SafetyPromptSchedule | `Shared/SafetyPromptSchedule.swift` | Pure schedule for the 3h50m active-time prompt (re-arm, 5 min timeout) |
 | CalorieEstimationEngine | `Shared/CalorieEstimationEngine.swift` | MET math. iOS adds the `TrainingSession` overloads in `ShuttlX/Services/CalorieEstimationEngine.swift` |
 | ThemeID | `Shared/ThemeID.swift` | `valid` = `["clean"]`; unknown saved or synced ids fall back to clean |
@@ -48,6 +49,7 @@ Also in the package: `IntervalEngine` (canonical, consumed by iOS only for now),
 | WorkoutTemplate | defines the app-side `IntervalType` — collides with `ShuttlXShared.IntervalType` |
 
 `TrainingSession` also carries `effortRPE: Int?` (watch post-workout effort, both copies). It usually stays on the watch copy; iOS dedups by id.
+`TrainingSession.pausedPeakHeartRate: Double?` (both copies): the highest HR read while paused; `maxHeartRate` and `averageHeartRate` count active time only.
 
 ## Per-target theme extensions (intentionally different per platform)
 

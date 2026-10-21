@@ -1,0 +1,50 @@
+appId: ${APP_ID}
+---
+- runFlow: ../common/onboard.yaml
+- tapOn: "Programs & plans"
+- tapOn: "Free Run"
+- runFlow: ../common/motion-prompt.yaml
+- assertVisible: "ELAPSED"
+- evalScript: ${output.lat = 52.5200}
+# Walk ~3.5 min: a GPS fix every ~6 s, about 7 m apart (~1.2 m/s). Maestro has no sleep; an optional wait is the pause.
+- repeat:
+    times: 34
+    commands:
+      - evalScript: ${output.lat = output.lat + 0.00007}
+      - setLocation: { latitude: "${output.lat}", longitude: 13.4050 }
+      - extendedWaitUntil: { visible: "NO SUCH TEXT", timeout: 5000, optional: true }
+# GPS alone must move the live distance (the simulator has no pedometer data).
+- assertNotVisible: "0 m"
+- assertVisible: "[1-9][0-9]* m"
+- tapOn: "Pause workout"
+- runFlow: ../common/motion-prompt.yaml
+- assertVisible: "Resume workout"
+# Moving while paused must not count (~30 s).
+- repeat:
+    times: 5
+    commands:
+      - evalScript: ${output.lat = output.lat + 0.00007}
+      - setLocation: { latitude: "${output.lat}", longitude: 13.4050 }
+      - extendedWaitUntil: { visible: "NO SUCH TEXT", timeout: 5000, optional: true }
+- tapOn: "Resume workout"
+- runFlow: ../common/motion-prompt.yaml
+# Run ~3.5 min: about 17 m per fix (~2.8 m/s).
+- repeat:
+    times: 34
+    commands:
+      - evalScript: ${output.lat = output.lat + 0.00015}
+      - setLocation: { latitude: "${output.lat}", longitude: 13.4050 }
+      - extendedWaitUntil: { visible: "NO SUCH TEXT", timeout: 5000, optional: true }
+- tapOn: "Finish workout"
+- tapOn: "Save & Finish"
+- runFlow: ../common/motion-prompt.yaml
+- assertNotVisible: "ELAPSED"
+# Today lists it
+- tapOn: "Today"
+- assertVisible: ".*1 session.*"
+# History list shows it and the detail opens
+- tapOn: "History"
+- tapOn: "List"
+- tapOn: "(Morning|Afternoon|Evening|Night).*"
+- assertVisible: "Avg BPM"
+- assertVisible: "[1-9][0-9.]* (m|km)"   # the saved session has a distance

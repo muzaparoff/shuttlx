@@ -36,17 +36,24 @@ public enum SpeedActivityClassifier {
         return Result(activity: run ? .running : .walking, confidence: ambiguous ? .low : .high)
     }
 
+    /// Longest gap between fixes (or from the newest fix to now) for the window to
+    /// count as covered. Walking with the 10 m distance filter gives a fix every ~7 s.
+    public static let maxFixGap: TimeInterval = 15
+
     /// Mean GPS speed of the fixes in the last `window` seconds of `points` (oldest
-    /// first). Walks backwards and stops at the window edge, so the per-tick call
-    /// allocates nothing. nil until the history reaches past the window, or with
-    /// fewer than `minFixes` speed fixes inside it (a fresh resume must not classify
-    /// on 2-3 fixes).
+    /// first). Walks backwards and stops at the first fix past the window edge, so
+    /// the per-tick call allocates nothing. nil unless the fixes COVER the window:
+    /// history reaches past it and no gap exceeds `maxFixGap` (a fresh resume or a
+    /// GPS dropout must not classify on the 2-3 fixes since). Coverage, not a fix
+    /// count: at walking pace there are only ~4 fixes in 30 s.
     public static func averageSpeed(of points: [RoutePoint], now: Date,
                                     window: TimeInterval = minWindow,
-                                    minFixes: Int = 15) -> (speed: Double, fixes: Int)? {
-        var sum = 0.0, fixes = 0, spansWindow = false
+                                    minFixes: Int = 2) -> (speed: Double, fixes: Int)? {
+        var sum = 0.0, fixes = 0, spansWindow = false, newer = now
         for point in points.reversed() {
+            guard newer.timeIntervalSince(point.timestamp) <= maxFixGap else { return nil }
             if now.timeIntervalSince(point.timestamp) > window { spansWindow = true; break }
+            newer = point.timestamp
             if let speed = point.speed { sum += speed; fixes += 1 }
         }
         guard spansWindow, fixes >= minFixes else { return nil }
@@ -61,6 +68,20 @@ public enum SpeedActivityClassifier {
                                     now: Date) -> DetectedActivity? {
         if let at = motionReadingAt, now.timeIntervalSince(at) <= motionFreshness { return nil }
         return speedVerdict == .running ? .running : .walking
+    }
+
+    /// Cycling by speed, but `averageSpeed` returns nil: a slow walk with the 10 m
+    /// distance filter gives a fix only every 15+ s, so the window is never covered and
+    /// the segment would stay CYCLE. Returns the on-foot class to feed the hysteresis
+    /// instead: a fresh CoreMotion walking/running reading, else step cadence of at
+    /// least 60 spm (the same line `classify` uses). A stop (red light) or a GPS
+    /// dropout while riding has neither, so it returns nil and cycling stays.
+    public static func gapVerdict(motion: DetectedActivity?, motionReadingAt: Date?,
+                                  cadence: Double?, now: Date) -> DetectedActivity? {
+        if let motion, motion == .walking || motion == .running,
+           let at = motionReadingAt, now.timeIntervalSince(at) <= motionFreshness { return motion }
+        guard let cadence, cadence >= 60 else { return nil }
+        return cadence >= 140 ? .running : .walking
     }
 
     /// A new class must hold 30 s before it replaces the committed one; 60 s when the

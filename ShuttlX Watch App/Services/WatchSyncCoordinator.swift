@@ -45,6 +45,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// next retry tick resend), and reconciled from the daemon's own outstanding
     /// queues at activation so a relaunch doesn't double-queue what it already holds.
     private var inFlightSessionIDs: Set<UUID> = []
+    /// A phone Discard that matched a workout still starting; applied by `workoutStartFinished()`.
+    private var heldDiscard: [String: Any]?
     // Gates scheduleFinishRetryBurst — without this, each pending session in a
     // retry cycle would schedule another 3 retries (1s/3s/8s), creating an
     // O(3^k × N) closure explosion that can kill the watch extension under
@@ -743,7 +745,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         // The watch-side stop button always calls save → stop in sequence.
                         // A bare stopWorkout() here would discard all session data because
                         // stopWorkout() only tears down state — it never calls save itself.
-                        if let wm = self.workoutManager, wm.isWorkoutActive {
+                        if let wm = self.workoutManager, wm.isWorkoutActive, self.stopApplies(message, to: wm) {
                             wm.saveWorkoutData()
                             wm.pendingSummary = wm.buildCurrentSummary()
                             wm.stopWorkout()
@@ -756,6 +758,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     self.handleIncomingPayload(message)
                 case "purgeSessions":
                     self.handlePurgeRequest(message)
+                case "discardWorkout":
+                    self.handleDiscardWorkout(message)
                 default:
                     break
                 }
@@ -822,7 +826,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     case "pause":  self.workoutManager?.pauseWorkout()
                     case "resume": self.workoutManager?.resumeWorkout()
                     case "stop":
-                        if let wm = self.workoutManager, wm.isWorkoutActive {
+                        if let wm = self.workoutManager, wm.isWorkoutActive, self.stopApplies(message, to: wm) {
                             wm.saveWorkoutData()
                             wm.pendingSummary = wm.buildCurrentSummary()
                             wm.stopWorkout()
@@ -838,6 +842,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 case "purgeSessions":
                     self.handlePurgeRequest(message)
                     replyHandler(["status": "received"])
+                case "discardWorkout":
+                    self.handleDiscardWorkout(message)
+                    replyHandler(["status": "ok"])
                 default:
                     replyHandler(["error": "Unknown action"])
                 }
@@ -948,6 +955,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 self.handlePurgeRequest(userInfo)
                 return
             }
+            if (userInfo["action"] as? String) == "discardWorkout" {
+                self.handleDiscardWorkout(userInfo)
+                return
+            }
             self.handleIncomingPayload(userInfo)
         }
     }
@@ -969,7 +980,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         case "resume":
             workoutManager?.resumeWorkout()
         case "stop":
-            if let wm = workoutManager, wm.isWorkoutActive {
+            if let wm = workoutManager, wm.isWorkoutActive, stopApplies(message, to: wm) {
                 wm.saveWorkoutData()
                 wm.pendingSummary = wm.buildCurrentSummary()
                 wm.stopWorkout()
@@ -987,28 +998,115 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
-    /// Starts a watch-side workout in response to a remote-start command from iPhone.
-    /// Decodes the mode and optional template data from the message payload.
-    private func handleRemoteStart(message: [String: Any]) {
-        guard let wm = workoutManager, !wm.isWorkoutActive, !wm.isStarting else {
-            logger.info("handleRemoteStart ignored — workout already active or starting")
+    /// Phone Discard: `["action": "discardWorkout", "sentAt": Double, "phoneSessionId": String]`,
+    /// sent by sendMessage AND transferUserInfo, so it usually arrives twice. Applies
+    /// ONLY to the workout the phone started with that `phoneSessionId`: a missing or
+    /// different id is ignored, so Discard on the phone never drops a workout started on
+    /// the watch. Also ignored when older than 120 s, or when the running workout started
+    /// after the phone's Discard. A matching Discard that arrives while that workout is
+    /// still starting is held and applied by `workoutStartFinished()`.
+    private func handleDiscardWorkout(_ payload: [String: Any]) {
+        guard let wm = workoutManager else { return }
+        let phoneID = payload["phoneSessionId"] as? String
+        let sentAt = (payload["sentAt"] as? TimeInterval).map { Date(timeIntervalSince1970: $0) }
+        switch PhoneDiscardRule.decide(phoneSessionId: phoneID, sentAt: sentAt, now: Date(),
+                                       runningPhoneSessionId: wm.phoneSessionID,
+                                       isStarting: wm.isStarting, isActive: wm.isWorkoutActive) {
+        case .ignore(let reason):
+            logger.warning("discardWorkout ignored — \(reason) (phoneSessionId \(phoneID ?? "none"), running \(wm.phoneSessionID ?? "watch-started"))")
+        case .hold:
+            logger.info("discardWorkout held — workout \(phoneID ?? "") still starting")
+            heldDiscard = payload
+        case .apply:
+            wm.discardWorkout(sentAt: sentAt)
+        }
+    }
+
+    /// A remote stop with a `phoneSessionId` stops only the workout the phone started
+    /// with that id; without one (older phone builds) it stops as before.
+    private func stopApplies(_ message: [String: Any], to wm: WatchWorkoutManager) -> Bool {
+        guard let phoneID = message["phoneSessionId"] as? String, phoneID != wm.phoneSessionID else { return true }
+        logger.warning("remote stop ignored — phoneSessionId \(phoneID) is not the running workout's")
+        return false
+    }
+
+    /// Called by the workout manager when a start attempt finished (started or not).
+    /// For a phone-started workout: reply `workoutStarted` (with the watch session id)
+    /// or `workoutStartIgnored` when the start failed, then apply a held Discard.
+    func workoutStartFinished() {
+        guard let wm = workoutManager, let phoneID = wm.phoneSessionID else {
+            heldDiscard = nil
             return
         }
+        if wm.isWorkoutActive {
+            sendToPhone(["action": "workoutStarted", "phoneSessionId": phoneID,
+                         "sessionId": wm.currentSessionID.uuidString])
+        } else {
+            sendToPhone(["action": "workoutStartIgnored", "phoneSessionId": phoneID])
+        }
+        guard let held = heldDiscard else { return }
+        heldDiscard = nil
+        let decision = PhoneDiscardRule.decide(
+            phoneSessionId: held["phoneSessionId"] as? String,
+            sentAt: (held["sentAt"] as? TimeInterval).map { Date(timeIntervalSince1970: $0) },
+            now: Date(), runningPhoneSessionId: phoneID, isStarting: false, isActive: wm.isWorkoutActive)
+        guard decision == .apply else {
+            logger.warning("held discardWorkout dropped — \(String(describing: decision))")
+            return
+        }
+        logger.warning("Applying held discardWorkout for \(phoneID)")
+        // The id match proves it is this workout; the start-time guard would reject it
+        // because the start finished after the phone's Discard.
+        wm.discardWorkout(sentAt: nil)
+    }
+
+    /// Small control replies to the phone: sendMessage when reachable, plus
+    /// transferUserInfo so it still lands when the phone is suspended (phone dedups).
+    private func sendToPhone(_ payload: [String: Any]) {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            logger.warning("\(payload["action"] as? String ?? "?") not sent — WCSession not activated")
+            return
+        }
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(payload, replyHandler: nil) { [weak self] error in
+                Task { @MainActor in
+                    self?.logger.error("\(payload["action"] as? String ?? "?") sendMessage failed: \(error.localizedDescription)")
+                }
+            }
+        }
+        WCSession.default.transferUserInfo(payload)
+    }
+
+    /// Starts a watch-side workout in response to a remote-start command from iPhone.
+    /// Decodes the mode and optional template data from the message payload. The
+    /// optional `phoneSessionId` links the watch workout to the phone's; when a
+    /// workout is already running or starting the phone gets `workoutStartIgnored`.
+    private func handleRemoteStart(message: [String: Any]) {
+        let phoneID = message["phoneSessionId"] as? String
+        guard let wm = workoutManager, !wm.isWorkoutActive, !wm.isStarting else {
+            logger.info("handleRemoteStart ignored — workout already active or starting")
+            if let phoneID, phoneID != workoutManager?.phoneSessionID {
+                sendToPhone(["action": "workoutStartIgnored", "phoneSessionId": phoneID])
+            }
+            return
+        }
+        heldDiscard = nil
         let mode = message["mode"] as? String ?? "freeRun"
-        logger.info("Remote start received — mode=\(mode)")
+        logger.info("Remote start received — mode=\(mode) phoneSessionId=\(phoneID ?? "none")")
         switch mode {
         case "interval":
             if let data = message["templateData"] as? Data,
-               let template = try? JSONDecoder().decode(WorkoutTemplate.self, from: data) {
-                wm.startIntervalWorkout(template: template)
+               let template = try? JSONDecoder().decode(WorkoutTemplate.self, from: data),
+               Self.isValidTemplate(template) {
+                wm.startIntervalWorkout(template: template, phoneSessionID: phoneID)
             } else {
                 logger.warning("Remote start 'interval' missing/invalid templateData — falling back to freeRun")
-                wm.startWorkout()
+                wm.startWorkout(phoneSessionID: phoneID)
             }
         case "gymRecovery":
-            wm.startGymRecoveryWorkout()
+            wm.startGymRecoveryWorkout(phoneSessionID: phoneID)
         default:
-            wm.startWorkout()
+            wm.startWorkout(phoneSessionID: phoneID)
         }
     }
 
@@ -1189,7 +1287,8 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// one running when it arrived, is kept. Never runs during a workout: it is
     /// stored and applied when the workout ends (or on the next launch).
     private func handlePurgeRequest(_ payload: [String: Any]) {
-        guard let ts = payload["ts"] as? Double,
+        // A ts far in the future would become `lastAppliedPurgeTS` and block every later purge.
+        guard let ts = payload["ts"] as? Double, ts.isFinite, ts > 0, ts < Date().timeIntervalSince1970 + 86_400,
               let scope = payload["scope"] as? String, scope == "all" || scope == "sessions" else {
             logger.error("purgeSessions ignored — bad payload \(payload.keys.sorted())")
             return
@@ -1311,7 +1410,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
         // Process max HR override if present
         if let maxHR = payload["maxHR"] as? Double {
-            if maxHR > 0 {
+            if maxHR > 0, !(maxHR.isFinite && HeartLimits.maxHRRange.contains(Int(maxHR))) {
+                logger.error("Max HR \(maxHR) from iPhone rejected — outside \(HeartLimits.maxHRRange)")
+            } else if maxHR > 0 {
                 HeartRateZoneCalculator.saveMaxHR(maxHR)
                 logger.info("Max HR synced from iPhone: \(Int(maxHR)) BPM")
             } else {
@@ -1322,10 +1423,12 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
 
         // Process heart limits if present (resolved numbers + alert flags only)
-        if let base64 = payload["heartSafetyData"] as? String,
+        if let base64 = payload["heartSafetyData"] as? String, base64.utf8.count <= Self.maxHeartSafetyBytes,
            let data = Data(base64Encoded: base64) {
             do {
-                let settings = try JSONDecoder().decode(HeartSafetySettings.self, from: data)
+                // Out-of-range limits are dropped; an unknown no-motion window falls back to 60 s.
+                var settings = try JSONDecoder().decode(HeartSafetySettings.self, from: data).sanitized()
+                if !Self.noMotionRange.contains(settings.noMotionSeconds) { settings.noMotionSeconds = 60 }
                 settings.save()
                 heartSafety = settings
                 logger.info("Heart limits synced from iPhone")
@@ -1338,7 +1441,11 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         if let base64 = payload["templatesData"] as? String,
            let data = Data(base64Encoded: base64) {
             do {
-                let templates = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+                let decoded = try JSONDecoder().decode([WorkoutTemplate].self, from: data)
+                let templates = Array(decoded.filter(Self.isValidTemplate).prefix(Self.maxTemplates))
+                if templates.count != decoded.count {
+                    logger.error("Templates from iPhone: kept \(templates.count) of \(decoded.count) (invalid or over \(Self.maxTemplates))")
+                }
                 workoutTemplates = templates
                 saveTemplatesToDisk(templates)
                 logger.info("Received \(templates.count) template(s) from iPhone")
@@ -1347,6 +1454,26 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 logger.error("Failed to decode templates: \(error.localizedDescription)")
             }
         }
+    }
+
+    // MARK: Incoming payload bounds (the phone's own editors stay well inside them)
+
+    nonisolated static let maxHeartSafetyBytes = 8_192
+    /// The phone offers 30 / 60 / 120 s.
+    nonisolated static let noMotionRange = 15...600
+    nonisolated static let maxTemplates = 200
+    nonisolated static let maxStepsPerBlock = 100
+    /// The phone's repeat stepper is 1...50.
+    nonisolated static let repeatRange = 1...50
+    nonisolated static let stepDurationRange: ClosedRange<TimeInterval> = 1...(4 * 3600)
+
+    /// A template the watch can run: at least one step, a bounded block, every step
+    /// 1 s to 4 h. Anything else would hang or crash the interval engine.
+    nonisolated static func isValidTemplate(_ t: WorkoutTemplate) -> Bool {
+        let steps = t.intervals + [t.warmup, t.cooldown].compactMap { $0 }
+        return t.name.count <= 200 && !steps.isEmpty && t.intervals.count <= maxStepsPerBlock
+            && repeatRange.contains(t.repeatCount)
+            && steps.allSatisfy { $0.duration.isFinite && stepDurationRange.contains($0.duration) }
     }
 
     private func saveTemplatesToDisk(_ templates: [WorkoutTemplate]) {

@@ -18,13 +18,26 @@ struct KmSplit: Identifiable {
     let cumulativeTime: TimeInterval
 }
 
+/// The 1 Hz active-time value, published on its own so the per-second tick
+/// re-renders only the views that observe it (`ElapsedTimerText`,
+/// `WorkoutClockReader`), not every page that observes the manager.
+@MainActor
+final class WorkoutClock: ObservableObject {
+    @Published var elapsed: TimeInterval = 0
+}
+
 @MainActor
 class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Published State
     @Published var isWorkoutActive = false
     @Published var isPaused = false
     @Published var currentActivity: DetectedActivity = .unknown
-    @Published var elapsedTime: TimeInterval = 0
+    let clock = WorkoutClock()
+    /// Pause-corrected active time. NOT published by the manager — observe `clock`.
+    var elapsedTime: TimeInterval {
+        get { clock.elapsed }
+        set { clock.elapsed = newValue }
+    }
     /// Wall-clock basis for SwiftUI's system-rendered timer text
     /// (`Text(timerInterval:)`), which ticks in the render server and therefore
     /// keeps counting even when the main actor is backlogged or the app is in
@@ -36,7 +49,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// `elapsedTime` itself is unchanged — metrics, the interval engine and the
     /// crash checkpoints all still derive from it.
     @Published private(set) var timerReferenceDate: Date?
-    @Published var currentSegmentTime: TimeInterval = 0
+    /// Written every tick; no view reads it, so it is not published.
+    var currentSegmentTime: TimeInterval = 0
     @Published var heartRate: Int = 0
     @Published var calories: Int = 0
     @Published var totalSteps: Int = 0
@@ -111,7 +125,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// One id per workout, created at start and shared by the 15s checkpoint
     /// and the final save — recovery dedup compares ids, so both saves MUST
     /// agree or a surviving backup re-imports as a duplicate session.
-    private var currentSessionID = UUID()
+    private(set) var currentSessionID = UUID()
     private var currentSegmentStartTime: Date?
     private var segments: [ActivitySegment] = []
     private var sharedDataManager: WatchSyncCoordinator?
@@ -132,6 +146,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var heartRateSampleSum: Double = 0
     private var heartRateSampleCount: Int = 0
     private var maxHeartRateValue: Double = 0
+    /// Peak while paused — kept out of `maxHeartRateValue` (active time only).
+    private var pausedPeakHeartRateValue: Double = 0
     private var totalCaloriesAccumulated: Double = 0
     // Cadence accumulators — paused samples and zero-cadence ticks excluded
     private var cadenceSampleSum: Double = 0
@@ -183,9 +199,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var lastMotionDate: Date?
     /// Evaluates above-limit / signal-lost every 5 s while paused (the display tick is stopped).
     private var pausedAlertTimer: DispatchSourceTimer?
-    /// Pause spans HealthKit recorded before a crash. The resumed HR query replays
-    /// every sample since the start; samples inside these spans stay out of avg/peak.
-    private var recoveredPauses: [DateInterval] = []
+    /// Finished pause spans of this workout: live pauses (added on resume) and the ones
+    /// HealthKit recorded before a crash (the resumed HR query replays every sample).
+    /// HR samples dated inside one, or after `pauseStartDate`, stay out of avg/peak.
+    private var pauseSpans: [DateInterval] = []
+    /// Id of the iPhone workout that started this one (`startWorkout` message), nil
+    /// when started on the watch. A phone Discard only applies when its id matches.
+    private(set) var phoneSessionID: String?
     /// "noMotion" while the workout is auto-paused by the presence heuristic; nil otherwise.
     @Published private(set) var autoPauseReason: String?
     /// Full-screen amber "Check your heart rate" card (suddenJump). Stays until dismissed.
@@ -213,6 +233,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // leave a recoverable backup — see docs/plans/2026-07-stability-and-design-plan.md)
     private var lastCheckpointDate: Date?
     private let checkpointInterval: TimeInterval = 15
+    /// The route (up to `maxRoutePoints`) is re-encoded at most this often, and on pause.
+    private var lastRouteCheckpointDate: Date?
+    private let routeCheckpointInterval: TimeInterval = 60
 
     // Freeze instrumentation: proves on-device whether ticks stall (main-actor
     // backlog / suspension) or stop entirely (kill) — see freeze root-cause plan.
@@ -343,7 +366,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// Starts a free-run workout. Authorization is awaited before any HealthKit session
     /// or queries begin. If the user has denied access the workout is aborted and
     /// `authorizationDenied` is set to `true` so the UI can show an error.
-    func startWorkout() {
+    func startWorkout(phoneSessionID: String? = nil) {
         guard !isWorkoutActive, !isStarting else {
             logger.warning("Workout already active or starting")
             return
@@ -360,13 +383,21 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         activeTemplate = nil
         workoutName = "Free Run"
 
+        self.phoneSessionID = phoneSessionID
         // Set isStarting so the UI shows a spinner on the very next frame.
-        isStarting = true
+        launchStart()
+    }
 
+    /// Runs the async start core, then tells the sync coordinator the start finished
+    /// (it answers a phone-started workout and applies a Discard that arrived early).
+    private func launchStart() {
+        isStarting = true
         Task { [weak self] in
             defer { self?.isStarting = false }
             guard let self = self else { return }
             await self.startWorkoutAfterAuth()
+            self.isStarting = false
+            (self.sharedDataManager ?? WatchSyncCoordinator.shared).workoutStartFinished()
         }
     }
 
@@ -453,7 +484,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
-        recoveredPauses = []
+        pausedPeakHeartRateValue = 0
+        pauseSpans = []
         hasReceivedHRSample = false
         noHeartRateDetected = false
         resetHeartAlertState()
@@ -464,6 +496,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         lastCadenceStepCount = 0
         lastCadenceTimestamp = nil
         lastCheckpointDate = nil
+        lastRouteCheckpointDate = nil
         lastTickDate = nil
         ticksSinceHeartbeat = 0
         paceWindowSamples.removeAll(keepingCapacity: true)
@@ -518,10 +551,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         logger.info("Workout started (sport: \(sport.displayName))")
 
-        broadcaster.notifyWorkoutStarted(sport: sport)
+        if phoneSessionID == nil {
+            broadcaster.notifyWorkoutStarted(sport: sport, sessionID: currentSessionID)
+        }
     }
 
-    func startIntervalWorkout(template: WorkoutTemplate) {
+    func startIntervalWorkout(template: WorkoutTemplate, phoneSessionID: String? = nil) {
         guard !isWorkoutActive, !isStarting else {
             logger.warning("Workout already active or starting")
             return
@@ -536,15 +571,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let engine = IntervalEngine()
         engine.configure(template: template)
         intervalEngine = engine
-        isStarting = true
-        Task { [weak self] in
-            defer { self?.isStarting = false }
-            guard let self = self else { return }
-            await self.startWorkoutAfterAuth()
-        }
+        self.phoneSessionID = phoneSessionID
+        launchStart()
     }
 
-    func startGymRecoveryWorkout() {
+    func startGymRecoveryWorkout(phoneSessionID: String? = nil) {
         guard !isWorkoutActive, !isStarting else {
             logger.warning("Workout already active or starting")
             return
@@ -564,12 +595,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         currentCadence = 0
         // Launch async core directly — same as startIntervalWorkout; must NOT call
         // startWorkout() which resets workoutMode to .freeRun. (RC-3)
-        isStarting = true
-        Task { [weak self] in
-            defer { self?.isStarting = false }
-            guard let self = self else { return }
-            await self.startWorkoutAfterAuth()
-        }
+        self.phoneSessionID = phoneSessionID
+        launchStart()
     }
 
     // MARK: - Manual station control (cardiacRehab)
@@ -666,6 +693,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             // inside the segment that was open. Record it or the MET estimate
             // charges the wearer for standing still (Phase 2).
             metricsLedger.recordPause(from: pauseStart, to: pauseEnd)
+            pauseSpans.append(DateInterval(start: pauseStart, end: max(pauseStart, pauseEnd)))
             pauseStartDate = nil
         }
 
@@ -770,7 +798,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
-        recoveredPauses = []
+        pausedPeakHeartRateValue = 0
+        pauseSpans = []
         cadenceSampleSum = 0
         cadenceSampleCount = 0
         maxCadenceValue = 0
@@ -791,8 +820,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         routePoints = []
         accumulatedPauseTime = 0
         pauseStartDate = nil
+        phoneSessionID = nil
 
-        broadcaster.notifyWorkoutStopped()
+        broadcaster.notifyWorkoutStopped(sessionID: currentSessionID)
 
         // Reset interval mode
         workoutMode = .freeRun
@@ -817,6 +847,26 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // A phone "delete my data" that arrived mid-workout runs now.
         (sharedDataManager ?? WatchSyncCoordinator.shared).applyDeferredPurgeIfPossible()
+    }
+
+    /// Phone Discard (`discardWorkout`): end the HK session WITHOUT writing it to
+    /// Health and drop the recording (no session, no backup, no summary). A
+    /// workout that started after `sentAt` is someone else's and is kept.
+    func discardWorkout(sentAt: Date?) {
+        guard isWorkoutActive else { return }
+        if let sentAt, let start = workoutStartTime, start > sentAt.addingTimeInterval(5) {
+            logger.warning("discardWorkout ignored — workout started after the phone's Discard")
+            return
+        }
+        #if os(watchOS)
+        workoutBuilder?.discardWorkout()
+        #endif
+        routeBuilder?.discard()
+        routeBuilder = nil
+        pendingSummary = nil
+        logger.warning("Workout discarded from iPhone at elapsed \(Int(self.elapsedTime))s — not saved")
+        // Ends the session, nils the builder and clears the crash backup.
+        stopWorkout()
     }
 
     // MARK: - HKWorkoutSession
@@ -953,10 +1003,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // engine so its countdown is wall-clock-derived (dropped ticks self-heal).
         let wallClockElapsed = Date().timeIntervalSince(startTime) - accumulatedPauseTime
 
-        // Order matters: tick the engine FIRST so its @Published state is up to
-        // date BEFORE we write to elapsedTime. The elapsedTime write fires the
-        // manager's objectWillChange; SwiftUI re-evaluates the body next runloop
-        // pass and reads engine.currentStepTimeRemaining (already decremented).
+        // Tick the engine first: the interval views observe it directly
+        // (IntervalCountdownHero, IntervalStepWash, OverallProgressStrip), and the
+        // elapsedTime write below only reaches views observing `clock`.
         if workoutMode == .interval, let engine = intervalEngine {
             engine.tick(heartRate: heartRate, distance: totalDistance, workoutElapsed: wallClockElapsed)
             if engine.isComplete {
@@ -1320,7 +1369,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         if lastSpeedCheckAt.map({ now.timeIntervalSince($0) >= Self.speedCheckInterval }) ?? true {
             lastSpeedCheckAt = now
-            // Needs GPS history older than the window and >= 15 speed fixes inside it.
+            // Needs GPS fixes covering the whole window (no gap over 15 s).
             if let avg = SpeedActivityClassifier.averageSpeed(of: routePoints, now: now) {
                 let cadence = cadenceForClassification.map(Double.init)
                 // A stop (red light) says nothing about the mode — don't ingest it.
@@ -1332,6 +1381,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                     if (committed == .cycling) != wasCycling {
                         logger.info("SEG SPEED [free-run] \(wasCycling ? "cycling" : "foot") -> \(committed == .cycling ? "cycling" : "foot") avg=\(String(format: "%.1f", avg.speed))m/s cadence=\(cadence.map { String(Int($0)) } ?? "n/a") fixes=\(avg.fixes)")
                     }
+                }
+            } else if wasCycling,
+                      let foot = SpeedActivityClassifier.gapVerdict(
+                        motion: lastMotionReading?.activity, motionReadingAt: lastMotionReadingAt,
+                        cadence: cadenceForClassification.map(Double.init), now: now) {
+                // Fixes too sparse to cover the window (slow walk): step/motion evidence
+                // goes through the same 60 s hold instead of leaving the segment on CYCLE.
+                lastSpeedFootVerdict = foot
+                if speedHysteresis.ingest(.walking, at: now) != .cycling {
+                    logger.info("SEG SPEED [free-run] cycling -> foot on GPS gap (\(foot.rawValue), cadence=\(self.cadenceForClassification.map(String.init) ?? "n/a"))")
                 }
             }
         }
@@ -1922,18 +1981,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 self.lastHRSampleDate = newestEnd
             }
             for sample in timedValues {
-                // A pause recorded before a crash (replayed after resume) excludes
-                // the sample from avg AND peak.
-                if self.recoveredPauses.contains(where: { $0.contains(sample.date) }) { continue }
-                // Only include samples taken while workout is not paused
-                if !self.isPaused {
-                    self.heartRateSampleSum += sample.bpm
-                    self.heartRateSampleCount += 1
-                    self.metricsLedger.recordHeartRate(bpm: sample.bpm, at: sample.date)
+                // Classified by the sample's own date, not delivery time: HealthKit
+                // delivers late, so a paused sample can arrive after the resume.
+                // Paused: out of avg AND peak, into the paused peak only.
+                if PausedSample.isPaused(sample.date, closed: self.pauseSpans, openSince: self.pauseStartDate) {
+                    self.pausedPeakHeartRateValue = max(self.pausedPeakHeartRateValue, sample.bpm)
+                    continue
                 }
-                if sample.bpm > self.maxHeartRateValue {
-                    self.maxHeartRateValue = sample.bpm
-                }
+                self.heartRateSampleSum += sample.bpm
+                self.heartRateSampleCount += 1
+                self.metricsLedger.recordHeartRate(bpm: sample.bpm, at: sample.date)
+                self.maxHeartRateValue = max(self.maxHeartRateValue, sample.bpm)
             }
             if let latestBPM = bpmValues.last {
                 self.heartRate = Int(latestBPM.rounded())
@@ -2012,11 +2070,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
-            route: routePoints.isEmpty ? nil : routePoints,
+            route: nil,
             kmSplits: backupSplits,
             averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
             maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
         )
+        session.pausedPeakHeartRate = pausedPeakHeartRateValue > 0 ? pausedPeakHeartRateValue : nil
         // ShuttlX's own phase-aware total, alongside Apple's `caloriesBurned`.
         session.estimatedCalories = shuttlxEstimatedCalories(for: segmentsCopy)
         // Mode/template identity so a recovered HK session can resume the SAME
@@ -2031,7 +2090,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             }
         }
 
-        persistence.checkpoint(session, autoPauseReason: autoPauseReason)
+        let now = Date()
+        let routeDue = isPaused || lastRouteCheckpointDate.map { now.timeIntervalSince($0) >= routeCheckpointInterval } ?? true
+        if routeDue { lastRouteCheckpointDate = now }
+        persistence.checkpoint(session, route: routeDue ? routePoints : nil, autoPauseReason: autoPauseReason)
     }
 
     /// Check for a crashed workout backup and recover the session
@@ -2251,6 +2313,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRateSampleSum = 0
         heartRateSampleCount = 0
         maxHeartRateValue = 0
+        pausedPeakHeartRateValue = 0
         heartRateAnchor = nil
         hasReceivedHRSample = false
         noHeartRateDetected = false
@@ -2263,8 +2326,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         metricsLedger.reset()
         // The replayed HR query re-delivers samples from earlier pauses too; keep them
         // out of avg/peak and the per-phase ledger.
-        recoveredPauses = Self.pauseIntervals(builder.workoutEvents, until: now)
-        for pause in recoveredPauses { metricsLedger.recordPause(from: pause.start, to: pause.end) }
+        pauseSpans = Self.pauseIntervals(builder.workoutEvents, until: now)
+        for pause in pauseSpans { metricsLedger.recordPause(from: pause.start, to: pause.end) }
         cadenceSampleSum = 0
         cadenceSampleCount = 0
         maxCadenceValue = 0
@@ -2278,6 +2341,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         lastSpeedFootVerdict = .walking
         lastIntervalStepIndex = nil
         lastCheckpointDate = nil
+        lastRouteCheckpointDate = nil
         lastTickDate = nil
         safetySchedule = SafetyPromptSchedule()
         safetyPromptVisible = false
@@ -2306,9 +2370,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         } else {
             startPausedAlertTimer()
         }
-        broadcaster.notifyWorkoutStarted(sport: sport)
+        broadcaster.notifyWorkoutStarted(sport: sport, sessionID: currentSessionID)
         saveWorkoutDataToLocalStorage()
-        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, pauses \(self.recoveredPauses.count), autoPause \(self.autoPauseReason ?? "none"), backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString))")
+        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, pauses \(self.pauseSpans.count), autoPause \(self.autoPauseReason ?? "none"), backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString))")
     }
     #endif
 
@@ -2409,6 +2473,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Phase-aware total from the per-segment MET estimates (Phase 2). Apple's
         // whole-session number stays in `caloriesBurned`; nothing is overwritten.
         session.estimatedCalories = shuttlxEstimatedCalories(for: segmentsCopy)
+
+        session.pausedPeakHeartRate = pausedPeakHeartRateValue > 0 ? pausedPeakHeartRateValue : nil
 
         // Attach interval results if this was an interval workout
         if workoutMode == .interval, let engine = intervalEngine {
@@ -2594,6 +2660,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         case "autopaused":
             applyPausedPreviewState()
             autoPauseReason = "noMotion"
+        case "nohr":
+            heartRate = 0
+            noHeartRateDetected = true
         default:
             break
         }

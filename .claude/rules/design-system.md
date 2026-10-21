@@ -63,6 +63,13 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 - Text colors: `.textPrimary`, `.textSecondary`
 - Surface colors: `.background`, `.surface`, `.surfaceBorder`
 
+## Accessibility colour and motion (Oct 2026)
+
+- Green TEXT and thin icons on light backgrounds use `ShuttlXColor.accentText` (about 5.3:1 on white, darker with Increase Contrast, system green in dark mode). System green (`ctaPrimary`, `running`) stays for fills, dots and bars, where it carries `iconOnCTA` text.
+- Run vs walk is never told by colour alone: ribbons add an activity glyph when Differentiate Without Colour is on, legends use the activity symbol, calendar day labels name the activities.
+- Animations go through `Animation.ifAllowed(_:)` / `withAnimation(.ifAllowed(...))` (nil while Reduce Motion is on). `microLabel` is `.caption2` (scales with Dynamic Type), not a fixed 9 pt. At accessibility sizes the History calendar shows the day list instead of the 7-column grid.
+- Touch targets are at least 44 pt (Today banner, live card pills, Live Activity buttons).
+
 ## Typography
 
 - Always use `ShuttlXFont.*` constants or `theme.fonts.*` — never raw `.font(.system(size:))`

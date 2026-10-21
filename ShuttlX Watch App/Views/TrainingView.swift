@@ -8,7 +8,6 @@ struct TrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @State var selectedTab = 0
     @State var showingStopConfirmation = false
-    @State var pausePulse = false
     @State var showingAuthDeniedAlert = false
     /// Tracks whether the high-intensity warning haptic has already fired this threshold crossing.
     @State var highIntensityHapticFired = false
@@ -20,6 +19,10 @@ struct TrainingView: View {
     @State var hrCalculator = HeartRateZoneCalculator.fromSharedDefaults()
     /// Drives the brief DIST flash on every km-split milestone.
     @State var kmSplitFlash = false
+    /// Full height of a free-run page: from the tag line to the screen bottom. The
+    /// running page pins itself to it; a stack shorter than the TabView floated to
+    /// the centre (no HR: no zone word or bar).
+    @State var pageHeight: CGFloat?
     #if os(watchOS)
     let screenHeight = WKInterfaceDevice.current().screenBounds.height
     let screenWidth = WKInterfaceDevice.current().screenBounds.width
@@ -65,6 +68,12 @@ struct TrainingView: View {
             }
             .tabViewStyle(PageTabViewStyle())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // The TabView sits inside the safe area (40mm: y40-178 of 197) and centres
+            // each page. A page this tall, centred there, ends at the screen bottom —
+            // where the page-dot inset is measured from.
+            .onGeometryChange(for: CGFloat.self, of: { 2 * (screenHeight - $0.frame(in: .global).midY) }) {
+                pageHeight = $0
+            }
             // VoiceOver must not reach the workout behind a prompt card.
             .accessibilityHidden(overlayShowing)
         }

@@ -147,6 +147,17 @@ struct SessionDetailView: View {
                 )
             }
 
+            if let paused = session.pausedPeakHeartRate, paused > 0 {
+                MetricCard(
+                    icon: "pause.circle.fill",
+                    value: "\(Int(paused)) BPM",
+                    label: "Peak while paused",
+                    color: ShuttlXColor.heartRate
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Peak heart rate while paused, \(Int(paused)) beats per minute")
+            }
+
             if let cal = session.caloriesBurned {
                 MetricCard(
                     icon: "flame.fill",
@@ -386,7 +397,14 @@ struct FixPartSheet: View {
 
     // MARK: Body
 
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var rowLayout: AnyLayout {
+        typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 8)) : AnyLayout(HStackLayout(spacing: 8))
+    }
+
     var body: some View {
+        ScrollView {
         VStack(spacing: 16) {
             HStack {
                 Button("Cancel") { dismiss() }
@@ -408,19 +426,20 @@ struct FixPartSheet: View {
                     .disabled(!canSave)
                     .accessibilityHint(canSave ? "" : "Choose a different type to save")
             }
-            .foregroundStyle(ShuttlXColor.ctaPrimary)
+            .foregroundStyle(ShuttlXColor.accentText)
 
-            HStack(spacing: 8) {
+            rowLayout {
                 ForEach(options, id: \.self) { tile($0) }
             }
 
             evidence
             scrubber
             actions
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.top, 14)
+        }
+        .scrollBounceBehavior(.basedOnSize)
         #if DEBUG
         // Screenshot seam: SHUTTLX_DEMO_FIX_ACTION=split|merge runs the action 2 s after the sheet opens.
         .task {
@@ -470,7 +489,9 @@ struct FixPartSheet: View {
                 handle = (secs - segment.startDate.timeIntervalSince1970) / max(segment.duration, 1)
             })
             .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Split point at \(TodayFormat.clock(splitDate))")
+            .accessibilityLabel("Split point")
+            .accessibilityValue(canSplit ? TodayFormat.clock(splitDate) : "Unavailable, part too short")
+            .accessibilityHint("Swipe up or down to move the split point")
             .accessibilityAdjustableAction { dir in
                 handle += (dir == .increment ? 0.1 : -0.1)
             }
@@ -481,7 +502,7 @@ struct FixPartSheet: View {
     }
 
     private var actions: some View {
-        HStack(spacing: 8) {
+        rowLayout {
             actionButton("Split at \(TodayFormat.clock(splitDate))", enabled: canSplit, action: split)
             actionButton("Merge with next", enabled: canMerge, action: merge)
         }
@@ -491,7 +512,7 @@ struct FixPartSheet: View {
         Button(action: action) {
             Text(title)
                 .font(ShuttlXFont.cardSubtitle.weight(.semibold).monospacedDigit())
-                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                .foregroundStyle(ShuttlXColor.accentText)
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .background(ShuttlXColor.ctaPrimary.opacity(0.14), in: Capsule())
         }

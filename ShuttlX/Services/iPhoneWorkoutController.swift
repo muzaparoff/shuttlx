@@ -43,6 +43,8 @@ final class iPhoneWorkoutController: ObservableObject {
     /// false (in `tearDown`) so the cover auto-dismisses without callers
     /// needing to track presentation state themselves.
     @Published var isPresentingTimer: Bool = false
+    /// Short explanation shown on the timer when the watch could not join this workout.
+    @Published private(set) var watchNotice: String?
 
     // MARK: - Common metrics
 
@@ -119,6 +121,8 @@ final class iPhoneWorkoutController: ObservableObject {
     private let motion = CMMotionActivityManager()
     private let locationManager = CLLocationManager()
     private var routePoints: [RoutePoint] = []
+    /// ~8 h at 1 point per 5 s; past this every other point is dropped (shape kept, memory and checkpoint bounded).
+    static let maxRoutePoints = 6000
     private var locationDelegate: LocationProxy?
 
     weak var dataManager: DataManager?
@@ -169,7 +173,7 @@ final class iPhoneWorkoutController: ObservableObject {
     /// Stops the iPhone workout in response to the Watch stopping first.
     /// Saves and dismisses the timer, mirroring what the user would do manually.
     func remoteStop() {
-        guard isActive else { return }
+        guard isActive, watchLinked else { return }   // a stop of some other watch workout is not ours
         _ = finish(notifyWatch: false)   // the watch stopped first; do not send it a second stop
         isPresentingTimer = false
     }
@@ -179,7 +183,7 @@ final class iPhoneWorkoutController: ObservableObject {
         mode = .freeRun
         workoutName = "Free Run"
         beginCommonStart()
-        watchLinked = PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun")
+        linkWatch(mode: "freeRun")
     }
 
     func startInterval(template: WorkoutTemplate) {
@@ -207,7 +211,7 @@ final class iPhoneWorkoutController: ObservableObject {
             .store(in: &intervalEngineCancellables)
 
         beginCommonStart()
-        watchLinked = PhoneSyncCoordinator.shared.startWatchWorkout(mode: "interval", template: template)
+        linkWatch(mode: "interval", template: template)
     }
 
     func startGymRecovery() {
@@ -230,7 +234,40 @@ final class iPhoneWorkoutController: ObservableObject {
         completedCaptures = []
         startMotionUpdates()
         beginCommonStart()
-        watchLinked = PhoneSyncCoordinator.shared.startWatchWorkout(mode: "gymRecovery")
+        linkWatch(mode: "gymRecovery")
+    }
+
+    /// Asks the watch to record the same workout. It counts as linked only after the watch answers
+    /// `workoutStarted` for this workout's id; an answer of "already recording" or no answer within a few
+    /// seconds leaves it unlinked, so Discard / Stop on the phone never touch a recording the phone did not start.
+    private func linkWatch(mode: String, template: WorkoutTemplate? = nil) {
+        let id = sessionID
+        watchNotice = nil
+        PhoneSyncCoordinator.shared.startWatchWorkout(mode: mode, template: template, phoneSessionId: id) { [weak self] reply in
+            guard let self, self.isActive, self.sessionID == id else { return }
+            switch reply {
+            case .started?:
+                self.watchLinked = true
+                if self.isPaused { PhoneSyncCoordinator.shared.pauseWatchWorkout() }
+                self.writeCheckpoint()
+            case .ignored?:
+                self.watchNotice = "Your watch did not start this workout (it may already be recording, or Health is not allowed there)."
+            case nil:
+                break
+            }
+        }
+    }
+
+    /// Live Activity buttons while a workout recorded on the iPhone is running. False = not ours (a watch-only workout).
+    func handleLiveActivityControl(_ command: String) -> Bool {
+        guard isActive else { return false }
+        switch command {
+        case "pause": pause()
+        case "resume": resume()
+        case "stop": finish()
+        default: return false
+        }
+        return true
     }
 
     private func beginCommonStart() {
@@ -414,10 +451,10 @@ final class iPhoneWorkoutController: ObservableObject {
     }
 
     /// Discards the in-progress workout. No `TrainingSession` is saved on the phone. A linked watch is told to
-    /// stop too, and it keeps its own record (there is no remote-discard command).
+    /// discard its own recording too (`discardWorkout`).
     func cancel() {
         guard isActive else { return }
-        stopWatchIfLinked(true)
+        if watchLinked { PhoneSyncCoordinator.shared.discardWatchWorkout() }
         tearDown()
     }
 
@@ -505,6 +542,8 @@ final class iPhoneWorkoutController: ObservableObject {
         stopLocationUpdates()
         motion.stopActivityUpdates()
         watchLinked = false
+        watchNotice = nil
+        PhoneSyncCoordinator.shared.endPhoneLink()
         stepOffset = 0
         pedometerKmOffset = 0
         pedometerKm = 0
@@ -646,12 +685,7 @@ final class iPhoneWorkoutController: ObservableObject {
                 self.totalSteps = self.stepOffset + data.numberOfSteps.intValue
                 if let dist = data.distance {
                     self.pedometerKm = self.pedometerKmOffset + dist.doubleValue / 1000.0
-                    // Prefer GPS distance when the fix quality is confirmed usable;
-                    // fall back to pedometer otherwise (treadmill, indoor, poor signal).
-                    self.totalDistance = self.gpsHasUsableFix
-                        ? self.gpsAccumulatedDistanceKm
-                        : self.pedometerKm
-                    self.updateRollingPace()
+                    self.refreshDistance()
                 }
                 if let cadence = data.currentCadence {
                     // Preferred: Apple's instantaneous cadence (steps/sec → steps/min)
@@ -674,6 +708,12 @@ final class iPhoneWorkoutController: ObservableObject {
                 }
             }
         }
+    }
+
+    /// GPS distance when its fix is usable, else the pedometer (`DistanceFusion`). Called from BOTH sources.
+    private func refreshDistance() {
+        totalDistance = DistanceFusion.totalKm(gpsKm: gpsAccumulatedDistanceKm, gpsUsable: gpsHasUsableFix, pedometerKm: pedometerKm)
+        updateRollingPace()
     }
 
     /// Rolling pace from a sliding 30s window of (elapsedTime, totalDistance)
@@ -735,6 +775,7 @@ final class iPhoneWorkoutController: ObservableObject {
                         timestamp: location.timestamp
                     )
                 )
+                self.routePoints.thinIfOver(Self.maxRoutePoints)
 
                 // GPS distance accumulation.
                 // Discard samples whose horizontal accuracy is worse than the threshold.
@@ -769,6 +810,8 @@ final class iPhoneWorkoutController: ObservableObject {
                     self.gpsHasUsableFix = true
                     self.logger.info("GPS fix usable after \(self.gpsValidSampleCount) valid samples — switching totalDistance to GPS")
                 }
+                // GPS alone must move the display too (no pedometer data: Motion denied, simulator).
+                self.refreshDistance()
             }
         }
         locationDelegate = delegate

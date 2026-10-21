@@ -264,7 +264,7 @@ struct WeeklyCarouselCard: View {
             ForEach(weeks) { week in
                 let isActive = week.id == (scrolledWeekID ?? weeks.first?.id)
                 Button {
-                    withAnimation(.easeInOut(duration: 0.25)) {
+                    withAnimation(.ifAllowed(.easeInOut(duration: 0.25))) {
                         scrolledWeekID = week.id
                     }
                 } label: {

@@ -25,13 +25,13 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ShuttlX uses your location during workouts to track your route and display it on a map.</string>
+	<string>ShuttlX uses your location during outdoor workouts to record your route and to tell cycling from running or walking by your speed.</string>
 	<key>NSMotionUsageDescription</key>
-	<string>ShuttlX uses motion data to automatically detect whether you are running or walking during your workout.</string>
+	<string>ShuttlX uses motion data during workouts to tell running from walking, count steps and cadence, and pause the workout when you seem to have stopped.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>ShuttlX uses HealthKit to read your fitness data including heart rate, calories burned, and distance to provide real-time workout metrics and training insights.</string>
+	<string>ShuttlX reads your heart rate, steps, distance and active energy during a workout to show them live and check them against your heart limit, and your weight, date of birth and sex to estimate calories and heart-rate zones.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>ShuttlX uses HealthKit to save your workout sessions and fitness activities to keep your health information up to date across all your devices.</string>
+	<string>ShuttlX saves each workout to Health, with its distance, active energy and GPS route.</string>
 	<key>WKBackgroundModes</key>
 	<array>
 		<string>workout-processing</string>

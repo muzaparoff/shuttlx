@@ -84,4 +84,16 @@ final class SegmentEditsTests: XCTestCase {
         XCTAssertEqual(eff[1].activityType, .running)
         XCTAssertEqual(try SegmentEdits.decode(JSONEncoder().encode(e)), e)
     }
+
+    /// The shared rule behind DataManager.effectiveSessions and the widgets.
+    func testEffectiveSubtractsRestCaloriesFromTheStoredTotal() {
+        let r = raw()
+        let e = SegmentEdits().settingType(.stationary, partID: r[1].id, parts: r, sessionID: sid)
+        let eff = e.effective(segments: r, calories: 500, sessionID: sid)
+        XCTAssertEqual(eff?.calories, 100)
+        XCTAssertEqual(eff?.segments[1].activityType, .stationary)
+        XCTAssertNil(e.effective(segments: raw(), calories: 500, sessionID: sid), "segments with other ids are untouched")
+        XCTAssertNil(SegmentEdits().effective(segments: r, calories: 500, sessionID: sid))
+        XCTAssertNil(e.effective(segments: r, calories: nil, sessionID: sid)?.calories)
+    }
 }

@@ -1,0 +1,8 @@
+# The Motion & Fitness prompt shows up whenever the pedometer starts (Maestro's `motion` permission did not stop it).
+appId: ${APP_ID}
+---
+- extendedWaitUntil: { visible: "Allow", timeout: 3000, optional: true }
+- runFlow:
+    when: { visible: "Allow" }
+    commands:
+      - tapOn: "Allow"

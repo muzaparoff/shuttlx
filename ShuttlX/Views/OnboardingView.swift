@@ -6,7 +6,7 @@ struct OnboardingView: View {
     @EnvironmentObject var dataManager: DataManager
     @Binding var isFirstLaunch: Bool
     @State private var currentPage = 0
-    @State private var heart = HeartSafetySettings.load()
+    @State private var heart = HeartSafetySettings.loadForEditing()
     @State private var doctorLimit: Int?
     @State private var age: Int?
     @State private var askAge = false
@@ -20,7 +20,7 @@ struct OnboardingView: View {
 
     init(isFirstLaunch: Binding<Bool>) {
         _isFirstLaunch = isFirstLaunch
-        let h = HeartSafetySettings.load()
+        let h = HeartSafetySettings.loadForEditing()
         _heart = State(initialValue: h)
         _betaChoice = State(initialValue: h.onBetaBlocker.map { $0 ? .yes : .no })
         _medicineText = State(initialValue: h.medicineName ?? "")
@@ -66,7 +66,7 @@ struct OnboardingView: View {
             Image(systemName: "figure.walk")
                 .font(ShuttlXFont.onboardingIcon)
                 .foregroundStyle(ShuttlXColor.walking)
-                .symbolEffect(.bounce, value: currentPage == 0)
+                .symbolEffect(.bounce, value: !UIAccessibility.isReduceMotionEnabled && currentPage == 0)
                 .accessibilityHidden(true)
 
             Text("Welcome to ShuttlX")
@@ -81,7 +81,7 @@ struct OnboardingView: View {
             Spacer()
 
             Button {
-                withAnimation { currentPage = 1 }
+                withAnimation(.ifAllowed(.default)) { currentPage = 1 }
             } label: {
                 Text("Get Started")
             }
@@ -102,7 +102,7 @@ struct OnboardingView: View {
             Image(systemName: "heart.fill")
                 .font(ShuttlXFont.onboardingIcon)
                 .foregroundStyle(ShuttlXColor.heartRate)
-                .symbolEffect(.bounce, value: currentPage == 1)
+                .symbolEffect(.bounce, value: !UIAccessibility.isReduceMotionEnabled && currentPage == 1)
                 .accessibilityHidden(true)
 
             Text("Health Integration")
@@ -125,7 +125,7 @@ struct OnboardingView: View {
             Button {
                 Task {
                     await dataManager.requestHealthKitPermissions()
-                    withAnimation { currentPage = 2 }
+                    withAnimation(.ifAllowed(.default)) { currentPage = 2 }
                 }
             } label: {
                 Text("Grant Health Access")
@@ -134,7 +134,7 @@ struct OnboardingView: View {
             .accessibilityHint("Requests HealthKit permissions")
 
             Button {
-                withAnimation { currentPage = 2 }
+                withAnimation(.ifAllowed(.default)) { currentPage = 2 }
             } label: {
                 Text("Skip for Now")
                     .font(ShuttlXFont.cardSubtitle)
@@ -150,82 +150,88 @@ struct OnboardingView: View {
     // MARK: - Step 2 of 3: Beta-blocker
 
     private var medicationPage: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Step 2 of 3").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
-                Spacer()
-                Button("Skip") { withAnimation { currentPage = 3 } }
+        // One List holds the header, rows and note so large Dynamic Type scrolls everything;
+        // only the Continue button is pinned.
+        List {
+            introRows {
+                HStack {
+                    Text("Step 2 of 3").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Skip") { withAnimation(.ifAllowed(.default)) { currentPage = 3 } }
+                        .font(ShuttlXFont.cardSubtitle)
+                        .frame(minHeight: 44)
+                        .accessibilityHint("Skip. You can answer later in Settings.")
+                }
+                Text("Do you take a beta-blocker?")
+                    .font(ShuttlXFont.metricMedium)
+                    .accessibilityAddTraits(.isHeader)
+                Text("Medicines like metoprolol or bisoprolol keep your heart rate lower. We then set your limit differently.")
                     .font(ShuttlXFont.cardSubtitle)
-                    .accessibilityHint("Skip. You can answer later in Settings.")
+                    .foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 20)
 
-            Text("Do you take a beta-blocker?")
-                .font(ShuttlXFont.metricMedium)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.horizontal, 20)
-
-            Text("Medicines like metoprolol or bisoprolol keep your heart rate lower. We then set your limit differently.")
-                .font(ShuttlXFont.cardSubtitle)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            List {
-                // "Not sure" is stored as Yes (safe side).
-                ForEach(BetaChoice.allCases, id: \.self) { choice in
-                    Button {
-                        betaChoice = choice
-                    } label: {
-                        HStack {
-                            Text(choice.title)
-                                .fontWeight(betaChoice == choice ? .semibold : .regular)
-                                .foregroundStyle(ShuttlXColor.textPrimary)
-                            Spacer()
-                            if betaChoice == choice {
-                                Image(systemName: "checkmark").fontWeight(.bold).foregroundStyle(.tint)
-                                    .accessibilityHidden(true)
-                            }
+            // "Not sure" is stored as Yes (safe side).
+            ForEach(BetaChoice.allCases, id: \.self) { choice in
+                Button {
+                    betaChoice = choice
+                } label: {
+                    HStack {
+                        Text(choice.title)
+                            .fontWeight(betaChoice == choice ? .semibold : .regular)
+                            .foregroundStyle(ShuttlXColor.textPrimary)
+                        Spacer()
+                        if betaChoice == choice {
+                            Image(systemName: "checkmark").fontWeight(.bold).foregroundStyle(.tint)
+                                .accessibilityHidden(true)
                         }
                     }
-                    .accessibilityLabel(choice.title)
-                    .accessibilityAddTraits(betaChoice == choice ? .isSelected : [])
                 }
-
-                Section {
-                    HStack {
-                        Text("Medicine")
-                        Spacer()
-                        TextField("Metoprolol", text: $medicineText).multilineTextAlignment(.trailing)
-                    }
-                    HStack {
-                        Text("Daily dose")
-                        Spacer()
-                        TextField("50 mg", text: $doseText).multilineTextAlignment(.trailing)
-                    }
-                } header: {
-                    Text("Optional · stays on this phone")
-                }
+                .accessibilityLabel(choice.title)
+                .accessibilityAddTraits(betaChoice == choice ? .isSelected : [])
             }
-            .scrollContentBackground(.hidden)
-            .scrollDismissesKeyboard(.interactively)
 
-            Text("Not medical advice. Your doctor knows your safe limit best.")
-                .font(ShuttlXFont.cardCaption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
+            Section {
+                LabeledContent("Medicine") {
+                    TextField("Metoprolol", text: $medicineText).multilineTextAlignment(.trailing)
+                }
+                LabeledContent("Daily dose") {
+                    TextField("50 mg", text: $doseText).multilineTextAlignment(.trailing)
+                }
+            } header: {
+                Text("Optional · stays on this phone")
+            }
 
+            introRows {
+                Text("Not medical advice. Your doctor knows your safe limit best.")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             Button {
                 saveMedication()
-                withAnimation { currentPage = 3 }
+                withAnimation(.ifAllowed(.default)) { currentPage = 3 }
             } label: {
                 Text("Continue")
             }
             .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
             .padding(.horizontal, 16)
-
-            Spacer().frame(height: 40)
+            .padding(.bottom, 40)
+            .padding(.top, 8)
+            .frame(maxWidth: .infinity)
+            .background(Color(.systemGroupedBackground))
         }
         .padding(.top, 8)
+    }
+
+    /// Plain text rows inside an onboarding List (no row chrome).
+    private func introRows<C: View>(@ViewBuilder _ content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 12, content: content)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
     }
 
     private func saveMedication() {
@@ -236,7 +242,7 @@ struct OnboardingView: View {
         }
         heart.medicineName = medicineText.isEmpty ? nil : medicineText
         heart.dailyDose = doseText.isEmpty ? nil : doseText
-        heart.save()
+        heart.saveForEditing()
     }
 
     // MARK: - Step 3 of 3: Heart limit
@@ -254,22 +260,17 @@ struct OnboardingView: View {
 
     private var limitPage: some View {
         let estimate = heart.estimatedUpperLimit(age: age)
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Step 3 of 3")
-                .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            Text("Your heart limit")
-                .font(ShuttlXFont.metricMedium)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.horizontal, 20)
-
-            Text("The watch warns you when you reach it.")
-                .font(ShuttlXFont.cardSubtitle)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
-            List {
+        return List {
+                introRows {
+                    Text("Step 3 of 3")
+                        .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                    Text("Your heart limit")
+                        .font(ShuttlXFont.metricMedium)
+                        .accessibilityAddTraits(.isHeader)
+                    Text("The watch warns you when you reach it.")
+                        .font(ShuttlXFont.cardSubtitle)
+                        .foregroundStyle(.secondary)
+                }
                 if askAge {
                     VStack(alignment: .leading, spacing: 4) {
                         HStack {
@@ -323,15 +324,15 @@ struct OnboardingView: View {
                     Text("0–10 scale, no heart-rate limit.")
                         .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
                 }
-            }
-            .scrollContentBackground(.hidden)
-            .scrollDismissesKeyboard(.interactively)
-
-            Text("Effort 0–10 is always on with a beta-blocker. Heart rate and effort are used together.")
-                .font(ShuttlXFont.cardCaption)
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 20)
-
+                introRows {
+                    Text("Effort 0–10 is always on with a beta-blocker. Heart rate and effort are used together.")
+                        .font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(.secondary)
+                }
+        }
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             Button {
                 finish()
             } label: {
@@ -341,9 +342,11 @@ struct OnboardingView: View {
             .disabled(!canFinish || finishing)
             .opacity(canFinish ? 1 : 0.4)
             .padding(.horizontal, 16)
+            .padding(.bottom, 40)
+            .padding(.top, 8)
+            .frame(maxWidth: .infinity)
+            .background(Color(.systemGroupedBackground))
             .accessibilityHint(canFinish ? "Completes onboarding and opens the app" : "Enter a limit, or choose estimate or effort only, to continue")
-
-            Spacer().frame(height: 40)
         }
         .padding(.top, 8)
         .toolbar {
@@ -361,7 +364,7 @@ struct OnboardingView: View {
         finishing = true
         heart.effortOnly = limitChoice == .effortOnly
         heart.upperLimit = limitChoice == .doctor ? doctorLimit : nil
-        heart.save()
+        heart.saveForEditing()
         PhoneSyncCoordinator.shared.sendHeartSafetyToWatch(heart, age: age)
         Task {
             await PhoneSyncCoordinator.requestNotificationAuthorization()

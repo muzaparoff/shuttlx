@@ -57,4 +57,14 @@ final class SessionMergeTests: XCTestCase {
         XCTAssertNil(SessionMerge.carriedEffort(incoming: nil, replaced: [nil]))
         XCTAssertNil(SessionMerge.carriedEffort(incoming: nil, replaced: []))
     }
+
+    /// First disk load finishing after a watch session arrived: the stored placeholder must go.
+    func testReplacedIDsFindsPlaceholdersCoveredByAnArrivedWatchSession() {
+        let watch = item(start: 0)
+        let placeholder = item(start: 60, placeholder: true)
+        let other = item(start: 7200, placeholder: true)       // a different day's workout
+        let normal = item(start: 0)                             // not a placeholder: never removed
+        XCTAssertEqual(SessionMerge.replacedIDs(by: [watch], in: [placeholder, other, normal]), [placeholder.id])
+        XCTAssertTrue(SessionMerge.replacedIDs(by: [], in: [placeholder]).isEmpty)
+    }
 }

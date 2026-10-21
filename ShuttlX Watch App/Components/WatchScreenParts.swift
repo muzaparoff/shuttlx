@@ -10,6 +10,10 @@ enum WatchScale {
     static let height = WKInterfaceDevice.current().screenBounds.height
     static let width = WKInterfaceDevice.current().screenBounds.width
     static func pt(_ mockupPx: CGFloat) -> CGFloat { (mockupPx / 238 * height).rounded() }
+    /// Readable floor for text on the smallest watch (40mm scales mockup 11px to 9pt).
+    static let minTextSize: CGFloat = 10
+    /// `pt` for a text size, never below `minTextSize`.
+    static func text(_ mockupPx: CGFloat) -> CGFloat { max(minTextSize, pt(mockupPx)) }
 }
 
 /// Full-width rounded pill used by every watch prompt (Continue, End & Save,

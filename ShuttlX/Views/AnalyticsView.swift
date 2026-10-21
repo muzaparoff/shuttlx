@@ -385,9 +385,9 @@ struct AnalyticsView: View {
     private func runWalkLegendItem(activity: DetectedActivity, duration: TimeInterval, calories: Double?) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
-                Circle()
-                    .fill(activity.themeColor)
-                    .frame(width: 8, height: 8)
+                Image(systemName: activity.systemImage)
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(activity.themeColor)
                 Text(activity.displayName)
                     .font(ShuttlXFont.cardCaption)
             }
@@ -440,7 +440,7 @@ struct AnalyticsView: View {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
                         Text(String(format: "%.1f", vo2))
                             .font(ShuttlXFont.metricLarge)
-                            .foregroundStyle(ShuttlXColor.running)
+                            .foregroundStyle(ShuttlXColor.accentText)
 
                         if let isUp = trending {
                             Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")

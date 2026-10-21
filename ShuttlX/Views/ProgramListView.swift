@@ -27,7 +27,7 @@ struct WatchPromptView: View {
                     VStack {
                         Image(systemName: "figure.run")
                             .font(.title2)
-                            .foregroundColor(ShuttlXColor.running)
+                            .foregroundColor(ShuttlXColor.accentText)
                         Text("Running")
                             .font(ShuttlXFont.cardCaption)
                             .foregroundStyle(.secondary)

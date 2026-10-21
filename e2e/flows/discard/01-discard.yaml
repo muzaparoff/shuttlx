@@ -1,0 +1,17 @@
+appId: ${APP_ID}
+---
+- runFlow: ../common/onboard.yaml
+- tapOn: "Programs & plans"
+- tapOn: "Free Run"
+- runFlow: ../common/motion-prompt.yaml
+- assertVisible: "ELAPSED"
+- extendedWaitUntil: { visible: "Pause workout", timeout: 10000 }
+- tapOn: "Cancel workout"
+- tapOn: "Discard"
+- runFlow: ../common/motion-prompt.yaml
+- assertNotVisible: "ELAPSED"
+- assertVisible: "Quick Start"   # back on Programs, not the timer
+- back
+- tapOn: "History"
+- tapOn: "List"
+- assertVisible: "No sessions this month"

@@ -39,8 +39,8 @@ extension TrainingView {
         return VStack(alignment: .leading, spacing: 0) {
             // Paused: the word, not just the amber clock (colour alone is not a state).
             Text(paused ? "\u{23F8}\u{FE0E} PAUSED" : "\u{25CF} \(activity.watchTag)")
-                .font(.system(size: WatchScale.pt(11), weight: .bold))
-                .tracking(WatchScale.pt(11) * 0.08)
+                .font(.system(size: WatchScale.text(11), weight: .bold))
+                .tracking(WatchScale.text(11) * 0.08)
                 .foregroundStyle(tagColor)
                 .accessibilityLabel(paused ? "Paused" : activity == .unknown ? workoutManager.workoutName : activity.displayName)
 
@@ -51,17 +51,13 @@ extension TrainingView {
             }
 
             ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
-                             elapsed: workoutManager.elapsedTime,
+                             clock: workoutManager.clock,
                              baseSize: WatchScale.pt(workoutManager.activitySwitch == nil ? 48 : 44),
                              availableWidth: screenWidth - 16,
                              weight: .semibold,
                              color: workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.textPrimary)
-                .opacity((!reduceMotion && workoutManager.isPaused && pausePulse) ? 0.35 : 1.0)
-                .animation(reduceMotion ? nil : .easeInOut(duration: 0.8).repeatForever(autoreverses: true),
-                           value: pausePulse)
+                .modifier(PausePulse(active: workoutManager.isPaused, low: 0.35))
                 .padding(.top, WatchScale.pt(6))
-                .accessibilityLabel("\(workoutManager.isPaused ? "Paused, " : "")elapsed time \(FormattingUtils.formatTimeAccessible(workoutManager.elapsedTime))")
-                .accessibilityAddTraits(.updatesFrequently)
 
             if let word, let ref = zoneReferenceHR {
                 let color = zoneWordColor(word)
@@ -92,7 +88,7 @@ extension TrainingView {
                     .foregroundStyle(ShuttlXColor.heartRate)
                     .fixedSize()
                 Text("BPM")
-                    .font(.system(size: WatchScale.pt(11), weight: .bold))
+                    .font(.system(size: WatchScale.text(11), weight: .bold))
                     .foregroundStyle(ShuttlXColor.textSecondary)
             }
             .accessibilityElement(children: .combine)
@@ -100,8 +96,9 @@ extension TrainingView {
             .accessibilityAddTraits(.updatesFrequently)
 
             if !bannerShown && workoutManager.activitySwitch == nil {
-                Text("Swipe left: distance, pace, calories.")
-                    .font(.system(size: WatchScale.pt(10)))
+                // Short enough for the 10pt text floor on 40mm.
+                Text("Swipe left: more metrics")
+                    .font(.system(size: WatchScale.text(10)))
                     .foregroundStyle(ShuttlXColor.textSecondary)
                     .lineLimit(1)
                     .fixedSize()
@@ -113,7 +110,10 @@ extension TrainingView {
         .padding(.horizontal, 8)
         // Keep the last line clear of the TabView page dots.
         .padding(.bottom, max(10, screenHeight * 0.055))
-        .onAppear { if workoutManager.isPaused && !reduceMotion { pausePulse = true } }
+        // The page TabView proposes no height, so the maxHeight frame above collapses
+        // to the content and a short stack (no HR) floated to the centre. Pinned to
+        // `pageHeight`, BPM stays at the bottom whatever is shown.
+        .frame(height: pageHeight)
     }
 
     private func heartLimitPage(limit: Int) -> some View {

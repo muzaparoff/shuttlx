@@ -96,6 +96,10 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     // App-only: never written to Health metadata.
     var effortRPE: Int?
 
+    // Highest heart rate read while the workout was paused. Kept apart from
+    // maxHeartRate (which, like the average, counts active time only). Nil = legacy.
+    var pausedPeakHeartRate: Double?
+
     // True when the iPhone built this session from an Apple Health workout
     // (it never arrived over WatchConnectivity). Nil for everything else.
     var importedFromHealth: Bool?

@@ -55,7 +55,7 @@ struct LiveRouteView: View {
 
                     VStack(spacing: 4) {
                         Image(systemName: "location.fill")
-                            .foregroundStyle(ShuttlXColor.running)
+                            .foregroundStyle(ShuttlXColor.accentText)
                         Text("Acquiring route...")
                             .font(ShuttlXFont.cardCaption)
                             .foregroundStyle(.secondary)

@@ -21,7 +21,7 @@ struct ThemeFonts: Equatable {
     var heroIcon: Font       = .system(size: 48)
     var onboardingIcon: Font = .system(size: 72)
     var prValue: Font        = .system(.title3, design: .rounded).weight(.bold)
-    var microLabel: Font     = .system(size: 9)
+    var microLabel: Font     = .caption2   // Dynamic Type; was fixed 9pt
     var debugMono: Font      = .system(.caption, design: .monospaced)
 
     // watchOS-specific

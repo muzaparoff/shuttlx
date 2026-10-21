@@ -60,7 +60,7 @@ struct iPhoneWorkoutTimerView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(controller.watchLinked
-                 ? "Save this workout to your history? Your Apple Watch stops too, and its recording is the one kept."
+                 ? "Save this workout to your history? Your Apple Watch stops too, and its recording is the one kept. Discard removes both."
                  : "Save this workout to your history?")
         }
         .alert("Cancel Workout?", isPresented: $showingCancelConfirmation) {
@@ -71,7 +71,7 @@ struct iPhoneWorkoutTimerView: View {
             Button("Keep Going", role: .cancel) {}
         } message: {
             Text(controller.watchLinked
-                 ? "This ends the workout without saving here. Your Apple Watch stops too and keeps its own recording."
+                 ? "This ends the workout without saving. Your Apple Watch discards its recording too."
                  : "This will end the workout without saving.")
         }
     }
@@ -79,6 +79,12 @@ struct iPhoneWorkoutTimerView: View {
     private var standardTimerBody: some View {
         VStack(spacing: 24) {
             header
+            if let notice = controller.watchNotice {
+                Text(notice)
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(ShuttlXColor.ctaWarning)
+                    .accessibilityLabel("Notice: \(notice)")
+            }
             heroSection
             metricsSection
             Spacer(minLength: 0)
@@ -185,7 +191,7 @@ struct iPhoneWorkoutTimerView: View {
                     Capsule()
                         .fill(stepColor)
                         .frame(width: max(0, proxy.size.width * progress))
-                        .animation(.linear(duration: 1), value: progress)
+                        .animation(.ifAllowed(.linear(duration: 1)), value: progress)
                 }
             }
             .frame(height: 6)
@@ -574,7 +580,7 @@ struct iPhoneWorkoutTimerView: View {
             if reached, let v = value {
                 Text("-\(v)")
                     .font(ShuttlXFont.cardCaption.weight(.bold))
-                    .foregroundStyle(ShuttlXColor.ctaPrimary)
+                    .foregroundStyle(ShuttlXColor.accentText)
             }
         }
         .foregroundStyle(reached ? ShuttlXColor.textPrimary : ShuttlXColor.textSecondary)

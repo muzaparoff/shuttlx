@@ -8,7 +8,7 @@ import ShuttlXShared
 struct HeartAlertsView: View {
     @EnvironmentObject var sharedDataManager: PhoneSyncCoordinator
     @Environment(\.openURL) private var openURL
-    @State private var heart = HeartSafetySettings.load()
+    @State private var heart = HeartSafetySettings.loadForEditing()
     @State private var age = DeviceManager.shared.userAge
     @State private var manualMaxHR = HeartRateZoneCalculator.loadSavedMaxHR().map { Int($0.rounded()) }
     @State private var maxHRMode: MaxHRMode = HeartRateZoneCalculator.loadSavedMaxHR() == nil ? .auto : .manual
@@ -40,8 +40,14 @@ struct HeartAlertsView: View {
         .navigationBarTitleDisplayMode(.large)
         .timelineScreenBackground()
         .onAppear {
-            heart = HeartSafetySettings.load()
+            heart = HeartSafetySettings.loadForEditing()
             age = DeviceManager.shared.userAge
+            // The age (typed, or from Health) may have lowered the estimated upper limit since the low limit was set.
+            if let note = heart.reconcileLowLimit(age: age) {
+                lowHint = note
+                heart.saveForEditing()
+                sharedDataManager.sendHeartSafetyToWatch(heart, age: age)
+            }
         }
         .task { await refreshNotificationState() }
         .toolbar {
@@ -71,14 +77,14 @@ struct HeartAlertsView: View {
                 lowHint = "Low limit changed to \(fixed) bpm to stay \(HeartLimits.lowGap) below the upper limit."
             }
         }
-        heart.save()
+        heart.saveForEditing()
         sharedDataManager.sendHeartSafetyToWatch(heart, age: age)
     }
 
     /// Medication notes never leave the phone: save without a watch push.
     private func updateLocal(_ change: (inout HeartSafetySettings) -> Void) {
         change(&heart)
-        heart.save()
+        heart.saveForEditing()
     }
 
     private func toggle(_ title: String, _ keyPath: WritableKeyPath<HeartSafetySettings, Bool>, asksNotifications: Bool = false) -> some View {

@@ -65,7 +65,7 @@ struct ShuttlXWatchApp: App {
                 let paceOverride = env["SHUTTLX_SNAPSHOT_PACE"]
                 let pausedOverride = env["SHUTTLX_SNAPSHOT_PAUSED"] == "1"
                 // SHUTTLX_SNAPSHOT_SCREEN=home|summary|effort renders those screens
-                // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused
+                // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused|nohr
                 // raises a workout overlay, SHUTTLX_SNAPSHOT_LIMIT=<bpm> fakes a synced
                 // heart limit (heart-limit mode), SHUTTLX_SNAPSHOT_TAB=<n> opens a page,
                 // SHUTTLX_SNAPSHOT_ACTIVITY=running|walking|cycling sets the tag,

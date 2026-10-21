@@ -134,7 +134,7 @@ enum HelpContent {
                 HelpStep(icon: "gear",
                          text: "During setup, answer the beta-blocker question (you can skip it) and choose your heart limit: your doctor's number, an estimate from your age, or effort only. Setup asks for your age if Health does not know it, and asks once to allow notifications."),
                 HelpStep(icon: "heart.fill",
-                         text: "Later: Settings → Heart → Heart limit opens Heart & alerts, where you change your limit, age, low limit and medication notes. Numbers are saved when you finish typing; one outside the allowed range is moved to the nearest allowed value and you are told. Max heart rate is Auto unless you type your own; Reset returns to Auto."),
+                         text: "Later: Settings → Heart → Heart limit opens Heart & alerts, where you change your limit, age, low limit and medication notes. Numbers are saved when you finish typing; one outside the allowed range is moved to the nearest allowed value and you are told. The low limit always stays at least 10 bpm below the upper limit, an estimated one included: if a new age lowers the estimate, the low limit is moved and you are told. Max heart rate is Auto unless you type your own; Reset returns to Auto."),
                 HelpStep(icon: "exclamationmark.triangle",
                          text: "If no limit is set and effort only is off, Today and Settings show “No heart limit set”: the watch cannot warn you until you set one."),
                 HelpStep(icon: "bell.badge",
@@ -169,7 +169,7 @@ enum HelpContent {
             icon: "square.grid.2x2",
             title: "Widgets & complications",
             body: """
-            Start workouts without opening the app: Home Screen widgets and \
+            Start workouts in one tap: Home Screen widgets and \
             Control Center controls on iPhone, complications on the Watch \
             face. The weekly goal ring keeps your progress in sight.
             """,
@@ -183,7 +183,7 @@ enum HelpContent {
                 HelpStep(icon: "applewatch.watchface",
                          text: "On the Watch: long-press the watch face, tap a complication slot, and pick ShuttlX — Quick Start, Last Workout, Today, or Weekly Progress."),
                 HelpStep(icon: "play.circle.fill",
-                         text: "Tapping a Start widget or complication launches the workout on your Watch right away."),
+                         text: "Tapping a Start widget on iPhone opens ShuttlX and asks you to confirm before the workout starts on your Watch. A Watch complication starts it right away."),
             ]),
         HelpTopic(
             id: "privacy",
@@ -237,11 +237,11 @@ struct HelpView: View {
         let isOpen = expanded == topic.id
         VStack(alignment: .leading, spacing: 0) {
             Button {
-                withAnimation(.snappy) { expanded = isOpen ? nil : topic.id }
+                withAnimation(.ifAllowed(.snappy)) { expanded = isOpen ? nil : topic.id }
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: topic.icon)
-                        .foregroundStyle(ShuttlXColor.ctaPrimary)
+                        .foregroundStyle(ShuttlXColor.accentText)
                         .frame(width: 26)
                         .accessibilityHidden(true)
                     Text(topic.title)
@@ -292,11 +292,11 @@ struct HelpView: View {
                 .monospacedDigit()
                 .frame(width: 18, height: 18)
                 .background(ShuttlXColor.ctaPrimary.opacity(0.14), in: Circle())
-                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                .foregroundStyle(ShuttlXColor.accentText)
                 .accessibilityHidden(true)
             Image(systemName: step.icon)
                 .font(ShuttlXFont.cardCaption)
-                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                .foregroundStyle(ShuttlXColor.accentText)
                 .frame(width: 24, height: 18)
                 .accessibilityHidden(true)
             Text(step.text)

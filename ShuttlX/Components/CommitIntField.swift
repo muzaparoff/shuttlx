@@ -28,7 +28,7 @@ struct CommitIntField: View {
             .onChange(of: focused) { _, isFocused in
                 if isFocused { hint = nil; onFocus() } else { commit() }
             }
-            .onDisappear { if focused { commit() } }
+            .onDisappear { commit() }   // focus may already be gone when the screen closes; commit() ignores an unchanged value
     }
 
     private func commit() {

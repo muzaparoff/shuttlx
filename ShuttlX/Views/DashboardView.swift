@@ -15,6 +15,8 @@ struct DashboardView: View {
     @State private var noHeartLimit = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedDay = Date()
+    /// The calendar day "today" meant when this view last looked; used to roll `selectedDay` over at midnight.
+    @State private var shownDay = Calendar.current.startOfDay(for: Date())
     @State private var dismissedParts = Set(UserDefaults.standard.stringArray(forKey: dismissedPartsKey) ?? [])
     @State private var pickingPartFor: TrainingSession?
     @State private var fixing: FixTarget?
@@ -61,7 +63,7 @@ struct DashboardView: View {
                     .foregroundStyle(ShuttlXColor.textPrimary)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: 0)
-                Text("Set").font(ShuttlXFont.cardCaption.weight(.bold)).foregroundStyle(ShuttlXColor.ctaPrimary)
+                Text("Set").font(ShuttlXFont.cardCaption.weight(.bold)).foregroundStyle(ShuttlXColor.accentText)
             }
             .padding(.horizontal, 12).padding(.vertical, 10)
             .background(ShuttlXColor.ctaWarning.opacity(0.14), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
@@ -117,6 +119,14 @@ struct DashboardView: View {
 
     private var bannerSession: TrainingSession? {
         daySessions.first { $0.segments.count >= 2 && !dismissedParts.contains($0.id.uuidString) }
+    }
+
+    /// After midnight the day that was "today" is yesterday: move the selection along unless the user picked another day.
+    private func rollOverDay() {
+        let today = Calendar.current.startOfDay(for: Date())
+        guard today != shownDay else { return }
+        if Calendar.current.isDate(selectedDay, inSameDayAs: shownDay) { selectedDay = Date() }
+        shownDay = today
     }
 
     private func dismissBanner(_ s: TrainingSession) {
@@ -196,7 +206,8 @@ struct DashboardView: View {
             .navigationDestination(isPresented: $showingPrograms) { ProgramsTabView() }
             .task { consumePendingPrograms() }
             .onAppear { refreshLimitWarning() }
-            .onChange(of: scenePhase) { _, phase in if phase == .active { refreshLimitWarning() } }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { refreshLimitWarning(); rollOverDay() } }
+            .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in rollOverDay() }
             #if DEBUG
             // Screenshot seam: SHUTTLX_DEMO_FIX_TODAY=<part number> opens Fix a part on that part of the banner session.
             .task(id: dataManager.effectiveVersion) {

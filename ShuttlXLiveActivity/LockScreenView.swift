@@ -91,14 +91,14 @@ struct LAButtons: View {
             Button(intent: PauseResumeWorkoutIntent(resume: state.isPaused)) {
                 Text(state.isPaused ? "Resume" : "Pause")
                     .font(.system(size: 13, weight: .semibold))
-                    .frame(maxWidth: .infinity, minHeight: 30)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                     .background(.white.opacity(0.16), in: Capsule())
             }
             Button(intent: EndWorkoutIntent()) {
                 Text("End & Save")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(red: 0.016, green: 0.129, blue: 0.05))
-                    .frame(maxWidth: .infinity, minHeight: 30)
+                    .frame(maxWidth: .infinity, minHeight: 44)
                     .background(Color.green, in: Capsule())
             }
         }

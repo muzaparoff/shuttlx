@@ -1,0 +1,21 @@
+# Fresh simulator: three onboarding steps, then the Today tab. Health is skipped (no system sheet on a sim).
+appId: ${APP_ID}
+---
+# Flows of one run share a simulator, so start clean every time (location "always" is what iOS accepts here).
+- launchApp:
+    clearState: true
+    permissions: { location: always, notifications: allow }
+- assertVisible: "Welcome to ShuttlX"
+- tapOn: "Get Started"
+- tapOn: "Skip for Now"
+- assertVisible: "Step 2 of 3"
+- tapOn: "No"
+- tapOn: "Continue"
+- assertVisible: "Your heart limit"
+- tapOn: "125"
+- inputText: "130"
+- tapOn:   # keyboard toolbar "Done" (text "Done" also matches the page button, which is disabled until the number is committed)
+    point: "87%,61%"
+- assertVisible: "Your heart limit"
+- tapOn: "Done"
+- assertVisible: "Programs & plans"

@@ -107,6 +107,15 @@ public struct SessionInbox<T: Codable & Identifiable> where T.ID == UUID {
     }
 
     public func removeAll() { try? FileManager.default.removeItem(at: directory) }
+
+    /// Keeps only the newest `cap` entries (by modification date). For a quarantine folder that must stay bounded.
+    public func trim(to cap: Int) {
+        let files = ((try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [])
+            .filter { $0.pathExtension == "json" }
+        guard files.count > cap else { return }
+        func date(_ u: URL) -> Date { (try? u.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast }
+        for f in files.sorted(by: { date($0) < date($1) }).prefix(files.count - cap) { try? FileManager.default.removeItem(at: f) }
+    }
 }
 
 public enum SessionIngestRules {

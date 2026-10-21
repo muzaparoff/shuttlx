@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ShuttlXShared
 
 enum WidgetDataProvider {
     private static let appGroupIdentifier = "group.com.shuttlx.shared"
@@ -41,10 +42,30 @@ enum WidgetDataProvider {
             logger.error("Widget: File coordination error: \(coordinatorError.localizedDescription)")
         }
 
+        // "Fix a part" corrections change a session's calories; the file is read-only here.
+        if let edits = loadEdits(in: containerURL) {
+            decoded = decoded.map { session in
+                guard let e = edits.effective(segments: session.segments, calories: session.caloriesBurned, sessionID: session.id) else { return session }
+                var s = session
+                s.segments = e.segments
+                s.caloriesBurned = e.calories
+                return s
+            }
+        }
+
         // Sort once at cache time — all callers get a pre-sorted slice
         cachedSessions = decoded.sorted { $0.startDate > $1.startDate }
         cacheTimestamp = Date()
         return cachedSessions ?? []
+    }
+
+    private static func loadEdits(in container: URL) -> SegmentEdits? {
+        let url = container.appendingPathComponent("segment_overrides.json")
+        guard FileManager.default.fileExists(atPath: url.path) else { return nil }
+        do { return try SegmentEdits.decode(Data(contentsOf: url)) } catch {
+            logger.error("Widget: Failed to read segment overrides: \(error.localizedDescription)")
+            return nil
+        }
     }
 
     /// Returns sessions sorted descending by startDate (most recent first).

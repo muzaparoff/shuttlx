@@ -27,7 +27,7 @@ struct PlanDetailView: View {
         }
         .navigationTitle(plan.name)
         .navigationBarTitleDisplayMode(.inline)
-        .themedScreenBackground()
+        .timelineScreenBackground()
     }
 
     // MARK: - Header
@@ -123,20 +123,19 @@ struct PlanDetailView: View {
             } else if day.isRecoveryDay {
                 Text("Free-form gym session — heart-recovery monitoring")
                     .font(ShuttlXFont.cardSubtitle)
-                    .foregroundStyle(ShuttlXColor.ctaPrimary)
+                    .foregroundStyle(ShuttlXColor.accentText)
                     .lineLimit(2)
                     .minimumScaleFactor(0.8)
             } else {
                 Text(day.templateName ?? "Workout")
                     .font(ShuttlXFont.cardSubtitle)
-                    .lineLimit(1)
             }
 
             Spacer()
 
             if isCompleted {
                 Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(ShuttlXColor.positive)
+                    .foregroundStyle(ShuttlXColor.accentText)
                     .accessibilityLabel("Completed")
             } else if !day.isRestDay {
                 // Mark complete button

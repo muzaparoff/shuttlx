@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import WidgetKit
 import ShuttlXShared
 
 /// User corrections of a session's parts ("Fix a part": type, split, merge). Kept in its own file so
@@ -62,6 +63,7 @@ final class SegmentOverrideStore: ObservableObject {
         guard let url else { logger.error("App Group container unavailable"); return }
         do {
             try JSONEncoder().encode(edits).write(to: url, options: StoreFile.writeOptions)
+            WidgetCenter.shared.reloadAllTimelines()   // widgets apply the corrections too
         } catch {
             logger.error("Save failed: \(error.localizedDescription, privacy: .public)")
         }

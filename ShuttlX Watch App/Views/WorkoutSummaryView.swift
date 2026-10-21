@@ -64,8 +64,8 @@ struct WorkoutSummaryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 Text("WORKOUT COMPLETE")
-                    .font(.system(size: WatchScale.pt(11), weight: .bold))
-                    .tracking(WatchScale.pt(11) * 0.08)
+                    .font(.system(size: WatchScale.text(11), weight: .bold))
+                    .tracking(WatchScale.text(11) * 0.08)
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
                 Text(FormattingUtils.formatTimer(summary.duration))
                     .font(.system(size: WatchScale.pt(38), weight: .semibold, design: .monospaced))
@@ -91,12 +91,12 @@ struct WorkoutSummaryView: View {
                 // screen had already replaced the workout and so never appeared.
                 if workoutManager.healthKitSaved {
                     Text("Saved to Health \u{2713}")
-                        .font(.system(size: WatchScale.pt(11)))
+                        .font(.system(size: WatchScale.text(11)))
                         .foregroundStyle(ShuttlXColor.textSecondary)
                         .padding(.top, WatchScale.pt(4))
                 } else if workoutManager.healthKitSaveError != nil {
                     Text("Not saved to Health")
-                        .font(.system(size: WatchScale.pt(11), weight: .semibold))
+                        .font(.system(size: WatchScale.text(11), weight: .semibold))
                         .foregroundStyle(ShuttlXColor.ctaWarning)
                         .padding(.top, WatchScale.pt(4))
                         .accessibilityLabel("Not saved to Health. The workout is kept in ShuttlX.")
@@ -216,37 +216,53 @@ struct EffortView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("How hard was it?")
-                .font(.system(size: WatchScale.pt(15), weight: .heavy))
-            Text("\(value)")
-                .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
-                .monospacedDigit()
-                .foregroundStyle(ShuttlXColor.ctaWarning)
-                .fixedSize()
-            Text(Self.word(value))
-                .font(.system(size: WatchScale.pt(12), weight: .bold))
-                .foregroundStyle(ShuttlXColor.ctaWarning)
-            HStack(spacing: 3) {
-                ForEach(0...10, id: \.self) { i in
-                    RoundedRectangle(cornerRadius: 3)
-                        .fill(i <= value ? ShuttlXColor.ctaWarning : Color.white.opacity(0.14))
-                        .frame(height: WatchScale.pt(8))
+            // One adjustable element for VoiceOver: swipe up/down = the Crown.
+            VStack(spacing: 0) {
+                Text("How hard was it?")
+                    .font(.system(size: WatchScale.pt(15), weight: .heavy))
+                Text("\(value)")
+                    .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
+                    .monospacedDigit()
+                    .foregroundStyle(ShuttlXColor.ctaWarning)
+                    .fixedSize()
+                Text(Self.word(value))
+                    .font(.system(size: WatchScale.pt(12), weight: .bold))
+                    .foregroundStyle(ShuttlXColor.ctaWarning)
+                HStack(spacing: 3) {
+                    ForEach(0...10, id: \.self) { i in
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(i <= value ? ShuttlXColor.ctaWarning : Color.white.opacity(0.14))
+                            .frame(height: WatchScale.pt(8))
+                    }
+                }
+                .padding(.top, WatchScale.pt(10))
+                HStack {
+                    Text("0 rest")
+                    Spacer()
+                    Text("10 max")
+                }
+                .font(.system(size: WatchScale.text(10)))
+                .foregroundStyle(ShuttlXColor.textSecondary)
+                .padding(.top, WatchScale.pt(4))
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("How hard was it?")
+            .accessibilityValue("\(value) of 10, \(Self.word(value))")
+            .accessibilityHint("Swipe up or down, or turn the Digital Crown, to change.")
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: crown = min(10, Double(value + 1))
+                case .decrement: crown = max(0, Double(value - 1))
+                @unknown default: break
                 }
             }
-            .padding(.top, WatchScale.pt(10))
-            HStack {
-                Text("0 rest")
-                Spacer()
-                Text("10 max")
-            }
-            .font(.system(size: WatchScale.pt(10)))
-            .foregroundStyle(ShuttlXColor.textSecondary)
-            .padding(.top, WatchScale.pt(4))
             HStack(spacing: 6) {
                 Button("Skip", action: onSkip)
                     .buttonStyle(WatchPillButtonStyle.neutral)
+                    .accessibilityHint("Closes without saving an effort")
                 Button("Save") { onSave(value) }
                     .buttonStyle(WatchPillButtonStyle.primary)
+                    .accessibilityHint("Saves effort \(value) of 10")
             }
             .padding(.top, WatchScale.pt(8))
         }
@@ -257,8 +273,6 @@ struct EffortView: View {
         .digitalCrownRotation($crown, from: 0, through: 10, by: 1, sensitivity: .low,
                               isContinuous: false, isHapticFeedbackEnabled: true)
         .onAppear { focused = true }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("How hard was it? \(value) of 10, \(Self.word(value)). Turn the Digital Crown to change.")
     }
 }
 

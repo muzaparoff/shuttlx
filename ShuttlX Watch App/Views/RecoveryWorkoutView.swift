@@ -33,10 +33,12 @@ struct RecoveryWorkoutView: View {
         return VStack(spacing: h * 0.018) {
             // Top row — total elapsed left, state pill right.
             HStack(spacing: 6) {
-                Text(FormattingUtils.formatTimer(workoutManager.elapsedTime))
-                    .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
-                    .monospacedDigit()
-                    .foregroundColor(ShuttlXColor.textSecondary)
+                WorkoutClockReader(clock: workoutManager.clock) { elapsed in
+                    Text(FormattingUtils.formatTimer(elapsed))
+                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                }
                 Spacer(minLength: 0)
                 statePill(pillSize: pillSize)
             }

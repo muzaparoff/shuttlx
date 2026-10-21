@@ -1,0 +1,19 @@
+appId: ${APP_ID}
+---
+- runFlow: ../common/onboard.yaml
+# Today
+- assertVisible: "Programs & plans"
+# History: calendar / list / map
+- tapOn: "History"
+- assertVisible: "Calendar"
+- tapOn: "List"
+- tapOn: "Map"
+- tapOn: "Calendar"
+# Trends
+- tapOn: "Trends"
+- assertVisible: "No Data Yet"
+# Settings > Heart & alerts
+- tapOn: "Settings"
+- tapOn: "Heart limit and alerts"
+- assertVisible: "Heart & alerts"
+- assertVisible: "130"

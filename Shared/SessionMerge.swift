@@ -33,6 +33,12 @@ public enum SessionMerge {
         return existing.isPhonePlaceholder && overlapsEnough(incoming, existing)
     }
 
+    /// Ids in `existing` that a session in `incoming` replaces (used when the first disk load finishes after a
+    /// watch session already arrived: the placeholder read from disk must not stay as a duplicate).
+    public static func replacedIDs(by incoming: [Item], in existing: [Item]) -> Set<UUID> {
+        Set(existing.filter { e in incoming.contains { replaces(incoming: $0, existing: e) } }.map(\.id))
+    }
+
     /// The watch recorded this workout already (any non-placeholder session of the same time range).
     public static func isCovered(_ phone: Item, by existing: [Item]) -> Bool {
         existing.contains { !$0.isPhonePlaceholder && $0.id != phone.id && overlapsEnough(phone, $0) }

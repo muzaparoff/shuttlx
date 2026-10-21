@@ -64,7 +64,7 @@ extension AppTheme {
             heroIcon: .system(size: 48),
             onboardingIcon: .system(size: 72),
             prValue: .system(.title3, design: .rounded).weight(.bold),
-            microLabel: .system(size: 9),
+            microLabel: .caption2,
             debugMono: .system(.caption, design: .monospaced),
             watchTimerDisplay: .system(size: 36, weight: .bold, design: .monospaced),
             watchMetricDisplay: .system(size: 40, weight: .bold, design: .rounded),

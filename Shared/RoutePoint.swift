@@ -18,3 +18,13 @@ public struct RoutePoint: Identifiable, Codable, Hashable, Sendable {
         self.horizontalAccuracy = horizontalAccuracy
     }
 }
+
+extension Array where Element == RoutePoint {
+    /// Keeps every other point (the last one always stays) once the array holds more than `limit`:
+    /// the route keeps its shape while memory and checkpoints stay bounded.
+    public mutating func thinIfOver(_ limit: Int) {
+        guard count > limit, let last else { return }
+        self = enumerated().compactMap { $0.offset % 2 == 0 ? $0.element : nil }
+        if self.last?.timestamp != last.timestamp { append(last) }
+    }
+}

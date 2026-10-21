@@ -87,7 +87,7 @@ struct TemplateListView: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
                 Image(systemName: "figure.run")
-                    .foregroundStyle(ShuttlXColor.running)
+                    .foregroundStyle(ShuttlXColor.accentText)
                     .frame(width: 20)
                 Text("Free Run")
                     .font(ShuttlXFont.cardTitle)

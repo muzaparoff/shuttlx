@@ -73,7 +73,8 @@ public struct HeartAlertFlags: Equatable, Sendable {
 /// Sudden jump works on real samples, not ticks: a new sample is seen when
 /// `lastHRDate` advances. It fires when two samples at least `jumpConfirmGap` apart,
 /// with no lower sample between them, both sit `jumpBpm` above the lowest sample of the
-/// `jumpWindow` before the first one. A single spike (optical sensor glitch) is ignored.
+/// `jumpWindow` before the first one, and the second arrives within `jumpWindow` of the
+/// first. A single spike (optical sensor glitch) is ignored.
 public struct HeartAlertEvaluator: Sendable {
     public static let aboveWindow: TimeInterval = 10
     public static let belowWindow: TimeInterval = 30
@@ -160,6 +161,8 @@ public struct HeartAlertEvaluator: Sendable {
     private mutating func ingestSample(_ hr: Int, at date: Date) -> Int? {
         samples.removeAll { date.timeIntervalSince($0.date) > Self.jumpWindow }
         defer { samples.append((date, hr)) }
+        // A start older than the window can't be confirmed (a spike, then minutes of no samples).
+        if let start = jumpStart, date.timeIntervalSince(start.date) > Self.jumpWindow { jumpStart = nil }
         if let start = jumpStart {
             let rise = hr - start.baseline
             guard rise >= Self.jumpBpm else { jumpStart = nil; return nil }   // came back down

@@ -13,7 +13,7 @@ struct SafetyPromptView: View {
             Text("Still training?")
                 .font(.system(size: WatchScale.pt(19), weight: .heavy))
             Text("Ends and saves in 5 min if there's no answer.")
-                .font(.system(size: WatchScale.pt(11)))
+                .font(.system(size: WatchScale.text(11)))
                 .foregroundStyle(ShuttlXColor.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, WatchScale.pt(4))
@@ -36,15 +36,15 @@ struct AutoPausedView: View {
 
     var body: some View {
         WatchPromptCard(announcement: "Workout paused. No heart rate for \(seconds) seconds. Still training?") {
-            Text("\u{23F8} PAUSED")
-                .font(.system(size: WatchScale.pt(11), weight: .bold))
-                .tracking(WatchScale.pt(11) * 0.08)
+            Text("\u{23F8}\u{FE0E} PAUSED")
+                .font(.system(size: WatchScale.text(11), weight: .bold))
+                .tracking(WatchScale.text(11) * 0.08)
                 .foregroundStyle(ShuttlXColor.ctaWarning)
             Text("Still training?")
                 .font(.system(size: WatchScale.pt(17), weight: .heavy))
                 .padding(.top, WatchScale.pt(6))
             Text("No heart rate for \(seconds) s.")
-                .font(.system(size: WatchScale.pt(11)))
+                .font(.system(size: WatchScale.text(11)))
                 .foregroundStyle(ShuttlXColor.textSecondary)
                 .padding(.top, WatchScale.pt(3))
         } buttons: {

@@ -68,6 +68,18 @@ public struct SegmentEdits: Codable, Equatable, Sendable {
         }
     }
 
+    /// The one rule for an "effective" session (DataManager and the widgets share it): edited parts, and the
+    /// stored total minus the energy of parts turned into Rest. nil when no edit touches this session.
+    public func effective(segments: [ActivitySegment], calories: Double?, sessionID: UUID)
+        -> (segments: [ActivitySegment], calories: Double?)? {
+        guard !segments.isEmpty,
+              partitions[sessionID.uuidString] != nil || segments.contains(where: { types[$0.id.uuidString] != nil })
+        else { return nil }
+        let edited = apply(to: segments, sessionID: sessionID)
+        let kcal = calories.map { max(0, $0 - Self.caloriesRemoved(raw: segments, effective: edited)) }
+        return (edited, kcal)
+    }
+
     /// Energy the edits removed from the session (rest parts). Subtract it from stored totals.
     public static func caloriesRemoved(raw: [ActivitySegment], effective: [ActivitySegment]) -> Double {
         max(0, raw.reduce(0) { $0 + calories($1) } - effective.reduce(0) { $0 + calories($1) })

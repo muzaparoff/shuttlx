@@ -111,8 +111,32 @@ final class HeartSafetyMigrationTests: XCTestCase {
         XCTAssertNil(HeartSafetySettings(upperLimit: 12).sanitized().upperLimit)
         XCTAssertNil(HeartSafetySettings(upperLimit: 400).sanitized().upperLimit)
         XCTAssertEqual(HeartSafetySettings(upperLimit: 150).sanitized().upperLimit, 150)
-        XCTAssertNil(HeartSafetySettings(upperLimit: 120, lowLimit: 115).sanitized().lowLimit)   // gap < 10
+        XCTAssertEqual(HeartSafetySettings(upperLimit: 120, lowLimit: 115).sanitized().lowLimit, 110)   // clamped to keep the gap
         XCTAssertEqual(HeartSafetySettings(upperLimit: 120, lowLimit: 50).sanitized().lowLimit, 50)
+    }
+
+    /// Age 65 on a beta-blocker estimates 107 bpm, so the low limit may be at most 97. The watch applies the same
+    /// range, so a typed 110 used to be dropped there while the phone still showed it.
+    func testLowLimitIsClampedAgainstTheEstimatedUpperLimit() {
+        let s = HeartSafetySettings(onBetaBlocker: true, lowLimit: 110)
+        XCTAssertEqual(s.effectiveUpperLimit(age: 65), 107)
+        XCTAssertEqual(s.clampedLowLimit(age: 65), 97)
+        let p = s.watchPayload(age: 65)
+        XCTAssertEqual(p.upperLimit, 107)
+        XCTAssertEqual(p.lowLimit, 97)
+        XCTAssertEqual(s.lowLimit, 110, "the phone's stored value is only changed by the screen that shows the note")
+    }
+
+    func testReconcileMovesTheStoredLowLimitAndSaysSo() {
+        var s = HeartSafetySettings(onBetaBlocker: true, lowLimit: 110)
+        XCTAssertEqual(s.reconcileLowLimit(age: 65), "Low limit changed to 97 bpm to stay 10 below the upper limit.")
+        XCTAssertEqual(s.lowLimit, 97)
+        XCTAssertNil(s.reconcileLowLimit(age: 65))
+    }
+
+    func testLowLimitWithinRangeIsUntouched() {
+        XCTAssertEqual(HeartSafetySettings(onBetaBlocker: true, lowLimit: 90).watchPayload(age: 65).lowLimit, 90)
+        XCTAssertNil(HeartSafetySettings(onBetaBlocker: true).watchPayload(age: 65).lowLimit)
     }
 
     func testHasNoLimit() {

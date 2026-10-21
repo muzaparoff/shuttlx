@@ -5,6 +5,7 @@ import ShuttlXShared
 struct ActivityRibbon: View {
     let segments: [ActivitySegment]
     var height: CGFloat = 14
+    @Environment(\.accessibilityDifferentiateWithoutColor) private var noColorOnly
 
     private var total: TimeInterval { segments.reduce(0) { $0 + max(0, $1.duration) } }
 
@@ -13,9 +14,19 @@ struct ActivityRibbon: View {
             HStack(spacing: 2) {
                 ForEach(segments) { segment in
                     let fraction = total > 0 ? max(0, segment.duration) / total : 0
+                    let width = max(6, geo.size.width * fraction)
                     Capsule()
                         .fill(segment.activityType.themeColor)
-                        .frame(width: max(6, geo.size.width * fraction))
+                        .frame(width: width)
+                        .overlay {
+                            // Differentiate Without Colour: a glyph so run vs walk is not told by colour alone.
+                            if noColorOnly, width >= height {
+                                Image(systemName: segment.activityType.systemImage)
+                                    .font(.system(size: max(8, height * 0.6)))
+                                    .foregroundStyle(ShuttlXColor.iconOnCTA)
+                                    .accessibilityHidden(true)
+                            }
+                        }
                 }
             }
         }

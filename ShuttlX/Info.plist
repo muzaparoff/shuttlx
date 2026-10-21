@@ -23,13 +23,13 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>ShuttlX uses your location during workouts to track your route and display it on a map.</string>
+	<string>ShuttlX uses your location during outdoor workouts you start on this iPhone to record your route, distance and pace, including with the screen off. It also shows your position on the History map when you ask for it.</string>
 	<key>NSMotionUsageDescription</key>
 	<string>ShuttlX uses motion data to track your steps and detect activity type during workouts.</string>
 	<key>NSHealthShareUsageDescription</key>
-	<string>ShuttlX uses HealthKit to read your fitness data including steps, calories burned, distance, and heart rate to provide personalized training insights and track your progress. ShuttlX also reads your ShuttlX workouts, including their routes, from Apple Health so a workout recorded on your Apple Watch still appears in your history if it did not sync directly.</string>
+	<string>ShuttlX reads from Apple Health: your workouts and their routes, heart rate, active energy, distance (walking, running, cycling, swimming), steps, and your date of birth (only to estimate your heart limit). It uses them to show your history, your heart-rate chart and a workout recorded on your Apple Watch that did not sync directly. Nothing is changed or deleted in Health by reading.</string>
 	<key>NSHealthUpdateUsageDescription</key>
-	<string>ShuttlX uses HealthKit to save your workout data and fitness activities to keep your health information up to date across all your devices.</string>
+	<string>ShuttlX saves the workouts you record on this iPhone to Apple Health, with their active energy and distance, so they appear next to your other activity.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -20,7 +20,7 @@ struct DevicePickerView: View {
                         Spacer()
                         if selectedDeviceID == nil {
                             Image(systemName: "checkmark")
-                                .foregroundStyle(ShuttlXColor.ctaPrimary)
+                                .foregroundStyle(ShuttlXColor.accentText)
                         }
                     }
                 }
@@ -54,7 +54,7 @@ struct DevicePickerView: View {
 
                             if selectedDeviceID == device.id {
                                 Image(systemName: "checkmark")
-                                    .foregroundStyle(ShuttlXColor.ctaPrimary)
+                                    .foregroundStyle(ShuttlXColor.accentText)
                             }
                         }
                     }

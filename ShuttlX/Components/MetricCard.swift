@@ -27,8 +27,6 @@ struct MetricCard: View {
             Text(label)
                 .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, minHeight: compact ? 0 : 88)
         .padding(compact ? 8 : 12)

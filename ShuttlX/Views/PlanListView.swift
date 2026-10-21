@@ -52,7 +52,7 @@ struct PlanListView: View {
                 planManager.save(plan)
             }
         }
-        .themedScreenBackground()
+        .timelineScreenBackground()
     }
 
     private var builtInPlans: [TrainingPlan] {
@@ -93,7 +93,7 @@ struct PlanListView: View {
                         .frame(width: 80)
                     Text("\(Int(pct * 100))%")
                         .font(.caption2.weight(.semibold))
-                        .foregroundStyle(ShuttlXColor.positive)
+                        .foregroundStyle(ShuttlXColor.accentText)
                 }
                 .padding(.top, 2)
             }

@@ -111,6 +111,23 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
         effortOnly ? nil : (upperLimit ?? estimatedUpperLimit(age: age))
     }
 
+    /// The low limit moved into the range allowed under the RESOLVED upper limit (own or estimated), or nil if
+    /// off. The watch applies the same range, so a low limit above it would be dropped there while the phone
+    /// still showed it.
+    public func clampedLowLimit(age: Int?) -> Int? {
+        guard let low = lowLimit else { return nil }
+        let r = HeartLimits.lowRange(upper: effectiveUpperLimit(age: age))
+        return min(max(low, r.lowerBound), r.upperBound)
+    }
+
+    /// Moves a low limit that no longer fits (the age or Health date of birth changed the estimated upper
+    /// limit) into range. Returns the note to show on the phone, or nil when nothing changed.
+    public mutating func reconcileLowLimit(age: Int?) -> String? {
+        guard let low = lowLimit, let fixed = clampedLowLimit(age: age), fixed != low else { return nil }
+        lowLimit = fixed
+        return "Low limit changed to \(fixed) bpm to stay \(HeartLimits.lowGap) below the upper limit."
+    }
+
     /// Effort 0-10 is always on with a beta-blocker or effort-only mode.
     public var effortAlwaysOn: Bool { onBetaBlocker == true || effortOnly }
 
@@ -128,6 +145,7 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
     public func watchPayload(age: Int?) -> HeartSafetySettings {
         var p = self
         p.upperLimit = effectiveUpperLimit(age: age)
+        p.lowLimit = clampedLowLimit(age: age)
         p.onBetaBlocker = nil
         p.useAirPodsHeartRate = false
         p.heartRateSource = .best
@@ -142,23 +160,69 @@ public struct HeartSafetySettings: Codable, Equatable, Sendable {
     public static let defaultsKey = "heartSafetySettings"
     private static let suite = "group.com.shuttlx.shared"
 
+    /// Settings without the medication notes (see `loadForEditing`). Cheap enough for per-update use.
+    /// An older build saved the notes inside this JSON: they are moved to `MedicineVault` once, here.
     public static func load() -> HeartSafetySettings {
-        guard let data = UserDefaults(suiteName: suite)?.data(forKey: defaultsKey),
-              let s = try? JSONDecoder().decode(HeartSafetySettings.self, from: data)
+        let defaults = UserDefaults(suiteName: suite)
+        guard let data = defaults?.data(forKey: defaultsKey),
+              var s = try? JSONDecoder().decode(HeartSafetySettings.self, from: data)
         else { return HeartSafetySettings() }
+        if s.medicineName != nil || s.dailyDose != nil {
+            // A value leaves the JSON only once the Keychain really holds it; otherwise the legacy copy stays
+            // there and the move is retried on the next load.
+            var left = s
+            if let n = s.medicineName, MedicineVault.name != nil || MedicineVault.store("name", n) { left.medicineName = nil }
+            if let d = s.dailyDose, MedicineVault.dose != nil || MedicineVault.store("dose", d) { left.dailyDose = nil }
+            if left != s, let data = try? JSONEncoder().encode(left) {
+                UserDefaults(suiteName: suite)?.set(data, forKey: defaultsKey)
+            }
+            s.medicineName = nil   // callers of load() never see the notes
+            s.dailyDose = nil
+        }
         return s.sanitized()
+    }
+
+    /// `load()` plus the medicine name and dose from the vault. Only screens that edit them need this.
+    public static func loadForEditing() -> HeartSafetySettings {
+        var s = load()
+        s.medicineName = MedicineVault.name
+        s.dailyDose = MedicineVault.dose
+        return s
     }
 
     /// Drops saved limits outside the accepted ranges (older builds saved every keystroke, e.g. "1" or "12").
     public func sanitized() -> HeartSafetySettings {
         var s = self
         if let u = s.upperLimit, !HeartLimits.upperRange.contains(u) { s.upperLimit = nil }
-        if let l = s.lowLimit, !HeartLimits.lowRange(upper: s.upperLimit).contains(l) { s.lowLimit = nil }
+        if let l = s.lowLimit {
+            let r = HeartLimits.lowRange(upper: s.upperLimit)
+            s.lowLimit = min(max(l, r.lowerBound), r.upperBound)
+        }
         return s
     }
 
-    public func save() {
-        guard let data = try? JSONEncoder().encode(self) else { return }
-        UserDefaults(suiteName: Self.suite)?.set(data, forKey: Self.defaultsKey)
+    /// Writes everything except the medication notes (they never go into UserDefaults). A legacy note that
+    /// could not be moved to the vault yet (`load()`) stays in the JSON until it can be.
+    public func save() { write(keepPendingLegacy: true) }
+
+    private func write(keepPendingLegacy: Bool) {
+        var stripped = self
+        stripped.medicineName = nil
+        stripped.dailyDose = nil
+        let defaults = UserDefaults(suiteName: Self.suite)
+        if keepPendingLegacy, let old = defaults?.data(forKey: Self.defaultsKey),
+           let prev = try? JSONDecoder().decode(HeartSafetySettings.self, from: old) {
+            if MedicineVault.name == nil { stripped.medicineName = prev.medicineName }
+            if MedicineVault.dose == nil { stripped.dailyDose = prev.dailyDose }
+        }
+        guard let data = try? JSONEncoder().encode(stripped) else { return }
+        defaults?.set(data, forKey: Self.defaultsKey)
+    }
+
+    /// `save()` plus the medicine name and dose into the vault. Use only with a value from `loadForEditing()`.
+    public func saveForEditing() {
+        let nameOK = MedicineVault.backend.write("name", medicineName)
+        let doseOK = MedicineVault.backend.write("dose", dailyDose)
+        write(keepPendingLegacy: !(nameOK && doseOK))
     }
 }

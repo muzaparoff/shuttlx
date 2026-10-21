@@ -117,19 +117,25 @@ final class LiveMetricsBroadcaster {
     }
 
     /// Notify iPhone that a workout started — transferUserInfo wakes iOS in background.
-    func notifyWorkoutStarted(sport: WorkoutSport) {
+    /// Watch-originated start only (phone-started workouts are answered by
+    /// `WatchSyncCoordinator.workoutStartFinished()` instead: the phone reads
+    /// `activityType` without `phoneSessionId` as a watch-originated start).
+    func notifyWorkoutStarted(sport: WorkoutSport, sessionID: UUID) {
         guard WCSession.default.activationState == .activated else { return }
         let startPayload: [String: Any] = [
             "action": "workoutStarted",
             "activityType": sport.rawValue,
-            "startTime": Date().timeIntervalSince1970
+            "startTime": Date().timeIntervalSince1970,
+            "sessionId": sessionID.uuidString
         ]
         WCSession.default.transferUserInfo(startPayload)
     }
 
-    /// Notify iPhone that the workout ended (immediate + guaranteed).
-    func notifyWorkoutStopped() {
-        let stopPayload: [String: Any] = ["action": "workoutStopped", "timestamp": Date().timeIntervalSince1970]
+    /// Notify iPhone that the workout ended (immediate + guaranteed). `sessionId`
+    /// (UUID string, optional/additive) lets the phone tell which workout stopped.
+    func notifyWorkoutStopped(sessionID: UUID? = nil) {
+        var stopPayload: [String: Any] = ["action": "workoutStopped", "timestamp": Date().timeIntervalSince1970]
+        if let sessionID { stopPayload["sessionId"] = sessionID.uuidString }
         if WCSession.default.isReachable {
             WCSession.default.sendMessage(stopPayload, replyHandler: nil, errorHandler: nil)
         }

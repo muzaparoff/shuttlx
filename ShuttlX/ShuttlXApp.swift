@@ -38,6 +38,15 @@ struct ShuttlXApp: App {
     @StateObject private var cloudKitSync = CloudKitSyncManager.shared
     @StateObject private var workoutController = iPhoneWorkoutController()
     @StateObject private var deepLinkRouter = DeepLinkRouter()
+    /// A workout start asked for by a URL (widget, control, any app that opens `shuttlx://`): runs only after the user confirms.
+    @State private var pendingStart: PendingStart?
+
+    private struct PendingStart: Identifiable {
+        let id = UUID()
+        let mode: String
+        let template: WorkoutTemplate?
+        var title: String { template.map { "Start \($0.name)?" } ?? "Start a free run?" }
+    }
     @AppStorage("isFirstLaunch") private var isFirstLaunch = true
 
     private let deepLinkLog = OSLog(subsystem: "com.shuttlx.ShuttlX", category: "DeepLink")
@@ -45,7 +54,13 @@ struct ShuttlXApp: App {
     init() {
         let telemetryConfig = TelemetryDeck.Config(appID: "2323535F-7F18-45F3-ACA2-215164CD22BC")
         TelemetryDeck.initialize(config: telemetryConfig)
-        WorkoutControlBridge.send = { PhoneSyncCoordinator.shared.sendLiveActivityControl($0) }
+        // Only a workout with a Live Activity can be controlled from it; a stray intent run is a no-op.
+        WorkoutControlBridge.send = { command in
+            // Cold launch by the button: the system kept the activity, this process has not met it yet.
+            guard LiveActivityManager.shared.adoptExisting() else { return }
+            if WorkoutControlBridge.phoneWorkout?(command) == true { return }
+            PhoneSyncCoordinator.shared.sendLiveActivityControl(command)
+        }
     }
 
     var body: some Scene {
@@ -221,6 +236,9 @@ struct ShuttlXApp: App {
                 PhoneSyncCoordinator.shared.onRemoteWorkoutStopped = { [weak workoutController] in
                     workoutController?.remoteStop()
                 }
+                WorkoutControlBridge.phoneWorkout = { [weak workoutController] command in
+                    workoutController?.handleLiveActivityControl(command) ?? false
+                }
                 #if DEBUG
                 // Screenshot seams (see the MARK above): seed demo sessions
                 // and/or select a launch tab.
@@ -309,6 +327,14 @@ struct ShuttlXApp: App {
                     Text("ShuttlX was closed during a workout that started \(cp.session.startDate.formatted(date: .abbreviated, time: .shortened)). It recorded \(FormattingUtils.formatTimer(cp.session.duration)). Save what was recorded?")
                 }
             }
+            .alert(pendingStart?.title ?? "", isPresented: Binding(
+                get: { pendingStart != nil },
+                set: { if !$0 { pendingStart = nil } }), presenting: pendingStart) { start in
+                Button("Start") { startWatchWorkoutWithRetry(mode: start.mode, template: start.template) }
+                Button("Cancel", role: .cancel) {}
+            } message: { _ in
+                Text("This starts the workout on your Apple Watch.")
+            }
             .onOpenURL { url in
                 os_log(.info, log: deepLinkLog, "onOpenURL fired: %{public}@", url.absoluteString)
                 guard url.scheme == "shuttlx" else { return }
@@ -352,8 +378,8 @@ struct ShuttlXApp: App {
                     if let idString = url.pathComponents.last,
                        let uuid = UUID(uuidString: idString) {
                         if let template = templateManager.templates.first(where: { $0.id == uuid }) {
-                            os_log(.info, log: deepLinkLog, "start-template: starting %{public}@", idString)
-                            startWatchWorkoutWithRetry(mode: "interval", template: template)
+                            os_log(.info, log: deepLinkLog, "start-template: asking to start %{public}@", idString)
+                            pendingStart = PendingStart(mode: "interval", template: template)
                         } else {
                             os_log(.error, log: deepLinkLog,
                                    "start-template: template %{public}@ not found — opening app only", idString)
@@ -363,8 +389,8 @@ struct ShuttlXApp: App {
                     }
                 case "start-freerun":
                     // shuttlx://start-freerun — widget/control tap.
-                    os_log(.info, log: deepLinkLog, "start-freerun: starting free run")
-                    startWatchWorkoutWithRetry(mode: "freeRun")
+                    os_log(.info, log: deepLinkLog, "start-freerun: asking to start a free run")
+                    pendingStart = PendingStart(mode: "freeRun", template: nil)
                 #if DEBUG
                 case "debug-stop-watch":
                     // Test hook: drives the exact same code path as the

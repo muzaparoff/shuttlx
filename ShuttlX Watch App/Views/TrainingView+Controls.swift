@@ -39,7 +39,7 @@ extension TrainingView {
             }
 
             Text("Swipe right: back to workout")
-                .font(.system(size: WatchScale.pt(11)))
+                .font(.system(size: WatchScale.text(11)))
                 .foregroundStyle(ShuttlXColor.textSecondary)
                 .padding(.top, WatchScale.pt(14))
                 .accessibilityHidden(true)

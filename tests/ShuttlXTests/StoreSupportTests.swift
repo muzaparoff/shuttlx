@@ -112,4 +112,18 @@ final class StoreSupportTests: XCTestCase {
         XCTAssertEqual(back?.scope, .sessions)
         XCTAssertNil(PurgeSessionsMessage(payload: ["action": "purgeSessions", "scope": "bogus", "ts": 1.0]))
     }
+
+    func testTrimKeepsTheNewestEntries() throws {
+        let box = SessionInbox<Rec>(directory: dir.appendingPathComponent("rejected"))
+        var ids: [UUID] = []
+        for i in 0..<5 {
+            let r = Rec(id: UUID(), n: i)
+            try box.add(r)
+            ids.append(r.id)
+            let url = box.directory.appendingPathComponent("\(r.id.uuidString).json")
+            try FileManager.default.setAttributes([.modificationDate: Date(timeIntervalSince1970: 1_000 + Double(i))], ofItemAtPath: url.path)
+        }
+        box.trim(to: 2)
+        XCTAssertEqual(Set(box.contents().elements.map(\.id)), Set(ids.suffix(2)))
+    }
 }

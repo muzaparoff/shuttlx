@@ -78,7 +78,7 @@ struct ProgramsTabView: View {
                         }
                     } icon: {
                         Image(systemName: "calendar.badge.clock")
-                            .foregroundStyle(ShuttlXColor.ctaPrimary)
+                            .foregroundStyle(ShuttlXColor.accentText)
                     }
                 }
                 .accessibilityLabel("Training Plans, \(planManager.plans.count) plans")
@@ -108,7 +108,7 @@ struct ProgramsTabView: View {
             }
         }
         .scrollContentBackground(.hidden)
-        .themedScreenBackground()
+        .timelineScreenBackground()
         .navigationTitle("Programs")
         #if DEBUG
         .navigationDestination(isPresented: $autoShowPlans) {
@@ -131,7 +131,6 @@ struct ProgramsTabView: View {
                     Text(subtitle)
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
                 Spacer()
                 Image(systemName: "play.circle.fill")
@@ -160,7 +159,6 @@ struct ProgramsTabView: View {
                     Text(template.summaryText)
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
                 }
                 Spacer()
                 Image(systemName: "play.circle.fill")
@@ -201,7 +199,7 @@ struct ProgramsTabView: View {
                     if let next = planManager.nextWorkout(for: progress) {
                         Text("Week \(next.week), Day \(next.day)")
                             .font(ShuttlXFont.cardCaption)
-                            .foregroundStyle(ShuttlXColor.ctaPrimary)
+                            .foregroundStyle(ShuttlXColor.accentText)
                     }
                 }
             }

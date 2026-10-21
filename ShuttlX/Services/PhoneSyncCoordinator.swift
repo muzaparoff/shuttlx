@@ -33,6 +33,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     @Published var livePauseReason: String?
     private var seenHeartAlerts = Set<String>()
     private var liveMetricsTimeoutTimer: Timer?
+    private var lastLiveMetricsTimestamp: TimeInterval = 0
     private var consecutiveFailures: Int = 0
 
     /// Set when the user requests a remote stop of the Watch workout. While
@@ -42,6 +43,15 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     /// tick (~3s) even when the original sendMessage was dropped for
     /// unreachability. Cleared when the Watch confirms via workoutStopped.
     private var pendingStopSentAt: Date? = nil
+
+    // Phone <-> watch handshake (see `WatchLinkRules`).
+    /// The watch's own session id for the workout we are running or mirroring (from the handshake or a watch start).
+    private(set) var currentWatchSessionId: String?
+    /// When the current workout began (phone start or watch start); a `workoutStopped` sent before it is stale.
+    private var currentWorkoutStart: Date?
+    /// Set while a phone workout is linked to the watch; added to pause / resume / stop / discard.
+    private(set) var linkedPhoneSessionId: String?
+    private var pendingStart: (handshake: WatchLinkRules.StartHandshake, onResult: (WatchLinkRules.StartReply?) -> Void)?
     private var lastStopResendAt: Date? = nil
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "PhoneSyncCoordinator")
 
@@ -191,14 +201,43 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     /// Returns how many were new.
     @discardableResult
     private func ingest(_ sessions: [TrainingSession]) -> Int {
+        ingestCounting(sessions).fresh
+    }
+
+    /// Sessions that fail the sanity check are not stored as history, but not thrown away either: a copy goes
+    /// to `rejected_sessions/<id>.json` (newest 20 kept) so a wrong limit never silently eats a workout.
+    private static let rejectedCap = 20
+    private func quarantine(_ session: TrainingSession) {
+        guard let dir = DataManager.workingContainer()?.appendingPathComponent("rejected_sessions", isDirectory: true) else { return }
+        let box = SessionInbox<TrainingSession>(directory: dir)
+        do {
+            try box.add(session)
+            box.trim(to: Self.rejectedCap)
+        } catch {
+            logger.error("Could not quarantine rejected session \(session.id): \(error.localizedDescription)")
+        }
+    }
+
+    private func ingestCounting(_ sessions: [TrainingSession]) -> (fresh: Int, rejected: Int) {
+        var rejected = 0
         let cutoff = SessionIngestRules.clearedAt()
         var seen = Set<UUID>()
         let fresh = sessions.filter { s in
+            guard WCPayloadValidation.isSaneSession(startDate: s.startDate, duration: s.duration, distanceKm: s.distance,
+                                                    calories: s.caloriesBurned, averageHR: s.averageHeartRate,
+                                                    maxHR: s.maxHeartRate, segmentCount: s.segments.count,
+                                                    routeCount: s.route?.count ?? 0) else {
+                log("Session \(s.id) rejected — values out of range (copy kept in rejected_sessions)")
+                logger.error("Rejected watch session \(s.id): duration \(s.duration), distance \(s.distance ?? -1), start \(s.startDate)")
+                quarantine(s)
+                rejected += 1
+                return false
+            }
             guard seen.insert(s.id).inserted, !isKnown(s.id) else { return false }
             let end = s.endDate ?? s.startDate.addingTimeInterval(s.duration)
             return !SessionIngestRules.isStale(end: end, clearedAt: cutoff)
         }
-        guard !fresh.isEmpty else { return 0 }
+        guard !fresh.isEmpty else { return (0, rejected) }
 
         let inbox = DataManager.pendingInbox()
         for session in fresh {
@@ -213,15 +252,25 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             log("Warning: dataManager nil — buffering \(fresh.count) session(s)")
             pendingForDataManager.append(contentsOf: fresh)
         }
-        return fresh.count
+        return (fresh.count, rejected)
     }
 
-    func handleReceivedSession(_ session: TrainingSession) {
-        guard ingest([session]) > 0 else { return }
+    /// Decodes the base64 `sessionData` unless it is larger than `WCPayloadValidation.maxSessionBytes`.
+    nonisolated private static func sessionBytes(_ base64: String) -> Data? {
+        guard base64.utf8.count <= WCPayloadValidation.maxSessionBytes / 3 * 4 + 4 else { return nil }
+        return Data(base64Encoded: base64)
+    }
+
+    /// False when the session was rejected as implausible (quarantined, not delivered).
+    @discardableResult
+    func handleReceivedSession(_ session: TrainingSession) -> Bool {
+        let result = ingestCounting([session])
+        guard result.fresh > 0 else { return result.rejected == 0 }
         log("New session received: \(session.id)")
         consecutiveFailures = 0
         lastSyncTime = Date()
         updateConnectivityHealth()
+        return true
     }
 
     /// Drops the in-memory relay (after a wipe) so a stale list cannot be re-forwarded.
@@ -252,7 +301,8 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
 
     /// Watch effort answer. Arrives on sendMessage and/or transferUserInfo (may duplicate; applying is idempotent).
     private func handleSessionEffort(_ payload: [String: Any]) {
-        guard let id = payload["sessionId"] as? String, let rpe = payload["effortRPE"] as? Int else {
+        guard let id = payload["sessionId"] as? String, let rpe = payload["effortRPE"] as? Int,
+              WCPayloadValidation.isValidEffort(sessionId: id, rpe: rpe) else {
             log("updateSessionEffort ignored — bad payload")
             return
         }
@@ -272,7 +322,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     private func handleHeartAlert(_ payload: [String: Any]) {
         guard let kindRaw = payload["kind"] as? String,
               let kind = HeartAlert.Kind(rawValue: kindRaw),
-              let ts = payload["ts"] as? TimeInterval else { return }
+              let ts = payload["ts"] as? TimeInterval, ts.isFinite else { return }
         let key = "\(kindRaw)-\(ts)"
         // Older than 60 s, or more than 5 s in the future (wrong watch clock): not shown.
         guard HeartLimits.isFreshAlert(ts: ts, now: Date().timeIntervalSince1970),
@@ -292,7 +342,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         }
         guard enabled else { return }
 
-        let body = HeartAlert(kind: kind, value: payload["value"] as? Int).message
+        let body = HeartAlert(kind: kind, value: WCPayloadValidation.alertValue(payload["value"])).message
         let center = UNUserNotificationCenter.current()
         Task {
             // Permission is asked in onboarding and when an alert is switched on, never here (a system
@@ -337,6 +387,11 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     // MARK: - Live Workout Metrics
 
     func handleLiveMetrics(_ message: [String: Any]) {
+        // The watch sends each snapshot on sendMessage AND applicationContext; handle it once.
+        if let ts = message["timestamp"] as? TimeInterval {
+            if ts <= lastLiveMetricsTimestamp { return }
+            lastLiveMetricsTimestamp = ts
+        }
         // Stop-pending re-send: metrics arriving proves the Watch is reachable
         // at this exact moment, so a stop that was dropped (sendMessage skipped
         // while unreachable / transferUserInfo still queued) can be re-delivered
@@ -358,22 +413,26 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             }
         }
 
+        guard let metrics = WCPayloadValidation.liveMetrics(message) else {
+            log("liveMetrics ignored — elapsed time missing or out of range")
+            return
+        }
         let wasActive = isWorkoutActiveOnWatch
         isWorkoutActiveOnWatch = true
         liveMetricsLastUpdated = Date()
 
-        liveElapsedTime = message["elapsedTime"] as? TimeInterval ?? 0
-        liveHeartRate = message["heartRate"] as? Int ?? 0
-        liveDistance = message["distance"] as? Double ?? 0
-        liveCalories = message["calories"] as? Int ?? 0
-        liveSteps = message["steps"] as? Int ?? 0
-        liveCurrentActivity = message["currentActivity"] as? String ?? "unknown"
-        liveWorkoutName = message["workoutName"] as? String ?? liveCurrentActivity
-        liveIsPaused = message["isPaused"] as? Bool ?? false
-        livePace = message["pace"] as? TimeInterval ?? 0
+        liveElapsedTime = metrics.elapsedTime
+        liveHeartRate = metrics.heartRate
+        liveDistance = metrics.distance
+        liveCalories = metrics.calories
+        liveSteps = metrics.steps
+        liveCurrentActivity = metrics.currentActivity
+        liveWorkoutName = metrics.workoutName
+        liveIsPaused = metrics.isPaused
+        livePace = metrics.pace
 
         // Accumulate live route points for real-time map
-        if let lat = message["latitude"] as? Double, let lon = message["longitude"] as? Double {
+        if let lat = metrics.latitude, let lon = metrics.longitude {
             let point = RoutePoint(latitude: lat, longitude: lon, timestamp: Date())
             // Avoid duplicates (same location within ~5m)
             if let last = liveRoutePoints.last {
@@ -385,6 +444,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             } else {
                 liveRoutePoints.append(point)
             }
+            liveRoutePoints.thinIfOver(2000)
         }
 
         // Explicitly start the Live Activity on the first metric update
@@ -425,7 +485,8 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         if !liveIsPaused {
             liveMetricsTimeoutTimer = Timer.scheduledTimer(withTimeInterval: 30.0, repeats: false) { [weak self] _ in
                 Task { @MainActor [weak self] in
-                    self?.clearLiveWorkoutState(endLiveActivity: false)
+                    // Signal loss is not a stop: only an explicit workoutStopped (or the user) ends the phone workout.
+                    self?.clearLiveWorkoutState(endLiveActivity: false, stopPhoneWorkout: false)
                 }
             }
         }
@@ -443,6 +504,27 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
 
     func pauseWatchWorkout() { sendWorkoutControl("pause") }
     func resumeWatchWorkout() { sendWorkoutControl("resume") }
+    /// Phone Discard: the watch drops its recording instead of saving it. No pending-stop re-send.
+    func discardWatchWorkout() {
+        guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
+            log("discardWorkout skipped — WCSession not activated")
+            return
+        }
+        // The watch ignores a discard without the id of the workout it acknowledged: never send one unlinked.
+        guard let linkedPhoneSessionId else {
+            log("discardWorkout skipped — this phone workout is not linked to the watch")
+            return
+        }
+        let message: [String: Any] = ["action": "discardWorkout", "sentAt": Date().timeIntervalSince1970,
+                                      "phoneSessionId": linkedPhoneSessionId]
+        if WCSession.default.isReachable {
+            WCSession.default.sendMessage(message, replyHandler: nil, errorHandler: { [weak self] error in
+                Task { @MainActor in self?.log("discardWorkout sendMessage failed: \(error.localizedDescription) — relying on transferUserInfo") }
+            })
+        }
+        WCSession.default.transferUserInfo(message)
+    }
+
     func stopWatchWorkout() {
         pendingStopSentAt = Date()
         lastStopResendAt = Date()
@@ -462,25 +544,47 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     /// Returns true when the command was sent and a watch with the app is paired, so the caller may treat
     /// the watch as recording the same workout (and send it pause / resume / stop).
     @discardableResult
-    func startWatchWorkout(mode: String, template: WorkoutTemplate? = nil) -> Bool {
+    func startWatchWorkout(mode: String, template: WorkoutTemplate? = nil, phoneSessionId: UUID? = nil,
+                           onReply: ((WatchLinkRules.StartReply?) -> Void)? = nil) -> Bool {
         guard WCSession.isSupported(), WCSession.default.activationState == .activated else {
             log("workoutControl 'start' skipped — WCSession not activated")
             return false
         }
         // A new workout invalidates any stale pending stop from a prior one.
         pendingStopSentAt = nil
+        currentWorkoutStart = Date()
+        currentWatchSessionId = nil
+        linkedPhoneSessionId = nil
+        pendingStart = nil
         var message: [String: Any] = [
             "action": "workoutControl",
             "command": "start",
             "mode": mode,
             "sentAt": Date().timeIntervalSince1970
         ]
+        if let phoneSessionId, let onReply {
+            let id = phoneSessionId.uuidString
+            message["phoneSessionId"] = id
+            pendingStart = (WatchLinkRules.StartHandshake(phoneSessionId: id), onReply)
+            // No answer in time (old watch build, unreachable, Health sheet on the watch): not linked for now.
+            // The handshake stays open: a late "started" for this id still links (see `handleStartHandshake`).
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(WatchLinkRules.replyTimeout * 1_000_000_000))
+                guard var p = self?.pendingStart, p.handshake.phoneSessionId == id, p.handshake.timeout() else { return }
+                self?.pendingStart?.handshake = p.handshake
+                self?.log("Watch did not answer the start handshake in time — not linked for now")
+                p.onResult(nil)
+            }
+        }
         if let template, let data = try? JSONEncoder().encode(template) {
             message["templateData"] = data
         }
         if WCSession.default.isReachable {
-            WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
-                Task { @MainActor in self?.log("workoutControl 'start' delivered via sendMessage") }
+            WCSession.default.sendMessage(message, replyHandler: { [weak self] reply in
+                Task { @MainActor in
+                    self?.log("workoutControl 'start' delivered via sendMessage")
+                    self?.handleStartHandshake(reply)
+                }
             }, errorHandler: { [weak self] error in
                 Task { @MainActor in self?.log("workoutControl 'start' sendMessage failed: \(error.localizedDescription)") }
             })
@@ -489,7 +593,47 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         }
         WCSession.default.transferUserInfo(message)
         log("workoutControl 'start' sent — mode=\(mode)")
-        return WCSession.default.isPaired && WCSession.default.isWatchAppInstalled
+        let canLink = WCSession.default.isPaired && WCSession.default.isWatchAppInstalled
+        if !canLink { resolveStart(nil) }
+        return canLink
+    }
+
+    /// Ends the handshake. `reply` nil = the watch cannot be reached at all (nothing will answer).
+    private func resolveStart(_ reply: WatchLinkRules.StartReply?) {
+        guard let p = pendingStart else { return }
+        pendingStart = nil
+        if case let .started(watchId)? = reply {
+            linkedPhoneSessionId = p.handshake.phoneSessionId
+            if let watchId { currentWatchSessionId = watchId }
+        }
+        p.onResult(reply)
+    }
+
+    /// The watch's answer to our start (`workoutStarted` / `workoutStartIgnored` with our `phoneSessionId`).
+    /// It arrives on two channels (duplicates are dropped) and can arrive after the timeout (still links).
+    private func handleStartHandshake(_ payload: [String: Any]) {
+        guard var p = pendingStart, let reply = p.handshake.receive(payload) else { return }
+        pendingStart = p
+        resolveStart(reply)
+    }
+
+    /// The phone workout ended or was never linked: stop adding its id to commands.
+    func endPhoneLink() {
+        linkedPhoneSessionId = nil
+        pendingStart = nil
+    }
+
+    /// `workoutStopped` from the watch. An older workout's stop (arrives late over transferUserInfo) is ignored.
+    private func handleWatchStopped(_ payload: [String: Any]) {
+        let sentAt = (payload["sentAt"] as? Double) ?? (payload["timestamp"] as? Double)
+        if WatchLinkRules.isStaleStop(stopSessionId: payload["sessionId"] as? String,
+                                      currentWatchSessionId: currentWatchSessionId,
+                                      sentAt: sentAt, workoutStart: currentWorkoutStart) {
+            log("Ignored a stale workoutStopped (older workout)")
+            return
+        }
+        currentWatchSessionId = nil
+        confirmWatchWorkoutStopped()
     }
 
     /// Sends a pause/resume/stop command to the Watch on two channels:
@@ -521,8 +665,9 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
 
         // sentAt lets the Watch discard stale deliveries (transferUserInfo is FIFO-queued
         // and can arrive minutes later — a stop from a prior workout must not kill the next one).
-        let message: [String: Any] = ["action": "workoutControl", "command": command,
+        var message: [String: Any] = ["action": "workoutControl", "command": command,
                                       "sentAt": Date().timeIntervalSince1970]
+        if let linkedPhoneSessionId { message["phoneSessionId"] = linkedPhoneSessionId }
 
         if WCSession.default.isReachable {
             WCSession.default.sendMessage(message, replyHandler: { [weak self] _ in
@@ -544,7 +689,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         WCSession.default.transferUserInfo(message)
     }
 
-    func clearLiveWorkoutState(endLiveActivity: Bool = true) {
+    func clearLiveWorkoutState(endLiveActivity: Bool = true, stopPhoneWorkout: Bool = true) {
         // NOTE: deliberately does NOT clear pendingStopSentAt — LiveWorkoutCard
         // calls this immediately after stopWatchWorkout(), and the pending-stop
         // re-send must keep working until the Watch confirms via workoutStopped
@@ -566,11 +711,12 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         livePace = 0
         liveRoutePoints = []
         liveMetricsLastUpdated = nil
+        lastLiveMetricsTimestamp = 0
         liveMetricsTimeoutTimer?.invalidate()
         liveMetricsTimeoutTimer = nil
         if wasActive {
-            log("Live workout state cleared — Live Activity ended")
-            onRemoteWorkoutStopped?()
+            log("Live workout state cleared — Live Activity ended: \(endLiveActivity), phone workout stopped: \(stopPhoneWorkout)")
+            if stopPhoneWorkout { onRemoteWorkoutStopped?() }
         }
     }
 
@@ -875,7 +1021,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
     }()
 
     private func log(_ message: String) {
-        logger.info("\(message)")
+        logger.info("\(message, privacy: .private)")  // may carry heart-rate limits, ages, session counts
         syncLog.append("[\(Self.logDateFormatter.string(from: Date()))] \(message)")
         if syncLog.count > 100 {
             syncLog.removeFirst()
@@ -956,7 +1102,7 @@ extension PhoneSyncCoordinator {
                 switch action {
                 case "saveSession":
                     if let sessionDataString = userInfo["sessionData"] as? String,
-                       let sessionData = Data(base64Encoded: sessionDataString) {
+                       let sessionData = Self.sessionBytes(sessionDataString) {
                         do {
                             let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
                             self.handleReceivedSession(trainingSession)
@@ -969,8 +1115,14 @@ extension PhoneSyncCoordinator {
                         self.log("Missing or invalid sessionData in userInfo")
                         self.consecutiveFailures += 1
                     }
+                case "workoutStartIgnored":
+                    self.handleStartHandshake(userInfo)
                 case "workoutStarted":
-                    if let activityType = userInfo["activityType"] as? String {
+                    self.handleStartHandshake(userInfo)
+                    // An answer to a phone-started workout: the phone already has its own Live Activity.
+                    if userInfo["phoneSessionId"] == nil, let activityType = userInfo["activityType"] as? String {
+                        self.currentWatchSessionId = userInfo["sessionId"] as? String
+                        self.currentWorkoutStart = Date()
                         self.pendingStopSentAt = nil  // fresh workout — old stop intent is void
                         self.isWorkoutActiveOnWatch = true
                         self.liveCurrentActivity = activityType
@@ -982,7 +1134,7 @@ extension PhoneSyncCoordinator {
                 case "updateSessionEffort":
                     self.handleSessionEffort(userInfo)
                 case "workoutStopped":
-                    self.confirmWatchWorkoutStopped()
+                    self.handleWatchStopped(userInfo)
                     self.log("Workout stopped on Watch (via transferUserInfo)")
                 case "lastSessionID":
                     // S-5 fix: lastSessionID moved from applicationContext (clobbered by
@@ -1007,7 +1159,7 @@ extension PhoneSyncCoordinator {
                 switch action {
                 case "saveSession":
                     if let sessionDataString = message["sessionData"] as? String,
-                       let sessionData = Data(base64Encoded: sessionDataString) {
+                       let sessionData = Self.sessionBytes(sessionDataString) {
                         do {
                             let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
                             self.handleReceivedSession(trainingSession)
@@ -1027,7 +1179,9 @@ extension PhoneSyncCoordinator {
                 case "updateSessionEffort":
                     self.handleSessionEffort(message)
                 case "workoutStopped":
-                    self.confirmWatchWorkoutStopped()
+                    self.handleWatchStopped(message)
+                case "workoutStarted", "workoutStartIgnored":
+                    self.handleStartHandshake(message)
                 case "ping":
                     self.consecutiveFailures = 0
                 default:
@@ -1071,12 +1225,14 @@ extension PhoneSyncCoordinator {
                 switch action {
                 case "saveSession":
                     if let sessionDataString = message["sessionData"] as? String,
-                       let sessionData = Data(base64Encoded: sessionDataString) {
+                       let sessionData = Self.sessionBytes(sessionDataString) {
                         do {
                             let trainingSession = try JSONDecoder().decode(TrainingSession.self, from: sessionData)
-                            self.handleReceivedSession(trainingSession)
+                            let accepted = self.handleReceivedSession(trainingSession)
                             self.consecutiveFailures = 0
-                            replyHandler(["status": "saved", "timestamp": Date().timeIntervalSince1970])
+                            // A rejected (implausible) session is NOT acknowledged as saved.
+                            replyHandler(accepted ? ["status": "saved", "timestamp": Date().timeIntervalSince1970]
+                                                  : ["error": "Session rejected"])
                         } catch {
                             self.log("Failed to decode session from message(reply): \(error.localizedDescription)")
                             self.consecutiveFailures += 1
@@ -1093,7 +1249,10 @@ extension PhoneSyncCoordinator {
                     self.handleLiveMetrics(message)
                     replyHandler(["status": "received"])
                 case "workoutStopped":
-                    self.confirmWatchWorkoutStopped()
+                    self.handleWatchStopped(message)
+                    replyHandler(["status": "received"])
+                case "workoutStarted", "workoutStartIgnored":
+                    self.handleStartHandshake(message)
                     replyHandler(["status": "received"])
                 case "ping":
                     replyHandler(["status": "alive", "timestamp": Date().timeIntervalSince1970])
@@ -1131,8 +1290,8 @@ extension PhoneSyncCoordinator {
         }
 
         Task { @MainActor in
-            guard let data = fileData else {
-                self.log("Failed to read file transfer data — file may have been cleaned up")
+            guard let data = fileData, data.count <= WCPayloadValidation.maxSessionBytes else {
+                self.log("Failed to read file transfer data (missing or over the size limit) — file may have been cleaned up")
                 self.consecutiveFailures += 1
                 self.updateConnectivityHealth()
                 return

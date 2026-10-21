@@ -49,6 +49,9 @@ class DataManager: ObservableObject {
     private let archiveKey = "sessions_archive.json"
     /// Active-history cap. Overflow is archived oldest-first — newest workouts are never dropped.
     private let sessionCap = 500
+    /// Eviction waits until the list is this far over the cap, then trims back to the cap: the archive file is
+    /// re-read and rewritten once per ~50 sessions instead of on every new session.
+    private let evictionSlack = 50
     private let appGroupIdentifier = "group.com.shuttlx.shared"
 
     init() {
@@ -71,15 +74,11 @@ class DataManager: ObservableObject {
             return
         }
         effectiveSessions = sessions.map { session in
-            guard !session.segments.isEmpty,
-                  edits.partitions[session.id.uuidString] != nil
-                    || session.segments.contains(where: { edits.types[$0.id.uuidString] != nil })
+            guard let e = edits.effective(segments: session.segments, calories: session.caloriesBurned, sessionID: session.id)
             else { return session }
             var s = session
-            s.segments = edits.apply(to: session.segments, sessionID: session.id)
-            if let kcal = s.caloriesBurned {
-                s.caloriesBurned = max(0, kcal - SegmentEdits.caloriesRemoved(raw: session.segments, effective: s.segments))
-            }
+            s.segments = e.segments
+            s.caloriesBurned = e.calories
             return s
         }
     }
@@ -185,7 +184,7 @@ class DataManager: ObservableObject {
         }
 
         var all = sessions + fresh
-        let evicted = Self.evictOldest(from: &all, cap: sessionCap)
+        let evicted = Self.evictOldest(from: &all, cap: sessionCap, slack: evictionSlack)
         sessions = all
         if !evicted.isEmpty {
             appendToArchive(evicted)
@@ -273,8 +272,8 @@ class DataManager: ObservableObject {
     /// Keeps the active list at `cap` by removing the OLDEST overflow and returning it for the archive.
     /// Archived ids stay in `processedSessionIds`, so watch re-sends of archived sessions are still
     /// deduplicated and cannot re-enter the active list.
-    private static func evictOldest(from all: inout [TrainingSession], cap: Int) -> [TrainingSession] {
-        guard all.count > cap else { return [] }
+    private static func evictOldest(from all: inout [TrainingSession], cap: Int, slack: Int) -> [TrainingSession] {
+        guard all.count > cap + slack else { return [] }
         let evicted = Array(all.sorted { $0.startDate < $1.startDate }.prefix(all.count - cap))
         let evictedIds = Set(evicted.map { $0.id })
         all.removeAll { evictedIds.contains($0.id) }
@@ -384,7 +383,7 @@ class DataManager: ObservableObject {
             guard let year = c.year,
                   let age = HeartLimits.age(birthYear: year, birthMonth: c.month, birthDay: c.day, now: Date()) else { return }
             if DeviceManager.shared.setAgeFromHealth(age) {
-                logger.info("Age \(age) taken from the Health date of birth")
+                logger.info("Age \(age, privacy: .private) taken from the Health date of birth")
                 PhoneSyncCoordinator.shared.sendHeartSafetyToWatch(HeartSafetySettings.load(), age: age)
             }
         } catch {
@@ -553,8 +552,15 @@ class DataManager: ObservableObject {
         processedSessionIds.formUnion(loaded.map { $0.id })
         // Sessions received while the read was in flight are already in `sessions`; keep them.
         let existingIds = Set(sessions.map { $0.id })
-        let missing = loaded.filter { !existingIds.contains($0.id) }
+        var missing = loaded.filter { !existingIds.contains($0.id) }
         guard !missing.isEmpty else { return }
+        // A watch session that arrived during the read replaces a phone placeholder that is only now loaded.
+        let arrived = sessions.filter { $0.importedFromHealth != true }.map { Self.mergeItem($0, placeholder: false) }
+        let victims = SessionMerge.replacedIDs(by: arrived, in: missing.map { Self.mergeItem($0, placeholder: isPhonePlaceholder($0.id)) })
+        if !victims.isEmpty {
+            missing.removeAll { victims.contains($0.id) }
+            logger.info("Dropped \(victims.count) loaded placeholder(s) already replaced by a watch session")
+        }
         sessions = existingIds.isEmpty ? loaded : sessions + missing
         logger.info("Loaded \(missing.count) session(s) from disk")
     }
@@ -598,7 +604,7 @@ class DataManager: ObservableObject {
         for key in ["pendingSessionEffort", "healthImport.anchor", "healthImport.deferredUUIDs",
                     "healthImport.lastDate", "healthImport.lastCount", "phonePlaceholderSessionIDs"] { std.removeObject(forKey: key) }
 
-        var names = [sessionsKey, archiveKey, "segment_overrides.json", PhoneWorkoutCheckpoint.fileName]
+        var names = [sessionsKey, archiveKey, "segment_overrides.json", PhoneWorkoutCheckpoint.fileName, "rejected_sessions"]
         var corruptPrefixes = ["sessions_corrupt_", "sessions_archive_corrupt_", "segment_overrides_corrupt_"]
         if scope == .everything {
             names += ["workout_templates.json", "exercise_devices.json", "training_plans.json", "plan_progress.json"]
@@ -606,6 +612,7 @@ class DataManager: ObservableObject {
                                 "training_plans_corrupt_", "plan_progress_corrupt_"]
             std.removeObject(forKey: "cloudKitPullSinceDate")
             HeartRateZoneCalculator.saveMaxHR(0)
+            MedicineVault.clear()
             let group = UserDefaults(suiteName: appGroupIdentifier)
             for key in ["userWeightKg", "userAge", "userAgeFromHealth", HeartSafetySettings.defaultsKey] { group?.removeObject(forKey: key) }
         }

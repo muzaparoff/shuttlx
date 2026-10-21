@@ -75,8 +75,38 @@ final class ActivityClassifierTests: XCTestCase {
         XCTAssertEqual(r?.speed ?? 0, 6, accuracy: 0.001)
         // History shorter than the window -> nil.
         XCTAssertNil(C.averageSpeed(of: pts(every: 1, for: 20, speed: 6), now: now))
-        // One fix every 7 s (walking pace with a 10 m distance filter): too few fixes.
-        XCTAssertNil(C.averageSpeed(of: pts(every: 7, for: 70, speed: 1.4), now: now))
+    }
+
+    /// B1: walking at 1.4 m/s with the 10 m distance filter gives one fix every ~7 s,
+    /// about 4 in the 30 s window. The window is covered, so it must classify — a
+    /// fix count of 15 kept a rider who got off the bike on CYCLE forever.
+    func testAverageSpeedAtWalkingPaceCoversWindow() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let walk = stride(from: 70, through: 0, by: -7).map {
+            RoutePoint(latitude: 0, longitude: 0, timestamp: now - TimeInterval($0), speed: 1.4)
+        }
+        let r = C.averageSpeed(of: walk, now: now)
+        XCTAssertEqual(r?.fixes, 5)
+        XCTAssertEqual(r?.speed ?? 0, 1.4, accuracy: 0.001)
+        XCTAssertEqual(C.classify(speed: r?.speed ?? 0, cadence: nil)?.activity, .walking)
+    }
+
+    /// A gap (pause, GPS loss) inside the window means it is not covered: a fresh
+    /// resume must not classify on the 2-3 fixes since.
+    func testAverageSpeedRejectsGapInWindow() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        let beforePause = (0...40).map {
+            RoutePoint(latitude: 0, longitude: 0, timestamp: now - 100 - TimeInterval($0), speed: 6)
+        }.reversed()
+        let afterResume = [8.0, 4, 0].map {
+            RoutePoint(latitude: 0, longitude: 0, timestamp: now - $0, speed: 1.4)
+        }
+        XCTAssertNil(C.averageSpeed(of: Array(beforePause) + afterResume, now: now))
+        // No fix for the last 20 s either.
+        let stale = stride(from: 60, through: 20, by: -2).map {
+            RoutePoint(latitude: 0, longitude: 0, timestamp: now - TimeInterval($0), speed: 1.4)
+        }
+        XCTAssertNil(C.averageSpeed(of: stale, now: now))
     }
 
     func testFootFallbackUsesSpeedWhenMotionIsStale() {
@@ -85,5 +115,40 @@ final class ActivityClassifierTests: XCTestCase {
         XCTAssertEqual(C.footFallback(speedVerdict: .walking, motionReadingAt: now - 300, now: now), .walking)
         XCTAssertNil(C.footFallback(speedVerdict: .running, motionReadingAt: now - 20, now: now))  // motion re-earns it
         XCTAssertEqual(C.footFallback(speedVerdict: .stationary, motionReadingAt: nil, now: now), .walking)
+    }
+
+    /// Slow walk after cycling: a fix every 17 s (0.6 m/s, 10 m filter) never covers
+    /// the window, so speed alone kept the segment on CYCLE forever.
+    func testSlowWalkAfterCyclingLeavesCyclingOnGap() {
+        let start = Date(timeIntervalSince1970: 1_000)
+        var h = C.Hysteresis()
+        for s in stride(from: 0, through: 60, by: 5) { h.ingest(.cycling, at: start + TimeInterval(s)) }
+        XCTAssertEqual(h.committed, .cycling)
+
+        let walk = (0..<20).map {
+            RoutePoint(latitude: 0, longitude: 0, timestamp: start + 70 + TimeInterval($0 * 17), speed: 0.6)
+        }
+        var committedAt: TimeInterval?
+        for s in stride(from: 100.0, through: 400, by: 5) {
+            let now = start + s
+            let fixes = walk.filter { $0.timestamp <= now }
+            XCTAssertNil(C.averageSpeed(of: fixes, now: now))   // the mechanism: never covered
+            if let foot = C.gapVerdict(motion: nil, motionReadingAt: nil, cadence: 95, now: now) {
+                XCTAssertEqual(foot, .walking)
+                if h.ingest(.walking, at: now) != .cycling, committedAt == nil { committedAt = s }
+            }
+        }
+        XCTAssertEqual(committedAt, 160)   // the usual 60 s hold
+    }
+
+    func testGapVerdictKeepsCyclingAtARedLight() {
+        let now = Date(timeIntervalSince1970: 1_000)
+        XCTAssertNil(C.gapVerdict(motion: nil, motionReadingAt: nil, cadence: 0, now: now))
+        XCTAssertNil(C.gapVerdict(motion: nil, motionReadingAt: nil, cadence: nil, now: now))
+        XCTAssertNil(C.gapVerdict(motion: .stationary, motionReadingAt: now - 5, cadence: 10, now: now))
+        XCTAssertNil(C.gapVerdict(motion: .cycling, motionReadingAt: now - 5, cadence: nil, now: now))
+        XCTAssertNil(C.gapVerdict(motion: .walking, motionReadingAt: now - 300, cadence: nil, now: now)) // stale
+        XCTAssertEqual(C.gapVerdict(motion: .walking, motionReadingAt: now - 5, cadence: nil, now: now), .walking)
+        XCTAssertEqual(C.gapVerdict(motion: nil, motionReadingAt: nil, cadence: 150, now: now), .running)
     }
 }

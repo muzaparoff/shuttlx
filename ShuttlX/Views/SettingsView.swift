@@ -344,7 +344,7 @@ struct SettingsView: View {
                     .accessibilityLabel(successMessage)
             }
         }
-        .animation(.spring(response: 0.3, dampingFraction: 0.8), value: showSuccessMessage)
+        .animation(.ifAllowed(.spring(response: 0.3, dampingFraction: 0.8)), value: showSuccessMessage)
         .timelineScreenBackground()
         .scrollDismissesKeyboard(.interactively)
         #if DEBUG
@@ -434,6 +434,7 @@ struct SettingsView: View {
     }
 
     private func pushHeart() {
+        if let note = heart.reconcileLowLimit(age: age) { ageHint = note }   // e.g. a new age lowered the estimated upper limit
         heart.save()
         sharedDataManager.sendHeartSafetyToWatch(heart, age: age)
     }
@@ -460,7 +461,7 @@ struct ToastView: View {
         HStack(spacing: 10) {
             Image(systemName: systemImage)
                 .font(.title3)
-                .foregroundStyle(ShuttlXColor.positive)
+                .foregroundStyle(ShuttlXColor.accentText)
             Text(message)
                 .font(.callout)
         }

@@ -32,6 +32,9 @@ struct HistoryMapView: View {
     @State private var hybrid = false
     @State private var expanded = false
     @State private var showLaps = false
+    @EnvironmentObject private var dataManager: DataManager
+    /// Polylines are expensive (activity lookup per point); rebuilt only when the sessions, filter or edits change.
+    @State private var pieceCache: [RoutePiece] = []
 
     private static let rowHeight: CGFloat = 58
     private static let locationManager = CLLocationManager()
@@ -55,8 +58,8 @@ struct HistoryMapView: View {
 
     private var selected: TrainingSession? { routed.first { $0.id == selectedID } }
 
-    private var pieces: [RoutePiece] {
-        routed.flatMap { pieces(for: $0) }.filter { filter == nil || $0.activity == filter }
+    private func rebuildPieces() {
+        pieceCache = routed.flatMap { pieces(for: $0) }.filter { filter == nil || $0.activity == filter }
     }
 
     /// Splits the (decimated) route by the effective activity at each point's timestamp.
@@ -155,16 +158,18 @@ struct HistoryMapView: View {
             if let raw = ProcessInfo.processInfo.environment["SHUTTLX_HISTORY_SELECT"], let n = Int(raw),
                routed.indices.contains(n) { selectedID = routed[n].id }
             #endif
+            rebuildPieces()
             fit()
         }
-        .onChange(of: sessions.map(\.id)) { _, _ in selectedID = nil; fit() }
-        .onChange(of: filter) { _, _ in selectedID = nil; fit() }
+        .onChange(of: sessions.map(\.id)) { _, _ in selectedID = nil; rebuildPieces(); fit() }
+        .onChange(of: filter) { _, _ in selectedID = nil; rebuildPieces(); fit() }
+        .onChange(of: dataManager.effectiveVersion) { _, _ in rebuildPieces() }
         .onChange(of: selectedID) { _, _ in showLaps = false; fit() }
         .accessibilityElement(children: .contain)
     }
 
     private var map: some View {
-        let all = pieces
+        let all = pieceCache
         let dim = selectedID != nil
         return Map(position: $position, selection: $selectedID) {
             UserAnnotation()
@@ -214,7 +219,7 @@ struct HistoryMapView: View {
                     HStack(spacing: 4) { Image(systemName: "chevron.left"); Text("All trainings") }
                         .font(ShuttlXFont.cardCaption.weight(.semibold))
                         .foregroundStyle(ShuttlXColor.textPrimary)
-                        .padding(.horizontal, 12).frame(height: 32)
+                        .padding(.horizontal, 12).frame(minHeight: 32)
                         .background(.regularMaterial, in: Capsule())
                 }
                 .buttonStyle(.plain)
@@ -245,13 +250,15 @@ struct HistoryMapView: View {
     }
 
     private var chips: some View {
-        HStack(spacing: 6) {
-            chip("All", dot: nil, on: filter == nil) { filter = nil }
-            ForEach(filterable, id: \.self) { a in
-                chip(TodayFormat.activityName(a), dot: color(a), on: filter == a) { filter = a }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                chip("All", dot: nil, on: filter == nil) { filter = nil }
+                ForEach(filterable, id: \.self) { a in
+                    chip(TodayFormat.activityName(a), dot: color(a), on: filter == a) { filter = a }
+                }
             }
+            .padding(.horizontal, 14)
         }
-        .padding(.horizontal, 14)
     }
 
     private func chip(_ title: String, dot: Color?, on: Bool, action: @escaping () -> Void) -> some View {
@@ -262,7 +269,7 @@ struct HistoryMapView: View {
             }
             .font(ShuttlXFont.cardCaption.weight(.semibold))
             .foregroundStyle(on ? ShuttlXColor.iconOnCTA : ShuttlXColor.textPrimary)
-            .padding(.horizontal, 12).frame(height: 32)
+            .padding(.horizontal, 12).frame(minHeight: 32)
             .background(on ? AnyShapeStyle(ShuttlXColor.ctaPrimary) : AnyShapeStyle(.regularMaterial), in: Capsule())
             .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
             .padding(.vertical, 6)
@@ -287,7 +294,7 @@ struct HistoryMapView: View {
             }
             .font(ShuttlXFont.cardCaption.weight(.semibold))
             .foregroundStyle(ShuttlXColor.textPrimary)
-            .padding(.horizontal, 12).frame(height: 32)
+            .padding(.horizontal, 12).frame(minHeight: 32)
             .background(.regularMaterial, in: Capsule())
             .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
         }
@@ -299,7 +306,7 @@ struct HistoryMapView: View {
             Image(systemName: icon)
                 .font(ShuttlXFont.cardSubtitle)
                 .foregroundStyle(ShuttlXColor.textPrimary)
-                .frame(width: 40, height: 40)
+                .frame(minWidth: 44, minHeight: 44)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
         }
@@ -336,9 +343,9 @@ struct HistoryMapView: View {
                 .padding(.top, 6).padding(.bottom, 4)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
-                .onTapGesture { withAnimation(.snappy) { expanded.toggle() } }
+                .onTapGesture { withAnimation(.ifAllowed(.snappy)) { expanded.toggle() } }
                 .gesture(DragGesture(minimumDistance: 12).onEnded { v in
-                    withAnimation(.snappy) { expanded = v.translation.height < 0 }
+                    withAnimation(.ifAllowed(.snappy)) { expanded = v.translation.height < 0 }
                 })
                 .accessibilityElement()
                 .accessibilityLabel("Trainings sheet")
@@ -482,10 +489,10 @@ struct HistoryMapView: View {
                 }
                 .buttonStyle(.plain)
                 if let group {
-                    Button { withAnimation(.snappy) { showLaps.toggle() } } label: {
+                    Button { withAnimation(.ifAllowed(.snappy)) { showLaps.toggle() } } label: {
                         Text("Same route \u{00B7} \(group.count)\u{00D7}")
                             .font(ShuttlXFont.cardSubtitle.weight(.semibold))
-                            .foregroundStyle(ShuttlXColor.ctaPrimary)
+                            .foregroundStyle(ShuttlXColor.accentText)
                             .frame(maxWidth: .infinity, minHeight: 46)
                             .background(ShuttlXColor.ctaPrimary.opacity(0.12), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
                     }

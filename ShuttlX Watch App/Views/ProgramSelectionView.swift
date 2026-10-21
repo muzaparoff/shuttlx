@@ -14,8 +14,8 @@ struct StartTrainingView: View {
     var body: some View {
         VStack(spacing: 0) {
             Text("SHUTTLX")
-                .font(.system(size: WatchScale.pt(11), weight: .bold))
-                .tracking(WatchScale.pt(11) * 0.08)
+                .font(.system(size: WatchScale.text(11), weight: .bold))
+                .tracking(WatchScale.text(11) * 0.08)
                 .foregroundStyle(ShuttlXColor.ctaPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -56,7 +56,7 @@ struct StartTrainingView: View {
             .accessibilityHint("Begins a free-form workout that finds running and walking by itself")
 
             Text("Free Run \u{00B7} finds Run / Walk itself")
-                .font(.system(size: WatchScale.pt(11)))
+                .font(.system(size: WatchScale.text(11)))
                 .foregroundStyle(ShuttlXColor.textSecondary)
                 .lineLimit(1)
                 .fixedSize()

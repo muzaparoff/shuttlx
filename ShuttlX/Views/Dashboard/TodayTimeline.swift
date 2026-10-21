@@ -127,17 +127,19 @@ struct PartsFoundBanner: View {
                 .joined(separator: " \u{00B7} ") + ". Right?")
                 .font(ShuttlXFont.cardCaption)
                 .foregroundStyle(ShuttlXColor.textPrimary.opacity(0.7))
-            HStack(spacing: 8) {
-                Button("Looks right", action: onLooksRight)
-                    .font(ShuttlXFont.cardCaption.weight(.semibold))
-                    .foregroundStyle(ShuttlXColor.iconOnCTA)
-                    .padding(.horizontal, 14).frame(minHeight: 34)
-                    .background(ShuttlXColor.ctaPrimary, in: Capsule())
-                Button("Fix a part", action: onFix)
-                    .font(ShuttlXFont.cardCaption.weight(.semibold))
-                    .foregroundStyle(ShuttlXColor.ctaPrimary)
-                    .padding(.horizontal, 14).frame(minHeight: 34)
-                    .background(ShuttlXColor.ctaPrimary.opacity(0.12), in: Capsule())
+            let looksRight = Button("Looks right", action: onLooksRight)
+                .font(ShuttlXFont.cardCaption.weight(.semibold))
+                .foregroundStyle(ShuttlXColor.iconOnCTA)
+                .padding(.horizontal, 14).frame(minHeight: 44)
+                .background(ShuttlXColor.ctaPrimary, in: Capsule())
+            let fix = Button("Fix a part", action: onFix)
+                .font(ShuttlXFont.cardCaption.weight(.semibold))
+                .foregroundStyle(ShuttlXColor.accentText)
+                .padding(.horizontal, 14).frame(minHeight: 44)
+                .background(ShuttlXColor.ctaPrimary.opacity(0.12), in: Capsule())
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { looksRight; fix }
+                VStack(alignment: .leading, spacing: 8) { looksRight; fix }
             }
             .buttonStyle(.plain)
         }
@@ -319,7 +321,7 @@ struct TodayEmptyState: View {
             Circle()
                 .fill(ShuttlXColor.ctaPrimary.opacity(0.14))
                 .frame(width: 84, height: 84)
-                .overlay(Image(systemName: "clock").font(ShuttlXFont.metricLarge).foregroundStyle(ShuttlXColor.ctaPrimary))
+                .overlay(Image(systemName: "clock").font(ShuttlXFont.metricLarge).foregroundStyle(ShuttlXColor.accentText))
                 .accessibilityHidden(true)
             Text("Start a workout on your watch")
                 .font(ShuttlXFont.metricMedium)

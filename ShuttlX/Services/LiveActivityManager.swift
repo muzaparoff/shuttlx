@@ -12,6 +12,8 @@ class LiveActivityManager {
     /// Tracks whether startActivity() previously failed, allowing retry on next call.
     private var startFailed = false
 
+    var hasActivity: Bool { currentActivity != nil }
+
     private init() {}
 
     // Ribbon bookkeeping: the watch doesn't broadcast segments, so the phone builds
@@ -35,6 +37,17 @@ class LiveActivityManager {
         }
     }
 
+    /// Picks up the activity the system kept across an app relaunch. True when one is held afterwards.
+    /// The Live Activity buttons call this first: a cold launch by a button tap has no `currentActivity` yet.
+    @discardableResult
+    func adoptExisting() -> Bool {
+        if currentActivity == nil {
+            currentActivity = Activity<WorkoutActivityAttributes>.activities.first(where: { $0.activityState == .active })
+            if let currentActivity { logger.info("Live Activity adopted: \(currentActivity.id)") }
+        }
+        return currentActivity != nil
+    }
+
     /// Explicitly starts a Live Activity for the given workout type.
     /// If `Activity.request()` throws, the error is logged and `startFailed` is set
     /// so that subsequent calls (e.g. from `updateActivity`) can retry.
@@ -47,6 +60,14 @@ class LiveActivityManager {
 
         // If an activity already exists and we haven't failed, skip.
         if currentActivity != nil && !startFailed {
+            return true
+        }
+
+        // One that survived an app relaunch (the system keeps it): adopt it instead of starting a second.
+        if currentActivity == nil, let existing = Activity<WorkoutActivityAttributes>.activities.first(where: { $0.activityState == .active }) {
+            currentActivity = existing
+            startFailed = false
+            logger.info("Live Activity adopted: \(existing.id)")
             return true
         }
 
@@ -171,9 +192,19 @@ class LiveActivityManager {
         currentActivity = nil
     }
 
+    /// Ends leftovers. The first live (not stale) activity is kept and adopted: the workout it shows may still run
+    /// (app relaunched mid-workout). Stale ones are orphans, extra live ones are duplicates; both are ended.
     func cleanupStaleActivities() {
+        let all = Activity<WorkoutActivityAttributes>.activities
+        let isLive: (Activity<WorkoutActivityAttributes>) -> Bool = {
+            $0.activityState == .active && !($0.content.staleDate.map { $0 < Date() } ?? false)
+        }
+        // The one this process already holds (started or adopted, e.g. by a button tap) is never swept, stale or not.
+        let keep = all.first(where: { $0.id == currentActivity?.id && $0.activityState == .active }) ?? all.first(where: isLive)
+        currentActivity = keep
+        if let keep { logger.info("Live Activity kept: \(keep.id)") }
         Task {
-            for activity in Activity<WorkoutActivityAttributes>.activities {
+            for activity in all where activity.id != keep?.id {
                 await activity.end(nil, dismissalPolicy: .immediate)
             }
         }

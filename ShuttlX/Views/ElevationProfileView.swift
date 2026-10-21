@@ -76,7 +76,7 @@ struct ElevationProfileView: View {
                         x: .value("Distance (km)", point.distance),
                         y: .value("Altitude (m)", point.altitude)
                     )
-                    .foregroundStyle(ShuttlXColor.running)
+                    .foregroundStyle(ShuttlXColor.accentText)
                     .lineStyle(StrokeStyle(lineWidth: 2))
                 }
                 .chartYScale(domain: (stats.minAltitude - 5)...(stats.maxAltitude + 5))

@@ -1177,8 +1177,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ShuttlX Watch App/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ShuttlX;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to read your workout data to track your training progress.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app needs access to save your workout data to track your training progress.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "ShuttlX reads your heart rate, steps, distance and active energy during a workout to show them live and check them against your heart limit, and your weight, date of birth and sex to estimate calories and heart-rate zones.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "ShuttlX saves each workout to Health, with its distance, active energy and GPS route.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.shuttlx.ShuttlX;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -1266,8 +1266,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "ShuttlX Watch App/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = ShuttlX;
-				INFOPLIST_KEY_NSHealthShareUsageDescription = "This app needs access to read your workout data to track your training progress.";
-				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "This app needs access to save your workout data to track your training progress.";
+				INFOPLIST_KEY_NSHealthShareUsageDescription = "ShuttlX reads your heart rate, steps, distance and active energy during a workout to show them live and check them against your heart limit, and your weight, date of birth and sex to estimate calories and heart-rate zones.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "ShuttlX saves each workout to Health, with its distance, active energy and GPS route.";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
 				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.shuttlx.ShuttlX;
 				LD_RUNPATH_SEARCH_PATHS = (

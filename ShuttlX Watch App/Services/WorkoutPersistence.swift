@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ShuttlXShared
 
 /// Crash-recovery backup store for the active workout — extracted from
 /// WatchWorkoutManager (refactor plan Phase 3).
@@ -14,21 +15,37 @@ final class WorkoutPersistence: Sendable {
     /// Serializes checkpoint/clear so a clear can never interleave mid-write.
     private let queue = DispatchQueue(label: "com.shuttlx.workout-persistence", qos: .utility)
 
+    /// The GPS route lives in its own file so the 15 s checkpoint does not re-encode
+    /// up to 2000 points every time; tagged with the session id so a leftover file
+    /// can never join another workout.
+    private struct RouteBackup: Codable {
+        let sessionID: UUID
+        let points: [RoutePoint]
+    }
+
     /// Encode + write the backup off the calling actor. Safe to call every tick;
-    /// the caller throttles cadence.
-    func checkpoint(_ session: TrainingSession, autoPauseReason: String? = nil) {
+    /// the caller throttles cadence. `route` is written only when non-nil (the
+    /// caller passes it at most every 60 s and on pause); otherwise the last
+    /// written route file stays.
+    func checkpoint(_ session: TrainingSession, route: [RoutePoint]?, autoPauseReason: String? = nil) {
+        var session = session
+        session.route = nil
         queue.async { [logger] in
             // Sidecar (not a TrainingSession field): the model is duplicated per
             // target and this only matters for resuming the paused overlay.
             UserDefaults.standard.set(autoPauseReason, forKey: Self.autoPauseReasonKey)
             do {
-                let data = try JSONEncoder().encode(session)
-                guard let backupURL = Self.backupURL() else {
+                guard let backupURL = Self.backupURL(), let routeURL = Self.routeURL() else {
                     logger.error("Could not resolve backup URL for workout backup")
                     return
                 }
+                if let route {
+                    let data = try JSONEncoder().encode(RouteBackup(sessionID: session.id, points: route))
+                    try data.write(to: routeURL, options: [.atomic, .completeFileProtection])
+                }
+                let data = try JSONEncoder().encode(session)
                 try data.write(to: backupURL, options: [.atomic, .completeFileProtection])
-                logger.info("Workout data backed up")
+                logger.info("Workout data backed up\(route != nil ? " (with route)" : "")")
             } catch {
                 logger.error("Failed to backup workout data: \(error.localizedDescription)")
             }
@@ -43,7 +60,14 @@ final class WorkoutPersistence: Sendable {
 
         do {
             let data = try Data(contentsOf: backupURL)
-            let session = try JSONDecoder().decode(TrainingSession.self, from: data)
+            var session = try JSONDecoder().decode(TrainingSession.self, from: data)
+            // Backups from older builds carry the route inline.
+            if session.route == nil, let routeURL = Self.routeURL(),
+               let routeData = try? Data(contentsOf: routeURL),
+               let route = try? JSONDecoder().decode(RouteBackup.self, from: routeData),
+               route.sessionID == session.id, !route.points.isEmpty {
+                session.route = route.points
+            }
             logger.info("Recovered crashed workout backup: \(Int(session.duration))s")
             return session
         } catch {
@@ -63,17 +87,21 @@ final class WorkoutPersistence: Sendable {
     func clearBackup() {
         queue.async {
             UserDefaults.standard.removeObject(forKey: Self.autoPauseReasonKey)
-            guard let backupURL = Self.backupURL() else { return }
-            try? FileManager.default.removeItem(at: backupURL)
+            for url in [Self.backupURL(), Self.routeURL()].compactMap({ $0 }) {
+                try? FileManager.default.removeItem(at: url)
+            }
         }
     }
 
-    /// Returns backup URL in App Group container (preferred) or Documents dir (fallback)
-    private static func backupURL() -> URL? {
+    private static func backupURL() -> URL? { fileURL("active_workout_backup.json") }
+    private static func routeURL() -> URL? { fileURL("active_workout_route.json") }
+
+    /// File in the App Group container (preferred) or Documents dir (fallback)
+    private static func fileURL(_ name: String) -> URL? {
         if let container = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: "group.com.shuttlx.shared") {
-            return container.appendingPathComponent("active_workout_backup.json")
+            return container.appendingPathComponent(name)
         }
         guard let docsURL = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return nil }
-        return docsURL.appendingPathComponent("active_workout_backup.json")
+        return docsURL.appendingPathComponent(name)
     }
 }

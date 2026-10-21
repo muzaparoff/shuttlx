@@ -72,7 +72,7 @@ final class HealthKitAuthService {
                 group.cancelAll()
             }
             logger.info("HealthKit authorization granted")
-            updateMaxHRFromHealthKit()
+            updateAgeFromHealthKit()
             return AuthResult(authorized: true, denied: false)
         } catch {
             if error is CancellationError {
@@ -225,27 +225,25 @@ final class HealthKitAuthService {
         return kg > 0 ? kg : nil
     }
 
-    /// Reads date of birth from HealthKit and persists the Tanaka-derived max HR
-    /// to the App Group UserDefaults. A manual override stored there is not clobbered —
-    /// the UI max HR field takes precedence over the formula.
-    private func updateMaxHRFromHealthKit() {
-        // Only update from HealthKit when no manual override exists
-        guard HeartRateZoneCalculator.loadSavedMaxHR() == nil else {
-            logger.info("Manual max HR override present — skipping HealthKit age lookup")
-            return
-        }
-
+    /// Reads date of birth from HealthKit and stores the AGE in the App Group
+    /// (`userAge`, read by `HeartRateZoneCalculator.fromSharedDefaults`), same rule
+    /// as the phone: `userMaxHeartRate` holds only a value the user typed (synced as
+    /// `maxHR`), so the estimate follows the age instead of being frozen.
+    private func updateAgeFromHealthKit() {
         do {
-            let components = try healthStore.dateOfBirthComponents()
-            let calendar = Calendar.current
-            let now = calendar.dateComponents([.year], from: Date())
-            guard let birthYear = components.year, let currentYear = now.year else { return }
-            let age = currentYear - birthYear
-            guard age > 0, age < 120 else { return }
-
-            let calculator = HeartRateZoneCalculator(age: age, manualMaxHR: nil)
-            HeartRateZoneCalculator.saveMaxHR(calculator.estimatedMaxHR)
-            logger.info("Max HR updated from HealthKit age \(age): \(calculator.estimatedMaxHR) BPM")
+            let c = try healthStore.dateOfBirthComponents()
+            guard let year = c.year,
+                  let age = HeartLimits.age(birthYear: year, birthMonth: c.month, birthDay: c.day, now: Date()) else { return }
+            UserDefaults(suiteName: Self.appGroupIdentifier)?.set(age, forKey: Self.manualAgeKey)
+            // Older builds froze the Tanaka estimate (year-only age, then or a year
+            // ago) into the override key. Drop it when it is exactly that number.
+            let currentYear = Calendar.current.component(.year, from: Date())
+            if let saved = HeartRateZoneCalculator.loadSavedMaxHR(),
+               [0, 1].contains(where: { abs(saved - HeartRateZoneCalculator(age: currentYear - year - $0).estimatedMaxHR) < 0.01 }) {
+                HeartRateZoneCalculator.saveMaxHR(0)
+                logger.info("Cleared frozen max HR estimate \(Int(saved)) BPM")
+            }
+            logger.info("Age from HealthKit date of birth: \(age)")
         } catch {
             logger.info("Date of birth not available in HealthKit: \(error.localizedDescription)")
         }

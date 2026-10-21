@@ -38,6 +38,9 @@ struct HistoryView: View {
     @State private var mode: HistoryMode = .calendar
     @State private var month = Date()
     @State private var selectedDay = Date()
+    @State private var shownDay = Calendar.current.startOfDay(for: Date())
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     #if DEBUG
     /// Screenshot seam (SHUTTLX_HISTORY_MODE=<calendar|list|map>).
@@ -78,7 +81,7 @@ struct HistoryView: View {
                         monthNavigator
 
                         switch mode {
-                        case .calendar:
+                        case .calendar where !typeSize.isAccessibilitySize:   // 7-column grid cannot hold AX text: use the day list
                             calendarGrid
                             daySection(selectedDay, daySessions)
                         default:
@@ -90,6 +93,8 @@ struct HistoryView: View {
                 }
                 .navigationTitle("History")
                 .timelineScreenBackground()
+                .onChange(of: scenePhase) { _, phase in if phase == .active { rollOverDay() } }
+                .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in rollOverDay() }
             }
         }
     }
@@ -120,8 +125,19 @@ struct HistoryView: View {
             .disabled(!canGoForward)
             .accessibilityLabel("Next month")
         }
-        .foregroundStyle(ShuttlXColor.ctaPrimary)
+        .foregroundStyle(ShuttlXColor.accentText)
         .padding(.horizontal, 10)
+    }
+
+    /// After midnight, a selection that was "today" follows the new today (and its month).
+    private func rollOverDay() {
+        let today = Calendar.current.startOfDay(for: Date())
+        guard today != shownDay else { return }
+        if cal.isDate(selectedDay, inSameDayAs: shownDay) {
+            selectedDay = Date()
+            if cal.isDate(month, equalTo: shownDay, toGranularity: .month) { month = Date() }
+        }
+        shownDay = today
     }
 
     private func shiftMonth(_ delta: Int) {
@@ -192,7 +208,8 @@ struct HistoryView: View {
         .buttonStyle(.plain)
         .disabled(future)
         .accessibilityLabel(day.formatted(.dateTime.weekday(.wide).day().month(.wide))
-                            + (sessions.isEmpty ? "" : ", \(sessions.count) sessions"))
+                            + (sessions.isEmpty ? "" : ", \(sessions.count) sessions: "
+                               + dotActivities(sessions).map { TodayFormat.activityName($0) }.joined(separator: ", ")))
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
@@ -285,7 +302,6 @@ struct HistoryDayRow: View {
                 Text(sub)
                     .font(ShuttlXFont.cardCaption.monospacedDigit())
                     .foregroundStyle(ShuttlXColor.textSecondary)
-                    .lineLimit(1)
             }
             Spacer(minLength: 6)
             if let km {

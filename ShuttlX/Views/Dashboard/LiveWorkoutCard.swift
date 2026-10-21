@@ -7,6 +7,8 @@ private let stalenessThreshold: TimeInterval = 5
 struct LiveWorkoutCard: View {
     @ObservedObject var sharedData: PhoneSyncCoordinator
     @State private var showStopConfirmation = false
+    /// Decoded once (and on appear), not once per second per redraw.
+    @State private var heart = HeartSafetySettings.load()
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1.0)) { context in
@@ -16,6 +18,7 @@ struct LiveWorkoutCard: View {
             }()
             content(isStale: isStale)
         }
+        .onAppear { heart = HeartSafetySettings.load() }
         .confirmationDialog(
             "End & Save?",
             isPresented: $showStopConfirmation,
@@ -55,7 +58,7 @@ struct LiveWorkoutCard: View {
 
     private var zoneWord: String? {
         guard sharedData.liveHeartRate > 0 else { return nil }
-        return HeartSafetySettings.load().zoneWord(hr: sharedData.liveHeartRate, age: DeviceManager.shared.userAge)
+        return heart.zoneWord(hr: sharedData.liveHeartRate, age: DeviceManager.shared.userAge)
     }
 
     private func pillButton(_ title: String, fill: Color, text: Color, disabled: Bool = false, action: @escaping () -> Void) -> some View {
@@ -63,7 +66,7 @@ struct LiveWorkoutCard: View {
             Text(title)
                 .font(ShuttlXFont.cardCaption.weight(.semibold))
                 .foregroundStyle(text)
-                .frame(maxWidth: .infinity, minHeight: 34)
+                .frame(maxWidth: .infinity, minHeight: 44)
                 .background(fill, in: Capsule())
         }
         .buttonStyle(.plain)
