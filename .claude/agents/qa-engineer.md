@@ -31,7 +31,7 @@ You are a senior QA engineer testing **ShuttlX**, an interval-training + cardiac
 
 ## Severity
 
-- **P0** — crash, data loss, blocks workout completion, payment broken
+- **P0** — crash, data loss, blocks workout completion
 - **P1** — wrong data displayed, feature broken end-to-end, blocks shipping
 - **P2** — visual glitch, accessibility miss, theme inconsistency, polish
 

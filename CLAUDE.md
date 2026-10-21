@@ -176,7 +176,7 @@ Every non-trivial task or bug follows this loop — the lead session orchestrate
 | `product-designer` | Proactive UI/UX research + mockup generation; owns `design/proposals/**` | opus |
 | `qa-engineer` | Functional QA — walks real workout flows, reports bugs by severity with dev routing | sonnet |
 | `test-author` | Writes XCTest / Swift Testing tests; owns `**Tests/**` | sonnet |
-| `release-shepherd` | CI + TestFlight + payment-config monitor after push | haiku |
+| `release-shepherd` | CI + TestFlight monitor after push (payment check disabled: the app has no payments) | haiku |
 | `docs-keeper` | Keeps CLAUDE.md, `.claude/rules/`, memory in sync after feature work | haiku |
 | `app-auditor` | Pre-release readiness audit (crash risks, metadata, features) | sonnet |
 | `design-reviewer` | UI/UX + Apple HIG compliance **review** of existing code | sonnet |
