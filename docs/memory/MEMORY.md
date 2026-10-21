@@ -8,8 +8,8 @@
 - **Bundle**: `com.shuttlx.ShuttlX` / `com.shuttlx.ShuttlX.watchkitapp`
 - **Team**: `83HPSY452Y`, App Group: `group.com.shuttlx.shared`
 - **Targets**: iOS 18.0+, watchOS 11.5+, Live Activity extension, Widgets extension
-- **Codebase**: ~27,700 non-blank lines across 164 Swift files (82 iOS, 40 watchOS, 22 Shared, 11 iOS widgets, 6 watch widgets, 3 Live Activity)
-- **Storage**: JSON in App Group container (sessions.json, workout_templates.json, exercise_devices.json, segment_overrides.json v2 SegmentEdits); UserDefaults `pendingSessionEffort`
+- **Codebase**: ~27,700 non-blank lines across 175 Swift files (84 iOS, 40 watchOS, 31 Shared, 11 iOS widgets, 6 watch widgets, 3 Live Activity)
+- **Storage**: JSON in App Group container (sessions.json, workout_templates.json, exercise_devices.json, segment_overrides.json v2 SegmentEdits); UserDefaults `pendingSessionEffort`; medicine name/dose in Keychain (`MedicineVault`)
 - **Sync**: WatchConnectivity (sendMessage + transferUserInfo + applicationContext)
 - **CI**: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 
@@ -37,13 +37,14 @@
 - Timer screen: 52pt monospaced timer, 28pt bold metrics, no emoji/icons
 - Watch controls: circular buttons (green=pause, red=stop)
 
-## Feature Status (v1.10.0 / 2026-10-21, timeline redesign)
+## Feature Status (v1.10.1 / 2026-10-22, timeline redesign)
 **Done**: Core workout, intervals, Watch app (timeline-mockup screens, crash recovery resumes the workout), sync, analytics (VO2max/TSB/PRs), training plans (3 built-in), themes (1: Clean), Live Activity (Pause/Resume + End & Save intents), iOS widgets Tier 1 (StartTrainingWidget, QuickStartControl, WeeklyGoalRingWidget, Small/Medium), watch complications (QuickStart has accessoryCorner), maps/routes, CloudKit + Sign In (basic), onboarding (beta-blocker question), 4-tab iOS layout (Today timeline / History calendar-list-map / Trends Week-Month-Year / Settings), Fix a part (type, split, merge; SegmentEdits), session heart-rate chart (HealthKit, read-only), Health import into History, heart limits + low limit + "Heart & alerts" screen, watch no-motion auto-pause, watch GPS cycling auto-switch, post-workout effort (watch → phone, PendingSessionEffort), zone words (EASY/STEADY/HARD), deep-link routing (iOS + watch), Account section (signed-in only; Sign Out / Delete Account)
 **Pending (Tier 2/3)**: iOS Tier 2 (Streak + families, Next Planned, Weekly Dashboard), watch Tier 2 (Start Template, Weekly Ring corner, Streak Corner, Today/Next inline, Last Workout circular), iOS/watch Tier 3 (Recovery Status — blocked on readiness metric)
 **Partial**: Multi-sport (model only), cadence (count only, no SPM), custom fonts (not bundled), AirPods Pro 3 heart rate (`useAirPodsHeartRate` intent flag + iOS 26 source row; no runtime path)
-**Open (timeline plan)**: AirPods runtime path; Trends past periods (current period only); widgets read raw sessions.json (Fix a part not applied); no reset-to-detected; Dynamic Island regions defined but not verified on device; sudden-jump alert still emitted although the plan drops it (owner decision)
+**Open (timeline plan)**: AirPods runtime path; Trends past periods (current period only); no reset-to-detected; Dynamic Island regions defined but not verified on device; sudden-jump alert default OFF but still emitted (owner decision)
+**v1.10.1 adds**: phone-started workouts link to the watch by handshake (`WatchLinkRules`); phone Discard reaches the watch (`PhoneDiscardRule`); WC payload checks; e2e Maestro suites in `e2e/`
 **Not done**: Voice coaching, export/sharing, StoreKit subscriptions, social groups/challenges, pace alerts, user profile + public CloudKit
-**Device-unverified**: no-motion auto-pause with the watch off the wrist; GPS cycling switch thresholds; heart alerts end to end on device; History map following the period; Live Activity on device
+**Device-unverified**: no-motion auto-pause with the watch off the wrist; GPS cycling switch thresholds; heart alerts end to end on device; History map following the period; Live Activity on device; phone-started handshake and Discard; watch checkpoint recovery; route in Health (full list: `docs/device-test-checklist-v1.10.1.md`)
 
 ## Theme System (1 theme: Clean, Oct 2026)
 - `@Observable ThemeManager` singleton, `selectTheme(id)` for switching, stored `current` property
@@ -91,10 +92,11 @@ bash tests/build_and_test_both_platforms.sh --clean --build
 xcodebuild -project ShuttlX.xcodeproj -scheme ShuttlX -destination 'generic/platform=iOS Simulator' build
 # watchOS only (same rule: destination only, no -sdk)
 xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination 'generic/platform=watchOS Simulator' build
-# SPM unit tests (29 tests: IntervalEngine, RecoverySegmenter, watch-parity guard) — also runs in CI test.yml
+# SPM unit tests (188 tests) — also runs in CI test.yml
 swift test
+# E2E Maestro suites (e2e/app.yml: smoke, workout10, discard) via appstore-kit e2e-v2 bin/e2e; JAVA_HOME=/opt/homebrew/opt/openjdk@17
 ```
 
 ## Current Build
-- Current: v1.10.0 (HEAD 02779c3) — timeline redesign: Today/History/Trends/Settings, watch mockup screens, heart alerts, effort
-- Previous: v1.9.0
+- Current: v1.10.1 (HEAD efe4eaf) — pre-release audit waves B-D, handshake/Discard, Keychain medication notes, e2e suites
+- Previous: v1.10.0 (HEAD 02779c3) — timeline redesign: Today/History/Trends/Settings, watch mockup screens, heart alerts, effort; v1.9.0

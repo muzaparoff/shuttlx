@@ -12,18 +12,18 @@ The watchOS target remains Apple-frameworks-only.
 - **Team**: `83HPSY452Y`
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
-- **Codebase**: ~27,700 non-blank lines across 164 Swift files (app targets + Shared, tests excluded)
+- **Codebase**: ~27,700 non-blank lines across 175 Swift files (app targets + Shared, tests excluded)
 - **CI**: thin GitHub Actions callers of the shared `muzaparoff/appstore-kit@v1` reusable workflows (`.github/workflows/`): `test.yml` runs CI on push to main and auto-bumps the semver tag from conventional commits; the `v*` tag triggers `deploy.yml` → archive, sign, upload to TestFlight. `store-release.yml` (manual) stages the App Store listing from `fastlane/metadata` + `marketing/appstore/final`. Fastlane the tool is NOT part of CI; `scripts/bump_version.sh` no longer exists — versioning is fully automatic
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 82 | PhoneSyncCoordinator (~1,115), DashboardView + TodayTimeline (Today), HistoryView + HistoryMapView, SessionDetailView (FixPartSheet), DayRibbon (`Components/`), AnalyticsView + Charts/ (TrendsOverview), DataManager (effectiveSessions), SettingsView + HeartAlertsView, DeviceManager, CalorieEstimationEngine (MET math in Shared), ThemeManager + theme files, HelpView |
+| iOS | `ShuttlX` | 84 | PhoneSyncCoordinator (~1,115), DashboardView + TodayTimeline (Today), HistoryView + HistoryMapView, SessionDetailView (FixPartSheet), DayRibbon (`Components/`), AnalyticsView + Charts/ (TrendsOverview), DataManager (effectiveSessions), SettingsView + HeartAlertsView, DeviceManager, CalorieEstimationEngine (MET math in Shared), ThemeManager + theme files, HelpView |
 | watchOS | `ShuttlX Watch App` | 40 | WatchWorkoutManager (~2,290, being decomposed — extracted: HealthKitAuthService, WorkoutPersistence, LiveMetricsBroadcaster, SegmentMetricsLedger, WorkoutPhaseHealthKitWriter, SegmentHygiene, +LocationDelegate, +HealthKitDelegates), WatchSyncCoordinator (~1,220), TrainingView (166 + 3 extension files: +Controls, +Metrics, +Running), WorkoutSummaryView (EffortView), ThemeManager + theme files |
-| Shared (SPM) | `ShuttlXShared` | 22 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer, SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, HeartAlertEvaluator, HeartSafetySettings, SpeedActivityClassifier, ThemeID |
+| Shared (SPM) | `ShuttlXShared` | 31 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer, SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, HeartAlertEvaluator, HeartSafetySettings, SpeedActivityClassifier, ThemeID, DistanceFusion, MedicineVault, PausedSample, PhoneDiscardRule, WCPayloadValidation, WatchLinkRules |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity (Dynamic Island + lock screen regions), LockScreenView |
-| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget (read raw `sessions.json` via WidgetDataProvider) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
+| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget (read `sessions.json` + `segment_overrides.json` via WidgetDataProvider; Fix a part applied through `SegmentEdits.effective`) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
 | watchOS Widgets | `ShuttlXWatchWidgets` | 6 | QuickStartComplication (now with accessoryCorner), LastWorkoutComplication, WeeklyProgressComplication, TodayWorkoutComplication, WatchWidgetDataProvider |
 
 ## Build Commands
@@ -40,6 +40,12 @@ xcodebuild -project ShuttlX.xcodeproj -scheme ShuttlX -destination 'generic/plat
 
 # watchOS only
 xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination 'generic/platform=watchOS Simulator' build
+
+# SPM unit tests (188 tests; also runs in CI test.yml)
+swift test
+
+# E2E (Maestro flows in e2e/flows/, suites in e2e/app.yml: smoke, workout10, discard). Run by the appstore-kit
+# engine branch e2e-v2 via bin/e2e, with JAVA_HOME=/opt/homebrew/opt/openjdk@17. Not wired into .github/workflows/.
 ```
 
 Both build scripts select targets by `-scheme` and `-destination` only (no `-sdk`).
@@ -74,16 +80,20 @@ iOS tabs (ContentView): Today · History (calendar / list / map modes) · Trends
 Heart limits and alerts (numbers/ranges: Shared/HeartLimits.swift; estimate = 85% of 220-age, x0.81 on a beta-blocker; details in .claude/rules/services.md):
   iPhone: HeartSafetySettings (App Group UserDefaults) → syncHeartSafety → watch
     (resolved upper limit + alert flags only; the medication answer stays on the phone)
-  Watch: HeartAlertEvaluator (above limit / below low limit / signal lost / no motion; the `suddenJump` check is still wired, see `.claude/rules/watchos.md`)
+  Watch: HeartAlertEvaluator (above limit / below low limit / signal lost / no motion; `suddenJump` is wired but default OFF, see `.claude/rules/watchos.md`)
     → local notification when not frontmost; heartAlert message → PhoneSyncCoordinator → phone notification
   No motion for 60 s (no HR, no motion) → auto-pause, reason "noMotion" → Live Activity "Paused – no motion"
 
+Phone-started workout (iOS): PhoneSyncCoordinator.startWatchWorkout(phoneSessionId:) → watch answers workoutStarted (+ its sessionId) or workoutStartIgnored
+  → iPhoneWorkoutController.watchLinked only after workoutStarted (5 s wait; a late answer still links; `Shared/WatchLinkRules.swift`)
+  → pause / resume / stop / discardWorkout reach the watch only while linked; the watch discards only the workout with the same phoneSessionId (`Shared/PhoneDiscardRule.swift`)
+  → iPhone distance = GPS once usable, else pedometer, never the sum (`Shared/DistanceFusion.swift`)
 Activity auto-switch (watch): GPS speed → SpeedActivityClassifier (hysteresis) → checkSpeedActivity() in WatchWorkoutManager
 Fix a part (iOS): SessionDetailView/FixPartSheet (type, Split, Merge, scrubber) → SegmentOverrideStore → segment_overrides.json (v2 envelope `SegmentEdits`: types + per-session partitions; v1 flat file still decodes; sessions.json never mutated)
   Pure logic `Shared/SegmentEdits.swift` (tested). DataManager.effectiveSessions = sessions + edits applied ONCE (Rest calories zeroed); every reader uses it, only persistence/CloudKit use raw `sessions`
   Session detail HR line: SessionHeartRateLoader queries HealthKit for the session range (not stored, never sent anywhere); hidden when no data
 Effort answer: watch `updateSessionEffort` (sendMessage + transferUserInfo) → PhoneSyncCoordinator.handleSessionEffort → DataManager.applyEffort sets `effortRPE` on the stored session; if the session has not arrived yet the answer waits in `PendingSessionEffort` (Shared/, bounded to 20, UserDefaults key `pendingSessionEffort`) and is applied on ingest. Never goes to Health or telemetry.
-Account (Settings → Account, only while signed in): Sign Out and Delete Account (confirmation alert → AuthenticationManager.deleteAccount: deletes the user's CloudKit session + template records, empties local sessions.json, clears keychain). There is currently no sign-in entry point in the UI (SignInView is unreferenced), so the section only appears for users still signed in from an earlier build.
+Account (Settings → Account, only while signed in): Sign Out and Delete Account (confirmation alert → AuthenticationManager.deleteAccount: deletes the user's CloudKit session + template records, empties local sessions.json, clears keychain and the medicine notes in Keychain via `MedicineVault.clear()`). There is currently no sign-in entry point in the UI (SignInView is unreferenced), so the section only appears for users still signed in from an earlier build.
 Settings (iOS) sections: Health & Watch · Heart (limit + "Heart & alerts" screen, effort-on-watch and activity auto-switch toggles) · Body Metrics · Account (signed-in only) · Data Management · Help · About. No theme picker, no Exercise Devices entry point (`DeviceListView` has none). Debug (Sync Debug) appears after a 1 s long-press on About's Version row.
 Health import (iOS): HealthKitImporter (read-only; started at launch, observer + anchor) → HealthImportRules (dedup against existing sessions, grace period) → DataManager; imported sessions carry `importedFromHealth`.
 Imported (Health) sessions never fire TelemetryDeck `workoutCompleted` or the rating prompt (DataManager.handleReceivedSessions checks `importedFromHealth`).
@@ -118,6 +128,7 @@ Theme sync:
 - Theme selection: App Group UserDefaults key `selectedThemeID`
 - Heart limits and alert switches: App Group UserDefaults key `heartSafetySettings` (JSON)
 - Effort answers waiting for their session: UserDefaults key `pendingSessionEffort` (`PendingSessionEffort`, bounded to 20)
+- Medicine name and daily dose (heart-limit beta-blocker notes): Keychain via `MedicineVault` (this device only, after first unlock). Never in the App Group `heartSafetySettings` JSON and never synced; `wipeLocalUserData(.everything)` clears them
 - `segment_overrides.json` is a v2 `SegmentEdits` envelope (types + per-session partitions); the v1 flat type map still decodes
 - Sync: WatchConnectivity (`sendMessage` + `transferUserInfo` + `applicationContext`)
 - HealthKit: workout sessions, heart rate, distance, calories. iOS reads Health workouts (import) and per-session heart rate (chart) read-only; the watch writes the live session

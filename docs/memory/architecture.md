@@ -1,19 +1,19 @@
 ---
 name: Architecture & File Map
-description: Current file structure per target (October 2026, v1.10.0), key service/view/model files, data flow
+description: Current file structure per target (October 2026, v1.10.1), key service/view/model files, data flow
 type: project
 ---
 
 # ShuttlX Architecture
 
-## File Map (164 Swift files, ~27,700 non-blank lines, tests excluded)
+## File Map (175 Swift files, ~27,700 non-blank lines, tests excluded)
 
-Counts from ripgrep, October 2026 (v1.10.0). Per-file line counts were dropped: the old table was stale. Key file sizes: WatchWorkoutManager ~2,290, PhoneSyncCoordinator ~1,115, WatchSyncCoordinator ~1,220, TrainingView ~166 (+Metrics ~700, +Controls, +Running).
+Counts from ripgrep, October 2026 (v1.10.1 file counts; line counts not re-measured since v1.10.0). Per-file line counts were dropped: the old table was stale. Key file sizes: WatchWorkoutManager ~2,290, PhoneSyncCoordinator ~1,115, WatchSyncCoordinator ~1,220, TrainingView ~166 (+Metrics ~700, +Controls, +Running).
 
-### iOS target (82 files, ~15,200 lines)
+### iOS target (84 files, ~15,200 lines)
 
 - **App**: ShuttlXApp.swift (DeepLinkRouter, onOpenURL), ContentView.swift (tabs Today · History · Trends · Settings)
-- **Services/**: DataManager (sessions + `effectiveSessions`), PhoneSyncCoordinator (WCSession), iPhoneWorkoutController, iOSHeartRateMonitor, AnalyticsEngine, CloudKitSyncManager, AuthenticationManager, LiveActivityManager, TemplateManager, PlanManager, DeviceManager, WidgetDataProvider (reads raw sessions.json), SegmentOverrideStore, SessionHeartRateLoader, HealthKitImporter, CalorieEstimationEngine (iOS overloads), FeedbackPrompt, iPhoneHapticPlayer
+- **Services/**: DataManager (sessions + `effectiveSessions`), PhoneSyncCoordinator (WCSession), iPhoneWorkoutController, iOSHeartRateMonitor, AnalyticsEngine, CloudKitSyncManager, AuthenticationManager, LiveActivityManager, TemplateManager, PlanManager, DeviceManager, WidgetDataProvider (reads sessions.json + segment_overrides.json), SegmentOverrideStore, SessionHeartRateLoader, HealthKitImporter, CalorieEstimationEngine (iOS overloads), FeedbackPrompt, iPhoneHapticPlayer
 - **Models/**: TrainingSession, WorkoutTemplate, WorkoutSport+Theme, DetectedActivity+Theme, ChartData, WorkoutActivityAttributes, WorkoutControlIntents (Live Activity intents)
 - **Theme/**: ShuttlXTheme, ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, ThemeChartStyle, TimelineStyle, IntervalTypeThemeHelpers, Themes/CleanTheme
 - **Components/**: DayRibbon (ActivityRibbon, SessionPartRow), MetricCard, ActivityBadge, PressScaleButtonStyle
@@ -28,9 +28,9 @@ Counts from ripgrep, October 2026 (v1.10.0). Per-file line counts were dropped: 
 - **Components/**: MetricCard, WatchScreenParts
 - **Views/**: TrainingView (+Controls, +Metrics, +Running), SafetyPromptView (SafetyPromptView, UnusualHeartRateView, WatchPromptCard), WorkoutSummaryView (EffortView), ProgramSelectionView (ProgramsListView), RecoveryWorkoutView, IntervalStepWash, DebugView
 
-### Shared (SPM `ShuttlXShared`, 22 files, ~2,000 lines)
+### Shared (SPM `ShuttlXShared`, 31 files, ~2,000 lines)
 
-- **Models**: ActivitySegment, DetectedActivity, RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport, SessionMode, HeartRateZoneCalculator, HeartSafetySettings, HeartAlertEvaluator, ActivityClassifier (SpeedActivityClassifier), SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, ThemeID, FormattingUtils, CalorieEstimationEngine
+- **Models**: ActivitySegment, DetectedActivity, RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport, SessionMode, HeartRateZoneCalculator, HeartSafetySettings, HeartAlertEvaluator, ActivityClassifier (SpeedActivityClassifier), SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, ThemeID, FormattingUtils, CalorieEstimationEngine, DistanceFusion, MedicineVault, PausedSample, PhoneDiscardRule, WCPayloadValidation, WatchLinkRules
 - **Engines**: IntervalEngine (canonical, iOS consumes it), RecoverySegmenter, HapticPlayer
 
 ### Live Activity (3 files) and widgets
@@ -53,10 +53,12 @@ Watch starts workout → WatchWorkoutManager.startIntervalWorkout(template)
 
 iPhone receives session → PhoneSyncCoordinator → DataManager (sessions = stored, effectiveSessions = + SegmentEdits) → UI updates
   → AnalyticsEngine processes trends
-  → Widgets read raw sessions.json via WidgetDataProvider (Fix a part edits not applied there)
+  → Widgets read sessions.json + segment_overrides.json via WidgetDataProvider (Fix a part applied via SegmentEdits.effective)
 
 Effort: watch updateSessionEffort → PhoneSyncCoordinator.handleSessionEffort → DataManager.applyEffort
   (parked in PendingSessionEffort if the session has not arrived)
+Phone-started workout: start carries phoneSessionId → watch workoutStarted (+ sessionId) / workoutStartIgnored → iPhone watchLinked
+  → Discard / stop reach the watch only while linked (PhoneDiscardRule, WatchLinkRules)
 ```
 
 ## Frameworks Used (zero external deps)

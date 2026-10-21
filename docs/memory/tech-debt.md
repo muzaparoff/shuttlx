@@ -1,13 +1,13 @@
 # Technical Debt & Known Issues
 
 ## Code Quality
-- [x] ~~Package.swift declares `ShuttlXShared` but `Shared/` dir doesn't exist~~ — fixed: `Shared/` exists (22 files)
+- [x] ~~Package.swift declares `ShuttlXShared` but `Shared/` dir doesn't exist~~ — fixed: `Shared/` exists (31 files)
 - [ ] Models still duplicated: `TrainingSession` and `WorkoutTemplate` per target (IntervalType name collision); watch still has its own IntervalEngine (Phase 4)
 - [ ] Debug views (SyncDebugView, DebugView): SyncDebugView is reached through a hidden 1 s long-press on Settings → About, not `#if DEBUG`
 - [ ] `print()` statements should use `os.log` / `Logger`
 - [ ] CloudKit sync: no push-triggered sync, no conflict resolution UI (just newest-wins)
 - [ ] `WatchWorkoutManager` is still ~2,290 lines (decomposition in progress)
-- [ ] `suddenJump` heart alert still emitted by `HeartAlertEvaluator` although the timeline plan drops it (owner decision)
+- [ ] `suddenJump` heart alert: default OFF since v1.10.1 (`HeartSafetySettings`), but still emitted by `HeartAlertEvaluator` although the timeline plan drops it (owner decision)
 
 ## Safety
 - [ ] Some `try?` silent failures in JSON encode/decode — should use `do/catch` with logging
@@ -18,7 +18,7 @@
 - [x] ~~Cadence: CMPedometer captures step count, but steps-per-minute not computed or displayed~~ — FIXED 2026-05-23. Both `WatchWorkoutManager.startPedometerUpdates` and `iPhoneWorkoutController.startPedometer` now fall back to a step-delta derivation over a ≥3s window when `CMPedometer.currentCadence` is nil (frequent during the first 30-60s of a workout + always nil in the simulator). Apple's instantaneous cadence still takes precedence when available. Display gates relaxed to render "—" when zero instead of hiding the CAD card entirely (avoids layout pop-in).
 - [ ] Training Plans: plan days reference template names by string, not UUID — no direct Watch launch from plan
 - [x] ~~Custom Fonts: Casio (7-segment) & Arcade (pixel) themes use system monospaced as fallback~~ — obsolete: both themes deleted (July 2026)
-- [ ] Widgets read raw `sessions.json` (`WidgetDataProvider`), so Fix a part edits do not reach them
+- [x] ~~Widgets read raw `sessions.json` (`WidgetDataProvider`), so Fix a part edits do not reach them~~ — fixed: widgets apply `segment_overrides.json` through `SegmentEdits.effective`
 - [ ] Trends: no navigation to past periods (Week / Month / Year show the current period only)
 
 ## Fixed Issues (for reference)

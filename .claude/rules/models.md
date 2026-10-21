@@ -27,7 +27,12 @@ duplicated per target until the Phase 4 engine unification
 | SessionMode | `Shared/SessionMode.swift` | |
 | HeartRateZoneCalculator | `Shared/HeartRateZoneCalculator.swift` | |
 | HeartSafetySettings | `Shared/HeartSafetySettings.swift` | HEALTH DATA: `onBetaBlocker` is device-only. `watchPayload(age:)` strips it and resolves the upper limit. `zoneWord`: EASY < 70% / STEADY < 90% / HARD |
-| HeartAlertEvaluator (+ `HeartAlert`) | `Shared/HeartAlertEvaluator.swift` | Kinds: aboveLimit, belowLow, signalLost, noMotion (60 s without HR and without motion), suddenJump (+40 bpm in 10 s; still emitted, see `watchos.md`) |
+| HeartAlertEvaluator (+ `HeartAlert`) | `Shared/HeartAlertEvaluator.swift` | Kinds: aboveLimit, belowLow, signalLost, noMotion (60 s without HR and without motion), suddenJump (+40 bpm in 10 s; default OFF in `HeartSafetySettings`, see `watchos.md`) |
+| PausedSample | `Shared/PausedSample.swift` | Whether an HR sample belongs to a pause, judged by its own date (delivery can lag). Used by the watch |
+| PhoneDiscardRule (+ `Decision`) | `Shared/PhoneDiscardRule.swift` | Watch-side rule for a phone `discardWorkout`: applies only to the workout with the same `phoneSessionId`; 120 s age limit; held while starting |
+| WCPayloadValidation | `Shared/WCPayloadValidation.swift` | Sanity checks for WatchConnectivity payloads (sessions, effort, alerts, live metrics) and the 8 MB session cap |
+| DistanceFusion | `Shared/DistanceFusion.swift` | iPhone workout distance: GPS when usable, else pedometer; never summed |
+| MedicineVault | `Shared/MedicineVault.swift` | Medication notes (name, daily dose) in the Keychain (`SecretBackend`, phone only). Never in JSON or sync |
 | SegmentEdits | `Shared/SegmentEdits.swift` | "Fix a part" corrections for `segment_overrides.json`: v2 envelope (types + per-session partitions), v1 flat map still decodes. Pure `apply`, split, merge, `caloriesRemoved`, `minPart`. Applied once in `DataManager.effectiveSessions` |
 | PendingSessionEffort | `Shared/PendingSessionEffort.swift` | Effort answers that arrived before their session; bounded to `cap` = 20 (oldest dropped); persisted under `pendingSessionEffort` |
 | HealthImportRules | `Shared/HealthImportRules.swift` | Dedup and grace-period rules for the iOS Health import; session ids from the external workout UUID |
@@ -48,7 +53,7 @@ Also in the package: `IntervalEngine` (canonical, consumed by iOS only for now),
 | TrainingSession | references `IntervalType`/`CompletedInterval` which collide with the package engine's types |
 | WorkoutTemplate | defines the app-side `IntervalType` — collides with `ShuttlXShared.IntervalType` |
 
-`TrainingSession` also carries `effortRPE: Int?` (watch post-workout effort, both copies). It usually stays on the watch copy; iOS dedups by id.
+`TrainingSession` also carries `effortRPE: Int?` (watch post-workout effort, both copies). It usually stays on the watch copy; iOS dedups by id. Also optional in both copies: `autoEnded` (safety-prompt timeout) and `pausedPeakHeartRate` (peak HR read while paused, kept out of the active peak).
 `TrainingSession.pausedPeakHeartRate: Double?` (both copies): the highest HR read while paused; `maxHeartRate` and `averageHeartRate` count active time only.
 
 ## Per-target theme extensions (intentionally different per platform)

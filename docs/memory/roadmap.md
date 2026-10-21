@@ -88,3 +88,4 @@
 | 2026-03-03 | Watch home screen redesign | ✅ Done (Build 30-32) |
 | 2026-03-03 | iOS Free Run as built-in program | ✅ Done (Build 33) |
 | 2026-10-20 | Timeline redesign: four tabs, History calendar/list/map, Today timeline, watch mockup screens, heart alerts, effort | ✅ Done in code (v1.10.0); device tests pending. Open items in docs/plans/2026-10-timeline-redesign.md |
+| 2026-10-22 | v1.10.1: phone-started watch handshake and Discard, Keychain medication notes, WatchConnectivity payload checks, phone distance fusion, sudden-jump default OFF, e2e Maestro suites | ✅ Done in code (efe4eaf); device checks in docs/device-test-checklist-v1.10.1.md |
