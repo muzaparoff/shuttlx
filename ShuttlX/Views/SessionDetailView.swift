@@ -375,7 +375,7 @@ struct FixPartSheet: View {
 
     private var guess: SpeedActivityClassifier.Result? {
         guard let speedMS else { return nil }
-        return SpeedActivityClassifier.classify(speed: speedMS, cadence: cadence, window: segment.duration)
+        return SpeedActivityClassifier.classifyForReview(speed: speedMS, cadence: cadence, window: segment.duration)
     }
 
     private var chips: [(text: String, spoken: String)] {
@@ -546,9 +546,13 @@ struct FixPartSheet: View {
         if guess != nil || !items.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 if let guess {
-                    (Text("ShuttlX thinks: \(TodayFormat.activityName(guess.activity))").fontWeight(.bold)
-                        .foregroundStyle(ShuttlXColor.textPrimary)
-                     + Text(" \u{00B7} \(guess.confidence == .high ? "high" : "low") confidence. Why:"))
+                    (guess.confidence == .high
+                        ? Text("ShuttlX thinks: \(TodayFormat.activityName(guess.activity))").fontWeight(.bold)
+                            .foregroundStyle(ShuttlXColor.textPrimary)
+                            + Text(" \u{00B7} high confidence. Why:")
+                        : Text("ShuttlX is not sure.").fontWeight(.bold)
+                            .foregroundStyle(ShuttlXColor.textPrimary)
+                            + Text(" What it measured:"))
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(ShuttlXColor.textSecondary)
                 } else {

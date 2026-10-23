@@ -47,6 +47,17 @@ final class ActivityClassifierTests: XCTestCase {
         XCTAssertEqual(C.classify(speed: 4, cadence: 40)?.activity, .cycling)      // cadence verdict
     }
 
+    func testReviewGuessIsLowForNoCadenceMidSpeed() {
+        XCTAssertEqual(C.classifyForReview(speed: 5.0, cadence: nil, window: 60)?.confidence, .low)
+        XCTAssertEqual(C.classify(speed: 5.0, cadence: nil)?.confidence, .high)   // watch result unchanged
+        XCTAssertEqual(C.classifyForReview(speed: 5.0, cadence: 170, window: 60)?.confidence, .high)
+        XCTAssertEqual(C.classifyForReview(speed: 7.5, cadence: nil, window: 60)?.confidence, .high)
+    }
+
+    func testSuddenJumpMessage() {
+        XCTAssertEqual(HeartAlert(kind: .suddenJump, value: 45).message, "Up 45 bpm quickly")
+    }
+
     func testFirstReadingDoesNotCommitCycling() {
         let t = Date(timeIntervalSince1970: 0)
         var h = C.Hysteresis()

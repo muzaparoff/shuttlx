@@ -2093,7 +2093,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         let now = Date()
         let routeDue = isPaused || lastRouteCheckpointDate.map { now.timeIntervalSince($0) >= routeCheckpointInterval } ?? true
         if routeDue { lastRouteCheckpointDate = now }
-        persistence.checkpoint(session, route: routeDue ? routePoints : nil, autoPauseReason: autoPauseReason)
+        persistence.checkpoint(session, route: routeDue ? routePoints : nil, autoPauseReason: autoPauseReason, phoneSessionID: phoneSessionID)
     }
 
     /// Check for a crashed workout backup and recover the session
@@ -2285,6 +2285,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         workoutStartTime = start
         currentSessionID = backup?.id ?? UUID()
+        // A phone Discard can still reach a workout the phone started.
+        phoneSessionID = backup.flatMap { persistence.recoveredPhoneSessionID(for: $0.id) }
         accumulatedPauseTime = max(0, wallSpan - active)
         pauseStartDate = paused ? now : nil
         isPaused = paused
@@ -2370,9 +2372,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         } else {
             startPausedAlertTimer()
         }
-        broadcaster.notifyWorkoutStarted(sport: sport, sessionID: currentSessionID)
+        // Same rule as a fresh start: the phone reads this as a watch-made start.
+        if phoneSessionID == nil {
+            broadcaster.notifyWorkoutStarted(sport: sport, sessionID: currentSessionID)
+        }
         saveWorkoutDataToLocalStorage()
-        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, pauses \(self.pauseSpans.count), autoPause \(self.autoPauseReason ?? "none"), backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString))")
+        logger.warning("Recovered HKWorkoutSession RESUMED (state \(session.state.rawValue), mode \(String(describing: self.workoutMode)), active \(Int(active))s, pauses \(self.pauseSpans.count), autoPause \(self.autoPauseReason ?? "none"), backup \(backup != nil ? "matched" : "none"), id \(self.currentSessionID.uuidString), phoneSessionId \(self.phoneSessionID ?? "none"))")
     }
     #endif
 

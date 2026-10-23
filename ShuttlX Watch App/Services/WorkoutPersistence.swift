@@ -27,13 +27,15 @@ final class WorkoutPersistence: Sendable {
     /// the caller throttles cadence. `route` is written only when non-nil (the
     /// caller passes it at most every 60 s and on pause); otherwise the last
     /// written route file stays.
-    func checkpoint(_ session: TrainingSession, route: [RoutePoint]?, autoPauseReason: String? = nil) {
+    func checkpoint(_ session: TrainingSession, route: [RoutePoint]?, autoPauseReason: String? = nil, phoneSessionID: String? = nil) {
         var session = session
         session.route = nil
         queue.async { [logger] in
-            // Sidecar (not a TrainingSession field): the model is duplicated per
-            // target and this only matters for resuming the paused overlay.
+            // Sidecars (not TrainingSession fields): the model is duplicated per
+            // target and these only matter for resuming after a crash.
             UserDefaults.standard.set(autoPauseReason, forKey: Self.autoPauseReasonKey)
+            // Tagged with the session id so a leftover value never joins another workout.
+            UserDefaults.standard.set(phoneSessionID.map { [session.id.uuidString: $0] }, forKey: Self.phoneSessionIDKey)
             do {
                 guard let backupURL = Self.backupURL(), let routeURL = Self.routeURL() else {
                     logger.error("Could not resolve backup URL for workout backup")
@@ -82,11 +84,19 @@ final class WorkoutPersistence: Sendable {
         UserDefaults.standard.string(forKey: Self.autoPauseReasonKey)
     }
 
+    /// Phone session id checkpointed for the workout `sessionID`, nil if none
+    /// (watch-started, older build, or a different workout).
+    func recoveredPhoneSessionID(for sessionID: UUID) -> String? {
+        (UserDefaults.standard.dictionary(forKey: Self.phoneSessionIDKey) as? [String: String])?[sessionID.uuidString]
+    }
+
     private static let autoPauseReasonKey = "activeWorkoutAutoPauseReason"
+    private static let phoneSessionIDKey = "activeWorkoutPhoneSessionID"
 
     func clearBackup() {
         queue.async {
             UserDefaults.standard.removeObject(forKey: Self.autoPauseReasonKey)
+            UserDefaults.standard.removeObject(forKey: Self.phoneSessionIDKey)
             for url in [Self.backupURL(), Self.routeURL()].compactMap({ $0 }) {
                 try? FileManager.default.removeItem(at: url)
             }

@@ -354,7 +354,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             }
             do {
                 let content = UNMutableNotificationContent()
-                content.title = "ShuttlX"
+                content.title = kind == .suddenJump ? "Check your heart rate" : "ShuttlX"
                 content.body = body
                 content.sound = .default
                 // ponytail: .active — .timeSensitive needs an entitlement the app doesn't have yet.

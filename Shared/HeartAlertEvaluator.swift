@@ -21,7 +21,7 @@ public struct HeartAlert: Equatable, Sendable {
         case .belowLow: return "Heart rate below \(value ?? 0)"
         case .signalLost: return "No heart rate signal"
         case .noMotion: return "Paused – no motion"
-        case .suddenJump: return "Heart rate jumped quickly"
+        case .suddenJump: return "Up \(value ?? 0) bpm quickly"
         }
     }
 }

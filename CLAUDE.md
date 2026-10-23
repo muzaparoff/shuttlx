@@ -97,7 +97,7 @@ Account (Settings → Account, only while signed in): Sign Out and Delete Accoun
 Settings (iOS) sections: Health & Watch · Heart (limit + "Heart & alerts" screen, effort-on-watch and activity auto-switch toggles) · Body Metrics · Account (signed-in only) · Data Management · Help · About. No theme picker, no Exercise Devices entry point (`DeviceListView` has none). Debug (Sync Debug) appears after a 1 s long-press on About's Version row.
 Health import (iOS): HealthKitImporter (read-only; started at launch, observer + anchor) → HealthImportRules (dedup against existing sessions, grace period) → DataManager; imported sessions carry `importedFromHealth`.
 Imported (Health) sessions never fire TelemetryDeck `workoutCompleted` or the rating prompt (DataManager.handleReceivedSessions checks `importedFromHealth`).
-Live Activity controls: Pause/Resume and End are LiveActivityIntents (ShuttlX/Models/WorkoutControlIntents.swift)
+Live Activity controls: Pause/Resume is a LiveActivityIntent; "Finish…" (EndWorkoutIntent, `openAppWhenRun`) never stops the workout, it opens the app (iPhone timer raised for a phone workout, else the Today live card) where the "End & Save" confirmation is the only way to stop (ShuttlX/Models/WorkoutControlIntents.swift)
 
 Theme sync:
   iPhone: Settings → ThemeManager.selectedThemeID → UserDefaults (App Group)

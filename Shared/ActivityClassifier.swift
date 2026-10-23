@@ -36,6 +36,17 @@ public enum SpeedActivityClassifier {
         return Result(activity: run ? .running : .walking, confidence: ambiguous ? .low : .high)
     }
 
+    /// For after-the-fact segments (Fix a part). Same answer as `classify`, but with no cadence a
+    /// speed in 3.5...6.5 m/s could be a fast run or a bike, so the guess is `.low`.
+    /// The watch keeps using `classify`.
+    public static func classifyForReview(speed: Double, cadence: Double?, window: TimeInterval) -> Result? {
+        guard let r = classify(speed: speed, cadence: cadence, window: window) else { return nil }
+        if cadence == nil, speed >= 3.5, speed < unknownCadenceCyclingSpeed, r.confidence == .high {
+            return Result(activity: r.activity, confidence: .low)
+        }
+        return r
+    }
+
     /// Longest gap between fixes (or from the newest fix to now) for the window to
     /// count as covered. Walking with the 10 m distance filter gives a fix every ~7 s.
     public static let maxFixGap: TimeInterval = 15

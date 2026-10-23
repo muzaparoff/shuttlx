@@ -265,6 +265,7 @@ final class iPhoneWorkoutController: ObservableObject {
         case "pause": pause()
         case "resume": resume()
         case "stop": finish()
+        case "show": isPresentingTimer = true
         default: return false
         }
         return true

@@ -95,7 +95,7 @@ struct LAButtons: View {
                     .background(.white.opacity(0.16), in: Capsule())
             }
             Button(intent: EndWorkoutIntent()) {
-                Text("End & Save")
+                Text("Finish…")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(red: 0.016, green: 0.129, blue: 0.05))
                     .frame(maxWidth: .infinity, minHeight: 44)

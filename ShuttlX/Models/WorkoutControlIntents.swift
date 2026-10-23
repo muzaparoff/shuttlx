@@ -26,10 +26,14 @@ struct PauseResumeWorkoutIntent: LiveActivityIntent {
 struct EndWorkoutIntent: LiveActivityIntent {
     static var title: LocalizedStringResource = "End Workout"
     static var isDiscoverable: Bool { false }
+    /// Never stops the workout: a lock-screen tap has no confirmation step. It opens the app
+    /// on the live workout, where the "End & Save" confirmation is the only place to stop.
+    static var openAppWhenRun: Bool { true }
     init() {}
 
     @MainActor func perform() async throws -> some IntentResult {
-        WorkoutControlBridge.send?("stop")
+        // Raises the iPhone timer when a phone workout runs; a watch-driven workout just shows the Today live card.
+        _ = WorkoutControlBridge.phoneWorkout?("show")
         return .result()
     }
 }
