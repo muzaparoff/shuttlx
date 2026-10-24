@@ -161,6 +161,8 @@ enum HelpContent {
                          text: "To cut a part in two, drag the handle on the bar to where it changes and tap Split."),
                 HelpStep(icon: "arrow.triangle.merge",
                          text: "Tap “Merge with next” to join a part with the one after it."),
+                HelpStep(icon: "arrow.uturn.backward",
+                         text: "Tap “Reset to detected” (and confirm) to remove all your corrections to that workout. It is off when the workout has none."),
                 HelpStep(icon: "heart.fill",
                          text: "The heart-rate line under the bar comes from Apple Health. It is hidden when Health has no heart-rate data for the workout."),
             ]),

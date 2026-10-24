@@ -36,7 +36,8 @@ struct HistoryMapView: View {
     /// Polylines are expensive (activity lookup per point); rebuilt only when the sessions, filter or edits change.
     @State private var pieceCache: [RoutePiece] = []
 
-    private static let rowHeight: CGFloat = 58
+    @ScaledMetric(relativeTo: .body) private var rowHeight: CGFloat = 58
+    @Environment(\.dynamicTypeSize) private var typeSize
     private static let locationManager = CLLocationManager()
     private let filterable: [DetectedActivity] = [.running, .walking, .cycling]
 
@@ -368,14 +369,10 @@ struct HistoryMapView: View {
         let km = items.compactMap(\.distance).reduce(0, +)
         let hours = items.reduce(0) { $0 + $1.duration } / 3600
         return VStack(spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("\(items.count) training\(items.count == 1 ? "" : "s")")
-                    .font(ShuttlXFont.cardTitle.weight(.bold))
-                    .foregroundStyle(ShuttlXColor.textPrimary)
-                Spacer()
-                Text("\(Int(km.rounded())) km \u{00B7} \(Int(hours.rounded())) h")
-                    .font(ShuttlXFont.cardCaption.monospacedDigit())
-                    .foregroundStyle(ShuttlXColor.textSecondary)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline) { listTitle(items.count); Spacer(); listTotals(km, hours) }
+                VStack(alignment: .leading, spacing: 2) { listTitle(items.count); listTotals(km, hours) }
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 18).padding(.bottom, 4)
             .accessibilityElement(children: .combine)
@@ -391,28 +388,44 @@ struct HistoryMapView: View {
                         ForEach(items) { s in row(s) }
                     }
                 }
-                .frame(height: CGFloat(min(items.count, expanded ? 7 : 3)) * Self.rowHeight)
+                .frame(height: CGFloat(min(items.count, typeSize.isAccessibilitySize ? 2 : (expanded ? 7 : 3))) * rowHeight)
             }
         }
+    }
+
+    private func listTitle(_ n: Int) -> some View {
+        Text("\(n) training\(n == 1 ? "" : "s")")
+            .font(ShuttlXFont.cardTitle.weight(.bold))
+            .foregroundStyle(ShuttlXColor.textPrimary)
+    }
+
+    private func listTotals(_ km: Double, _ hours: Double) -> some View {
+        Text("\(Int(km.rounded())) km \u{00B7} \(Int(hours.rounded())) h")
+            .font(ShuttlXFont.cardCaption.monospacedDigit())
+            .foregroundStyle(ShuttlXColor.textSecondary)
     }
 
     @ViewBuilder
     private func row(_ s: TrainingSession) -> some View {
         let segs = s.displaySegments()
+        let big = typeSize.isAccessibilitySize
+        let km: String? = s.distance.flatMap { $0 > 0 ? String(format: "%.1f km", $0) : nil }
         let content = HStack(spacing: 10) {
-            Group {
-                if hasRoute(s) {
-                    RouteThumbnail(session: s, segments: segs, size: RouteSnapshotCache.square)
-                } else {
-                    ZStack {
-                        Color(.tertiarySystemFill)
-                        Image(systemName: (segs.first?.activityType ?? .running).systemImage)
-                            .foregroundStyle(ShuttlXColor.textSecondary)
+            if !big {
+                Group {
+                    if hasRoute(s) {
+                        RouteThumbnail(session: s, segments: segs, size: RouteSnapshotCache.square)
+                    } else {
+                        ZStack {
+                            Color(.tertiarySystemFill)
+                            Image(systemName: (segs.first?.activityType ?? .running).systemImage)
+                                .foregroundStyle(ShuttlXColor.textSecondary)
+                        }
                     }
                 }
+                .frame(width: 46, height: 46)
+                .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
             }
-            .frame(width: 46, height: 46)
-            .clipShape(RoundedRectangle(cornerRadius: 11, style: .continuous))
             VStack(alignment: .leading, spacing: 2) {
                 Text(s.timelineName)
                     .font(ShuttlXFont.cardSubtitle.weight(.semibold))
@@ -420,16 +433,20 @@ struct HistoryMapView: View {
                 Text(dayLabel(s.startDate) + " \u{00B7} " + TodayFormat.clock(s.startDate))
                     .font(ShuttlXFont.cardCaption)
                     .foregroundStyle(ShuttlXColor.textSecondary)
+                // At accessibility sizes the distance moves under the text so the name keeps the full width.
+                if big, let km {
+                    Text(km).font(ShuttlXFont.cardCaption.monospacedDigit()).foregroundStyle(ShuttlXColor.textSecondary)
+                }
             }
             Spacer(minLength: 6)
-            if let d = s.distance, d > 0 {
-                Text(String(format: "%.1f km", d))
+            if !big, let km {
+                Text(km)
                     .font(ShuttlXFont.cardCaption.monospacedDigit())
                     .foregroundStyle(ShuttlXColor.textSecondary)
             }
         }
         .padding(.horizontal, 16)
-        .frame(height: Self.rowHeight)
+        .frame(height: rowHeight)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
         if hasRoute(s) {

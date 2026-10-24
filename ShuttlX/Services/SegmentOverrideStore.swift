@@ -38,6 +38,11 @@ final class SegmentOverrideStore: ObservableObject {
         return true
     }
 
+    /// Drops this session's corrections (`rawSegmentIDs` = ids of the RECORDED segments in sessions.json).
+    func reset(sessionID: UUID, rawSegmentIDs: [UUID]) {
+        commit(edits.resetting(sessionID: sessionID, rawSegmentIDs: rawSegmentIDs))
+    }
+
     /// Wipe: forget every correction (the file is removed by `DataManager.wipeLocalUserData`).
     func wipe() { edits = SegmentEdits() }
 

@@ -35,6 +35,53 @@ public enum LenientJSON {
     }
 }
 
+/// Read-append-write decision for a JSON array store (the watch `sessions.json`). Pure, so the rule is tested.
+public enum StoreAppend {
+    public enum Plan<T> {
+        /// Write `elements` (every readable record plus the new one). `backupFirst`: some records were
+        /// unreadable and are dropped by this write, so copy the file (`StoreFile.backupCorrupt`) before it.
+        case write([T], backupFirst: Bool)
+        case alreadyStored
+        /// Nothing in the file could be read. Back it up, never overwrite it, keep the new record elsewhere.
+        case keepFile
+    }
+
+    /// `existing` is nil when there is no file yet.
+    public static func plan<T: Codable & Identifiable>(existing: Data?, adding item: T,
+                                                       decoder: JSONDecoder = JSONDecoder()) -> Plan<T> {
+        guard let existing else { return .write([item], backupFirst: false) }
+        let decoded = LenientJSON.decodeArray(T.self, from: existing, decoder: decoder)
+        if decoded.wholeFileUndecodable { return .keepFile }
+        if decoded.elements.contains(where: { $0.id == item.id }) { return .alreadyStored }
+        return .write(decoded.elements + [item], backupFirst: decoded.skipped > 0)
+    }
+
+    public enum Outcome: Equatable {
+        case inserted(backup: URL?)
+        case alreadyStored
+        /// The file was wholly unreadable and left as it was; the item was NOT stored.
+        case fileKept(backup: URL?)
+    }
+
+    /// Applies `plan` to the file at `url`. Run it inside the caller's write coordination / serial queue.
+    /// Throws when the read (other than "no file") or the write fails; the file is then unchanged.
+    public static func append<T: Codable & Identifiable>(_ item: T, to url: URL,
+                                                         options: Data.WritingOptions = StoreFile.writeOptions) throws -> Outcome {
+        let existing = FileManager.default.fileExists(atPath: url.path) ? try Data(contentsOf: url) : nil
+        switch plan(existing: existing, adding: item) {
+        case .alreadyStored:
+            return .alreadyStored
+        case .keepFile:
+            return .fileKept(backup: try? StoreFile.backupCorrupt(url))
+        case .write(let elements, let backupFirst):
+            // No backup, no write: the unreadable records would be gone for good.
+            let backup = backupFirst ? try StoreFile.backupCorrupt(url) : nil
+            try JSONEncoder().encode(elements).write(to: url, options: options)
+            return .inserted(backup: backup)
+        }
+    }
+}
+
 public enum StoreFile {
     /// Files written by background wakes or read by widgets must stay readable while the phone is locked
     /// after the first unlock; `.completeFileProtection` makes those writes fail and widgets read nothing.

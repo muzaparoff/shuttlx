@@ -580,7 +580,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
         let logger = self.logger
         Self.sessionStoreQueue.async {
-            Self.appendSessionToStore(session, containerURL: containerURL, logger: logger)
+            guard !Self.appendSessionToStore(session, containerURL: containerURL, logger: logger) else { return }
+            // Not on disk (unreadable store kept as is, or a failed write): the pending queue
+            // still gets it to the phone.
+            Task { @MainActor [weak self] in self?.queuePendingSession(session) }
         }
     }
 
@@ -615,7 +618,11 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         }
     }
 
-    private nonisolated static func appendSessionToStore(_ session: TrainingSession, containerURL: URL, logger: Logger) {
+    /// Returns false when the session did NOT reach sessions.json (the caller queues it for the phone).
+    /// Per-record decode (`StoreAppend`, Shared): unreadable records are backed up, the readable ones kept,
+    /// and a wholly unreadable file is never overwritten.
+    @discardableResult
+    private nonisolated static func appendSessionToStore(_ session: TrainingSession, containerURL: URL, logger: Logger) -> Bool {
         let sessionsURL = containerURL.appendingPathComponent("sessions.json")
         let coordinator = NSFileCoordinator()
         var coordinatorError: NSError?
@@ -623,36 +630,24 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         // funnels through here, so reloading timelines unconditionally fired
         // widget-extension IPC dozens of times per sync cycle for no change at all.
         var didInsert = false
+        var stored = false
 
         // Read-then-write under a single write coordination to prevent races
         coordinator.coordinate(writingItemAt: sessionsURL, options: .forReplacing, error: &coordinatorError) { writeURL in
-            var sessions: [TrainingSession] = []
-
-            // Read existing sessions if the file exists (using the coordinator-provided URL)
-            if FileManager.default.fileExists(atPath: writeURL.path) {
-                do {
-                    let data = try Data(contentsOf: writeURL)
-                    sessions = try JSONDecoder().decode([TrainingSession].self, from: data)
-                } catch {
-                    logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
-                    // Preserve corrupt file — don't overwrite workout history
-                    let backupURL = writeURL.deletingLastPathComponent()
-                        .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                    try? FileManager.default.copyItem(at: writeURL, to: backupURL)
-                    logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                    Self.purgeOldCorruptBackups(in: writeURL.deletingLastPathComponent(), logger: logger)
-                    // Continue with empty array — better to have one session than lose all
-                }
-            }
-
-            guard !sessions.contains(where: { $0.id == session.id }) else { return }
-            sessions.append(session)
-
             do {
-                let data = try JSONEncoder().encode(sessions)
-                try data.write(to: writeURL, options: [.atomic, .completeFileProtection])
-                didInsert = true
-                logger.info("Session saved to App Group")
+                switch try StoreAppend.append(session, to: writeURL, options: [.atomic, .completeFileProtection]) {
+                case .inserted(let backup):
+                    if let backup {
+                        logger.error("CRITICAL: sessions.json had unreadable records; kept the rest, copy in \(backup.lastPathComponent)")
+                    }
+                    didInsert = true
+                    stored = true
+                    logger.info("Session saved to App Group")
+                case .alreadyStored:
+                    stored = true
+                case .fileKept(let backup):
+                    logger.error("CRITICAL: sessions.json unreadable on watch; left untouched (copy: \(backup?.lastPathComponent ?? "failed")), session \(session.id) queued for the phone")
+                }
             } catch {
                 logger.error("Failed to save session to App Group: \(error.localizedDescription)")
             }
@@ -665,6 +660,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             // actually changed (dedup hit / encode failure ⇒ nothing to reload).
             WidgetCenter.shared.reloadAllTimelines()
         }
+        return stored
     }
 
     // MARK: - WCSessionDelegate
@@ -1181,15 +1177,14 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         var coordinatorError: NSError?
         coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
             do {
-                let data = try Data(contentsOf: readURL)
-                result = try JSONDecoder().decode([TrainingSession].self, from: data)
+                let decoded = LenientJSON.decodeArray(TrainingSession.self, from: try Data(contentsOf: readURL))
+                result = decoded.elements
+                if decoded.skipped > 0 || decoded.wholeFileUndecodable {
+                    let backup = try? StoreFile.backupCorrupt(url)
+                    logger.error("CRITICAL: sessions.json on watch: \(decoded.skipped) unreadable record(s)\(decoded.wholeFileUndecodable ? " (whole file)" : ""), copy: \(backup?.lastPathComponent ?? "failed")")
+                }
             } catch {
-                logger.error("CRITICAL: Failed to decode sessions.json on watch: \(error.localizedDescription)")
-                let backupURL = url.deletingLastPathComponent()
-                    .appendingPathComponent("sessions_corrupt_\(Int(Date().timeIntervalSince1970)).json")
-                try? FileManager.default.copyItem(at: readURL, to: backupURL)
-                logger.error("Backed up corrupt sessions.json to \(backupURL.lastPathComponent)")
-                purgeOldCorruptBackups(in: url.deletingLastPathComponent(), logger: logger)
+                logger.error("Failed to read sessions.json on watch: \(error.localizedDescription)")
             }
         }
         if let coordinatorError {
@@ -1506,18 +1501,6 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
 
     // MARK: - Helpers
-
-    private nonisolated static func purgeOldCorruptBackups(in directory: URL, logger: Logger) {
-        let cutoff = Date().addingTimeInterval(-7 * 24 * 3600)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.creationDateKey]) else { return }
-        for file in files where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
-            let created = (try? file.resourceValues(forKeys: [.creationDateKey]).creationDate) ?? Date.distantFuture
-            if created < cutoff {
-                try? FileManager.default.removeItem(at: file)
-                logger.info("Removed stale corrupt backup: \(file.lastPathComponent)")
-            }
-        }
-    }
 
     /// nonisolated so the off-main session loaders can resolve the container
     /// without a main-actor hop (it only reads a static constant).

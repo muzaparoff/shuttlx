@@ -96,4 +96,26 @@ final class SegmentEditsTests: XCTestCase {
         XCTAssertNil(SegmentEdits().effective(segments: r, calories: 500, sessionID: sid))
         XCTAssertNil(e.effective(segments: r, calories: nil, sessionID: sid)?.calories)
     }
+
+    func testResetRemovesOnlyThisSessionsEdits() throws {
+        let r = raw()
+        let other = UUID()
+        let otherSeg = raw()
+        var e = SegmentEdits().settingType(.stationary, partID: r[1].id, parts: r, sessionID: sid)
+        e = try XCTUnwrap(e.splitting(partID: r[1].id, at: t0.addingTimeInterval(1800), parts: r, sessionID: sid))
+        e = e.settingType(.walking, partID: otherSeg[0].id, parts: otherSeg, sessionID: other)
+        XCTAssertTrue(e.hasEdits(sessionID: sid, rawSegmentIDs: r.map(\.id)))
+        let out = e.resetting(sessionID: sid, rawSegmentIDs: r.map(\.id))
+        XCTAssertFalse(out.hasEdits(sessionID: sid, rawSegmentIDs: r.map(\.id)))
+        XCTAssertEqual(out.apply(to: r, sessionID: sid), r)
+        XCTAssertEqual(out.types[otherSeg[0].id.uuidString], .walking)
+    }
+
+    func testResetOnV1FlatMap() throws {
+        let r = raw()
+        let v1 = try JSONEncoder().encode([r[1].id.uuidString: DetectedActivity.stationary])
+        let e = try SegmentEdits.decode(v1)
+        XCTAssertTrue(e.hasEdits(sessionID: sid, rawSegmentIDs: r.map(\.id)))
+        XCTAssertEqual(e.resetting(sessionID: sid, rawSegmentIDs: r.map(\.id)), SegmentEdits())
+    }
 }

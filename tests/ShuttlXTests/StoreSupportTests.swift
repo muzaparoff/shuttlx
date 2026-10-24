@@ -32,6 +32,53 @@ final class StoreSupportTests: XCTestCase {
         XCTAssertTrue(LenientJSON.decodeArray(Rec.self, from: Data()).wholeFileUndecodable)
     }
 
+    // MARK: append (watch sessions.json, audit C1)
+
+    /// The old watch append decoded strictly and wrote `[new]` over a file with one bad record
+    /// (probe: 30 good + 1 bad became 1 record).
+    func testAppendKeepsGoodRecordsAndBacksUpTheBadOne() throws {
+        let f = dir.appendingPathComponent("sessions.json")
+        let good = (1...30).map { Rec(id: UUID(), n: $0) }
+        var json = String(data: try JSONEncoder().encode(good), encoding: .utf8)!
+        json.removeLast()
+        json += ",{\"id\":\"not-a-uuid\",\"n\":0}]"
+        let original = Data(json.utf8)
+        try original.write(to: f)
+        let new = Rec(id: UUID(), n: 99)
+
+        guard case .inserted(let backup?) = try StoreAppend.append(new, to: f, options: .atomic) else {
+            return XCTFail("expected an insert with a backup")
+        }
+        XCTAssertEqual(try JSONDecoder().decode([Rec].self, from: Data(contentsOf: f)), good + [new])
+        XCTAssertEqual(try Data(contentsOf: backup), original)
+        XCTAssertEqual(try StoreAppend.append(new, to: f, options: .atomic), .alreadyStored)
+    }
+
+    func testAppendNeverReplacesAWhollyUnreadableFile() throws {
+        let f = dir.appendingPathComponent("sessions.json")
+        let truncated = Data("[{\"id\":".utf8)
+        try truncated.write(to: f)
+
+        guard case .fileKept(let backup?) = try StoreAppend.append(Rec(id: UUID(), n: 1), to: f, options: .atomic) else {
+            return XCTFail("expected the file to be kept")
+        }
+        XCTAssertEqual(try Data(contentsOf: f), truncated)
+        XCTAssertEqual(try Data(contentsOf: backup), truncated)
+        // A second attempt adds no second copy and still leaves the file alone.
+        guard case .fileKept(let again?) = try StoreAppend.append(Rec(id: UUID(), n: 2), to: f, options: .atomic) else {
+            return XCTFail("expected the file to be kept")
+        }
+        XCTAssertEqual(again.lastPathComponent, backup.lastPathComponent)
+        XCTAssertEqual(try Data(contentsOf: f), truncated)
+    }
+
+    func testAppendCreatesMissingFile() throws {
+        let f = dir.appendingPathComponent("sessions.json")
+        let r = Rec(id: UUID(), n: 1)
+        XCTAssertEqual(try StoreAppend.append(r, to: f, options: .atomic), .inserted(backup: nil))
+        XCTAssertEqual(try JSONDecoder().decode([Rec].self, from: Data(contentsOf: f)), [r])
+    }
+
     func testAllElementsBadCountsAsWholeFile() {
         let r = LenientJSON.decodeArray(Rec.self, from: Data("[{\"x\":1},{\"x\":2}]".utf8))
         XCTAssertTrue(r.wholeFileUndecodable)

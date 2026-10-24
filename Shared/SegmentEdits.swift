@@ -123,6 +123,19 @@ public struct SegmentEdits: Codable, Equatable, Sendable {
         return replacing(specs, sessionID: sessionID)
     }
 
+    /// True when any edit touches this session (type overrides are keyed by RECORDED segment id, so the raw ids are needed).
+    public func hasEdits(sessionID: UUID, rawSegmentIDs: [UUID]) -> Bool {
+        partitions[sessionID.uuidString] != nil || rawSegmentIDs.contains { types[$0.uuidString] != nil }
+    }
+
+    /// "Reset to detected": drops this session's partition and the type overrides of its recorded segments. Other sessions are untouched.
+    public func resetting(sessionID: UUID, rawSegmentIDs: [UUID]) -> SegmentEdits {
+        var out = self
+        out.partitions[sessionID.uuidString] = nil
+        for id in rawSegmentIDs { out.types[id.uuidString] = nil }
+        return out
+    }
+
     private func replacing(_ specs: [PartSpec], sessionID: UUID) -> SegmentEdits {
         var out = self
         out.partitions[sessionID.uuidString] = specs

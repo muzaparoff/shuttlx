@@ -300,6 +300,9 @@ struct FixPartSheet: View {
     let partID: UUID
     let parts: [ActivitySegment]   // the session's EFFECTIVE parts, in order
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var dataManager: DataManager
+    @ObservedObject private var store = SegmentOverrideStore.shared
+    @State private var confirmingReset = false
     /// nil = no tile chosen (the part is `.unknown`, which is not Rest); Save stays off until one is picked.
     @State private var choice: DetectedActivity?
     /// Where the split handle sits inside the part, 0...1 (mockup: starts in the middle).
@@ -344,6 +347,10 @@ struct FixPartSheet: View {
         guard let choice else { return false }
         return choice != segment.activityType
     }
+
+    /// Recorded (unedited) segment ids of this session, from sessions.json.
+    private var rawSegmentIDs: [UUID] { dataManager.sessions.first { $0.id == sessionID }?.segments.map(\.id) ?? [] }
+    private var hasEdits: Bool { store.edits.hasEdits(sessionID: sessionID, rawSegmentIDs: rawSegmentIDs) }
 
     private func split() {
         SegmentOverrideStore.shared.split(partID: partID, at: splitDate, parts: partsWithChoice, sessionID: sessionID)
@@ -406,27 +413,33 @@ struct FixPartSheet: View {
     var body: some View {
         ScrollView {
         VStack(spacing: 16) {
-            HStack {
-                Button("Cancel") { dismiss() }
-                    .font(ShuttlXFont.cardSubtitle)
-                    .frame(minWidth: 60, minHeight: 44, alignment: .leading)
-                Spacer()
-                Text(title)
-                    .font(ShuttlXFont.cardTitle.weight(.bold).monospacedDigit())
-                    .foregroundStyle(ShuttlXColor.textPrimary)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button("Save") {
-                    guard let choice, canSave else { return }
-                    SegmentOverrideStore.shared.setType(choice, partID: partID, parts: parts, sessionID: sessionID)
-                    dismiss()
-                }
-                    .font(ShuttlXFont.cardSubtitle.weight(.bold))
-                    .frame(minWidth: 60, minHeight: 44, alignment: .trailing)
-                    .disabled(!canSave)
-                    .accessibilityHint(canSave ? "" : "Choose a different type to save")
+            // At accessibility sizes the title takes its own line so Cancel / Save keep their width.
+            let cancelButton = Button("Cancel") { dismiss() }
+                .font(ShuttlXFont.cardSubtitle)
+                .frame(minWidth: 60, minHeight: 44, alignment: .leading)
+            let saveButton = Button("Save") {
+                guard let choice, canSave else { return }
+                SegmentOverrideStore.shared.setType(choice, partID: partID, parts: parts, sessionID: sessionID)
+                dismiss()
             }
-            .foregroundStyle(ShuttlXColor.accentText)
+                .font(ShuttlXFont.cardSubtitle.weight(.bold))
+                .frame(minWidth: 60, minHeight: 44, alignment: .trailing)
+                .disabled(!canSave)
+                .accessibilityHint(canSave ? "" : "Choose a different type to save")
+            let titleText = Text(title)
+                .font(ShuttlXFont.cardTitle.weight(.bold).monospacedDigit())
+                .foregroundStyle(ShuttlXColor.textPrimary)
+                .accessibilityAddTraits(.isHeader)
+            if typeSize.isAccessibilitySize {
+                VStack(spacing: 4) {
+                    titleText
+                    HStack { cancelButton; Spacer(); saveButton }
+                        .foregroundStyle(ShuttlXColor.accentText)
+                }
+            } else {
+                HStack { cancelButton; Spacer(); titleText; Spacer(); saveButton }
+                    .foregroundStyle(ShuttlXColor.accentText)
+            }
 
             rowLayout {
                 ForEach(options, id: \.self) { tile($0) }
@@ -452,7 +465,7 @@ struct FixPartSheet: View {
             }
         }
         #endif
-        .presentationDetents([.height(440), .large])
+        .presentationDetents(typeSize.isAccessibilitySize ? [.large] : [.height(440), .large])
         .presentationDragIndicator(.visible)
         .presentationCornerRadius(24)
         .presentationBackground(Color(.systemBackground))
@@ -502,9 +515,31 @@ struct FixPartSheet: View {
     }
 
     private var actions: some View {
+        VStack(spacing: 8) {
         rowLayout {
             actionButton("Split at \(TodayFormat.clock(splitDate))", enabled: canSplit, action: split)
             actionButton("Merge with next", enabled: canMerge, action: merge)
+        }
+        Button { confirmingReset = true } label: {
+            Text("Reset to detected")
+                .font(ShuttlXFont.cardSubtitle.weight(.semibold))
+                .foregroundStyle(hasEdits ? ShuttlXColor.ctaDestructive : ShuttlXColor.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: 44)
+        }
+        .buttonStyle(.plain)
+        .disabled(!hasEdits)
+        .accessibilityLabel("Reset to detected")
+        .accessibilityHint(hasEdits ? "Removes all your corrections to this workout and restores the parts ShuttlX detected"
+                                    : "Unavailable, this workout has no corrections")
+        .confirmationDialog("Reset this workout to the parts ShuttlX detected?", isPresented: $confirmingReset, titleVisibility: .visible) {
+            Button("Reset to detected", role: .destructive) {
+                store.reset(sessionID: sessionID, rawSegmentIDs: rawSegmentIDs)
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Your type changes, splits and merges for this workout are removed. The recorded workout is not changed.")
+        }
         }
     }
 
