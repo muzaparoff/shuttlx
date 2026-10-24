@@ -10,9 +10,11 @@ enum HistoryMode: String, CaseIterable {
 /// Segmented Calendar / List / Map switch (shared by all three modes; the map floats it over the map).
 struct HistoryModePicker: View {
     @Binding var mode: HistoryMode
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
     var body: some View {
         Picker("History view", selection: $mode) {
-            ForEach(HistoryMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+            // Simple mode hides Map (a user already on Map is moved to Calendar by HistoryView).
+            ForEach(HistoryMode.allCases.filter { !simpleMode || $0 != .map }, id: \.self) { Text($0.rawValue).tag($0) }
         }
         .pickerStyle(.segmented)
         .accessibilityLabel("History view mode")
@@ -41,6 +43,7 @@ struct HistoryView: View {
     @State private var shownDay = Calendar.current.startOfDay(for: Date())
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dynamicTypeSize) private var typeSize
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
 
     #if DEBUG
     /// Screenshot seam (SHUTTLX_HISTORY_MODE=<calendar|list|map>).
@@ -97,6 +100,7 @@ struct HistoryView: View {
                 .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in rollOverDay() }
             }
         }
+        .onChange(of: simpleMode, initial: true) { _, on in if on && mode == .map { mode = .calendar } }
     }
 
     // MARK: - Month navigator (shared by calendar and list)
@@ -192,7 +196,7 @@ struct HistoryView: View {
                     .font(ShuttlXFont.cardSubtitle.monospacedDigit().weight(selected || isToday ? .bold : .regular))
                     .foregroundStyle(selected ? ShuttlXColor.iconOnCTA
                                      : future ? ShuttlXColor.textSecondary.opacity(0.45)
-                                     : isToday ? ShuttlXColor.ctaPrimary : ShuttlXColor.textPrimary)
+                                     : isToday ? ShuttlXColor.accentText : ShuttlXColor.textPrimary)
                     .frame(width: 30, height: 30)
                     .background(Circle().fill(selected ? ShuttlXColor.ctaPrimary : .clear))
                 HStack(spacing: 2) {

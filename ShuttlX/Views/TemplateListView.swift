@@ -89,7 +89,7 @@ struct TemplateListView: View {
                 Image(systemName: "figure.run")
                     .foregroundStyle(ShuttlXColor.accentText)
                     .frame(width: 20)
-                Text("Free Run")
+                Text("Run/Walk")
                     .font(ShuttlXFont.cardTitle)
             }
 
@@ -109,7 +109,7 @@ struct TemplateListView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Free Run, auto-detects run and walk")
+        .accessibilityLabel("Run/Walk, auto-detects run and walk")
     }
 
     // MARK: - Template List

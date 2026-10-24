@@ -92,7 +92,7 @@ struct LiveWorkoutCard: View {
             Label("PAUSED AUTOMATICALLY", systemImage: "pause.fill")
                 .font(ShuttlXFont.cardCaption.weight(.heavy))
                 .tracking(0.7)
-                .foregroundStyle(ShuttlXColor.ctaWarning)
+                .foregroundStyle(ShuttlXColor.warningText)
             Text("Still training?")
                 .font(ShuttlXFont.metricMedium)
                 .foregroundStyle(ShuttlXColor.textPrimary)
@@ -111,18 +111,23 @@ struct LiveWorkoutCard: View {
     }
 
     private func liveCard(isStale: Bool) -> some View {
-        let tint = isStale ? Color.yellow : (sharedData.liveIsPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.running)
+        let tint = isStale ? Color.yellow : (sharedData.liveIsPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.running)   // borders and fills only
+        let activity = DetectedActivity(rawValue: sharedData.liveCurrentActivity)
+        let tintText = isStale || sharedData.liveIsPaused ? ShuttlXColor.warningText : (activity.map(ShuttlXColor.activityText) ?? ShuttlXColor.textPrimary)
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 if isStale {
                     Label("SIGNAL LOST", systemImage: "antenna.radiowaves.left.and.right.slash")
-                        .font(ShuttlXFont.cardCaption.weight(.heavy)).tracking(0.7).foregroundStyle(.yellow)
+                        .font(ShuttlXFont.cardCaption.weight(.heavy)).tracking(0.7).foregroundStyle(ShuttlXColor.warningText)
                 } else {
                     HStack(spacing: 6) {
-                        Circle().fill(tint).frame(width: 8, height: 8)
+                        // Glyph + word, never colour alone (Run vs Walk).
+                        Image(systemName: sharedData.liveIsPaused ? "pause.fill" : (activity?.systemImage ?? "figure.run"))
+                            .font(ShuttlXFont.cardCaption.weight(.heavy)).foregroundStyle(tintText)
                             .modifier(PulseModifier(animate: !sharedData.liveIsPaused))
+                            .accessibilityHidden(true)
                         Text(sharedData.liveIsPaused ? "PAUSED" : "\(activityWord) \u{00B7} LIVE")
-                            .font(ShuttlXFont.cardCaption.weight(.heavy)).tracking(0.7).foregroundStyle(tint)
+                            .font(ShuttlXFont.cardCaption.weight(.heavy)).tracking(0.7).foregroundStyle(tintText)
                     }
                 }
                 Spacer()
@@ -150,7 +155,7 @@ struct LiveWorkoutCard: View {
                         if let zoneWord {
                             Text(zoneWord)
                                 .font(ShuttlXFont.cardCaption.weight(.heavy))
-                                .foregroundStyle(zoneWord == "HARD" ? ShuttlXColor.ctaDestructive : ShuttlXColor.running)
+                                .foregroundStyle(zoneWord == "HARD" ? ShuttlXColor.ctaDestructive : ShuttlXColor.accentText)
                         }
                     }
                 }
@@ -160,7 +165,7 @@ struct LiveWorkoutCard: View {
             }
             HStack(spacing: 8) {
                 pillButton(sharedData.liveIsPaused ? "Resume" : "Pause",
-                           fill: ShuttlXColor.ctaPrimary.opacity(0.12), text: ShuttlXColor.ctaPrimary, action: togglePause)
+                           fill: ShuttlXColor.ctaPrimary.opacity(0.12), text: ShuttlXColor.accentText, action: togglePause)
                 pillButton("End & Save", fill: ShuttlXColor.ctaDestructive.opacity(0.12), text: ShuttlXColor.ctaDestructive) { showStopConfirmation = true }
             }
         }

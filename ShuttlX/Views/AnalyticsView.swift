@@ -20,6 +20,11 @@ struct AnalyticsView: View {
     @State private var fatigueScore: Double = 0
     @State private var formScore: Double = 0
 
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
+    /// Athlete metrics (VO2max, fitness / fatigue / form, recovery "Fatigued") are information for athletes and can
+    /// worry a rehab patient, so they are opt-in and never shown in Simple mode.
+    @AppStorage("showAthleteMetrics") private var showAthleteMetrics = false
+
     private var sessions: [TrainingSession] { dataManager.effectiveSessions }
     #if DEBUG
     @State private var seamDetail = false
@@ -34,6 +39,7 @@ struct AnalyticsView: View {
                     } else {
                         TrendsOverview(sessions: sessions)
                         detailRows
+                        athleteSection
                     }
                 }
                 .padding(.horizontal, 16)
@@ -73,6 +79,22 @@ struct AnalyticsView: View {
             detailRow("More", hint: nil) { detailScreen("More") { moreCards } }
         }
         .timelineCard()
+    }
+
+    @ViewBuilder private var athleteSection: some View {
+        if !simpleMode {
+            Toggle("Show athlete metrics", isOn: $showAthleteMetrics)
+                .font(ShuttlXFont.cardSubtitle)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 48)
+                .timelineCard()
+                .accessibilityHint("Shows VO2max, fitness, fatigue and form")
+            if showAthleteMetrics {
+                recoveryStatusCard
+                fitnessOverviewRow
+                vo2maxCard
+            }
+        }
     }
 
     private func detailRow<D: View>(_ title: String, hint: String?, @ViewBuilder destination: () -> D) -> some View {
@@ -118,13 +140,10 @@ struct AnalyticsView: View {
 
     @ViewBuilder private var recordsCards: some View {
         personalRecordsSection
-        vo2maxCard
         elevationSection
     }
 
     @ViewBuilder private var moreCards: some View {
-        recoveryStatusCard
-        fitnessOverviewRow
         ScrubTimelineHeroCard(sessions: sessions)
         ComparisonSplitCard(sessions: sessions)
         CalendarHeatmapCard(sessions: sessions)

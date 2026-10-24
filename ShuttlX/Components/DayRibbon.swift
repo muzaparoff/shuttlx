@@ -5,7 +5,6 @@ import ShuttlXShared
 struct ActivityRibbon: View {
     let segments: [ActivitySegment]
     var height: CGFloat = 14
-    @Environment(\.accessibilityDifferentiateWithoutColor) private var noColorOnly
 
     private var total: TimeInterval { segments.reduce(0) { $0 + max(0, $1.duration) } }
 
@@ -19,8 +18,8 @@ struct ActivityRibbon: View {
                         .fill(segment.activityType.themeColor)
                         .frame(width: width)
                         .overlay {
-                            // Differentiate Without Colour: a glyph so run vs walk is not told by colour alone.
-                            if noColorOnly, width >= height {
+                            // Run vs walk is never told by colour alone: ribbons tall enough always carry the glyph.
+                            if height >= 14, width >= height {
                                 Image(systemName: segment.activityType.systemImage)
                                     .font(.system(size: max(8, height * 0.6)))
                                     .foregroundStyle(ShuttlXColor.iconOnCTA)
@@ -45,6 +44,7 @@ struct ActivityRibbon: View {
 /// One row of the parts list: colour bar, activity, start time + duration, distance when known.
 struct SessionPartRow: View {
     let segment: ActivitySegment
+    var showsChevron = true
 
     private var timeText: String {
         "\(TodayFormat.clock(segment.startDate)) · \(TodayFormat.short(segment.duration))"
@@ -66,7 +66,7 @@ struct SessionPartRow: View {
                 .fill(segment.activityType.themeColor)
                 .frame(width: 10, height: 28)
             VStack(alignment: .leading, spacing: 2) {
-                Text(TodayFormat.activityName(segment.activityType))
+                Label(TodayFormat.activityName(segment.activityType), systemImage: segment.activityType.systemImage)
                     .font(ShuttlXFont.cardSubtitle.weight(.semibold))
                     .foregroundStyle(ShuttlXColor.textPrimary)
                 Text(timeText)
@@ -86,9 +86,11 @@ struct SessionPartRow: View {
                     }
                 }
             }
-            Image(systemName: "chevron.right")
-                .font(ShuttlXFont.cardCaption)
-                .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
+            if showsChevron {
+                Image(systemName: "chevron.right")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
+            }
         }
         .padding(.horizontal, 14).padding(.vertical, 9)
         .contentShape(Rectangle())

@@ -18,6 +18,7 @@ struct SettingsView: View {
     @State private var showSuccessMessage = false
     @State private var successMessage = ""
     @State private var showDebug = false
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
     @ObservedObject var deviceManager = DeviceManager.shared
     @State private var weightText: String = ""
     @State private var age: Int?
@@ -57,6 +58,13 @@ struct SettingsView: View {
                 }
             }
             if !Self.seamSkipTop {   // SHUTTLX_SCROLL_BOTTOM=1 screenshot seam (false in release)
+            Section {
+                Toggle("Simple mode", isOn: $simpleMode)
+                    .accessibilityHint("Fewer cards and bigger numbers. Heart limit and alerts stay on.")
+            } footer: {
+                Text("Fewer cards and bigger numbers. Nothing is deleted, and heart alerts always stay on.")
+            }
+
             // Health & Watch
             Section("Health & Watch") {
                 HStack {
@@ -247,7 +255,7 @@ struct SettingsView: View {
             }
 
             #if DEBUG
-            if showDebug {
+            if showDebug && !simpleMode {
             Section("Debug") {
                 NavigationLink("Sync Debug") { SyncDebugView() }
             }

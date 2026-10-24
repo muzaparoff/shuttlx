@@ -1,5 +1,6 @@
 import SwiftUI
 import HealthKit
+import WatchConnectivity
 import ShuttlXShared
 
 struct OnboardingView: View {
@@ -17,6 +18,7 @@ struct OnboardingView: View {
     @State private var limitChoice = LimitChoice.doctor
     @State private var medicineText = ""
     @State private var doseText = ""
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
 
     init(isFirstLaunch: Binding<Bool>) {
         _isFirstLaunch = isFirstLaunch
@@ -28,7 +30,8 @@ struct OnboardingView: View {
         _doctorLimit = State(initialValue: h.upperLimit)
         _age = State(initialValue: DeviceManager.shared.userAge)
         _askAge = State(initialValue: DeviceManager.shared.userAge == nil)
-        _limitChoice = State(initialValue: h.effortOnly ? .effortOnly : .doctor)
+        // The estimate is the default, so Done is enabled as soon as the age is known; a saved own limit wins.
+        _limitChoice = State(initialValue: h.effortOnly ? .effortOnly : h.upperLimit != nil ? .doctor : .estimate)
         #if DEBUG
         // Screenshot seam: SHUTTLX_ONBOARDING_STEP=2|3 opens that step directly.
         if let raw = ProcessInfo.processInfo.environment["SHUTTLX_ONBOARDING_STEP"], let step = Int(raw) {
@@ -38,15 +41,16 @@ struct OnboardingView: View {
     }
 
     var body: some View {
-        VStack {
-            TabView(selection: $currentPage) {
-                welcomePage.tag(0)
-                healthPage.tag(1)
-                medicationPage.tag(2)
-                limitPage.tag(3)
+        // No pager: pages change only through their buttons, so nobody swipes past a decision.
+        ZStack {
+            switch currentPage {
+            case 0: welcomePage
+            case 1: healthPage
+            case 2: medicationPage
+            default: limitPage
             }
-            .tabViewStyle(.page(indexDisplayMode: .never))
         }
+        .transition(.opacity)
         .onChange(of: currentPage) { _, page in
             // Health may have supplied the age on page 1; ask for it on the limit page only if still unknown.
             guard page == 3 else { return }
@@ -60,7 +64,8 @@ struct OnboardingView: View {
     // MARK: - Page 1: Welcome
 
     private var welcomePage: some View {
-        VStack(spacing: 24) {
+        scrollingPage {
+            stepLabel(1)
             Spacer()
 
             Image(systemName: "figure.walk")
@@ -90,13 +95,31 @@ struct OnboardingView: View {
 
             Spacer().frame(height: 40)
         }
-        .padding()
+    }
+
+    /// Welcome and Health pages: a ScrollView so large text scrolls instead of clipping; the content still fills
+    /// the screen (Spacers) when it fits.
+    private func scrollingPage<C: View>(@ViewBuilder _ content: @escaping () -> C) -> some View {
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 24, content: content)
+                    .padding()
+                    .frame(maxWidth: .infinity, minHeight: geo.size.height)
+            }
+        }
+    }
+
+    private func stepLabel(_ n: Int) -> some View {
+        Text("Step \(n) of 4")
+            .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Page 2: HealthKit
 
     private var healthPage: some View {
-        VStack(spacing: 24) {
+        scrollingPage {
+            stepLabel(2)
             Spacer()
 
             Image(systemName: "heart.fill")
@@ -144,10 +167,9 @@ struct OnboardingView: View {
 
             Spacer().frame(height: 40)
         }
-        .padding()
     }
 
-    // MARK: - Step 2 of 3: Beta-blocker
+    // MARK: - Step 3 of 4: Beta-blocker
 
     private var medicationPage: some View {
         // One List holds the header, rows and note so large Dynamic Type scrolls everything;
@@ -155,7 +177,7 @@ struct OnboardingView: View {
         List {
             introRows {
                 HStack {
-                    Text("Step 2 of 3").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                    Text("Step 3 of 4").font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
                     Spacer()
                     Button("Skip") { withAnimation(.ifAllowed(.default)) { currentPage = 3 } }
                         .font(ShuttlXFont.cardSubtitle)
@@ -245,7 +267,7 @@ struct OnboardingView: View {
         heart.saveForEditing()
     }
 
-    // MARK: - Step 3 of 3: Heart limit
+    // MARK: - Step 4 of 4: Heart limit
 
     /// What the chosen option would give right now; nil means Done stays disabled.
     private var chosenLimit: Int? {
@@ -262,7 +284,7 @@ struct OnboardingView: View {
         let estimate = heart.estimatedUpperLimit(age: age)
         return List {
                 introRows {
-                    Text("Step 3 of 3")
+                    Text("Step 4 of 4")
                         .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
                     Text("Your heart limit")
                         .font(ShuttlXFont.metricMedium)
@@ -333,20 +355,34 @@ struct OnboardingView: View {
         .scrollContentBackground(.hidden)
         .scrollDismissesKeyboard(.interactively)
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            Button {
-                finish()
-            } label: {
-                Text("Done")
+            VStack(spacing: 8) {
+                Toggle("Keep it simple? You can change this in Settings.", isOn: $simpleMode)   // Simple mode (single row)
+                    .font(ShuttlXFont.cardSubtitle)
+                    .padding(.horizontal, 4)
+                Button {
+                    finish(startWalk: watchReady)
+                } label: {
+                    Text(watchReady ? "Start your first walk" : "Done")
+                }
+                .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
+                .disabled(!canFinish || finishing)
+                .opacity(canFinish ? 1 : 0.4)
+                .accessibilityHint(canFinish ? (watchReady ? "Finishes setup, then asks to start a free walk on your Apple Watch" : "Completes onboarding and opens the app")
+                                             : "Enter a limit, or choose estimate or effort only, to continue")
+                if watchReady {
+                    Label("Apple Watch connected", systemImage: "checkmark.circle.fill")
+                        .font(ShuttlXFont.cardCaption).foregroundStyle(ShuttlXColor.textSecondary)
+                    Button("I'll do it later") { finish(startWalk: false) }
+                        .font(ShuttlXFont.cardSubtitle)
+                        .frame(minHeight: 44)
+                        .disabled(!canFinish || finishing)
+                }
             }
-            .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
-            .disabled(!canFinish || finishing)
-            .opacity(canFinish ? 1 : 0.4)
             .padding(.horizontal, 16)
             .padding(.bottom, 40)
             .padding(.top, 8)
             .frame(maxWidth: .infinity)
             .background(Color(.systemGroupedBackground))
-            .accessibilityHint(canFinish ? "Completes onboarding and opens the app" : "Enter a limit, or choose estimate or effort only, to continue")
         }
         .padding(.top, 8)
         .toolbar {
@@ -359,7 +395,7 @@ struct OnboardingView: View {
 
     /// Done: the chosen option always yields a limit (or effort only); then the notification permission
     /// is asked once, here, so alerts can reach the phone later.
-    private func finish() {
+    private func finish(startWalk: Bool = false) {
         guard canFinish else { return }
         finishing = true
         heart.effortOnly = limitChoice == .effortOnly
@@ -369,7 +405,20 @@ struct OnboardingView: View {
         Task {
             await PhoneSyncCoordinator.requestNotificationAuthorization()
             isFirstLaunch = false
+            if startWalk {
+                // Same path as the widget link: the app asks "Start ...?" before it touches the watch.
+                try? await Task.sleep(for: .milliseconds(800))
+                if let url = URL(string: "shuttlx://start-freerun") { await UIApplication.shared.open(url) }
+            }
         }
+    }
+
+    /// The watch can start a walk only when it is paired with ShuttlX installed.
+    private var watchReady: Bool {
+        #if DEBUG
+        if ProcessInfo.processInfo.environment["SHUTTLX_ONBOARDING_WATCH"] == "1" { return true }
+        #endif
+        return WCSession.isSupported() && WCSession.default.isPaired && WCSession.default.isWatchAppInstalled
     }
 
     private func limitRow<Detail: View>(_ choice: LimitChoice, title: String,

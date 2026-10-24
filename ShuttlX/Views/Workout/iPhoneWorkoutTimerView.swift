@@ -78,7 +78,7 @@ struct iPhoneWorkoutTimerView: View {
             if let notice = controller.watchNotice {
                 Text(notice)
                     .font(ShuttlXFont.cardCaption)
-                    .foregroundStyle(ShuttlXColor.ctaWarning)
+                    .foregroundStyle(ShuttlXColor.warningText)
                     .accessibilityLabel("Notice: \(notice)")
             }
             heroSection
@@ -97,7 +97,7 @@ struct iPhoneWorkoutTimerView: View {
         HStack(spacing: 8) {
             Text(controller.workoutName.uppercased())
                 .font(ShuttlXFont.sectionHeader)
-                .foregroundStyle(controller.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.ctaPrimary)
+                .foregroundStyle(controller.isPaused ? ShuttlXColor.warningText : ShuttlXColor.accentText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer()
@@ -157,6 +157,7 @@ struct iPhoneWorkoutTimerView: View {
     private var intervalCountdownHero: some View {
         let engine = controller.intervalEngine
         let stepColor = engine?.currentStep.map { ShuttlXColor.forStepType(appType(for: $0.type)) } ?? ShuttlXColor.textPrimary
+        let stepText = engine?.currentStep.map { stepTextColor(appType(for: $0.type)) } ?? ShuttlXColor.textPrimary
         let progress: Double = {
             guard let step = engine?.currentStep, step.duration > 0,
                   let remaining = engine?.currentStepTimeRemaining else { return 0 }
@@ -172,7 +173,7 @@ struct iPhoneWorkoutTimerView: View {
                 Text(FormattingUtils.formatTimer(max(0, remaining)))
                     .font(.system(size: 104, weight: .bold, design: .monospaced))
                     .monospacedDigit()
-                    .foregroundStyle(stepColor)
+                    .foregroundStyle(stepText)
                     .contentTransition(.numericText())
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)
@@ -182,7 +183,7 @@ struct iPhoneWorkoutTimerView: View {
                             Circle().fill(stepColor).frame(width: 7, height: 7)
                             Text(displayName(for: step.type).uppercased())
                                 .font(ShuttlXFont.cardCaption.weight(.bold))
-                                .foregroundStyle(stepColor)
+                                .foregroundStyle(stepText)
                         }
                         Text("\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)")
                             .font(ShuttlXFont.cardCaption)
@@ -216,7 +217,7 @@ struct iPhoneWorkoutTimerView: View {
                         .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.5))
                     Text(displayName(for: next.type).uppercased())
                         .font(ShuttlXFont.cardCaption.weight(.semibold))
-                        .foregroundStyle(ShuttlXColor.forStepType(appType(for: next.type)).opacity(0.8))
+                        .foregroundStyle(stepTextColor(appType(for: next.type)))
                     Text(formatStepDuration(next.duration))
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(ShuttlXColor.textSecondary.opacity(0.6))
@@ -249,7 +250,7 @@ struct iPhoneWorkoutTimerView: View {
             Text(bpm > 0 ? "\(bpm)" : "—")
                 .font(.system(size: 104, weight: .bold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(bpm > 0 ? ShuttlXColor.forHRZone(bpm) : ShuttlXColor.textSecondary)
+                .foregroundStyle(bpm > 0 ? ShuttlXColor.hrText(bpm) : ShuttlXColor.textSecondary)
                 .contentTransition(.numericText())
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
@@ -264,7 +265,7 @@ struct iPhoneWorkoutTimerView: View {
                 if isRest && bpm > 0, let safe = isHRSafe(bpm) {
                     Image(systemName: "arrow.down")
                         .foregroundStyle(safe
-                                         ? ShuttlXColor.ctaPrimary.opacity(0.7)
+                                         ? ShuttlXColor.accentText
                                          : ShuttlXColor.heartRate.opacity(0.7))
                 }
             }
@@ -290,19 +291,19 @@ struct iPhoneWorkoutTimerView: View {
     }
 
     private var recoveryStatePill: some View {
-        let (text, color): (String, Color) = {
+        let (text, color, textColor): (String, Color, Color) = {
             switch controller.recoveryState {
             case .idle:
-                return ("READY", ShuttlXColor.textSecondary)
+                return ("READY", ShuttlXColor.textSecondary, ShuttlXColor.textSecondary)
             case .work:
                 return (
                     "STATION \(controller.recoverySetNumber) · \(FormattingUtils.formatTimer(controller.stationElapsedTime))",
-                    ShuttlXColor.ctaPrimary
+                    ShuttlXColor.ctaPrimary, ShuttlXColor.accentText
                 )
             case .rest:
                 return (
                     "REST · \(FormattingUtils.formatTimer(controller.restElapsedTime))",
-                    ShuttlXColor.ctaWarning
+                    ShuttlXColor.ctaWarning, ShuttlXColor.warningText
                 )
             }
         }()
@@ -310,7 +311,7 @@ struct iPhoneWorkoutTimerView: View {
             Circle().fill(color).frame(width: 8, height: 8)
             Text(text)
                 .font(ShuttlXFont.cardTitle.monospacedDigit())
-                .foregroundStyle(color)
+                .foregroundStyle(textColor)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
@@ -344,7 +345,7 @@ struct iPhoneWorkoutTimerView: View {
             heartRateCard
             metricCard(label: "DIST",
                        value: FormattingUtils.formatDistance(controller.totalDistance, unit: .current),
-                       color: ShuttlXColor.running)
+                       color: ShuttlXColor.accentText)
             metricCard(label: "PACE",
                        value: controller.currentPace.map { FormattingUtils.formatPaceWithUnit($0, unit: .current) } ?? "—",
                        color: ShuttlXColor.pace)
@@ -360,7 +361,7 @@ struct iPhoneWorkoutTimerView: View {
             HStack(spacing: 10) {
                 metricCard(label: "DIST",
                            value: FormattingUtils.formatDistance(controller.totalDistance, unit: .current),
-                           color: ShuttlXColor.running,
+                           color: ShuttlXColor.accentText,
                            compact: true)
                 metricCard(label: "PACE",
                            value: controller.currentPace.map { FormattingUtils.formatPaceWithUnit($0, unit: .current) } ?? "—",
@@ -389,7 +390,7 @@ struct iPhoneWorkoutTimerView: View {
                         .font(ShuttlXFont.metricMedium)
                         .monospacedDigit()
                         .foregroundStyle(bpm > 0
-                                         ? ShuttlXColor.forHRZone(bpm)
+                                         ? ShuttlXColor.hrText(bpm)
                                          : ShuttlXColor.textSecondary)
                     Text("BPM")
                         .font(ShuttlXFont.cardCaption.weight(.semibold))
@@ -409,7 +410,7 @@ struct iPhoneWorkoutTimerView: View {
                 } else if noSource {
                     Text("No HR source detected")
                         .font(ShuttlXFont.cardCaption.weight(.semibold))
-                        .foregroundStyle(ShuttlXColor.ctaWarning)
+                        .foregroundStyle(ShuttlXColor.warningText)
                     Text("Pair Apple Watch, AirPods Pro, or Powerbeats Pro 2 to record heart rate.")
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(ShuttlXColor.textSecondary)
@@ -564,6 +565,15 @@ struct iPhoneWorkoutTimerView: View {
         guard bpm > 0 else { return nil }
         let word = HeartSafetySettings.load().zoneWord(hr: bpm, age: DeviceManager.shared.userAge)
         return word.map { $0 == "EASY" }
+    }
+
+    /// Step name / countdown as TEXT: green and orange fills fail contrast as text on white.
+    private func stepTextColor(_ type: IntervalType) -> Color {
+        switch type {
+        case .work: return ShuttlXColor.accentText
+        case .rest: return ShuttlXColor.walkingText
+        default: return ShuttlXColor.forStepType(type)
+        }
     }
 
     private func restColor(for restSecs: TimeInterval) -> Color {

@@ -31,6 +31,25 @@ enum HelpContent {
 
     static let topics: [HelpTopic] = [
         HelpTopic(
+            id: "simple-mode",
+            icon: "textformat.size",
+            title: "Simple mode",
+            body: """
+            Simple mode shows fewer cards and bigger numbers. Today has one \
+            big Start button and three tiles: time, distance and heart. It \
+            only hides screens; nothing is deleted, and your heart limit and \
+            alerts are always on. Turn it off to see everything again.
+            """,
+            steps: [
+                HelpStep(icon: "switch.2",
+                         text: "Open Settings and turn on “Simple mode” (the first row)."),
+                HelpStep(icon: "play.fill",
+                         text: "On Today, tap “Start on Apple Watch” and confirm. Tap “Other workouts” for programs and plans."),
+                HelpStep(icon: "calendar",
+                         text: "History keeps Calendar and List. The Map view and the “Fix a part” prompt on Today are hidden until you turn Simple mode off.")
+            ]
+        ),
+        HelpTopic(
             id: "watch-workout",
             icon: "applewatch",
             title: "Start an interval workout on Apple Watch",
@@ -112,9 +131,9 @@ enum HelpContent {
                 HelpStep(icon: "calendar",
                          text: "Open the History tab and switch between Calendar, List and Map to browse past sessions. Map shows the routes of the selected month and groups repeated routes."),
                 HelpStep(icon: "hand.tap",
-                         text: "Tap a session row for the full detail — intervals, heart rate chart, route map, and splits."),
+                         text: "Tap a session row for the full detail — intervals, route map and splits, and a heart rate chart with your limit as a dashed line. With a limit set it says how much of the time you stayed under it (an estimate from Apple Health readings)."),
                 HelpStep(icon: "chart.line.uptrend.xyaxis",
-                         text: "Open the Trends tab for Recovery Status, Training Load Trend, Weekly Volume, and Personal Records."),
+                         text: "Open the Trends tab for your active minutes this week, month or year and how they compare with the period before. Recovery, fitness, fatigue and VO2max sit behind “Show athlete metrics” at the bottom (off by default, hidden in Simple mode)."),
                 HelpStep(icon: "arrow.triangle.2.circlepath",
                          text: "Missing a Watch workout? Open ShuttlX on the Watch; unsent workouts sync to the iPhone automatically."),
             ]),
@@ -133,7 +152,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "gear",
-                         text: "During setup, answer the beta-blocker question (you can skip it) and choose your heart limit: your doctor's number, an estimate from your age, or effort only. Setup asks for your age if Health does not know it, and asks once to allow notifications."),
+                         text: "During setup, answer the beta-blocker question (you can skip it) and choose your heart limit: your doctor's number, an estimate from your age (the default), or effort only. Setup has four steps, one at a time, and the last button offers to start your first walk on the Apple Watch. Setup asks for your age if Health does not know it, and asks once to allow notifications."),
                 HelpStep(icon: "heart.fill",
                          text: "Later: Settings → Heart → Heart limit opens Heart & alerts, where you change your limit, age, low limit and medication notes. Numbers are saved when you finish typing; one outside the allowed range is moved to the nearest allowed value and you are told. The low limit always stays at least 10 bpm below the upper limit, an estimated one included: if a new age lowers the estimate, the low limit is moved and you are told. Max heart rate is Auto unless you type your own; Reset returns to Auto."),
                 HelpStep(icon: "exclamationmark.triangle",
@@ -157,7 +176,7 @@ enum HelpContent {
             """,
             steps: [
                 HelpStep(icon: "hand.tap",
-                         text: "Open a workout and tap a part, or tap “Fix a part” on Today."),
+                         text: "Open a workout and tap a part, or tap “Fix a part” on Today (not shown in Simple mode, where parts are not tappable)."),
                 HelpStep(icon: "circle.grid.2x2",
                          text: "Pick Run, Walk, Cycle or Rest, then Save."),
                 HelpStep(icon: "scissors",

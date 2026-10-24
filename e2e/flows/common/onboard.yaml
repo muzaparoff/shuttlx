@@ -1,4 +1,4 @@
-# Fresh simulator: three onboarding steps, then the Today tab. Health is skipped (no system sheet on a sim).
+# Fresh simulator: four onboarding pages, then the Today tab. Health is skipped (no system sheet on a sim).
 appId: ${APP_ID}
 ---
 # Flows of one run share a simulator, so start clean every time (location "always" is what iOS accepts here).
@@ -8,7 +8,7 @@ appId: ${APP_ID}
 - assertVisible: "Welcome to ShuttlX"
 - tapOn: "Get Started"
 - tapOn: "Skip for Now"
-- assertVisible: "Step 2 of 3"
+- assertVisible: "Step 3 of 4"
 - tapOn: "No"
 - tapOn: "Continue"
 - assertVisible: "Your heart limit"

@@ -184,7 +184,7 @@ final class iPhoneWorkoutController: ObservableObject {
     func startFreeRun() {
         guard !isActive else { return }
         mode = .freeRun
-        workoutName = "Free Run"
+        workoutName = "Run/Walk"
         beginCommonStart()
         linkWatch(mode: "freeRun")
     }

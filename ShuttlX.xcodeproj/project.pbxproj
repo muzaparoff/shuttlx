@@ -41,6 +41,7 @@
 		T0DA0001 /* TodayTimeline.swift in Sources */ = {isa = PBXBuildFile; fileRef = T0DA0001F /* TodayTimeline.swift */; };
 		T0DA0002 /* TimelineStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = T0DA0002F /* TimelineStyle.swift */; };
 		A5923E02 /* LiveWorkoutCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923D02 /* LiveWorkoutCard.swift */; };
+		S1MP0001 /* SimpleMode.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1MP0001F /* SimpleMode.swift */; };
 		B5923011 /* ChartData.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923001 /* ChartData.swift */; };
 		B5923012 /* WeeklyDistanceChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923002 /* WeeklyDistanceChart.swift */; };
 		B5923013 /* PaceTrendChart.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5923003 /* PaceTrendChart.swift */; };
@@ -268,6 +269,7 @@
 		T0DA0001F /* TodayTimeline.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodayTimeline.swift; sourceTree = "<group>"; };
 		T0DA0002F /* TimelineStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimelineStyle.swift; sourceTree = "<group>"; };
 		A5923D02 /* LiveWorkoutCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveWorkoutCard.swift; sourceTree = "<group>"; };
+		S1MP0001F /* SimpleMode.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimpleMode.swift; sourceTree = "<group>"; };
 		B5923001 /* ChartData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartData.swift; sourceTree = "<group>"; };
 		B5923002 /* WeeklyDistanceChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklyDistanceChart.swift; sourceTree = "<group>"; };
 		B5923003 /* PaceTrendChart.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaceTrendChart.swift; sourceTree = "<group>"; };
@@ -505,6 +507,7 @@
 				A5923505F /* TrainingSession.swift */,
 				A5923530F /* DetectedActivity+Theme.swift */,
 				B5923001 /* ChartData.swift */,
+				S1MP0001F /* SimpleMode.swift */,
 				LA000004 /* WorkoutActivityAttributes.swift */,
 				LA000090 /* WorkoutControlIntents.swift */,
 				D5923001F /* WorkoutTemplate.swift */,
@@ -972,6 +975,7 @@
 				A5923E02 /* LiveWorkoutCard.swift in Sources */,
 				T0DA0001 /* TodayTimeline.swift in Sources */,
 				B5923011 /* ChartData.swift in Sources */,
+				S1MP0001 /* SimpleMode.swift in Sources */,
 				B5923012 /* WeeklyDistanceChart.swift in Sources */,
 				B5923013 /* PaceTrendChart.swift in Sources */,
 				B5923014 /* HRZoneChart.swift in Sources */,

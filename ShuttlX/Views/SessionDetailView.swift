@@ -15,6 +15,7 @@ struct SessionDetailView: View {
     @EnvironmentObject private var dataManager: DataManager
     @State private var fixing: FixTarget?
     @State private var heartRate: HeartRateSeries?
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
 
     private var current: TrainingSession {
         dataManager.effectiveSessions.first { $0.id == session.id } ?? session
@@ -35,7 +36,7 @@ struct SessionDetailView: View {
                 statTrio
 
                 if !segments.isEmpty {
-                    VStack(spacing: 5) {
+                    VStack(spacing: 10) {
                         ActivityRibbon(segments: segments, height: 16)
                         if let heartRate {
                             HeartRateLine(series: heartRate, start: session.startDate,
@@ -44,9 +45,14 @@ struct SessionDetailView: View {
                     }
                     VStack(spacing: 0) {
                         ForEach(segments) { seg in
-                            Button { fixing = FixTarget(sessionID: session.id, partID: seg.id) } label: { SessionPartRow(segment: seg) }
-                                .buttonStyle(.plain)
-                                .accessibilityHint("Opens Fix a part")
+                            // Simple mode hides the Fix a part entry point (corrections already made stay applied).
+                            if simpleMode {
+                                SessionPartRow(segment: seg, showsChevron: false)
+                            } else {
+                                Button { fixing = FixTarget(sessionID: session.id, partID: seg.id) } label: { SessionPartRow(segment: seg) }
+                                    .buttonStyle(.plain)
+                                    .accessibilityHint("Opens Fix a part")
+                            }
                         }
                     }
                     .padding(.vertical, 6)
@@ -229,7 +235,7 @@ struct SessionDetailView: View {
                     icon: "gauge.with.needle",
                     value: "Effort \(effort)/10",
                     label: "How hard",
-                    color: ShuttlXColor.ctaPrimary
+                    color: ShuttlXColor.accentText
                 )
             }
         }
@@ -267,31 +273,73 @@ struct SessionDetailView: View {
     }
 }
 
-/// Heart-rate line under the ribbon (approved mockup): same width as the ribbon, start / avg + peak / end below.
+/// Heart-rate chart under the ribbon: y axis, the user's limit as a dashed line, the part above it shaded,
+/// and (only when a limit is in force) a one-line verdict. Samples come from Health (`SessionHeartRateLoader`).
+/// ponytail: the verdict counts the ~150 time buckets (averages), so a short spike inside one bucket is not counted.
 private struct HeartRateLine: View {
     let series: HeartRateSeries
     let start: Date
     let end: Date
+    /// Resolved limit (own or estimated), nil with effort only / no age.
+    private let limit: Int? = {
+        #if DEBUG
+        // Screenshot seam: SHUTTLX_DEMO_LIMIT=<bpm> stands in for a saved limit (the simulator has none).
+        if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_LIMIT"], let v = Int(raw) { return v }
+        #endif
+        return HeartSafetySettings.load().effectiveUpperLimit(age: DeviceManager.shared.userAge)
+    }()
+
+    private var verdict: String? {
+        guard let limit, let pct = LimitVerdict.percentUnder(series.points.map(\.bpm), limit: limit) else { return nil }
+        return "Under your limit \(pct)% of the time"
+    }
 
     var body: some View {
-        let lo = (series.points.map(\.bpm).min() ?? 0) - 5
-        let hi = series.peak + 5
-        VStack(spacing: 5) {
-            Chart(series.points) { p in
-                LineMark(x: .value("Time", p.date), y: .value("BPM", p.bpm))
-                    .interpolationMethod(.catmullRom)
-                    .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
-                    .foregroundStyle(ShuttlXColor.heartRate)
+        let lim = limit.map(Double.init)
+        let lo = min((series.points.map(\.bpm).min() ?? 0) - 5, (lim ?? .infinity) - 10)
+        let hi = max(series.peak + 5, (lim ?? 0) + 10)
+        VStack(alignment: .leading, spacing: 6) {
+            if let verdict, let limit {
+                Text(verdict)
+                    .font(ShuttlXFont.cardTitle.weight(.bold))
+                    .foregroundStyle(ShuttlXColor.textPrimary)
+                Text("Limit \(limit) bpm \u{00B7} Peak \(Int(series.peak.rounded()))")
+                    .font(ShuttlXFont.cardCaption.monospacedDigit())
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+            }
+            Chart {
+                if let lim {
+                    ForEach(series.points) { p in
+                        AreaMark(x: .value("Time", p.date), yStart: .value("Limit", lim),
+                                 yEnd: .value("BPM", max(p.bpm, lim)))
+                            .interpolationMethod(.catmullRom)
+                            .foregroundStyle(ShuttlXColor.ctaWarning.opacity(0.3))
+                    }
+                    RuleMark(y: .value("Limit", lim))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                        .foregroundStyle(ShuttlXColor.ctaWarning)
+                }
+                ForEach(series.points) { p in
+                    LineMark(x: .value("Time", p.date), y: .value("BPM", p.bpm))
+                        .interpolationMethod(.catmullRom)
+                        .lineStyle(StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+                        .foregroundStyle(ShuttlXColor.heartRate)
+                }
             }
             .chartXScale(domain: min(start, end)...max(start, end))   // start > end must not trap
             .chartYScale(domain: lo...hi)
             .chartXAxis(.hidden)
-            .chartYAxis(.hidden)
-            .frame(height: 64)
+            .chartYAxis {
+                AxisMarks(position: .trailing, values: .automatic(desiredCount: 4)) { _ in
+                    AxisGridLine().foregroundStyle(ShuttlXColor.textSecondary.opacity(0.2))
+                    AxisValueLabel().font(ShuttlXFont.cardCaption.monospacedDigit())
+                }
+            }
+            .frame(height: 140)
             HStack {
                 Text(TodayFormat.clock(start))
                 Spacer()
-                Text("\u{2665} \(Int(series.average.rounded())) peak \(Int(series.peak.rounded()))")
+                Text("Avg \(Int(series.average.rounded())) \u{00B7} Peak \(Int(series.peak.rounded()))")
                 Spacer()
                 Text(TodayFormat.clock(end))
             }
@@ -299,7 +347,8 @@ private struct HeartRateLine: View {
             .foregroundStyle(ShuttlXColor.textSecondary)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Heart rate over the session, average \(Int(series.average.rounded())), peak \(Int(series.peak.rounded())) beats per minute")
+        .accessibilityLabel("Heart rate over the session, average \(Int(series.average.rounded())), peak \(Int(series.peak.rounded())) beats per minute"
+                            + (limit.map { ". Limit \($0)." + (verdict.map { " \($0)." } ?? "") } ?? ""))
     }
 }
 

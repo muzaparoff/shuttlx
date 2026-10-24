@@ -52,6 +52,12 @@ enum TodayFormat {
         return totals.sorted { $0.value > $1.value }.map { activityName($0.key) }.joined(separator: " + ")
     }
 
+    static func dominantActivity(_ segs: [ActivitySegment]) -> DetectedActivity? {
+        var totals: [DetectedActivity: TimeInterval] = [:]
+        for s in segs { totals[s.activityType, default: 0] += s.duration }
+        return totals.max { $0.value < $1.value }?.key
+    }
+
     static func dominantColor(_ segs: [ActivitySegment]) -> Color? {
         var totals: [DetectedActivity: TimeInterval] = [:]
         for s in segs { totals[s.activityType, default: 0] += s.duration }
@@ -98,6 +104,12 @@ struct TodayWeekStrip: View {
                         Circle()
                             .fill(TodayFormat.dominantColor(segs) ?? Color(.tertiarySystemFill))
                             .frame(width: 20, height: 20)
+                            .overlay {   // glyph so Run / Walk is never told by colour alone
+                                if let a = TodayFormat.dominantActivity(segs) {
+                                    Image(systemName: a.systemImage).font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(ShuttlXColor.iconOnCTA).accessibilityHidden(true)
+                                }
+                            }
                             .overlay(Circle().strokeBorder(ShuttlXColor.textPrimary, lineWidth: 1.5).padding(-4).opacity(isSelected ? 1 : 0))
                     }
                     .frame(maxWidth: .infinity, minHeight: 44)
@@ -205,7 +217,7 @@ struct TimelineSessionRow: View {
                         .font(ShuttlXFont.cardCaption.monospacedDigit())
                         .foregroundStyle(ShuttlXColor.textSecondary)
                 }
-                ActivityRibbon(segments: segs, height: 8)
+                ActivityRibbon(segments: segs, height: 14)
                 Text(meta)
                     .font(ShuttlXFont.cardCaption.monospacedDigit())
                     .foregroundStyle(ShuttlXColor.textSecondary)
@@ -307,6 +319,80 @@ enum RouteSnapshotCache {
         }
         cache.setObject(result, forKey: key)
         return result
+    }
+}
+
+// MARK: - Start card (D3, both modes)
+
+/// "Next up" card: one obvious way to start. Also used by the empty state (`showOthers: false`, the Programs row is already there).
+struct TodayStartCard: View {
+    var showOthers = true
+    let onStart: () -> Void
+    let onOthers: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Next up").font(ShuttlXFont.microLabel).textCase(.uppercase)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+            Label {
+                Text("Run/Walk").font(ShuttlXFont.metricMedium).foregroundStyle(ShuttlXColor.textPrimary)
+            } icon: {
+                Image(systemName: "figure.run").foregroundStyle(ShuttlXColor.accentText)
+            }
+            Text("Your watch finds Run and Walk itself").font(ShuttlXFont.cardCaption)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+            Button(action: onStart) {
+                Label("Start on Apple Watch", systemImage: "play.fill")
+                    .font(ShuttlXFont.cardTitle.weight(.bold))
+                    .foregroundStyle(ShuttlXColor.iconOnCTA)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(ShuttlXColor.ctaPrimary, in: Capsule())
+            }
+            .buttonStyle(PressScaleButtonStyle())
+            .accessibilityHint("Asks to confirm, then starts a Run/Walk workout on your Apple Watch")
+            if showOthers {
+                Button(action: onOthers) {
+                    Text("Other workouts")
+                        .font(ShuttlXFont.cardSubtitle.weight(.semibold))
+                        .foregroundStyle(ShuttlXColor.accentText)
+                        .frame(maxWidth: .infinity, minHeight: 44)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Programs, interval workouts and plans")
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .timelineCard(radius: 20)
+    }
+}
+
+// MARK: - Simple mode tiles
+
+/// Label left, number right (stacks at large text) so a big number never clips.
+struct SimpleTile: View {
+    let icon: String
+    let label: String
+    let value: String
+    var tint: Color = ShuttlXColor.textPrimary
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack {
+                Label(label, systemImage: icon).font(ShuttlXFont.cardTitle).foregroundStyle(ShuttlXColor.textSecondary)
+                Spacer(minLength: 8)
+                Text(value).font(ShuttlXFont.metricLarge.monospacedDigit()).foregroundStyle(ShuttlXColor.textPrimary).lineLimit(1)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Label(label, systemImage: icon).font(ShuttlXFont.cardTitle).foregroundStyle(ShuttlXColor.textSecondary)
+                Text(value).font(ShuttlXFont.metricLarge.monospacedDigit()).foregroundStyle(ShuttlXColor.textPrimary)
+            }
+        }
+        .padding(.horizontal, 16).padding(.vertical, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .timelineCard(radius: 18)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(label) \(value)")
     }
 }
 

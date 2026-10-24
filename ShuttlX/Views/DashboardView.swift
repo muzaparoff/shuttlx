@@ -12,6 +12,9 @@ struct DashboardView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ThemeManager.self) private var themeManager
     @State private var showingPrograms = false
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
+    @State private var confirmStart = false
+    @State private var startFailed = false
     @State private var noHeartLimit = false
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedDay = Date()
@@ -117,6 +120,28 @@ struct DashboardView: View {
         }
     }
 
+    /// Simple mode: three big tiles for the selected day (time, distance, heart).
+    private var simpleTiles: some View {
+        let km = daySessions.compactMap(\.distance).reduce(0, +)
+        let secs = daySessions.reduce(0) { $0 + $1.duration }
+        let hrs = daySessions.compactMap(\.averageHeartRate).filter { $0 > 0 }
+        let hr = hrs.isEmpty ? nil : Int(hrs.reduce(0, +) / Double(hrs.count))
+        return VStack(spacing: 12) {
+            SimpleTile(icon: "clock", label: "Time", value: secs > 0 ? TodayFormat.short(secs) : "\u{2014}")
+            SimpleTile(icon: "figure.walk", label: "Distance", value: km > 0 ? FormattingUtils.formatDistance(km, unit: .current) : "\u{2014}")
+            SimpleTile(icon: "heart.fill", label: "Heart", value: hr.map { "\($0) bpm" } ?? "\u{2014}")
+        }
+    }
+
+    private func startCard(showOthers: Bool = true) -> some View {
+        TodayStartCard(showOthers: showOthers, onStart: { confirmStart = true }, onOthers: { showingPrograms = true })
+    }
+
+    /// Same path as the widget links: ask first, then remote-start on the watch (services.md, "Starting from a URL needs a confirmation").
+    private func startOnWatch() {
+        if !PhoneSyncCoordinator.shared.startWatchWorkout(mode: "freeRun") { startFailed = true }
+    }
+
     private var bannerSession: TrainingSession? {
         daySessions.first { $0.segments.count >= 2 && !dismissedParts.contains($0.id.uuidString) }
     }
@@ -181,7 +206,8 @@ struct DashboardView: View {
                     if noHeartLimit { limitWarning }
                     if showEmpty {
                         TodayEmptyState(importer: importer)
-                            .containerRelativeFrame(.vertical) { h, _ in h * 0.7 }
+                            .containerRelativeFrame(.vertical) { h, _ in h * 0.5 }
+                        startCard(showOthers: false)
                     } else {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Today")
@@ -192,8 +218,13 @@ struct DashboardView: View {
                                 .font(ShuttlXFont.cardSubtitle)
                                 .foregroundStyle(ShuttlXColor.textSecondary)
                         }
-                        if isLive { liveContent } else { dataContent }
-                        programsRow.padding(.top, 8)
+                        if isLive {
+                            if simpleMode { LiveWorkoutCard(sharedData: sharedData) } else { liveContent }
+                        } else {
+                            startCard()
+                            if simpleMode { simpleTiles } else { dataContent }
+                        }
+                        if !simpleMode { programsRow.padding(.top, 8) }
                     }
                 }
                 .padding(.horizontal, 16)
@@ -205,7 +236,19 @@ struct DashboardView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(isPresented: $showingPrograms) { ProgramsTabView() }
             .task { consumePendingPrograms() }
-            .onAppear { refreshLimitWarning() }
+            .alert("Start Run/Walk?", isPresented: $confirmStart) {
+                Button("Start") { startOnWatch() }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("This starts the workout on your Apple Watch.") }
+            .alert("Could not reach your watch", isPresented: $startFailed) {
+                Button("OK", role: .cancel) {}
+            } message: { Text("Check that your Apple Watch is nearby and try again.") }
+            .onAppear {
+                refreshLimitWarning()
+                #if DEBUG
+                if let v = ProcessInfo.processInfo.environment["SHUTTLX_SIMPLE_MODE"] { simpleMode = (v == "1") }   // screenshot seam
+                #endif
+            }
             .onChange(of: scenePhase) { _, phase in if phase == .active { refreshLimitWarning(); rollOverDay() } }
             .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in rollOverDay() }
             #if DEBUG

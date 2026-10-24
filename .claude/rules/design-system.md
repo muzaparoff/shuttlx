@@ -66,9 +66,19 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 ## Accessibility colour and motion (Oct 2026)
 
 - Green TEXT and thin icons on light backgrounds use `ShuttlXColor.accentText` (about 5.3:1 on white, darker with Increase Contrast, system green in dark mode). System green (`ctaPrimary`, `running`) stays for fills, dots and bars, where it carries `iconOnCTA` text.
-- Run vs walk is never told by colour alone: ribbons add an activity glyph when Differentiate Without Colour is on, legends use the activity symbol, calendar day labels name the activities.
+- Text tokens (`Theme/TimelineStyle.swift`): `accentText` (green), `walkingText` (orange), `warningText` (amber, was `Color.yellow` / `ctaWarning` as text), `hrText(bpm)`, `activityText(_)`. Zone/step/activity fills never carry text. Live card and iPhone timer use them.
+- Run vs walk is never told by colour alone: ribbons of 14 pt or more always carry the activity glyph (smaller ones when Differentiate Without Colour is on), the week strip dots carry it, the live card tag is glyph + word, legends use the activity symbol, calendar day labels name the activities.
 - Animations go through `Animation.ifAllowed(_:)` / `withAnimation(.ifAllowed(...))` (nil while Reduce Motion is on). `microLabel` is `.caption2` (scales with Dynamic Type), not a fixed 9 pt. At accessibility sizes the History calendar shows the day list instead of the 7-column grid.
+- Ribbons 14 pt or taller always carry the run/walk/cycle glyph (not only with Differentiate Without Colour); `SessionPartRow` pairs the glyph with the word. Today's date in the History calendar uses `accentText`.
+- Session detail HR chart: y axis, dashed `ctaWarning` limit line, part above it shaded, verdict "Under your limit N% of the time" (`Shared/LimitVerdict.swift`, rounds down; shown only when a limit is in force).
+- Trends hero is active minutes + "vs last period" (same elapsed span of the previous period); distance is a second line. Athlete metrics (Recovery "Fatigued", Fitness/Fatigue/Form, VO2max) live behind the default-off `showAthleteMetrics` toggle and never show in Simple mode.
+- Onboarding: no pager (pages change by buttons only), "Step N of 4" on every page, the estimate is the default limit choice, last button is "Start your first walk" (opens `shuttlx://start-freerun`, which still asks for confirmation) only when a paired watch has the app.
 - Touch targets are at least 44 pt (Today banner, live card pills, Live Activity buttons).
+
+## Simple mode (Oct 2026)
+
+- `SimpleMode` (`ShuttlX/Models/SimpleMode.swift`): App Group Bool `simpleMode`, default OFF. Views read it with `@AppStorage(SimpleMode.key, store: SimpleMode.store)`. It hides, never deletes; heart-safety items (limit banner, alerts, live card) are never hidden. Watch unchanged.
+- Today: Start card + three `SimpleTile`s (time, distance, heart; label left / number right, stacks at large text); other cards, week strip, Fix a part banner and the Programs row are hidden (Programs via "Other workouts"). History hides Map. Settings hides Sync Debug. Toggle: Settings first row, last onboarding page.
 
 ## Typography
 

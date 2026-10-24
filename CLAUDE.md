@@ -74,6 +74,7 @@ Watch complication deep-link flow:
   Complication → widgetURL "shuttlx://start-workout" or "shuttlx://start-template/{id}"
   → ShuttlXWatchApp.onOpenURL → workoutManager.startWorkout/startIntervalWorkout
 
+Simple mode (iOS, `SimpleMode`, App Group key `simpleMode`, default off; Settings row + last onboarding page): Today = Start card + 3 tiles (time/distance/heart); History hides Map; Settings hides Sync Debug; Trends hides extras (other agent). Today "Next up" card (both modes, also empty state): "Start on Apple Watch" -> confirmation alert -> `PhoneSyncCoordinator.startWatchWorkout(mode: "freeRun")`.
 iOS tabs (ContentView): Today · History (calendar / list / map modes) · Trends · Settings
   Programs & plans is a row on Today (DashboardView → ProgramsTabView). `shuttlx://plan` selects Today and pushes Programs.
 

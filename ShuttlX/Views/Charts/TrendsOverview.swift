@@ -6,8 +6,9 @@ enum TrendsPeriod: String, CaseIterable {
     case week = "Week", month = "Month", year = "Year"
 }
 
-/// First screen of Trends (approved mockup, 2026-10): Week / Month / Year, one hero
-/// distance, a stacked bar chart in activity colours and "Time by activity".
+/// First screen of Trends: Week / Month / Year, one hero of ACTIVE MINUTES with a comparison to the
+/// previous period (works for treadmill, gym and indoor users, unlike distance), a stacked bar chart of
+/// minutes in activity colours, distance as a second line and "Time by activity".
 /// Activities are the EFFECTIVE types (SegmentOverrideStore corrections applied).
 struct TrendsOverview: View {
     let sessions: [TrainingSession]
@@ -17,7 +18,7 @@ struct TrendsOverview: View {
         let id = UUID()
         let date: Date
         let name: String
-        let km: Double
+        let minutes: Double
     }
 
     private static let none = "None"
@@ -41,19 +42,11 @@ struct TrendsOverview: View {
         return sessions.filter { $0.startDate >= i.start && $0.startDate < i.end }
     }
 
-    /// Session distance split by activity: proportional to the parts' own distances,
-    /// else everything goes to the longest part. Parts of type Rest never get distance.
-    private func kmByActivity(_ s: TrainingSession) -> [DetectedActivity: Double] {
-        guard let d = s.distance, d > 0 else { return [:] }
-        let segs = s.displaySegments().filter { shown.contains($0.activityType) }
-        var own: [DetectedActivity: Double] = [:]
-        for g in segs { own[g.activityType, default: 0] += max(0, g.distance ?? 0) }
-        let sum = own.values.reduce(0, +)
-        if sum > 0 { return own.mapValues { d * $0 / sum } }
-        var dur: [DetectedActivity: TimeInterval] = [:]
-        for g in segs { dur[g.activityType, default: 0] += g.duration }
-        guard let top = dur.max(by: { $0.value < $1.value })?.key else { return [:] }
-        return [top: d]
+    /// Active seconds per activity (effective parts; Rest never counts).
+    private func secondsByActivity(_ s: TrainingSession) -> [DetectedActivity: TimeInterval] {
+        var t: [DetectedActivity: TimeInterval] = [:]
+        for g in s.displaySegments() where shown.contains(g.activityType) { t[g.activityType, default: 0] += max(0, g.duration) }
+        return t
     }
 
     private var entries: [Entry] {
@@ -61,15 +54,15 @@ struct TrendsOverview: View {
         var out: [Entry] = []
         var start = i.start
         while start < i.end, let next = cal.date(byAdding: bucketUnit, value: 1, to: start) {
-            var km: [DetectedActivity: Double] = [:]
+            var sec: [DetectedActivity: TimeInterval] = [:]
             for s in inPeriod where s.startDate >= start && s.startDate < next {
-                for (a, v) in kmByActivity(s) { km[a, default: 0] += v }
+                for (a, v) in secondsByActivity(s) { sec[a, default: 0] += v }
             }
-            let any = km.values.reduce(0, +) > 0
+            let any = sec.values.reduce(0, +) > 0
             if any {
-                for a in shown { if let v = km[a], v > 0 { out.append(Entry(date: start, name: TodayFormat.activityName(a), km: v)) } }
+                for a in shown { if let v = sec[a], v > 0 { out.append(Entry(date: start, name: TodayFormat.activityName(a), minutes: v / 60)) } }
             } else {
-                out.append(Entry(date: start, name: Self.none, km: 0.0001))
+                out.append(Entry(date: start, name: Self.none, minutes: 0.01))
             }
             start = next
         }
@@ -78,6 +71,23 @@ struct TrendsOverview: View {
 
     private var totalKm: Double { inPeriod.compactMap(\.distance).reduce(0, +) }
     private var totalInUnit: Double { DistanceUnit.current.value(fromKm: totalKm) }
+
+    private func activeSeconds(_ list: [TrainingSession]) -> TimeInterval {
+        list.reduce(0) { $0 + secondsByActivity($1).values.reduce(0, +) }
+    }
+    private var activeTotal: TimeInterval { activeSeconds(inPeriod) }
+
+    private var periodComponent: Calendar.Component { period == .week ? .weekOfYear : period == .month ? .month : .year }
+    private var lastWord: String { period == .week ? "last week" : period == .month ? "last month" : "last year" }
+
+    /// Previous period, only as far in as this one has got (so day 10 is compared with day 10, not a whole month).
+    private var previousActive: TimeInterval? {
+        let i = interval
+        guard let prevStart = cal.date(byAdding: periodComponent, value: -1, to: i.start) else { return nil }
+        let end = prevStart.addingTimeInterval(min(Date().timeIntervalSince(i.start), i.duration))
+        let total = activeSeconds(sessions.filter { $0.startDate >= prevStart && $0.startDate < end })
+        return total > 0 ? total : nil
+    }
 
     private var timeByActivity: [(activity: DetectedActivity, seconds: TimeInterval)] {
         var t: [DetectedActivity: TimeInterval] = [:]
@@ -113,17 +123,28 @@ struct TrendsOverview: View {
                 Text(subtitle)
                     .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(ShuttlXColor.textSecondary)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(totalInUnit >= 100 ? String(format: "%.0f", totalInUnit) : String(format: "%.1f", totalInUnit))
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text(Self.hm(activeTotal))
                         .font(ShuttlXFont.metricLarge.monospacedDigit())
                         .foregroundStyle(ShuttlXColor.textPrimary)
-                    Text(DistanceUnit.current.symbol)
+                    Text("active")
                         .font(ShuttlXFont.cardSubtitle.weight(.semibold))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                }
+                if let prev = previousActive {
+                    let diff = activeTotal - prev
+                    Label("\(Self.hm(abs(diff))) vs \(lastWord)",
+                          systemImage: abs(diff) < 60 ? "equal" : diff > 0 ? "arrow.up" : "arrow.down")
+                        .font(ShuttlXFont.cardCaption.weight(.semibold))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                }
+                if totalKm > 0 {
+                    Text("Distance \(String(format: "%.1f", totalInUnit)) \(DistanceUnit.current.symbol)")
+                        .font(ShuttlXFont.cardCaption.monospacedDigit())
                         .foregroundStyle(ShuttlXColor.textSecondary)
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(subtitle), \(String(format: "%.1f", totalInUnit)) \(DistanceUnit.current == .km ? "kilometres" : "miles")")
 
             chart
 
@@ -134,7 +155,7 @@ struct TrendsOverview: View {
     private var chart: some View {
         let i = interval
         return Chart(entries) { e in
-            BarMark(x: .value("Date", e.date, unit: bucketUnit), y: .value("Kilometres", e.km))
+            BarMark(x: .value("Date", e.date, unit: bucketUnit), y: .value("Minutes", e.minutes))
                 .foregroundStyle(by: .value("Activity", e.name))
                 .cornerRadius(3)
         }
@@ -144,7 +165,14 @@ struct TrendsOverview: View {
         ])
         .chartLegend(.hidden)
         .chartXScale(domain: i.start...i.end)
-        .chartYAxis(.hidden)
+        .chartYAxis {
+            AxisMarks(position: .trailing, values: .automatic(desiredCount: 3)) { v in
+                AxisGridLine().foregroundStyle(ShuttlXColor.textSecondary.opacity(0.2))
+                AxisValueLabel {
+                    if let m = v.as(Double.self) { Text("\(Int(m))m").font(ShuttlXFont.cardCaption.monospacedDigit()) }
+                }
+            }
+        }
         .chartXAxis {
             if period == .year {
                 AxisMarks(values: .stride(by: .month)) { _ in AxisValueLabel(format: .dateTime.month(.narrow)) }
@@ -156,7 +184,7 @@ struct TrendsOverview: View {
         }
         .frame(height: 150)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Distance by \(bucketUnit == .day ? "day" : "month"), \(periodWord): \(String(format: "%.1f", totalInUnit)) \(DistanceUnit.current == .km ? "kilometres" : "miles")")
+        .accessibilityLabel("Active time by \(bucketUnit == .day ? "day" : "month"), \(periodWord): \(Self.hm(activeTotal))")
     }
 
     @ViewBuilder
