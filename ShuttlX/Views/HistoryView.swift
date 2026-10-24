@@ -282,7 +282,7 @@ struct HistoryDayRow: View {
         let total = max(1, segs.reduce(0) { $0 + max(0, $1.duration) })
         let sub = [TodayFormat.clock(session.startDate), TodayFormat.short(session.duration),
                    TodayFormat.activitySummary(segs)].joined(separator: " \u{00B7} ")
-        let km = session.distance.flatMap { $0 > 0 ? String(format: "%.1f km", $0) : nil }
+        let km = session.distance.flatMap { $0 > 0 ? FormattingUtils.formatDistance($0, unit: .current) : nil }
         HStack(spacing: 10) {
             GeometryReader { geo in
                 VStack(spacing: 1) {

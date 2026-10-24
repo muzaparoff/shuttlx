@@ -32,9 +32,8 @@ enum TodayFormat {
     }
 
     static func clock(_ d: Date) -> String {
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        return f.string(from: d)
+        // Follows the system 12/24-hour setting.
+        d.formatted(date: .omitted, time: .shortened)
     }
 
     static func activityName(_ a: DetectedActivity) -> String {
@@ -61,7 +60,7 @@ enum TodayFormat {
 
     static func meta(_ session: TrainingSession, _ segs: [ActivitySegment]) -> String {
         var parts: [String] = []
-        if let km = session.distance, km > 0 { parts.append(String(format: "%.1f km", km)) }
+        if let km = session.distance, km > 0 { parts.append(FormattingUtils.formatDistance(km, unit: .current)) }
         if let hr = session.averageHeartRate, hr > 0 { parts.append("\(Int(hr)) bpm") }
         parts.append(activitySummary(segs))
         return parts.joined(separator: " · ")
@@ -361,7 +360,7 @@ struct EarlierRow: View {
     var body: some View {
         let segs = session.displaySegments()
         var sub = [session.startDate.formatted(.relative(presentation: .named, unitsStyle: .wide)).prefix(1).uppercased() + session.startDate.formatted(.relative(presentation: .named, unitsStyle: .wide)).dropFirst(), TodayFormat.short(session.duration)]
-        if let km = session.distance, km > 0 { sub.append(String(format: "%.1f km", km)) }
+        if let km = session.distance, km > 0 { sub.append(FormattingUtils.formatDistance(km, unit: .current)) }
         return NavigationLink(destination: SessionDetailView(session: session)) {
             HStack {
                 VStack(alignment: .leading, spacing: 2) {

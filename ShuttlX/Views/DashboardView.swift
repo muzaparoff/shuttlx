@@ -88,7 +88,7 @@ struct DashboardView: View {
             .timelineCard()
         }
         .buttonStyle(PressScaleButtonStyle())
-        .accessibilityHint("Interval workouts and training plans")
+        .accessibilityHint("Run/Walk, mixed programs and training plans")
     }
 
     private func stat(_ value: String, _ unit: String?, _ label: String) -> some View {
@@ -110,7 +110,7 @@ struct DashboardView: View {
         let cal = daySessions.compactMap(\.caloriesBurned).reduce(0, +)
         let minutes = Int(secs / 60)
         return HStack(alignment: .top, spacing: 20) {
-            stat(String(format: "%.1f", km), "km", "distance")
+            stat(FormattingUtils.formatDistanceValue(km, unit: .current), DistanceUnit.current.symbol, "distance")
             stat(String(format: "%d:%02d", minutes / 60, minutes % 60), nil, "active")
             stat("\(Int(cal))", "cal", "energy")
             Spacer(minLength: 0)

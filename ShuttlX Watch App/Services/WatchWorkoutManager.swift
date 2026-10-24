@@ -11,13 +11,6 @@ import os
 import os.log
 import ShuttlXShared
 
-struct KmSplit: Identifiable {
-    let id = UUID()
-    let kmNumber: Int
-    let splitTime: TimeInterval
-    let cumulativeTime: TimeInterval
-}
-
 /// The 1 Hz active-time value, published on its own so the per-second tick
 /// re-renders only the views that observe it (`ElapsedTimerText`,
 /// `WorkoutClockReader`), not every page that observes the manager.
@@ -56,8 +49,15 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     @Published var totalSteps: Int = 0
     @Published var totalDistance: Double = 0
     @Published var currentPace: TimeInterval? = nil   // seconds per km (average)
-    @Published var completedKmSplits: [KmSplit] = []
-    @Published var lastCompletedKm: Int = 0
+    /// Km splits (stored as `kmSplits`) and mile splits (display + alerts only).
+    /// Not fed in gym recovery: its pedometer distance is not a run.
+    @Published private(set) var kmSplitCounter = SplitCounter(unitMetres: SplitCounter.kmMetres)
+    @Published private(set) var mileSplitCounter = SplitCounter(unitMetres: SplitCounter.mileMetres)
+    func splitCounter(for unit: DistanceUnit) -> SplitCounter { unit == .mi ? mileSplitCounter : kmSplitCounter }
+    /// "KM 3 · 6:12" on the running page for `undoWindow` seconds. Waits while the
+    /// auto-switch toast shows (that one wins), then gets its own 4 s.
+    struct SplitToast: Equatable { let id = UUID(); let unit: DistanceUnit; let split: SplitCounter.Split }
+    @Published private(set) var splitToast: SplitToast?
     @Published var healthKitAuthorized: Bool = false
     @Published var authorizationDenied: Bool = false
     @Published var healthKitSaveError: String? = nil
@@ -89,7 +89,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // MARK: - Workout Mode
     enum WorkoutMode { case freeRun, interval, gymRecovery }
     @Published var workoutMode: WorkoutMode = .freeRun
-    @Published var workoutName: String = "Free Run"
+    @Published var workoutName: String = "Run/Walk"
 
     // `intervalEngine` is @Published so swapping in a new engine triggers a
     // re-render. For per-tick UI updates, views observe the engine DIRECTLY
@@ -167,9 +167,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     // callback, which deepens the very main-actor backlog that stalled the tick.
     private var paceWindowSamples: [(time: Date, distance: Double)] = []
     private let paceWindowSec: TimeInterval = 30
-
-    // Pace & split tracking
-    private var timeAtLastKm: TimeInterval = 0
 
     // T-METRICS.4: HKLiveWorkoutBuilder's distanceWalkingRunning statistic is
     // Apple's canonical fused distance (pedometer + GPS + on-device motion).
@@ -381,7 +378,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutMode = .freeRun
         intervalEngine = nil
         activeTemplate = nil
-        workoutName = "Free Run"
+        workoutName = "Run/Walk"
 
         self.phoneSessionID = phoneSessionID
         // Set isStarting so the UI shows a spinner on the very next frame.
@@ -460,9 +457,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         totalDistance = 0
         hkDistanceKm = 0
         currentPace = nil
-        completedKmSplits = []
-        lastCompletedKm = 0
-        timeAtLastKm = 0
+        resetSplits()
         segments = []
         currentActivity = .unknown
         healthKitSaved = false
@@ -649,6 +644,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         timerReferenceDate = nil
         // Resume reopens a fresh segment, so an Undo offered before the pause is stale.
         clearActivitySwitch()
+        splitToast = nil
 
         // Push isPaused:true to iPhone before stopping the timer so the
         // 10-second timeout on the phone side doesn't clear live state.
@@ -773,9 +769,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         totalDistance = 0
         hkDistanceKm = 0
         currentPace = nil
-        completedKmSplits = []
-        lastCompletedKm = 0
-        timeAtLastKm = 0
+        resetSplits()
         segments = []
         hasReceivedHRSample = false
         noHeartRateDetected = false
@@ -1483,8 +1477,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     private func clearActivitySwitch() {
+        let hadSwitch = activitySwitch != nil
         activitySwitch = nil
         undoState = nil
+        // A split toast that waited behind the switch toast gets its own 4 s now.
+        if hadSwitch, let toast = splitToast { expireSplitToast(toast.id) }
     }
 
     /// "Undo" on the auto-switch toast: drop the segment the switch just opened,
@@ -1856,24 +1853,45 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             // else: keep previous currentPace value (don't flip mid-workout)
         }
 
-        // Km split detection
-        let completedKm = Int(floor(distanceKm))
-        // One buzz per update even if a late distance batch crosses two km at once.
-        // `.success`, not `.notification`: that one is reserved for safety (watchos.md, haptics).
+        // Splits: every km is stored; the alert is free run only, in the wearer's unit,
+        // never while cycling, one tap per update (`.success`; `.notification` is for safety).
+        guard workoutMode != .gymRecovery else { return }
+        let metres = distanceKm * 1000
+        let km = kmSplitCounter.update(metres: metres, activeTime: workoutAge)
+        let mi = mileSplitCounter.update(metres: metres, activeTime: workoutAge)
+        for split in km.splits {
+            logger.info("Km split \(split.number): \(Int(split.splitTime))s\(split.estimated ? " (est.)" : "")")
+        }
+        let unit = WatchSyncCoordinator.shared.distanceUnit
+        let update = unit == .mi ? mi : km
+        guard update.alert, let split = update.splits.last, workoutMode == .freeRun,
+              currentActivity != .cycling, WatchSyncCoordinator.shared.splitAlertsOn else { return }
         #if os(watchOS)
-        if completedKm > lastCompletedKm { WKInterfaceDevice.current().play(.success) }
+        WKInterfaceDevice.current().play(.success)
         #endif
-        while completedKm > lastCompletedKm {
-            lastCompletedKm += 1
-            let splitTime = elapsedTime - timeAtLastKm
-            let split = KmSplit(
-                kmNumber: lastCompletedKm,
-                splitTime: splitTime,
-                cumulativeTime: elapsedTime
-            )
-            completedKmSplits.append(split)
-            timeAtLastKm = elapsedTime
-            logger.info("Km split \(self.lastCompletedKm): \(Int(splitTime))s")
+        let toast = SplitToast(unit: unit, split: split)
+        splitToast = toast
+        if activitySwitch == nil { expireSplitToast(toast.id) }
+    }
+
+    private func expireSplitToast(_ id: UUID) {
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(Self.undoWindow))
+            guard let self, self.splitToast?.id == id else { return }
+            self.splitToast = nil
+        }
+    }
+
+    private func resetSplits() {
+        kmSplitCounter = SplitCounter(unitMetres: SplitCounter.kmMetres)
+        mileSplitCounter = SplitCounter(unitMetres: SplitCounter.mileMetres)
+        splitToast = nil
+    }
+
+    private var kmSplitData: [KmSplitData]? {
+        let splits = kmSplitCounter.splits
+        return splits.isEmpty ? nil : splits.map {
+            KmSplitData(kmNumber: $0.number, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
         }
     }
 
@@ -2053,9 +2071,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         let segmentsCopy = finalizedSegments()
 
-        let backupSplits: [KmSplitData]? = completedKmSplits.isEmpty ? nil : completedKmSplits.map {
-            KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
-        }
+        let backupSplits = kmSplitData
 
         // Calculate total pause time including current pause if active
         let totalPause = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
@@ -2272,7 +2288,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 logger.warning("Recovered interval template not found on watch — resuming as free run")
             }
             workoutMode = .freeRun
-            workoutName = "Free Run"
+            workoutName = "Run/Walk"
             intervalEngine = nil
             activeTemplate = nil
         }
@@ -2306,10 +2322,16 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         totalDistance = pedometerDistanceKm
         hkDistanceKm = 0
         routePoints = backup?.route ?? []
-        let splits = backup?.kmSplits ?? []
-        completedKmSplits = splits.map { KmSplit(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime) }
-        lastCompletedKm = splits.last?.kmNumber ?? 0
-        timeAtLastKm = splits.last?.cumulativeTime ?? 0
+        // Re-seed both counters from the saved km crossings (miles are interpolated
+        // between them); the first update after the kill gap records but does not tap.
+        resetSplits()
+        for split in backup?.kmSplits ?? [] {
+            let metres = Double(split.kmNumber) * SplitCounter.kmMetres
+            _ = kmSplitCounter.update(metres: metres, activeTime: split.cumulativeTime)
+            _ = mileSplitCounter.update(metres: metres, activeTime: split.cumulativeTime)
+        }
+        kmSplitCounter.silenceNextUpdate()
+        mileSplitCounter.silenceNextUpdate()
         currentPace = nil
         paceWindowSamples.removeAll(keepingCapacity: true)
         heartRate = 0
@@ -2439,7 +2461,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             calories: calories,
             steps: totalSteps,
             avgPace: currentPace,
-            splitsCount: lastCompletedKm,
+            splitUnit: WatchSyncCoordinator.shared.distanceUnit,
+            splits: splitCounter(for: WatchSyncCoordinator.shared.distanceUnit).splits,
             completedSets: workoutMode == .gymRecovery ? captures.count : nil,
             averageHRR1: avgHRR1,
             bodyMassUnavailable: bodyMassUnavailable,
@@ -2453,9 +2476,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         let segmentsCopy = finalizedSegments(logEnergy: true)
 
-        let splits: [KmSplitData]? = completedKmSplits.isEmpty ? nil : completedKmSplits.map {
-            KmSplitData(kmNumber: $0.kmNumber, splitTime: $0.splitTime, cumulativeTime: $0.cumulativeTime)
-        }
+        let splits = kmSplitData
 
         // Calculate total pause time including current pause if active
         let totalPauseTime = accumulatedPauseTime + (pauseStartDate.map { Date().timeIntervalSince($0) } ?? 0)
@@ -2628,7 +2649,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// simulator without waiting an hour. Snapshot/QA only.
     func applyFreeRunPreviewSnapshot(elapsed: TimeInterval) {
         workoutMode = .freeRun
-        workoutName = "Free Run"
+        workoutName = "Run/Walk"
         intervalEngine = nil
         isWorkoutActive = true
         isPaused = false
@@ -2669,6 +2690,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         case "nohr":
             heartRate = 0
             noHeartRateDetected = true
+        case "split":
+            applyPreviewSplit()
         default:
             break
         }
@@ -2688,8 +2711,32 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         healthKitSaved = !healthSaveFailed
         healthKitSaveError = healthSaveFailed ? "Preview: save failed" : nil
         pendingSummary = WorkoutSummary(duration: 4212, distance: 9.8, avgHeartRate: 138, calories: 612,
-                                        steps: 11_204, avgPace: 430, splitsCount: 9,
+                                        steps: 11_204, avgPace: 430,
+                                        splitUnit: WatchSyncCoordinator.shared.distanceUnit,
+                                        splits: Self.previewSplits(unit: WatchSyncCoordinator.shared.distanceUnit, km: 9.8, seconds: 4212),
                                         sessionID: UUID(), segments: segs)
+    }
+
+    /// Snapshot/QA only: splits from an even-ish run over `km` in `seconds`.
+    static func previewSplits(unit: DistanceUnit, km: Double, seconds: TimeInterval) -> [SplitCounter.Split] {
+        var c = SplitCounter(unitMetres: unit == .mi ? SplitCounter.mileMetres : SplitCounter.kmMetres)
+        for i in 1...100 {
+            let f = Double(i) / 100
+            // Slower start, faster finish, so the list is not 9 equal rows.
+            _ = c.update(metres: km * 1000 * f, activeTime: seconds * (f * 1.1 - 0.1 * f * f))
+        }
+        return c.splits
+    }
+
+    /// Snapshot/QA only: the km/mile toast and the page-1 "last split" row.
+    func applyPreviewSplit() {
+        let unit = WatchSyncCoordinator.shared.distanceUnit
+        var c = SplitCounter(unitMetres: unit == .mi ? SplitCounter.mileMetres : SplitCounter.kmMetres)
+        for s in Self.previewSplits(unit: unit, km: totalDistance, seconds: elapsedTime) {
+            _ = c.update(metres: Double(s.number) * c.unitMetres, activeTime: s.cumulativeTime)
+        }
+        if unit == .mi { mileSplitCounter = c } else { kmSplitCounter = c }
+        if let last = c.lastSplit { splitToast = SplitToast(unit: unit, split: last) }
     }
 
     func applyPreviewSnapshot() {

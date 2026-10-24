@@ -338,11 +338,21 @@ class DataManager: ObservableObject {
         checkHealthKitAuthorizationStatus()
         guard HKHealthStore.isHealthDataAvailable() else { return }
         do {
-            let status = try await healthStore.statusForAuthorizationRequest(toShare: [], read: HealthKitImporter.readTypes)
+            let status = try await healthStore.statusForAuthorizationRequest(toShare: [], read: Self.requestReadTypes)
             healthReadAccessNeeded = status == .shouldRequest
         } catch {
             logger.error("Health request status failed: \(error.localizedDescription)")
         }
+    }
+
+    /// Everything the single Health sheet asks to read: the importer's types, the date of birth (age for the estimated
+    /// heart limit) and Apple's VO2max (Trends, read-only). The importer gates on `HealthKitImporter.readTypes` only,
+    /// so adding a type here never pauses the import for people who already allowed the older set.
+    static var requestReadTypes: Set<HKObjectType> {
+        var types = HealthKitImporter.readTypes   // workouts, routes, heart rate, energy, distance, steps
+        if let dob = HKCharacteristicType.characteristicType(forIdentifier: .dateOfBirth) { types.insert(dob) }
+        if let vo2 = VO2MaxLoader.type { types.insert(vo2) }
+        return types
     }
 
     /// The ONE Health sheet: workout/energy/distance sharing plus everything the Health import and the
@@ -355,9 +365,7 @@ class DataManager: ObservableObject {
             return
         }
 
-        var typesToRead = HealthKitImporter.readTypes   // workouts, routes, heart rate, energy, distance, steps
-        // Date of birth: gives the age for the estimated heart limit when the user has not typed one.
-        if let dob = HKCharacteristicType.characteristicType(forIdentifier: .dateOfBirth) { typesToRead.insert(dob) }
+        let typesToRead = Self.requestReadTypes
 
         let typesToWrite: Set<HKSampleType> = [HKWorkoutType.workoutType(), activeEnergyType, distanceType]
 

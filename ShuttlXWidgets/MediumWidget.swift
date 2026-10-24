@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import ShuttlXShared
 
 // WidgetTheme + WidgetMetricColor now live in Shared/WidgetTheme.swift —
 // shared across every widget file in this target (Tier-1 widget cleanup).
@@ -97,7 +98,7 @@ struct MediumWidgetProvider: TimelineProvider {
         // Distance is stored in km
         let dist: String
         if let d = session.distance, d > 0 {
-            dist = String(format: "%.2f km", d)
+            dist = FormattingUtils.formatDistance(d, unit: .current)
         } else {
             dist = ""
         }

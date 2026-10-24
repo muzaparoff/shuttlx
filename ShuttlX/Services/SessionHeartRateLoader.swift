@@ -86,3 +86,40 @@ enum SessionHeartRateLoader {
     }
     #endif
 }
+
+/// Apple's measured VO2max (`vo2Max`), read-only. The watch measures it on outdoor walks and runs.
+/// Nothing here is stored, written to Health, logged with values, or sent to telemetry.
+struct VO2MaxReading: Equatable {
+    let value: Double          // ml/kg/min
+    let date: Date
+    let previous: Double?      // the sample before it, for the trend arrow
+}
+
+enum VO2MaxLoader {
+    private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "VO2Max")
+
+    static var type: HKQuantityType? { HKQuantityType.quantityType(forIdentifier: .vo2Max) }
+
+    /// Nil when Health is unavailable, access was not granted (HealthKit then returns no samples), or none exist.
+    static func latest() async -> VO2MaxReading? {
+        #if DEBUG
+        // Screenshot seam (SHUTTLX_DEMO_VO2=<value>): the simulator has no Health data.
+        if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_VO2"], let v = Double(raw) {
+            return VO2MaxReading(value: v, date: Date().addingTimeInterval(-3 * 86400), previous: v - 0.6)
+        }
+        #endif
+        guard HKHealthStore.isHealthDataAvailable(), let type else { return nil }
+        let unit = HKUnit(from: "ml/(kg*min)")
+        let samples: [HKQuantitySample] = await withCheckedContinuation { cont in
+            let q = HKSampleQuery(sampleType: type, predicate: nil, limit: 2,
+                                  sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]) { _, results, error in
+                if let error { logger.info("VO2max query failed: \(error.localizedDescription, privacy: .public)") }
+                cont.resume(returning: (results as? [HKQuantitySample]) ?? [])
+            }
+            HKHealthStore().execute(q)
+        }
+        guard let first = samples.first else { return nil }
+        return VO2MaxReading(value: first.quantity.doubleValue(for: unit), date: first.endDate,
+                             previous: samples.dropFirst().first?.quantity.doubleValue(for: unit))
+    }
+}

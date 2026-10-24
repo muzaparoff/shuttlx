@@ -27,7 +27,7 @@ struct RouteMapView: View {
                 ForEach(kmMarkers) { marker in
                     Annotation("", coordinate: marker.coordinate) {
                         VStack(spacing: 0) {
-                            Text("km \(marker.km)")
+                            Text("\(DistanceUnit.current.symbol) \(marker.km)")
                                 .font(ShuttlXFont.microLabel.weight(.bold))
                             Text(marker.paceLabel)
                                 .font(ShuttlXFont.microLabel.monospacedDigit())
@@ -75,7 +75,29 @@ struct RouteMapView: View {
         let paceLabel: String
     }
 
+    /// Miles: the stored splits are per km, so walk the route and time each mile from the GPS timestamps.
+    private var mileMarkers: [KmMarker] {
+        guard route.count >= 2 else { return [] }
+        var out: [KmMarker] = []
+        var km = 0.0
+        var next = 1
+        var lastTime = route[0].timestamp
+        for i in 1..<route.count {
+            let a = route[i - 1], b = route[i]
+            km += haversineDistance(lat1: a.latitude, lon1: a.longitude, lat2: b.latitude, lon2: b.longitude)
+            if km >= Double(next) * DistanceUnit.kmPerMile {
+                let secs = b.timestamp.timeIntervalSince(lastTime)
+                out.append(KmMarker(km: next, coordinate: CLLocationCoordinate2D(latitude: b.latitude, longitude: b.longitude),
+                                    paceLabel: FormattingUtils.formatPaceWithUnit(secs / DistanceUnit.kmPerMile, unit: .mi)))
+                lastTime = b.timestamp
+                next += 1
+            }
+        }
+        return out
+    }
+
     private var kmMarkers: [KmMarker] {
+        if DistanceUnit.current == .mi { return mileMarkers }
         guard let splits = kmSplits, !splits.isEmpty, route.count >= 2 else { return [] }
 
         var markers: [KmMarker] = []

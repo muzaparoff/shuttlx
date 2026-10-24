@@ -91,7 +91,7 @@ extension DetectedActivity {
         case .walking: return "WALK"
         case .cycling: return "CYCLE"
         case .stationary: return "STILL"
-        case .unknown: return "FREE RUN"
+        case .unknown: return "RUN/WALK"
         }
     }
 

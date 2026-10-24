@@ -2,9 +2,9 @@ import SwiftUI
 import os.log
 import WatchConnectivity
 
-/// Watch home (timeline mockup screen 1): one Start button for free run and a
-/// Programs row. Gym Recovery is no longer on Home — it stays reachable from
-/// the iPhone (`startWatchWorkout` "gymRecovery" -> WatchSyncCoordinator).
+/// Watch home: the two programs. Run/Walk = the big Start (free run, finds run and
+/// walk itself); Mixed = the interval programs list. Gym Recovery stays started
+/// from the iPhone (`startWatchWorkout` "gymRecovery" -> WatchSyncCoordinator).
 struct StartTrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
@@ -31,7 +31,7 @@ struct StartTrainingView: View {
             }
 
             Button(action: {
-                logger.info("Start Free Run tapped")
+                logger.info("Start Run/Walk tapped")
                 #if os(watchOS)
                 WKInterfaceDevice.current().play(.start)
                 #endif
@@ -52,10 +52,10 @@ struct StartTrainingView: View {
             }
             .buttonStyle(.plain)
             .padding(.top, WatchScale.pt(12))
-            .accessibilityLabel("Start Free Run")
-            .accessibilityHint("Begins a free-form workout that finds running and walking by itself")
+            .accessibilityLabel("Start Run/Walk")
+            .accessibilityHint("Begins an open-ended workout that finds running and walking by itself")
 
-            Text("Free Run \u{00B7} finds Run / Walk itself")
+            Text("Run/Walk")
                 .font(.system(size: WatchScale.text(11)))
                 .foregroundStyle(ShuttlXColor.textSecondary)
                 .lineLimit(1)
@@ -68,10 +68,12 @@ struct StartTrainingView: View {
             NavigationLink {
                 ProgramsListView()
             } label: {
-                HStack {
-                    Text("Programs")
-                    Spacer()
-                    Text("\u{203A}").foregroundStyle(ShuttlXColor.textSecondary)
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Mixed")
+                    Spacer(minLength: 4)
+                    Text("Intervals \u{203A}")
+                        .font(.system(size: WatchScale.text(11)))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
                 }
                 .font(.system(size: WatchScale.pt(13), weight: .semibold))
                 .foregroundStyle(ShuttlXColor.textPrimary)
@@ -80,6 +82,7 @@ struct StartTrainingView: View {
                 .background(ShuttlXColor.watchCardBackground, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Mixed")
             .accessibilityHint("Interval programs synced from your iPhone")
         }
         .padding(.horizontal, 8)
@@ -89,7 +92,7 @@ struct StartTrainingView: View {
     }
 }
 
-/// Interval programs synced from the iPhone (was inline on the old Home).
+/// "Mixed": interval programs synced from the iPhone.
 struct ProgramsListView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
@@ -163,7 +166,7 @@ struct ProgramsListView: View {
             }
             .padding(.horizontal, ShuttlXSpacing.xs)
         }
-        .navigationTitle("Programs")
+        .navigationTitle("Mixed")
         .onAppear { loadLastSession() }
     }
 

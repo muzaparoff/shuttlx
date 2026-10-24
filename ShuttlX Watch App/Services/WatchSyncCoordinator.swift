@@ -15,9 +15,16 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     @Published var workoutTemplates: [WorkoutTemplate] = []
     /// Resolved heart limits + alert flags from the iPhone (no medication field). No UI yet.
     @Published private(set) var heartSafety = HeartSafetySettings.load()
+    /// Phone "Distance units" (App Group `distanceUnit`: "km" | "mi" | absent = region).
+    @Published private(set) var distanceUnit = DistanceUnit.current
+    /// Phone "Split alerts" switch (App Group `splitAlerts`, absent = on): the km/mile tap + toast.
+    @Published private(set) var splitAlertsOn = UserDefaults(suiteName: "group.com.shuttlx.shared")?
+        .object(forKey: WatchSyncCoordinator.splitAlertsKey) as? Bool ?? true
+    nonisolated static let splitAlertsKey = "splitAlerts"
     #if DEBUG
     /// Snapshot harness only — not persisted.
     func applyPreviewHeartSafety(_ settings: HeartSafetySettings) { heartSafety = settings }
+    func applyPreviewDistanceUnit(_ unit: DistanceUnit) { distanceUnit = unit }
     #endif
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchSyncCoordinator")
@@ -759,7 +766,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                         self.handleRemoteStart(message: message)
                     default: break
                     }
-                case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety":
+                case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety", "syncWorkoutPrefs", "syncDistanceUnit":
                     self.handleIncomingPayload(message)
                 case "purgeSessions":
                     self.handlePurgeRequest(message)
@@ -841,7 +848,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     default: break
                     }
                     replyHandler(["status": "ok"])
-                case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety":
+                case "syncTheme", "syncTemplates", "syncMaxHR", "syncHeartSafety", "syncWorkoutPrefs", "syncDistanceUnit":
                     self.handleIncomingPayload(message)
                     replyHandler(["status": "received"])
                 case "purgeSessions":
@@ -1444,6 +1451,23 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             } catch {
                 logger.error("Failed to decode heart limits: \(error.localizedDescription)")
             }
+        }
+
+        // Workout prefs (applicationContext merges them with theme + templates).
+        if let raw = payload[DistanceUnit.storageKey] as? String {
+            let defaults = UserDefaults(suiteName: Self.appGroupIdentifier)
+            if DistanceUnit(rawValue: raw) != nil {
+                defaults?.set(raw, forKey: DistanceUnit.storageKey)
+            } else if raw == "auto" {
+                defaults?.removeObject(forKey: DistanceUnit.storageKey)
+            } else {
+                logger.error("Distance unit '\(raw, privacy: .public)' from iPhone rejected")
+            }
+            distanceUnit = DistanceUnit.current
+        }
+        if let on = payload[Self.splitAlertsKey] as? Bool {
+            UserDefaults(suiteName: Self.appGroupIdentifier)?.set(on, forKey: Self.splitAlertsKey)
+            splitAlertsOn = on
         }
 
         // Process templates if present

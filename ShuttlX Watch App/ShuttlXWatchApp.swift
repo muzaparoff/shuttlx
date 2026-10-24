@@ -69,7 +69,11 @@ struct ShuttlXWatchApp: App {
                 // raises a workout overlay, SHUTTLX_SNAPSHOT_LIMIT=<bpm> fakes a synced
                 // heart limit (heart-limit mode), SHUTTLX_SNAPSHOT_TAB=<n> opens a page,
                 // SHUTTLX_SNAPSHOT_ACTIVITY=running|walking|cycling sets the tag,
-                // SHUTTLX_SNAPSHOT_HEALTHFAIL=1 shows the summary's "Not saved to Health".
+                // SHUTTLX_SNAPSHOT_HEALTHFAIL=1 shows the summary's "Not saved to Health",
+                // SHUTTLX_SNAPSHOT_UNIT=km|mi fakes the synced distance unit
+                // (OVERLAY=split: the km/mile toast + page-1 last split; overlays can be
+                // comma-separated), SHUTTLX_SNAPSHOT_SCROLL=bottom scrolls the summary down.
+                let unitOverride = env["SHUTTLX_SNAPSHOT_UNIT"].flatMap(DistanceUnit.init(rawValue:))
                 let screen = env["SHUTTLX_SNAPSHOT_SCREEN"]
                 if screen == "home" {
                     NavigationStack { StartTrainingView() }
@@ -87,7 +91,10 @@ struct ShuttlXWatchApp: App {
                     .environment(ThemeManager.shared)
                     .environmentObject(sharedDataManager)
                     .environmentObject(workoutManager)
-                    .task { workoutManager.applySummaryPreview(healthSaveFailed: env["SHUTTLX_SNAPSHOT_HEALTHFAIL"] == "1") }
+                    .task {
+                        if let unitOverride { sharedDataManager.applyPreviewDistanceUnit(unitOverride) }
+                        workoutManager.applySummaryPreview(healthSaveFailed: env["SHUTTLX_SNAPSHOT_HEALTHFAIL"] == "1")
+                    }
                 } else {
                 TrainingView()
                     .environment(ThemeManager.shared)
@@ -96,6 +103,7 @@ struct ShuttlXWatchApp: App {
                     .environmentObject(workoutManager)
                     .task {
                         ThemeManager.shared.selectTheme(snapshot)
+                        if let unitOverride { sharedDataManager.applyPreviewDistanceUnit(unitOverride) }
                         if let limit = env["SHUTTLX_SNAPSHOT_LIMIT"].flatMap(Int.init) {
                             sharedDataManager.applyPreviewHeartSafety(HeartSafetySettings(upperLimit: limit))
                         }
@@ -114,8 +122,9 @@ struct ShuttlXWatchApp: App {
                         if let a = env["SHUTTLX_SNAPSHOT_ACTIVITY"].flatMap(DetectedActivity.init(rawValue:)) {
                             workoutManager.currentActivity = a
                         }
-                        if let overlay = env["SHUTTLX_SNAPSHOT_OVERLAY"] {
-                            workoutManager.applyPreviewOverlay(overlay)
+                        // Comma-separated: e.g. "split,nohr" (toast + banner).
+                        for overlay in (env["SHUTTLX_SNAPSHOT_OVERLAY"] ?? "").split(separator: ",") {
+                            workoutManager.applyPreviewOverlay(String(overlay))
                         }
                     }
                 }

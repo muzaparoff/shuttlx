@@ -17,18 +17,26 @@ struct ProgramsTabView: View {
 
     var body: some View {
         List {
-            // Quick Start — all iPhone-launchable workout modes in one place.
-            // Hidden while a watch workout is active so users can't double-
-            // launch a session on both devices.
+            // Run/Walk: the open-ended free run (finds Run and Walk itself). Hidden while a watch
+            // workout is active so users can't double-launch a session on both devices.
             if !sharedData.isWorkoutActiveOnWatch {
                 Section {
                     startRow(
-                        title: "Free Run",
-                        subtitle: "Open-ended · HR · GPS",
+                        title: "Start Run/Walk",
+                        subtitle: "Open-ended · finds Run and Walk itself · HR · GPS",
                         systemImage: "figure.run.circle.fill",
                         color: ShuttlXColor.running,
                         action: { workoutController.presentFreeRun() }
                     )
+                } header: {
+                    Text("Run/Walk")
+                }
+            }
+
+            // Mixed: Gym Recovery, interval programs (one-tap start; long-press for Edit / Delete)
+            // and training plans. The deep links (shuttlx://plan, start-template) are unchanged.
+            Section {
+                if !sharedData.isWorkoutActiveOnWatch {
                     startRow(
                         title: "Gym Recovery",
                         subtitle: "HR recovery between sets · cardiac rehab",
@@ -36,35 +44,13 @@ struct ProgramsTabView: View {
                         color: ShuttlXColor.heartRate,
                         action: { workoutController.presentGymRecovery() }
                     )
-                } header: {
-                    Text("Quick Start")
-                }
-            }
-
-            // All interval templates as one-tap-to-start rows. Long-press
-            // gives Edit / Delete via context menu; "Manage Workouts" link
-            // below opens the full editor list.
-            if !templateManager.templates.isEmpty && !sharedData.isWorkoutActiveOnWatch {
-                Section {
                     ForEach(templateManager.templates) { template in
                         templateStartRow(template)
                     }
-                } header: {
-                    Text("Interval Programs")
                 }
-            }
-
-            // Active plan
-            if let active = planManager.activePlan() {
-                Section {
+                if let active = planManager.activePlan() {
                     activePlanRow(plan: active.plan, progress: active.progress)
-                } header: {
-                    Text("Active Plan")
                 }
-            }
-
-            // Training Plans
-            Section {
                 NavigationLink {
                     PlanListView()
                 } label: {
@@ -83,10 +69,6 @@ struct ProgramsTabView: View {
                 }
                 .accessibilityLabel("Training Plans, \(planManager.plans.count) plans")
                 .accessibilityHint("View and manage training plans")
-            }
-
-            // Interval Workouts
-            Section {
                 NavigationLink {
                     TemplateListView()
                 } label: {
@@ -105,6 +87,8 @@ struct ProgramsTabView: View {
                 }
                 .accessibilityLabel("Interval Workouts, \(templateManager.templates.count) workouts")
                 .accessibilityHint("View and manage interval workout templates")
+            } header: {
+                Text("Mixed")
             }
         }
         .scrollContentBackground(.hidden)

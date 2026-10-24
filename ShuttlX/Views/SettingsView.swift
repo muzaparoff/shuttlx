@@ -26,6 +26,9 @@ struct SettingsView: View {
     @FocusState private var weightFocused: Bool
     @Environment(\.scenePhase) private var scenePhase
     @State private var heart = HeartSafetySettings.load()
+    /// "auto" | "km" | "mi" (App Group key `distanceUnit`; "auto" = key absent).
+    @AppStorage("splitAlerts", store: UserDefaults(suiteName: "group.com.shuttlx.shared")) private var splitAlerts = true
+    @AppStorage(DistanceUnit.storageKey, store: UserDefaults(suiteName: "group.com.shuttlx.shared")) private var distanceUnitRaw = ""
     #if DEBUG
     @State private var seamHeartAlerts = false   // SHUTTLX_SHOW_HEART=1 screenshot seam
     #endif
@@ -89,13 +92,13 @@ struct SettingsView: View {
                         .accessibilityHint("Opens the iPhone Settings for ShuttlX")
                     }
                 } else if !dataManager.healthKitAuthorized || dataManager.healthReadAccessNeeded {
-                    Button(dataManager.healthKitAuthorized ? "Allow reading past workouts" : "Request HealthKit Access") {
+                    Button(dataManager.healthKitAuthorized ? "Allow reading workouts and fitness level" : "Request HealthKit Access") {
                         Task {
                             await dataManager.requestHealthKitPermissions()
                         }
                     }
                     .accessibilityHint(dataManager.healthKitAuthorized
-                        ? "Opens the Health permission dialog once, so workouts that did not sync from the watch can be read back"
+                        ? "Opens the Health permission dialog once, so workouts that did not sync from the watch and your Apple Watch fitness level can be read"
                         : "Opens the HealthKit permission dialog")
                 }
 
@@ -154,6 +157,23 @@ struct SettingsView: View {
                     get: { heart.autoSwitchActivity },
                     set: { heart.autoSwitchActivity = $0; pushHeart() }))
                     .accessibilityHint("The watch changes between run, walk and cycling on its own")
+            }
+
+            Section("Workout") {
+                Picker("Distance units", selection: $distanceUnitRaw) {
+                    Text("Auto (\(DistanceUnit.resolve(stored: nil).symbol))").tag("")
+                    Text("Kilometres").tag("km")
+                    Text("Miles").tag("mi")
+                }
+                .accessibilityHint("Distances and pace on the iPhone and the watch")
+                .onChange(of: distanceUnitRaw) { _, new in
+                    if new.isEmpty { UserDefaults(suiteName: "group.com.shuttlx.shared")?.removeObject(forKey: DistanceUnit.storageKey) }
+                    sharedDataManager.sendDistanceUnitToWatch()
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+                Toggle("Split alerts", isOn: $splitAlerts)
+                    .accessibilityHint("The watch taps your wrist at each kilometre or mile in Run/Walk")
+                    .onChange(of: splitAlerts) { _, _ in sharedDataManager.sendDistanceUnitToWatch() }
             }
 
             // Body Metrics Section (for calorie estimation)

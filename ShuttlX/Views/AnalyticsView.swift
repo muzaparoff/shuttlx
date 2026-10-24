@@ -12,6 +12,7 @@ struct AnalyticsView: View {
     @State private var recovery: RecoveryStatus = .normal
     @State private var vo2max: Double? = nil
     @State private var previousVO2max: Double? = nil
+    @State private var healthVO2: VO2MaxReading? = nil
     @State private var paceZones: [PaceZoneDistribution] = []
     @State private var elevationSummary: AnalyticsEngine.ElevationSummary? = nil
     @State private var latestElevationRoute: [RoutePoint]? = nil
@@ -55,6 +56,7 @@ struct AnalyticsView: View {
         }
         .task(id: dataManager.effectiveVersion) {
             recomputeAnalytics()
+            healthVO2 = await VO2MaxLoader.latest()
         }
     }
 
@@ -64,7 +66,7 @@ struct AnalyticsView: View {
         VStack(spacing: 0) {
             detailRow("Heart rate zones", hint: nil) { detailScreen("Heart rate zones") { hrZonesCards } }
             Divider().padding(.leading, 14)
-            detailRow("Records", hint: records.fastestKmPace.map { FormattingUtils.formatPace($0) + "/km best" }) {
+            detailRow("Records", hint: records.fastestKmPace.map { FormattingUtils.formatPaceWithUnit($0, unit: .current) + " best" }) {
                 detailScreen("Records") { recordsCards }
             }
             Divider().padding(.leading, 14)
@@ -421,45 +423,54 @@ struct AnalyticsView: View {
 
     @ViewBuilder
     private var vo2maxCard: some View {
-        if let vo2 = vo2max {
-            let trending = previousVO2max.map { vo2 > $0 }
-
-            VStack(spacing: 8) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Est. VO2max")
-                            .font(ShuttlXFont.sectionHeader)
-
-                        Text(vo2maxCategory(vo2))
-                            .font(ShuttlXFont.cardCaption)
-                            .foregroundStyle(.secondary)
-                    }
-
-                    Spacer()
-
+        // Apple's measured value wins; the in-app estimate (running sessions only) is the fallback.
+        let measured = healthVO2
+        let value = measured?.value ?? vo2max
+        let previous = measured != nil ? measured?.previous : previousVO2max
+        VStack(spacing: 8) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(measured != nil ? "Cardio fitness (VO2max)" : value != nil ? "Estimated VO2max" : "Cardio fitness (VO2max)")
+                        .font(ShuttlXFont.sectionHeader)
+                }
+                Spacer()
+                if let value {
                     HStack(alignment: .firstTextBaseline, spacing: 4) {
-                        Text(String(format: "%.1f", vo2))
+                        Text(String(format: "%.1f", value))
                             .font(ShuttlXFont.metricLarge)
                             .foregroundStyle(ShuttlXColor.accentText)
-
-                        if let isUp = trending {
-                            Image(systemName: isUp ? "arrow.up.right" : "arrow.down.right")
+                        if let previous, previous != value {
+                            Image(systemName: value > previous ? "arrow.up.right" : "arrow.down.right")
                                 .font(ShuttlXFont.sectionHeader)
-                                .foregroundStyle(isUp ? ShuttlXColor.positive : ShuttlXColor.negative)
+                                .foregroundStyle(value > previous ? ShuttlXColor.positive : ShuttlXColor.negative)
                         }
                     }
                 }
-
-                Text("ml/kg/min")
+            }
+            if value != nil {
+                Text(vo2Caption(measured))
                     .font(ShuttlXFont.microLabel)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                Text("Apple Watch measures this on outdoor walks and runs.")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(16)
-            .timelineCard()
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Estimated VO2 max: \(String(format: "%.1f", vo2)) milliliters per kilogram per minute. \(vo2maxCategory(vo2))")
         }
+        .padding(16)
+        .timelineCard()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(value.map {
+            "\(measured != nil ? "Cardio fitness, VO2 max" : "Estimated VO2 max"): \(String(format: "%.1f", $0)) milliliters per kilogram per minute. \(vo2Caption(measured))"
+        } ?? "Cardio fitness, VO2 max: no reading yet. Apple Watch measures this on outdoor walks and runs.")
+    }
+
+    /// "ml/kg/min · From Apple Watch, 21 Oct" or "ml/kg/min · estimate".
+    private func vo2Caption(_ measured: VO2MaxReading?) -> String {
+        guard let measured else { return "ml/kg/min \u{00B7} estimate" }
+        return "ml/kg/min \u{00B7} from Apple Health, \(measured.date.formatted(.dateTime.day().month(.abbreviated)))"
     }
 
     private func estimatePreviousVO2Max(sessions: [TrainingSession]) -> Double? {
@@ -467,17 +478,6 @@ struct AnalyticsView: View {
         guard let fourWeeksAgo = calendar.date(byAdding: .day, value: -28, to: Date()) else { return nil }
         let olderSessions = sessions.filter { $0.startDate < fourWeeksAgo }
         return AnalyticsEngine.estimatedVO2Max(sessions: olderSessions)
-    }
-
-    private func vo2maxCategory(_ value: Double) -> String {
-        switch value {
-        case ..<30: return "Below Average"
-        case 30..<37: return "Average"
-        case 37..<42: return "Above Average"
-        case 42..<50: return "Good"
-        case 50..<55: return "Excellent"
-        default: return "Elite"
-        }
     }
 
     // MARK: - Personal Records
@@ -491,8 +491,8 @@ struct AnalyticsView: View {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 if let pace = records.fastestKmPace {
                     PRCard(
-                        title: "Fastest km",
-                        value: FormattingUtils.formatPace(pace),
+                        title: DistanceUnit.current == .km ? "Fastest km" : "Best pace (/mi)",
+                        value: FormattingUtils.formatPace(pace, unit: .current),
                         date: records.fastestKmDate,
                         icon: "hare.fill",
                         color: ShuttlXColor.running
@@ -502,7 +502,7 @@ struct AnalyticsView: View {
                 if let dist = records.mostDistance {
                     PRCard(
                         title: "Longest Run",
-                        value: FormattingUtils.formatDistance(dist),
+                        value: FormattingUtils.formatDistance(dist, unit: .current),
                         date: records.mostDistanceDate,
                         icon: "road.lanes",
                         color: ShuttlXColor.steps

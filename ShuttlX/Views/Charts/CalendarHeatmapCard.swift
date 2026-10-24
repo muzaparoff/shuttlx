@@ -179,7 +179,7 @@ struct CalendarHeatmapCard: View {
 
     private var detailValueText: String {
         guard let selectedDay else { return "—" }
-        return selectedDay.distanceKm <= 0 ? "Rest day" : FormattingUtils.formatDistance(selectedDay.distanceKm)
+        return selectedDay.distanceKm <= 0 ? "Rest day" : FormattingUtils.formatDistance(selectedDay.distanceKm, unit: .current)
     }
 
     private func fullDateLabel(_ day: HeatmapDay) -> String {

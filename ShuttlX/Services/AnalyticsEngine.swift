@@ -115,7 +115,10 @@ enum AnalyticsEngine {
     /// Simplified VO2max estimate.
     /// Primary: Cooper test formula from best 12-min effort: VO2max = (distance_m - 504.9) / 44.73
     /// Fallback: HR method: 15.3 x (maxHR / restHR), using estimated values from session data.
-    static func estimatedVO2Max(sessions: [TrainingSession]) -> Double? {
+    /// Only used when Health has no measured VO2max. Cooper / HR formulas assume running, so cycling and
+    /// mostly-walking sessions are left out (they gave inflated numbers).
+    static func estimatedVO2Max(sessions allSessions: [TrainingSession]) -> Double? {
+        let sessions = allSessions.filter(isRunningSession)
         // Try Cooper test approach: find best 12-minute distance
         let cooperEstimate = cooperVO2Max(sessions: sessions)
         if let cooper = cooperEstimate, cooper > 15 && cooper < 90 {
@@ -369,6 +372,16 @@ enum AnalyticsEngine {
             let weekSessions = sessions.filter { $0.startDate >= weekStart && $0.startDate < weekEnd }
             return computeTrainingLoad(for: weekSessions)
         }
+    }
+
+    /// Running sport, or a free run that is at least 70% running and has no cycling.
+    static func isRunningSession(_ s: TrainingSession) -> Bool {
+        if let sport = s.sportType { return sport == .running }
+        guard s.duration > 0 else { return false }
+        let segs = s.displaySegments()
+        if segs.contains(where: { $0.activityType == .cycling }) { return false }
+        let running = segs.filter { $0.activityType == .running }.reduce(0) { $0 + $1.duration }
+        return running / s.duration >= 0.7
     }
 
     private static func cooperVO2Max(sessions: [TrainingSession]) -> Double? {

@@ -6,7 +6,7 @@ struct TodayWorkoutProvider: TimelineProvider {
         TodayWorkoutEntry(
             date: Date(),
             hasSession: true,
-            sportTypeName: "Free Run",
+            sportTypeName: "Run/Walk",
             sportTypeIcon: "figure.run",
             duration: "28 min",
             heartRate: "142",

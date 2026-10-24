@@ -158,10 +158,10 @@ struct ComparisonSplitCard: View {
             title: "Distance",
             thisValue: thisKm,
             lastValue: lastKm,
-            thisDisplay: FormattingUtils.formatDistance(thisKm),
-            lastDisplay: FormattingUtils.formatDistance(lastKm),
+            thisDisplay: FormattingUtils.formatDistance(thisKm, unit: .current),
+            lastDisplay: FormattingUtils.formatDistance(lastKm, unit: .current),
             percentDelta: percentDelta(this: thisKm, last: lastKm),
-            accessibleUnit: { "\(String(format: "%.1f", $0)) kilometers" }
+            accessibleUnit: { "\(FormattingUtils.formatDistanceValue($0, unit: .current)) \(DistanceUnit.current == .km ? "kilometers" : "miles")" }
         )
     }
 

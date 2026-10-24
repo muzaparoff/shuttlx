@@ -18,8 +18,6 @@ struct TrainingView: View {
     @Environment(ThemeManager.self) var themeManager
 
     @State var hrCalculator = HeartRateZoneCalculator.fromSharedDefaults()
-    /// Drives the brief DIST flash on every km-split milestone.
-    @State var kmSplitFlash = false
     /// Full height of a free-run page: from the tag line to the screen bottom. The
     /// running page pins itself to it; a stack shorter than the TabView floated to
     /// the centre (no HR: no zone word or bar).
@@ -128,13 +126,6 @@ struct TrainingView: View {
         // (two samples, 10 s, cooldown), so one event buzzes once.
         .onChange(of: workoutManager.heartRate, initial: true) { _, newHR in
             heartLimitModeOn = HeartLimitMode.isOn(hr: newHR, limit: resolvedHeartLimit, wasOn: heartLimitModeOn)
-        }
-        .onChange(of: workoutManager.lastCompletedKm) { _, _ in
-            guard !reduceMotion else { return }
-            kmSplitFlash = true
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
-                kmSplitFlash = false
-            }
         }
         #if DEBUG
         .onAppear {

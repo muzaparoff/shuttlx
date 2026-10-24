@@ -10,7 +10,7 @@ private struct RoutePiece: Identifiable {
     let coords: [CLLocationCoordinate2D]
 }
 
-/// "km 5 / 5'48"/km" label on the selected route.
+/// "km 5 / 5'48"/km" (or mi) label on the selected route.
 private struct KmMark: Identifiable {
     let id: Int
     let coord: CLLocationCoordinate2D
@@ -122,7 +122,8 @@ struct HistoryMapView: View {
     /// Pace is the time since the previous label, shown unless the whole session is cycling.
     private func kmMarks(_ s: TrainingSession) -> [KmMark] {
         guard let route = s.route, route.count >= 2 else { return [] }
-        let total = s.distance ?? 0
+        let unit = DistanceUnit.current
+        let total = unit.value(fromKm: s.distance ?? 0)
         let stepKm = max(1, Int((total / 10).rounded(.up)))
         let showPace = !s.displaySegments().allSatisfy { $0.activityType == .cycling }
         var out: [KmMark] = []
@@ -134,10 +135,10 @@ struct HistoryMapView: View {
             let here = CLLocation(latitude: p.latitude, longitude: p.longitude)
             metres += here.distance(from: prev)
             prev = here
-            if metres >= Double(nextKm) * 1000 {
-                let secPerKm = p.timestamp.timeIntervalSince(lastTime) / Double(stepKm)
+            if metres >= Double(nextKm) * 1000 * unit.km {
+                let secPerKm = p.timestamp.timeIntervalSince(lastTime) / (Double(stepKm) * unit.km)
                 out.append(KmMark(id: nextKm, coord: CLLocationCoordinate2D(latitude: p.latitude, longitude: p.longitude),
-                                  km: nextKm, pace: showPace && secPerKm > 0 ? FormattingUtils.formatPace(secPerKm) + "/km" : nil))
+                                  km: nextKm, pace: showPace && secPerKm > 0 ? FormattingUtils.formatPaceWithUnit(secPerKm, unit: .current) : nil))
                 lastTime = p.timestamp
                 nextKm += stepKm
             }
@@ -189,13 +190,13 @@ struct HistoryMapView: View {
                 ForEach(kmMarks(s)) { m in
                     Annotation("", coordinate: m.coord, anchor: .bottom) {
                         VStack(spacing: 0) {
-                            Text("km \(m.km)").font(ShuttlXFont.microLabel.weight(.bold))
+                            Text("\(DistanceUnit.current.symbol) \(m.km)").font(ShuttlXFont.microLabel.weight(.bold))
                             if let pace = m.pace { Text(pace).font(ShuttlXFont.microLabel) }
                         }
                         .foregroundStyle(.black)
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(.white.opacity(0.92), in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                        .accessibilityLabel("Kilometre \(m.km)" + (m.pace.map { ", pace \($0)" } ?? ""))
+                        .accessibilityLabel("\(DistanceUnit.current.name.capitalized) \(m.km)" + (m.pace.map { ", pace \($0)" } ?? ""))
                     }
                 }
             }
@@ -400,7 +401,7 @@ struct HistoryMapView: View {
     }
 
     private func listTotals(_ km: Double, _ hours: Double) -> some View {
-        Text("\(Int(km.rounded())) km \u{00B7} \(Int(hours.rounded())) h")
+        Text("\(Int(DistanceUnit.current.value(fromKm: km).rounded())) \(DistanceUnit.current.symbol) \u{00B7} \(Int(hours.rounded())) h")
             .font(ShuttlXFont.cardCaption.monospacedDigit())
             .foregroundStyle(ShuttlXColor.textSecondary)
     }
@@ -409,7 +410,7 @@ struct HistoryMapView: View {
     private func row(_ s: TrainingSession) -> some View {
         let segs = s.displaySegments()
         let big = typeSize.isAccessibilitySize
-        let km: String? = s.distance.flatMap { $0 > 0 ? String(format: "%.1f km", $0) : nil }
+        let km: String? = s.distance.flatMap { $0 > 0 ? FormattingUtils.formatDistanceValue($0, unit: .current) + " " + DistanceUnit.current.symbol : nil }
         let content = HStack(spacing: 10) {
             if !big {
                 Group {
@@ -486,7 +487,7 @@ struct HistoryMapView: View {
 
             let pace = paceStat(s, segs)
             HStack(alignment: .top) {
-                trio(s.distance.flatMap { $0 > 0 ? String(format: "%.1f", $0) : nil } ?? "\u{2013}", "km", "distance")
+                trio(s.distance.flatMap { $0 > 0 ? FormattingUtils.formatDistanceValue($0, unit: .current) : nil } ?? "\u{2013}", DistanceUnit.current.symbol, "distance")
                 trio(shortClock(s.duration), "", "time")
                 trio(pace.value, pace.unit, pace.label)
             }
@@ -547,13 +548,13 @@ struct HistoryMapView: View {
         if !run.isEmpty {
             let km = run.compactMap(\.distance).reduce(0, +)
             let t = run.reduce(0) { $0 + $1.duration }
-            return (FormattingUtils.formatPace(t / km), "/km", "run pace")
+            return (FormattingUtils.formatPace(t / km, unit: .current), DistanceUnit.current.paceSuffix, "run pace")
         }
         if let d = s.distance, d > 0, s.duration > 0 {
             if segs.allSatisfy({ $0.activityType == .cycling }) {
-                return (String(format: "%.1f", d / (s.duration / 3600)), "km/h", "avg speed")
+                return (String(format: "%.1f", d / (s.duration / 3600) / DistanceUnit.current.km), DistanceUnit.current == .km ? "km/h" : "mph", "avg speed")
             }
-            return (FormattingUtils.formatPace(s.duration / d), "/km", "avg pace")
+            return (FormattingUtils.formatPace(s.duration / d, unit: .current), DistanceUnit.current.paceSuffix, "avg pace")
         }
         return ("\u{2013}", "", "pace")
     }
@@ -568,7 +569,7 @@ struct HistoryMapView: View {
                         Spacer()
                         Text(FormattingUtils.formatDuration(g.duration))
                         if let d = g.distance, d > 0 {
-                            Text(FormattingUtils.formatPace(g.duration / d) + "/km").frame(width: 70, alignment: .trailing)
+                            Text(FormattingUtils.formatPaceWithUnit(g.duration / d, unit: .current)).frame(width: 70, alignment: .trailing)
                         }
                     }
                     .font(ShuttlXFont.cardCaption.monospacedDigit())

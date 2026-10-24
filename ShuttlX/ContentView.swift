@@ -1,9 +1,12 @@
 import SwiftUI
+import ShuttlXShared
 
 struct ContentView: View {
     @EnvironmentObject var dataManager: DataManager
     @EnvironmentObject var deepLinkRouter: DeepLinkRouter
     @State private var selectedTab = 0
+    /// Distance unit change: rebuild the tabs so every distance/pace text re-reads it.
+    @AppStorage(DistanceUnit.storageKey, store: UserDefaults(suiteName: "group.com.shuttlx.shared")) private var distanceUnitRaw = ""
     @State private var showingDeepLinkSession: TrainingSession?
 
     var body: some View {
@@ -43,6 +46,7 @@ struct ContentView: View {
             .accessibilityHint("Adjust app preferences")
         }
         .modifier(TabBarMinimizeModifier())
+        .id(distanceUnitRaw)
         .sheet(item: $showingDeepLinkSession) { session in
             NavigationStack {
                 SessionDetailView(session: session)

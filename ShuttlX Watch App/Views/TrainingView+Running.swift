@@ -34,6 +34,8 @@ extension TrainingView {
         let word = heartZoneWord
         let bannerShown = isHighIntensityWarning || workoutManager.noHeartRateDetected
         let labelSize = max(10, screenHeight * 0.08)
+        // The switch toast wins; a split toast waits behind it (WatchWorkoutManager).
+        let toastShown = workoutManager.activitySwitch != nil || workoutManager.splitToast != nil
 
         return VStack(alignment: .leading, spacing: 0) {
             // Paused: the word, not just the amber clock (colour alone is not a state).
@@ -47,11 +49,13 @@ extension TrainingView {
             // with the system clock); the hint below steps aside to pay for it.
             if let sw = workoutManager.activitySwitch {
                 activitySwitchToast(sw).padding(.top, 4)
+            } else if let split = workoutManager.splitToast {
+                splitToastView(split).padding(.top, 4)
             }
 
             ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
                              clock: workoutManager.clock,
-                             baseSize: WatchScale.pt(workoutManager.activitySwitch == nil ? 48 : 44),
+                             baseSize: WatchScale.pt(toastShown ? 44 : 48),
                              availableWidth: screenWidth - 16,
                              weight: .semibold,
                              color: workoutManager.isPaused ? ShuttlXColor.ctaWarning : ShuttlXColor.textPrimary)
@@ -61,11 +65,11 @@ extension TrainingView {
             if let word, let ref = zoneReferenceHR {
                 let color = zoneWordColor(word)
                 Text(word)
-                    .font(.system(size: WatchScale.pt(workoutManager.activitySwitch == nil ? 30 : 28), weight: .heavy))
+                    .font(.system(size: WatchScale.pt(toastShown ? 28 : 30), weight: .heavy))
                     .tracking(-0.3)
                     .foregroundStyle(color)
                     .fixedSize()
-                    .padding(.top, WatchScale.pt(workoutManager.activitySwitch == nil ? 10 : 6))
+                    .padding(.top, WatchScale.pt(toastShown ? 6 : 10))
                     .accessibilityLabel("Effort \(word.lowercased())")
                 WatchFillBar(fraction: Double(hr) / ref, fill: color)
                     .padding(.top, WatchScale.pt(8))
@@ -94,7 +98,7 @@ extension TrainingView {
             .accessibilityLabel(hr > 0 ? "Heart rate \(hr) beats per minute" : "Heart rate no data")
             .accessibilityAddTraits(.updatesFrequently)
 
-            if !bannerShown && workoutManager.activitySwitch == nil {
+            if !bannerShown && !toastShown {
                 // Short enough for the 10pt text floor on 40mm.
                 Text("Swipe left: more metrics")
                     .font(.system(size: WatchScale.text(10)))
@@ -186,8 +190,9 @@ extension TrainingView {
 
     // MARK: - Page 1 (swipe left)
 
-    /// Distance, pace, BPM, then calories. HR and the safety banner never leave the
-    /// screen (watchos.md): while a banner shows it takes the CAL row (audit W1 / 1E).
+    /// Distance, pace (speed while cycling), BPM, then the last split (calories until
+    /// the first one). HR and the safety banner never leave the screen (watchos.md):
+    /// while a banner shows it takes the 4th row (audit W1 / 1E).
     var freeRunMetricsPage: some View {
         let h = screenHeight
         let rowWidth = screenWidth - 16
@@ -207,14 +212,22 @@ extension TrainingView {
             Spacer(minLength: 0)
             unitNumber(compactDistanceValue, compactDistanceUnit, ShuttlXColor.textPrimary,
                        size(compactDistanceValue, compactDistanceUnit), unitSize) { EmptyView() }
-                .background(kmSplitHighlight)
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel("Distance \(accessibleDistance)")
             Spacer(minLength: 0)
-            unitNumber(paceValueText, "/KM", ShuttlXColor.running,
-                       size(paceValueText, "/KM"), unitSize) { EmptyView() }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel(accessiblePace)
+            if showsSpeed {
+                unitNumber(speedValueText, speedUnit, ShuttlXColor.cycling,
+                           size(speedValueText, speedUnit), unitSize) { EmptyView() }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(speedValueText == "\u{2014}" ? "Speed no data"
+                                        : "Speed \(speedValueText) \(distanceUnit == .mi ? "miles" : "kilometers") per hour")
+            } else {
+                let paceUnit = distanceUnit.paceSuffix.uppercased()
+                unitNumber(paceValueText, paceUnit, ShuttlXColor.running,
+                           size(paceValueText, paceUnit), unitSize) { EmptyView() }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(accessiblePace)
+            }
             Spacer(minLength: 0)
             unitNumber(hrText, "BPM", ShuttlXColor.heartRate, size(hrText, "BPM"), unitSize) { EmptyView() }
                 .accessibilityElement(children: .combine)
@@ -225,6 +238,22 @@ extension TrainingView {
                 highIntensityWarningView(labelSize: labelSize)
             } else if workoutManager.noHeartRateDetected {
                 noHeartRateBanner(labelSize: labelSize)
+            } else if let split = workoutManager.splitCounter(for: distanceUnit).lastSplit {
+                let label = Self.splitLabel(distanceUnit, split.number)
+                let value = Self.splitClock(split.splitTime)
+                HStack(alignment: .firstTextBaseline, spacing: max(1, unitSize * 0.18)) {
+                    Text(label)
+                        .font(.system(size: unitSize, weight: .bold, design: .monospaced))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                        .fixedSize()
+                    Text(value)
+                        .font(.system(size: size(value, label), weight: .bold, design: .monospaced))
+                        .monospacedDigit()
+                        .foregroundColor(ShuttlXColor.textPrimary)
+                        .fixedSize()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Last split, \(Self.splitAccessible(distanceUnit, split))")
             } else {
                 unitNumber(calText, "CAL", ShuttlXColor.calories, size(calText, "CAL"), unitSize) { EmptyView() }
                     .accessibilityElement(children: .combine)
@@ -239,6 +268,25 @@ extension TrainingView {
     }
 
     // MARK: - Overlays
+
+    /// "KM 3 · 6:12" — green toast in the switch-toast row for `undoWindow` seconds.
+    func splitToastView(_ toast: WatchWorkoutManager.SplitToast) -> some View {
+        Text("\(Self.splitLabel(toast.unit, toast.split.number)) \u{00B7} \(Self.splitClock(toast.split.splitTime))")
+            .font(.system(size: WatchScale.pt(14), weight: .heavy))
+            .monospacedDigit()
+            .lineLimit(1)
+            .fixedSize()
+            .foregroundStyle(ShuttlXColor.iconOnCTA)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.leading, 12).padding(.trailing, 6).padding(.vertical, 4)
+            .frame(minHeight: 24 + 8)
+            .background(ShuttlXColor.ctaPrimary, in: RoundedRectangle(cornerRadius: 18))
+            .transition(.opacity)
+            .accessibilityLabel(Self.splitAccessible(toast.unit, toast.split))
+            .task(id: toast.id) {
+                AccessibilityNotification.Announcement(Self.splitAccessible(toast.unit, toast.split)).post()
+            }
+    }
 
     /// "Now walking · Undo" — full-width orange toast for `WatchWorkoutManager.undoWindow`.
     func activitySwitchToast(_ sw: WatchWorkoutManager.ActivitySwitch) -> some View {

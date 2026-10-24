@@ -52,12 +52,12 @@ struct SessionPartRow: View {
 
     private var distanceText: String? {
         guard let km = segment.distance, km > 0 else { return nil }
-        return FormattingUtils.formatDistance(km)
+        return FormattingUtils.formatDistance(km, unit: .current)
     }
 
     private var paceText: String? {
         guard let km = segment.distance, km > 0.05, segment.duration > 0 else { return nil }
-        return FormattingUtils.formatPace(segment.duration / km) + "/km"
+        return FormattingUtils.formatPaceWithUnit(segment.duration / km, unit: .current)
     }
 
     var body: some View {

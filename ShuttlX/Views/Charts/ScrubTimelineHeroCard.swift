@@ -178,11 +178,11 @@ struct ScrubTimelineHeroCard: View {
                 .tracking(0.5)
 
             HStack(alignment: .lastTextBaseline, spacing: 6) {
-                Text(String(format: "%.1f", selected?.distanceKm ?? 0))
+                Text(FormattingUtils.formatDistanceValue(selected?.distanceKm ?? 0, unit: .current))
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .monospacedDigit()
                     .foregroundStyle(ShuttlXColor.textPrimary)
-                Text("KM")
+                Text(DistanceUnit.current.symbol.uppercased())
                     .font(ShuttlXFont.cardCaption)
                     .fontWeight(.semibold)
                     .foregroundStyle(ShuttlXColor.textSecondary)
@@ -195,7 +195,7 @@ struct ScrubTimelineHeroCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel({
             guard let selected else { return "Distance, no data" }
-            return "Distance, \(String(format: "%.1f", selected.distanceKm)) kilometers, \(selected.fullDateLabel)"
+            return "Distance, \(FormattingUtils.formatDistanceValue(selected.distanceKm, unit: .current)) \(DistanceUnit.current == .km ? "kilometers" : "miles"), \(selected.fullDateLabel)"
         }())
     }
 
@@ -304,7 +304,7 @@ struct ScrubTimelineHeroCard: View {
         .accessibilityElement()
         .accessibilityLabel("Timeline scrubber")
         .accessibilityValue(
-            selected.map { "\($0.fullDateLabel), \(String(format: "%.1f", $0.distanceKm)) kilometers" } ?? "No data"
+            selected.map { "\($0.fullDateLabel), \(FormattingUtils.formatDistanceValue($0.distanceKm, unit: .current)) \(DistanceUnit.current == .km ? "kilometers" : "miles")" } ?? "No data"
         )
         .accessibilityAdjustableAction { direction in
             guard count > 1 else { return }
@@ -354,7 +354,7 @@ struct ScrubTimelineHeroCard: View {
                 .foregroundStyle(ShuttlXColor.textSecondary)
                 .tracking(0.5)
             Spacer()
-            Text("\(FormattingUtils.formatPace(paceSecondsPerKm))/km")
+            Text(FormattingUtils.formatPaceWithUnit(paceSecondsPerKm, unit: .current))
                 .font(ShuttlXFont.cardSubtitle)
                 .fontWeight(.semibold)
                 .monospacedDigit()
@@ -362,7 +362,7 @@ struct ScrubTimelineHeroCard: View {
         }
         .padding(.top, 6)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Average pace at selected point: \(FormattingUtils.formatPace(paceSecondsPerKm)) per kilometer")
+        .accessibilityLabel("Average pace at selected point: \(FormattingUtils.formatPace(paceSecondsPerKm, unit: .current)) per \(DistanceUnit.current.name)")
     }
 
     // MARK: - Empty state

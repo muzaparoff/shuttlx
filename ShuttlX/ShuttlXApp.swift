@@ -244,6 +244,8 @@ struct ShuttlXApp: App {
                 // and/or select a launch tab.
                 let env = ProcessInfo.processInfo.environment
                 if let t = env["SHUTTLX_THEME"] { themeManager.selectTheme(t) }
+                // SHUTTLX_UNIT=km|mi forces the distance unit (App Group key `distanceUnit`).
+                if let u = env["SHUTTLX_UNIT"] { UserDefaults(suiteName: "group.com.shuttlx.shared")?.set(u, forKey: DistanceUnit.storageKey) }
                 // SHUTTLX_DEMO_SIGNEDIN=1 shows the Settings Account section (in memory only, no keychain write).
                 if env["SHUTTLX_DEMO_SIGNEDIN"] == "1" { authManager.isSignedIn = true }
                 if demoDataRequested {
@@ -252,6 +254,11 @@ struct ShuttlXApp: App {
                     if env["SHUTTLX_DEMO_TODAY"] == "1" { demo += ShuttlXDemoData.makeTodaySessions() }
                     dataManager.activateDemoMode(sessions: demo)
                     // SHUTTLX_DEMO_OPEN=1 opens today's morning session detail.
+                    // SHUTTLX_DEMO_OPEN=splits opens the newest session that has km splits.
+                    if env["SHUTTLX_DEMO_OPEN"] == "splits",
+                       let m = demo.filter({ ($0.kmSplits?.count ?? 0) > 2 }).max(by: { $0.startDate < $1.startDate }) {
+                        deepLinkRouter.pendingSessionID = m.id
+                    }
                     if env["SHUTTLX_DEMO_OPEN"] == "1",
                        let m = demo.first(where: { $0.route != nil && Calendar.current.isDateInToday($0.startDate) }) {
                         deepLinkRouter.pendingSessionID = m.id

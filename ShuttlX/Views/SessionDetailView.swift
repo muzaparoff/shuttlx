@@ -23,6 +23,7 @@ struct SessionDetailView: View {
     var body: some View {
         let session = current
         let segments = session.segments
+        ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: 20) {
                 if let route = session.route, !route.isEmpty {
@@ -52,6 +53,8 @@ struct SessionDetailView: View {
                     .timelineCard()
                 }
 
+                SplitsCard(session: session).id("splitsCard")
+
                 // Interval results (if interval workout)
                 if let results = session.completedIntervalResults, !results.isEmpty {
                     IntervalResultsView(intervals: results)
@@ -62,6 +65,16 @@ struct SessionDetailView: View {
 
             }
             .padding()
+        }
+        #if DEBUG
+        // Screenshot seam: SHUTTLX_SCROLL_SPLITS=1 scrolls to the Splits card.
+        .task {
+            if ProcessInfo.processInfo.environment["SHUTTLX_SCROLL_SPLITS"] == "1" {
+                try? await Task.sleep(for: .seconds(1))
+                proxy.scrollTo("splitsCard", anchor: .top)
+            }
+        }
+        #endif
         }
         .task(id: session.id) { heartRate = await SessionHeartRateLoader.load(for: session) }
         .sheet(item: $fixing) { target in
@@ -112,7 +125,7 @@ struct SessionDetailView: View {
 
     private var statTrio: some View {
         HStack(alignment: .top) {
-            stat(session.distance.flatMap { $0 > 0 ? FormattingUtils.formatDistance($0) : nil } ?? "–", "Distance")
+            stat(session.distance.flatMap { $0 > 0 ? FormattingUtils.formatDistance($0, unit: .current) : nil } ?? "–", "Distance")
             stat(FormattingUtils.formatDuration(session.duration), "Time")
             stat(session.averageHeartRate.map { "\(Int($0))" } ?? "–", "Avg BPM")
         }
@@ -205,8 +218,8 @@ struct SessionDetailView: View {
             if let distance = session.distance, distance > 0 {
                 MetricCard(
                     icon: "gauge.with.dots.needle.bottom.50percent",
-                    value: FormattingUtils.formatPace(session.duration / distance),
-                    label: "Avg Pace",
+                    value: FormattingUtils.formatPace(session.duration / distance, unit: .current),
+                    label: "Avg Pace (\(DistanceUnit.current.paceSuffix))",
                     color: ShuttlXColor.pace
                 )
             }
@@ -388,7 +401,7 @@ struct FixPartSheet: View {
     private var chips: [(text: String, spoken: String)] {
         var out: [(String, String)] = []
         if let km = segment.distance, km > 0.05, segment.duration > 0 {
-            let p = FormattingUtils.formatPace(segment.duration / km) + "/km"
+            let p = FormattingUtils.formatPaceWithUnit(segment.duration / km, unit: .current)
             out.append(("pace \(p)", "pace \(p)"))
         }
         if let hr = segment.averageHeartRate, hr > 0 {
@@ -396,7 +409,7 @@ struct FixPartSheet: View {
         }
         if let c = cadence { out.append(("cadence \(Int(c.rounded())) spm", "cadence \(Int(c.rounded())) steps per minute")) }
         if let v = speedMS {
-            let t = String(format: "%.1f km/h", v * 3.6)
+            let t = FormattingUtils.formatSpeed(metersPerSecond: v, unit: .current)
             out.append(("speed \(t)", "speed \(t)"))
         }
         return out
@@ -637,5 +650,60 @@ private struct EvidenceFlow: Layout {
             x += s.width + spacing; rowH = max(rowH, s.height); maxX = max(maxX, x - spacing)
         }
         return (CGSize(width: maxX, height: y + rowH), origins)
+    }
+}
+
+
+/// Splits from the stored `kmSplits` (the watch saves them whether or not a route exists). Km as stored; miles are
+/// interpolated from them. Hidden when the session has none (for example an iPhone-only workout).
+private struct SplitsCard: View {
+    let session: TrainingSession
+
+    var body: some View {
+        let unit = DistanceUnit.current
+        let rows = FormattingUtils.splitRows(splitTimes: (session.kmSplits ?? []).sorted { $0.kmNumber < $1.kmNumber }.map(\.splitTime),
+                                             totalKm: session.distance, totalDuration: session.duration, unit: unit)
+        if !rows.isEmpty {
+            let full = rows.filter { !$0.isPartial }.map(\.pace)
+            let fastest = full.min() ?? rows.map(\.pace).min() ?? 1
+            let slowest = full.max() ?? fastest
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Splits")
+                    .font(ShuttlXFont.sectionHeader)
+                ForEach(rows, id: \.number) { row in
+                    let pace = FormattingUtils.formatPaceWithUnit(row.pace / unit.km, unit: unit)
+                    let label = row.isPartial ? String(format: "%.2f", row.distance) : "\(unit.symbol.uppercased()) \(row.number)"
+                    HStack(spacing: 10) {
+                        Text(row.isPartial ? "\(label) \(unit.symbol)" : label)
+                            .font(ShuttlXFont.cardCaption.weight(.semibold))
+                            .frame(width: 58, alignment: .leading)
+                        Text(FormattingUtils.formatTimer(row.time))
+                            .font(ShuttlXFont.cardSubtitle.monospacedDigit())
+                            .frame(width: 52, alignment: .leading)
+                        GeometryReader { geo in
+                            // Faster pace = longer bar, scaled between the slowest and fastest whole split.
+                            let span = max(slowest - fastest, 1)
+                            let ratio = row.isPartial ? 0.3 : 1 - 0.7 * min(1, max(0, (row.pace - fastest) / span))
+                            Capsule().fill(row.isPartial ? ShuttlXColor.textSecondary.opacity(0.35) : ShuttlXColor.running)
+                                .frame(width: geo.size.width * ratio, height: 6)
+                                .frame(maxHeight: .infinity, alignment: .center)
+                        }
+                        .frame(height: 14)
+                        Text(pace)
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(ShuttlXColor.textSecondary)
+                            .frame(width: 76, alignment: .trailing)
+                    }
+                    .foregroundStyle(row.isPartial ? ShuttlXColor.textSecondary : ShuttlXColor.textPrimary)
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(row.isPartial
+                        ? "Last \(String(format: "%.2f", row.distance)) \(unit.name)s, \(FormattingUtils.formatTimeAccessible(row.time)), pace \(FormattingUtils.formatPace(row.pace / unit.km, unit: unit)) per \(unit.name)"
+                        : "\(unit.name.capitalized) \(row.number), \(FormattingUtils.formatTimeAccessible(row.time)), pace \(FormattingUtils.formatPace(row.pace / unit.km, unit: unit)) per \(unit.name)")
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .timelineCard()
+        }
     }
 }

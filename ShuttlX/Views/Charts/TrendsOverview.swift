@@ -77,6 +77,7 @@ struct TrendsOverview: View {
     }
 
     private var totalKm: Double { inPeriod.compactMap(\.distance).reduce(0, +) }
+    private var totalInUnit: Double { DistanceUnit.current.value(fromKm: totalKm) }
 
     private var timeByActivity: [(activity: DetectedActivity, seconds: TimeInterval)] {
         var t: [DetectedActivity: TimeInterval] = [:]
@@ -113,16 +114,16 @@ struct TrendsOverview: View {
                     .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(ShuttlXColor.textSecondary)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(totalKm >= 100 ? String(format: "%.0f", totalKm) : String(format: "%.1f", totalKm))
+                    Text(totalInUnit >= 100 ? String(format: "%.0f", totalInUnit) : String(format: "%.1f", totalInUnit))
                         .font(ShuttlXFont.metricLarge.monospacedDigit())
                         .foregroundStyle(ShuttlXColor.textPrimary)
-                    Text("km")
+                    Text(DistanceUnit.current.symbol)
                         .font(ShuttlXFont.cardSubtitle.weight(.semibold))
                         .foregroundStyle(ShuttlXColor.textSecondary)
                 }
             }
             .accessibilityElement(children: .combine)
-            .accessibilityLabel("\(subtitle), \(String(format: "%.1f", totalKm)) kilometres")
+            .accessibilityLabel("\(subtitle), \(String(format: "%.1f", totalInUnit)) \(DistanceUnit.current == .km ? "kilometres" : "miles")")
 
             chart
 
@@ -155,7 +156,7 @@ struct TrendsOverview: View {
         }
         .frame(height: 150)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Distance by \(bucketUnit == .day ? "day" : "month"), \(periodWord): \(String(format: "%.1f", totalKm)) kilometres")
+        .accessibilityLabel("Distance by \(bucketUnit == .day ? "day" : "month"), \(periodWord): \(String(format: "%.1f", totalInUnit)) \(DistanceUnit.current == .km ? "kilometres" : "miles")")
     }
 
     @ViewBuilder

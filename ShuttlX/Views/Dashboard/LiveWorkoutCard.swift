@@ -50,8 +50,8 @@ struct LiveWorkoutCard: View {
 
     private var summaryLine: String {
         var parts: [String] = []
-        if sharedData.liveDistance > 0 { parts.append(String(format: "%.1f km", sharedData.liveDistance)) }
-        if sharedData.livePace > 0 { parts.append(FormattingUtils.formatPace(sharedData.livePace) + "/km") }
+        if sharedData.liveDistance > 0 { parts.append(FormattingUtils.formatDistance(sharedData.liveDistance, unit: .current)) }
+        if sharedData.livePace > 0 { parts.append(FormattingUtils.formatPaceWithUnit(sharedData.livePace, unit: .current)) }
         if sharedData.liveCalories > 0 { parts.append("\u{2248} \(sharedData.liveCalories) cal estimate") }
         return parts.joined(separator: " \u{00B7} ")
     }

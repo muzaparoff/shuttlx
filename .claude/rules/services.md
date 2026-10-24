@@ -47,6 +47,11 @@ globs:
 - Workout sessions: save on pause/stop, implement crash recovery
 - iOS Health reads are read-only: `HealthKitImporter` requests `toShare: []`; `SessionHeartRateLoader` runs a statistics query over one session's range and stores nothing. `DataManager` is the iOS path that requests share types
 
+## Units, VO2max (Wave 2)
+
+- Distance unit: App Group `distanceUnit` ("km"|"mi"|absent); watch gets "km"|"mi"|"auto" under context key `distanceUnit` plus `splitAlerts` (Bool, missing = on). Display only; stored distances, `kmSplits` and pace data stay per km. Use `FormattingUtils.*(unit: .current)`; never hard-code "km" or "/km" in iOS views.
+- VO2max: `VO2MaxLoader` (HKSampleQuery, latest 2 samples) is read-only; never stored, written to Health or sent to telemetry. Its type is requested in the single sheet via `DataManager.requestReadTypes` (importer gating stays on `HealthKitImporter.readTypes` so adding a read type never pauses the import).
+
 ## Deep Links
 
 Deep links route widgets/controls/external URLs into the app to start workouts or navigate. **Widget processes cannot run WatchConnectivity** — iOS widgets must deep-link to the host app, which then calls `PhoneSyncCoordinator.startWatchWorkout()`.

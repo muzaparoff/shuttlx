@@ -96,7 +96,6 @@ extension TrainingView {
                 let topSize = twoUpValueSize(dist, pace, rowWidth: rowWidth, labelSize: labelSize)
                 HStack(spacing: 8) {
                     compactMetric("DIST", dist, topSize, labelSize, a11y: "Distance \(accessibleDistance)")
-                        .background(kmSplitHighlight)
                     compactMetric("PACE", pace, topSize, labelSize, a11y: accessiblePace)
                 }
                 // Only this row follows the 1 Hz clock.
@@ -158,17 +157,35 @@ extension TrainingView {
         return max(8, min(WatchScale.pt(20), (half - labelWidth - 2) / (glyphs * advance)))
     }
 
-    /// Yellow-green highlight capsule shown briefly when a km split fires.
-    var kmSplitHighlight: some View {
-        Capsule()
-            .fill(ShuttlXColor.running.opacity(kmSplitFlash ? 0.25 : 0))
-            .animation(
-                kmSplitFlash
-                    ? .easeIn(duration: 0.08)
-                    : .easeOut(duration: 0.55),
-                value: kmSplitFlash
-            )
+    /// Synced from the phone ("km" / "mi" / region). Data stays in km.
+    var distanceUnit: DistanceUnit { WatchSyncCoordinator.shared.distanceUnit }
+
+    /// Split time "6:12" (h:mm:ss past an hour).
+    static func splitClock(_ t: TimeInterval) -> String {
+        let s = Int(t.rounded())
+        return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+                         : String(format: "%d:%02d", s / 60, s % 60)
     }
+
+    /// "KM 3" / "MI 2"
+    static func splitLabel(_ unit: DistanceUnit, _ number: Int) -> String {
+        "\(unit.symbol.uppercased()) \(number)"
+    }
+
+    /// "Kilometre 3, 6 minutes 12 seconds"
+    static func splitAccessible(_ unit: DistanceUnit, _ split: SplitCounter.Split) -> String {
+        "\(unit.name.capitalized) \(split.number), \(FormattingUtils.formatTimeAccessible(split.splitTime.rounded()))"
+    }
+
+    /// Speed replaces pace while a cycling segment runs (min/km is unreadable on a bike).
+    var showsSpeed: Bool { workoutManager.currentActivity == .cycling }
+
+    var speedValueText: String {
+        guard let pace = workoutManager.currentPace, pace > 0 else { return "\u{2014}" }
+        return String(format: "%.1f", 3600 / pace / distanceUnit.km)
+    }
+
+    var speedUnit: String { distanceUnit == .mi ? "MPH" : "KM/H" }
 
     // MARK: - Apple-style Metric Line (free run)
 
@@ -405,8 +422,8 @@ extension TrainingView {
     /// form keeps its "m" because "450" alone would be ambiguous.
     var compactDistanceText: String {
         let km = workoutManager.totalDistance
-        if km < 1.0 { return "\(Int(km * 1000))m" }
-        return String(format: "%.2f", km)
+        if distanceUnit == .km, km < 1.0 { return "\(Int(km * 1000))m" }
+        return String(format: "%.2f", distanceUnit.value(fromKm: km))
     }
 
     /// Free-run distance split into number and unit so the unit can be rendered as a
@@ -414,16 +431,17 @@ extension TrainingView {
     /// reads worse than "450 M" at a glance.
     var compactDistanceValue: String {
         let km = workoutManager.totalDistance
-        if km < 1.0 { return "\(Int(km * 1000))" }
-        return String(format: "%.2f", km)
+        if distanceUnit == .km, km < 1.0 { return "\(Int(km * 1000))" }
+        return String(format: "%.2f", distanceUnit.value(fromKm: km))
     }
 
     var compactDistanceUnit: String {
-        workoutManager.totalDistance < 1.0 ? "M" : "KM"
+        distanceUnit == .mi ? "MI" : workoutManager.totalDistance < 1.0 ? "M" : "KM"
     }
 
     var accessibleDistance: String {
         let dist = workoutManager.totalDistance
+        if distanceUnit == .mi { return String(format: "%.2f miles", distanceUnit.value(fromKm: dist)) }
         if dist < 1.0 {
             return "\(Int(dist * 1000)) meters"
         }
@@ -436,7 +454,7 @@ extension TrainingView {
         // keep the value legible in the two-up row (it overflowed the half-width
         // slot on 41–46mm and clipped to "PACE --…").
         guard let pace = workoutManager.currentPace else { return "—" }
-        return FormattingUtils.formatPace(pace)
+        return FormattingUtils.formatPace(pace, unit: distanceUnit)
     }
 
     /// Free-run PACE value without its unit — "/KM" is rendered as a small baseline
@@ -446,9 +464,10 @@ extension TrainingView {
 
     var accessiblePace: String {
         guard let pace = workoutManager.currentPace else { return "Average pace no data" }
-        let minutes = Int(pace) / 60
-        let seconds = Int(pace) % 60
-        return "Average pace \(minutes) minutes \(seconds) seconds per kilometer"
+        let perUnit = pace * distanceUnit.km
+        let minutes = Int(perUnit) / 60
+        let seconds = Int(perUnit) % 60
+        return "Average pace \(minutes) minutes \(seconds) seconds per \(distanceUnit == .mi ? "mile" : "kilometer")"
     }
 }
 

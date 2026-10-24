@@ -343,10 +343,10 @@ struct iPhoneWorkoutTimerView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
             heartRateCard
             metricCard(label: "DIST",
-                       value: FormattingUtils.formatDistance(controller.totalDistance),
+                       value: FormattingUtils.formatDistance(controller.totalDistance, unit: .current),
                        color: ShuttlXColor.running)
             metricCard(label: "PACE",
-                       value: controller.currentPace.map { FormattingUtils.formatPace($0) } ?? "—",
+                       value: controller.currentPace.map { FormattingUtils.formatPaceWithUnit($0, unit: .current) } ?? "—",
                        color: ShuttlXColor.pace)
             metricCard(label: "STEPS",
                        value: "\(controller.totalSteps)",
@@ -359,11 +359,11 @@ struct iPhoneWorkoutTimerView: View {
             heartRateCard
             HStack(spacing: 10) {
                 metricCard(label: "DIST",
-                           value: FormattingUtils.formatDistance(controller.totalDistance),
+                           value: FormattingUtils.formatDistance(controller.totalDistance, unit: .current),
                            color: ShuttlXColor.running,
                            compact: true)
                 metricCard(label: "PACE",
-                           value: controller.currentPace.map { FormattingUtils.formatPace($0) } ?? "—",
+                           value: controller.currentPace.map { FormattingUtils.formatPaceWithUnit($0, unit: .current) } ?? "—",
                            color: ShuttlXColor.pace,
                            compact: true)
             }

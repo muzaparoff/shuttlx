@@ -12,7 +12,9 @@ struct WorkoutSummary {
     let calories: Int
     let steps: Int
     let avgPace: TimeInterval?
-    let splitsCount: Int
+    var splitUnit: DistanceUnit = .km
+    /// Whole-unit splits in `splitUnit` (none in gym recovery or under one unit).
+    var splits: [SplitCounter.Split] = []
     var completedSets: Int? = nil
     var averageHRR1: Double? = nil
     /// No body mass in Health (or read access withheld), so ShuttlX's per-phase
@@ -78,7 +80,8 @@ struct WorkoutSummaryView: View {
                 }
                 HStack(alignment: .firstTextBaseline) {
                     if summary.distance > 0 {
-                        valueUnit(String(format: "%.1f", summary.distance), "km", ShuttlXColor.textPrimary)
+                        valueUnit(FormattingUtils.formatDistanceValue(summary.distance, unit: summary.splitUnit),
+                                  summary.splitUnit.symbol, ShuttlXColor.textPrimary)
                     }
                     Spacer(minLength: 4)
                     if summary.avgHeartRate > 0 {
@@ -118,6 +121,9 @@ struct WorkoutSummaryView: View {
                 .padding(.top, WatchScale.pt(20))
         }
         .scrollIndicators(.hidden)
+        #if DEBUG
+        .defaultScrollAnchor(ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT_SCROLL"] == "bottom" ? .bottom : nil)
+        #endif
         // One haptic for the Health outcome, when it is known: success when saved,
         // failure for "Not saved to Health" (it used to play success either way).
         .onChange(of: healthOutcome, initial: true) { _, outcome in
@@ -158,7 +164,7 @@ struct WorkoutSummaryView: View {
             }
             if let pace = summary.avgPace, pace > 0, pace < 3600 {
                 summaryRow(icon: "gauge.with.dots.needle.33percent", color: ShuttlXColor.pace,
-                           label: "Avg Pace", value: FormattingUtils.formatPace(pace))
+                           label: "Avg Pace", value: FormattingUtils.formatPaceWithUnit(pace, unit: summary.splitUnit))
             }
             if summary.steps > 0 {
                 summaryRow(icon: "shoeprints.fill", color: ShuttlXColor.steps,
@@ -172,6 +178,7 @@ struct WorkoutSummaryView: View {
                 summaryRow(icon: "arrow.down.heart.fill", color: ShuttlXColor.heartRate,
                            label: "Avg HRR (1min)", value: "\(Int(hrr1.rounded())) BPM")
             }
+            if !summary.splits.isEmpty { splitsList }
             if summary.bodyMassUnavailable {
                 // Non-blocking: without a weight ShuttlX declines to invent its own estimate.
                 Text("Add your weight in the Health app for accurate calories.")
@@ -181,6 +188,37 @@ struct WorkoutSummaryView: View {
             }
         }
         .padding(.bottom, ShuttlXSpacing.lg)
+    }
+
+    /// "SPLITS" then one "KM 1   9:40" row per whole unit; "est." when a late
+    /// distance batch crossed it together with another one.
+    private var splitsList: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text("SPLITS")
+                .font(.system(size: WatchScale.text(11), weight: .bold))
+                .tracking(WatchScale.text(11) * 0.08)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+                .accessibilityAddTraits(.isHeader)
+            ForEach(summary.splits, id: \.number) { split in
+                HStack(alignment: .firstTextBaseline) {
+                    Text(TrainingView.splitLabel(summary.splitUnit, split.number))
+                        .font(.system(size: WatchScale.text(12), weight: .bold, design: .monospaced))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                    Spacer(minLength: 4)
+                    if split.estimated {
+                        Text("est.")
+                            .font(.system(size: WatchScale.text(10)))
+                            .foregroundStyle(ShuttlXColor.textSecondary)
+                    }
+                    Text(TrainingView.splitClock(split.splitTime))
+                        .font(ShuttlXFont.watchSummaryMetric)
+                        .monospacedDigit()
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(TrainingView.splitAccessible(summary.splitUnit, split) + (split.estimated ? ", estimated" : ""))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func summaryRow(icon: String, color: Color, label: String, value: String) -> some View {

@@ -158,7 +158,7 @@ struct WeeklyCarouselCard: View {
                 .foregroundStyle(.secondary)
 
             HStack(spacing: 20) {
-                statTile(value: FormattingUtils.formatDistance(week.totalDistanceKm), label: "DISTANCE")
+                statTile(value: FormattingUtils.formatDistance(week.totalDistanceKm, unit: .current), label: "DISTANCE")
                 statTile(value: FormattingUtils.formatDuration(week.totalDuration), label: "DURATION")
                 statTile(value: "\(week.sessionCount)", label: "SESSIONS")
             }
@@ -184,7 +184,7 @@ struct WeeklyCarouselCard: View {
         )
         .accessibilityElement(children: .combine)
         .accessibilityLabel(
-            "\(week.label): \(FormattingUtils.formatDistance(week.totalDistanceKm)), " +
+            "\(week.label): \(FormattingUtils.formatDistance(week.totalDistanceKm, unit: .current)), " +
             "\(FormattingUtils.formatDuration(week.totalDuration)), \(week.sessionCount) sessions"
         )
     }

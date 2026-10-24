@@ -63,13 +63,13 @@ struct QuickStartComplicationView: View {
             .accessibilityLabel("Start workout")
         #if os(watchOS)
         case .accessoryCorner:
-            // Corner slot: run glyph in the corner, curved "FREE RUN" label
+            // Corner slot: run glyph in the corner, curved "RUN/WALK" label
             // hugging the bezel via .widgetLabel. System-tinted per watch face.
             Image(systemName: "figure.run")
                 .font(.title2)
                 .widgetAccentable()
-                .widgetLabel("FREE RUN")
-                .accessibilityLabel("Start free run")
+                .widgetLabel("RUN/WALK")
+                .accessibilityLabel("Start Run/Walk")
         #endif
         default:
             ZStack {

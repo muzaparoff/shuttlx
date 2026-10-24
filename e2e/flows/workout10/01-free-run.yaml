@@ -2,7 +2,7 @@ appId: ${APP_ID}
 ---
 - runFlow: ../common/onboard.yaml
 - tapOn: "Programs & plans"
-- tapOn: "Free Run"
+- tapOn: "Start Run/Walk"
 - runFlow: ../common/motion-prompt.yaml
 - assertVisible: "ELAPSED"
 - evalScript: ${output.lat = 52.5200}

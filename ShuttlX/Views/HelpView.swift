@@ -43,7 +43,7 @@ enum HelpContent {
                 HelpStep(icon: "applewatch.watchface",
                          text: "Open ShuttlX on your Apple Watch. Your interval programs sync from the iPhone automatically."),
                 HelpStep(icon: "hand.tap",
-                         text: "Tap an interval program card to start it, or tap “Free Run” for an open-ended session."),
+                         text: "Tap an interval program card to start it, or tap “Run/Walk” for an open-ended session that finds Run and Walk itself."),
                 HelpStep(icon: "chevron.left.chevron.right",
                          text: "During the workout, swipe between pages to see the timer, live metrics, and controls."),
                 HelpStep(icon: "pause.circle.fill",
@@ -104,7 +104,8 @@ enum HelpContent {
             body: """
             Every finished session is stored with its intervals, heart rate, \
             route, and splits. Trends turns that history into trends: \
-            training load, weekly volume, estimated VO2max, pace zones, and \
+            training load, weekly volume, cardio fitness (VO2max from Apple Health, \
+            or an estimate from your runs when Health has none), pace zones, and \
             personal records.
             """,
             steps: [
@@ -140,6 +141,8 @@ enum HelpContent {
                 HelpStep(icon: "bell.badge",
                          text: "Choose which alerts you want: above limit, below low limit, signal lost, and the sudden rise alert (+40 bpm in 10 s, off by default because it can false alarm). Pause when no heart rate has its own switch and delay (30, 60 or 120 s)."),
                 HelpStep(icon: "applewatch",
+                         text: "Settings → Workout sets Distance units (Auto follows your region, Kilometres or Miles; the watch follows too) and Split alerts, the wrist tap at each kilometre or mile in Run/Walk."),
+                HelpStep(icon: "heart.text.square",
                          text: "Settings → Heart also switches the 0–10 effort question and Run / Walk auto-switch on the watch. Effort stays on with a beta-blocker."),
             ]),
         HelpTopic(

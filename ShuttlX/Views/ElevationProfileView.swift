@@ -61,7 +61,7 @@ struct ElevationProfileView: View {
             if elevationData.count >= 2 {
                 Chart(elevationData) { point in
                     AreaMark(
-                        x: .value("Distance (km)", point.distance),
+                        x: .value("Distance", DistanceUnit.current.value(fromKm: point.distance)),
                         y: .value("Altitude (m)", point.altitude)
                     )
                     .foregroundStyle(
@@ -73,14 +73,14 @@ struct ElevationProfileView: View {
                     )
 
                     LineMark(
-                        x: .value("Distance (km)", point.distance),
+                        x: .value("Distance", DistanceUnit.current.value(fromKm: point.distance)),
                         y: .value("Altitude (m)", point.altitude)
                     )
                     .foregroundStyle(ShuttlXColor.accentText)
                     .lineStyle(StrokeStyle(lineWidth: 2))
                 }
                 .chartYScale(domain: (stats.minAltitude - 5)...(stats.maxAltitude + 5))
-                .chartXAxisLabel("km")
+                .chartXAxisLabel(DistanceUnit.current.symbol)
                 .chartYAxisLabel("m")
                 .frame(height: 160)
                 .clipShape(RoundedRectangle(cornerRadius: 12))

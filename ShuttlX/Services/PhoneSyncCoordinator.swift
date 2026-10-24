@@ -943,6 +943,25 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
         log("Theme sent to Watch via applicationContext: \(themeID)")
     }
 
+    // MARK: - Distance Unit Sync
+
+    /// App Group key `distanceUnit` ("km" | "mi" | absent). The watch gets "km" / "mi" / "auto" (absent = follow region)
+    /// under the plain context key `distanceUnit`, next to the theme. Display only: stored data stays in km.
+    func sendDistanceUnitToWatch() {
+        guard WCSession.isSupported(), session.isPaired else { return }
+        let stored = UserDefaults(suiteName: "group.com.shuttlx.shared")?.string(forKey: DistanceUnit.storageKey)
+        let value = DistanceUnit(rawValue: stored ?? "")?.rawValue ?? "auto"
+        // Split alerts on the watch (App Group Bool `splitAlerts`, missing = on). Travels with the unit.
+        let splitAlerts = (UserDefaults(suiteName: "group.com.shuttlx.shared")?.object(forKey: "splitAlerts") as? Bool) ?? true
+        if session.isReachable {
+            session.sendMessage(["action": "syncDistanceUnit", "distanceUnit": value, "splitAlerts": splitAlerts], replyHandler: nil, errorHandler: { [weak self] error in
+                self?.log("Distance unit sendMessage failed: \(error.localizedDescription)")
+            })
+        }
+        updateCombinedApplicationContext(merging: ["distanceUnit": value, "splitAlerts": splitAlerts])
+        log("Distance unit sent to Watch: \(value), split alerts \(splitAlerts)")
+    }
+
     // MARK: - Max HR Sync
 
     /// Syncs the user's max HR override to the Watch so it uses the same zone boundaries.
@@ -1042,6 +1061,7 @@ extension PhoneSyncCoordinator {
                 self.consecutiveFailures = 0
                 self.sendHeartSafetyToWatch(HeartSafetySettings.load(), age: DeviceManager.shared.userAge)
                 self.sendPendingMaxHRResetIfNeeded()
+                self.sendDistanceUnitToWatch()
 
                 // After activation, try pulling sessions if Watch is reachable,
                 // then reconcile to catch any sessions that overflowed the inline
