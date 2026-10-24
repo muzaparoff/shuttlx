@@ -118,11 +118,22 @@ struct WorkoutSummaryView: View {
                 .padding(.top, WatchScale.pt(20))
         }
         .scrollIndicators(.hidden)
-        .onAppear {
+        // One haptic for the Health outcome, when it is known: success when saved,
+        // failure for "Not saved to Health" (it used to play success either way).
+        .onChange(of: healthOutcome, initial: true) { _, outcome in
             #if os(watchOS)
-            WKInterfaceDevice.current().play(.success)
+            switch outcome {
+            case true?: WKInterfaceDevice.current().play(.success)
+            case false?: WKInterfaceDevice.current().play(.failure)
+            case nil: break
+            }
             #endif
         }
+    }
+
+    /// nil until HealthKit answers; true saved, false failed.
+    private var healthOutcome: Bool? {
+        workoutManager.healthKitSaved ? true : workoutManager.healthKitSaveError != nil ? false : nil
     }
 
     private func valueUnit(_ value: String, _ unit: String, _ color: Color) -> some View {

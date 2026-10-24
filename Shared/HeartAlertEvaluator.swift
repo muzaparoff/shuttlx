@@ -34,8 +34,10 @@ public struct HeartAlertLimits: Equatable, Sendable {
     public init(upper: Int?, low: Int?, noMotionWindow: TimeInterval = HeartAlertEvaluator.noMotionWindow) {
         self.upper = upper; self.low = low; self.noMotionWindow = noMotionWindow
     }
-    public init(_ s: HeartSafetySettings) {
-        self.init(upper: s.upperLimit, low: s.lowLimit, noMotionWindow: TimeInterval(s.noMotionSeconds))
+    /// `age`: the watch's own Health age. The upper limit is the synced one, else the age estimate
+    /// (`effectiveUpperLimit`), the same number the watch screen measures "Ease off" against.
+    public init(_ s: HeartSafetySettings, age: Int? = nil) {
+        self.init(upper: s.effectiveUpperLimit(age: age), low: s.lowLimit, noMotionWindow: TimeInterval(s.noMotionSeconds))
     }
 }
 
@@ -75,6 +77,10 @@ public struct HeartAlertFlags: Equatable, Sendable {
 /// with no lower sample between them, both sit `jumpBpm` above the lowest sample of the
 /// `jumpWindow` before the first one, and the second arrives within `jumpWindow` of the
 /// first. A single spike (optical sensor glitch) is ignored.
+///
+/// Above limit also needs real samples: at least two fresh samples in a row above the limit, and the
+/// 10 s window counts from the first of them. One high sample held on screen (then no samples) never
+/// fires. Nothing else suppresses it.
 public struct HeartAlertEvaluator: Sendable {
     public static let aboveWindow: TimeInterval = 10
     public static let belowWindow: TimeInterval = 30
@@ -96,6 +102,10 @@ public struct HeartAlertEvaluator: Sendable {
     private var samples: [(date: Date, hr: Int)] = []
     /// First elevated sample of a possible jump and the baseline it rose from.
     private var jumpStart: (date: Date, baseline: Int)?
+    /// Newest sample date seen by the above-limit rule (paused ticks included).
+    private var lastAboveCheckSample: Date?
+    /// Consecutive real samples above the upper limit: date of the first, and how many.
+    private var aboveRun: (first: Date, count: Int)?
 
     public init() {}
 
@@ -116,14 +126,24 @@ public struct HeartAlertEvaluator: Sendable {
         let motionAge = now.timeIntervalSince(max(lastMotionDate ?? armed, armed))
         let repeatEvery = paused ? Self.pausedRepeat : Self.cooldown
 
+        if freshHR, let date = lastHRDate, date > (lastAboveCheckSample ?? .distantPast) {
+            lastAboveCheckSample = date
+            if let upper = limits.upper, hr > upper {
+                aboveRun = (aboveRun?.first ?? date, (aboveRun?.count ?? 0) + 1)
+            } else {
+                aboveRun = nil
+            }
+        }
+
         var out: [HeartAlert] = []
-        func check(_ kind: HeartAlert.Kind, _ on: Bool, window: TimeInterval, value: Int? = nil) {
+        func check(_ kind: HeartAlert.Kind, _ on: Bool, window: TimeInterval, value: Int? = nil,
+                   startedAt: Date? = nil) {
             guard on else {
                 since[kind] = nil
                 lastFired[kind] = nil
                 return
             }
-            let start = since[kind] ?? now
+            let start = since[kind] ?? startedAt ?? now
             since[kind] = start
             guard now.timeIntervalSince(start) >= window else { return }
             if let last = lastFired[kind], now.timeIntervalSince(last) < repeatEvery { return }
@@ -132,7 +152,9 @@ public struct HeartAlertEvaluator: Sendable {
         }
 
         if let upper = limits.upper {
-            check(.aboveLimit, flags.aboveLimit && freshHR && hr > upper, window: Self.aboveWindow, value: upper)
+            let run = aboveRun.flatMap { $0.count >= 2 ? $0.first : nil }
+            check(.aboveLimit, flags.aboveLimit && freshHR && hr > upper && run != nil,
+                  window: Self.aboveWindow, value: upper, startedAt: run)
         } else { check(.aboveLimit, false, window: 0) }
         if !paused {
             if let low = limits.low {

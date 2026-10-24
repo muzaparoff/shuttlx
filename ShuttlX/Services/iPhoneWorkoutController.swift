@@ -112,6 +112,8 @@ final class iPhoneWorkoutController: ObservableObject {
     private var lastGPSLocation: CLLocation?
     private var gpsHasUsableFix: Bool = false
     private var gpsValidSampleCount: Int = 0
+    private var fusion = DistanceFusion()
+    private var lastGPSFixAt: Date?
 
     private let haptics = iPhoneHapticPlayer()
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "iPhoneWorkoutController")
@@ -121,8 +123,9 @@ final class iPhoneWorkoutController: ObservableObject {
     private let motion = CMMotionActivityManager()
     private let locationManager = CLLocationManager()
     private var routePoints: [RoutePoint] = []
-    /// ~8 h at 1 point per 5 s; past this every other point is dropped (shape kept, memory and checkpoint bounded).
+    /// ~8 h at 1 point per 5 s; past this the route is re-sampled evenly down to `routeThinTarget` (checkpoint bounded).
     static let maxRoutePoints = 6000
+    static let routeThinTarget = 4500
     private var locationDelegate: LocationProxy?
 
     weak var dataManager: DataManager?
@@ -295,6 +298,8 @@ final class iPhoneWorkoutController: ObservableObject {
         lastGPSLocation = nil
         gpsHasUsableFix = false
         gpsValidSampleCount = 0
+        fusion = DistanceFusion()
+        lastGPSFixAt = nil
         routePoints = []
         heartRateMonitor.reset()
         heartRateMonitor.start(from: now)
@@ -568,6 +573,8 @@ final class iPhoneWorkoutController: ObservableObject {
         lastGPSLocation = nil
         gpsHasUsableFix = false
         gpsValidSampleCount = 0
+        fusion = DistanceFusion()
+        lastGPSFixAt = nil
         routePoints = []
         workoutStartTime = nil
         accumulatedPauseTime = 0
@@ -713,7 +720,9 @@ final class iPhoneWorkoutController: ObservableObject {
 
     /// GPS distance when its fix is usable, else the pedometer (`DistanceFusion`). Called from BOTH sources.
     private func refreshDistance() {
-        totalDistance = DistanceFusion.totalKm(gpsKm: gpsAccumulatedDistanceKm, gpsUsable: gpsHasUsableFix, pedometerKm: pedometerKm)
+        totalDistance = fusion.update(gpsKm: gpsAccumulatedDistanceKm, pedometerKm: pedometerKm,
+                                      gpsUsable: gpsHasUsableFix,
+                                      gpsFixAge: lastGPSFixAt.map { Date().timeIntervalSince($0) })
         updateRollingPace()
     }
 
@@ -776,7 +785,7 @@ final class iPhoneWorkoutController: ObservableObject {
                         timestamp: location.timestamp
                     )
                 )
-                self.routePoints.thinIfOver(Self.maxRoutePoints)
+                self.routePoints.thinEvenlyIfOver(Self.maxRoutePoints, to: Self.routeThinTarget)
 
                 // GPS distance accumulation.
                 // Discard samples whose horizontal accuracy is worse than the threshold.
@@ -786,6 +795,7 @@ final class iPhoneWorkoutController: ObservableObject {
                 }
 
                 self.gpsValidSampleCount += 1
+                self.lastGPSFixAt = Date()
 
                 guard let last = self.lastGPSLocation else {
                     // First valid sample — anchor the reference point, do not

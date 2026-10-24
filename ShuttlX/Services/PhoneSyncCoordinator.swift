@@ -444,7 +444,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             } else {
                 liveRoutePoints.append(point)
             }
-            liveRoutePoints.thinIfOver(2000)
+            liveRoutePoints.thinEvenlyIfOver(2000, to: 1500)
         }
 
         // Explicitly start the Live Activity on the first metric update

@@ -50,9 +50,9 @@ struct ShuttlXWatchApp: App {
                 // instead of the interval snapshot — used to capture the wall-clock
                 // timer at 1h+ without waiting. SHUTTLX_SNAPSHOT_AOD=1 forces the
                 // Always-On (reduced luminance) variant.
-                // SHUTTLX_SNAPSHOT_HR overrides the seeded heart rate (the seed of
-                // 138 is STEADY against the 190 fallback max; with no synced limit
-                // the "Ease off" banner needs HARD, i.e. >= 90% — pass e.g. 175). SHUTTLX_SNAPSHOT_PACE overrides pace in sec/km, or
+                // SHUTTLX_SNAPSHOT_HR overrides the seeded heart rate (no synced limit
+                // and no watch age = no zone word and no "Ease off"; pass
+                // SHUTTLX_SNAPSHOT_LIMIT for those). SHUTTLX_SNAPSHOT_PACE overrides pace in sec/km, or
                 // "none" for the nil case that renders "—".
                 // SHUTTLX_SNAPSHOT_PAUSED=1 freezes the seeded workout the way
                 // pauseWorkout() does (isPaused + nil timerReferenceDate) so the
@@ -65,7 +65,7 @@ struct ShuttlXWatchApp: App {
                 let paceOverride = env["SHUTTLX_SNAPSHOT_PACE"]
                 let pausedOverride = env["SHUTTLX_SNAPSHOT_PAUSED"] == "1"
                 // SHUTTLX_SNAPSHOT_SCREEN=home|summary|effort renders those screens
-                // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused|nohr
+                // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused|nohr|end|discard
                 // raises a workout overlay, SHUTTLX_SNAPSHOT_LIMIT=<bpm> fakes a synced
                 // heart limit (heart-limit mode), SHUTTLX_SNAPSHOT_TAB=<n> opens a page,
                 // SHUTTLX_SNAPSHOT_ACTIVITY=running|walking|cycling sets the tag,

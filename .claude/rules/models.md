@@ -31,7 +31,7 @@ duplicated per target until the Phase 4 engine unification
 | PausedSample | `Shared/PausedSample.swift` | Whether an HR sample belongs to a pause, judged by its own date (delivery can lag). Used by the watch |
 | PhoneDiscardRule (+ `Decision`) | `Shared/PhoneDiscardRule.swift` | Watch-side rule for a phone `discardWorkout`: applies only to the workout with the same `phoneSessionId`; 120 s age limit; held while starting |
 | WCPayloadValidation | `Shared/WCPayloadValidation.swift` | Sanity checks for WatchConnectivity payloads (sessions, effort, alerts, live metrics) and the 8 MB session cap |
-| DistanceFusion | `Shared/DistanceFusion.swift` | iPhone workout distance: GPS when usable, else pedometer; never summed |
+| DistanceFusion | `Shared/DistanceFusion.swift` | iPhone workout distance, incremental value type (`update`): adds the GPS increment while a usable fix is < 10 s old, else the pedometer increment; monotonic, never summed |
 | MedicineVault | `Shared/MedicineVault.swift` | Medication notes (name, daily dose) in the Keychain (`SecretBackend`, phone only). Never in JSON or sync |
 | SegmentEdits | `Shared/SegmentEdits.swift` | "Fix a part" corrections for `segment_overrides.json`: v2 envelope (types + per-session partitions), v1 flat map still decodes. Pure `apply`, split, merge, `caloriesRemoved`, `minPart`. Applied once in `DataManager.effectiveSessions` |
 | PendingSessionEffort | `Shared/PendingSessionEffort.swift` | Effort answers that arrived before their session; bounded to `cap` = 20 (oldest dropped); persisted under `pendingSessionEffort` |

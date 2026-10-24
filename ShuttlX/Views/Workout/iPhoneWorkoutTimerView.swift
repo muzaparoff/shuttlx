@@ -53,22 +53,18 @@ struct iPhoneWorkoutTimerView: View {
                 _ = controller.finish()
                 dismiss()
             }
-            Button("Discard", role: .destructive) {
-                controller.cancel()
-                dismiss()
-            }
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(controller.watchLinked
-                 ? "Save this workout to your history? Your Apple Watch stops too, and its recording is the one kept. Discard removes both."
+                 ? "Save this workout to your history? Your Apple Watch stops too, and its recording is the one kept."
                  : "Save this workout to your history?")
         }
-        .alert("Cancel Workout?", isPresented: $showingCancelConfirmation) {
+        .alert("Discard workout?", isPresented: $showingCancelConfirmation) {
             Button("Discard", role: .destructive) {
                 controller.cancel()
                 dismiss()
             }
-            Button("Keep Going", role: .cancel) {}
+            Button("Keep going", role: .cancel) {}
         } message: {
             Text(controller.watchLinked
                  ? "This ends the workout without saving. Your Apple Watch discards its recording too."
@@ -105,8 +101,20 @@ struct iPhoneWorkoutTimerView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer()
-            // Step pill moved to the same row as the countdown hero below
-            // (intervalCountdownHero) so duration + phase read together.
+            Menu {
+                Button(role: .destructive) {
+                    showingCancelConfirmation = true
+                } label: {
+                    Label("Discard workout", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .font(.title2)
+                    .frame(width: 44, height: 44)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+            }
+            .accessibilityLabel("More")
+            .accessibilityHint("Discard workout without saving")
         }
     }
 
@@ -253,9 +261,9 @@ struct iPhoneWorkoutTimerView: View {
                 HRZoneArc(zone: hrZoneNumber(bpm))
                     .frame(width: 44, height: 22)
                 // Recovering arrow during rest (green when HR safely back in Z1/Z2)
-                if isRest && bpm > 0 {
+                if isRest && bpm > 0, let safe = isHRSafe(bpm) {
                     Image(systemName: "arrow.down")
-                        .foregroundStyle(isHRSafe(bpm)
+                        .foregroundStyle(safe
                                          ? ShuttlXColor.ctaPrimary.opacity(0.7)
                                          : ShuttlXColor.heartRate.opacity(0.7))
                 }
@@ -498,59 +506,47 @@ struct iPhoneWorkoutTimerView: View {
                 .accessibilityHint("Ends the current station and starts a rest period with HRR captures")
             }
 
-            // Global controls — Cancel / Skip Step (interval only) / Pause / Finish
-            HStack(spacing: 12) {
+            // Global controls: labelled bars (no icon-only buttons). Discard lives in the "…" menu in the header.
+            if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
                 Button {
-                    showingCancelConfirmation = true
+                    controller.skipStep()
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.title3.weight(.bold))
-                        .frame(width: 56, height: 56)
-                        .background(Circle().fill(ShuttlXColor.surface))
-                        .overlay(Circle().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
-                        .foregroundStyle(ShuttlXColor.textSecondary)
-                }
-                .accessibilityLabel("Cancel workout")
-                .accessibilityHint("Ends without saving")
-
-                if controller.mode == .interval, controller.intervalEngine?.isComplete == false {
-                    Button {
-                        controller.skipStep()
-                    } label: {
-                        Image(systemName: "forward.end.fill")
-                            .font(.title3.weight(.bold))
-                            .frame(width: 56, height: 56)
-                            .background(Circle().fill(ShuttlXColor.surface))
-                            .overlay(Circle().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
-                            .foregroundStyle(ShuttlXColor.textPrimary)
-                    }
-                    .accessibilityLabel("Skip step")
-                }
-
-                Button {
-                    if controller.isPaused { controller.resume() } else { controller.pause() }
-                } label: {
-                    Image(systemName: controller.isPaused ? "play.fill" : "pause.fill")
-                        .font(.title.weight(.bold))
+                    Label("Skip step", systemImage: "forward.end.fill")
+                        .font(ShuttlXFont.cardTitle)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Capsule().fill(ShuttlXColor.ctaPrimary))
-                        .foregroundStyle(.white)
+                        .frame(height: 44)
+                        .background(Capsule().fill(ShuttlXColor.surface))
+                        .overlay(Capsule().stroke(ShuttlXColor.surfaceBorder, lineWidth: 1))
+                        .foregroundStyle(ShuttlXColor.textPrimary)
                 }
-                .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
-
-                Button {
-                    showingFinishConfirmation = true
-                } label: {
-                    Image(systemName: "checkmark")
-                        .font(.title3.weight(.bold))
-                        .frame(width: 56, height: 56)
-                        .background(Circle().fill(ShuttlXColor.ctaDestructive))
-                        .foregroundStyle(.white)
-                }
-                .accessibilityLabel("Finish workout")
-                .accessibilityHint("Saves and ends")
+                .accessibilityLabel("Skip step")
             }
+
+            Button {
+                if controller.isPaused { controller.resume() } else { controller.pause() }
+            } label: {
+                Label(controller.isPaused ? "Resume" : "Pause",
+                      systemImage: controller.isPaused ? "play.fill" : "pause.fill")
+                    .font(ShuttlXFont.cardTitle.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 60)
+                    .background(Capsule().fill(ShuttlXColor.ctaPrimary))
+                    .foregroundStyle(ShuttlXColor.iconOnCTA)
+            }
+            .accessibilityLabel(controller.isPaused ? "Resume workout" : "Pause workout")
+
+            Button {
+                showingFinishConfirmation = true
+            } label: {
+                Text("End & Save")
+                    .font(ShuttlXFont.cardTitle.weight(.bold))
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(Capsule().fill(ShuttlXColor.ctaDestructive))
+                    .foregroundStyle(.white)
+            }
+            .accessibilityLabel("End and save workout")
+            .accessibilityHint("Asks to confirm, then saves and ends")
         }
     }
 
@@ -562,9 +558,12 @@ struct iPhoneWorkoutTimerView: View {
         return stepColor(for: step.type)
     }
 
-    private func isHRSafe(_ bpm: Int) -> Bool {
-        guard bpm > 0 else { return false }
-        return Double(bpm) / 185.0 < 0.70   // Z1/Z2
+    /// EASY (< 70 % of the user's resolved heart limit, same rule as the zone word). nil when no limit can be
+    /// resolved (no limit, no age): the arrow is hidden rather than judged against a guess.
+    private func isHRSafe(_ bpm: Int) -> Bool? {
+        guard bpm > 0 else { return nil }
+        let word = HeartSafetySettings.load().zoneWord(hr: bpm, age: DeviceManager.shared.userAge)
+        return word.map { $0 == "EASY" }
     }
 
     private func restColor(for restSecs: TimeInterval) -> Color {

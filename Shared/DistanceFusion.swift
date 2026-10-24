@@ -1,11 +1,27 @@
 import Foundation
 
-/// Which distance the iPhone workout shows. GPS once its fix is usable (outdoors), else the pedometer
-/// (treadmill, poor signal). Never the sum of the two. It is recomputed on EVERY update of either source:
-/// the old code only recomputed it when the pedometer reported, so a run with GPS but no pedometer data
-/// (Motion access denied, simulator) showed 0 m while the route was recorded.
-public enum DistanceFusion {
-    public static func totalKm(gpsKm: Double, gpsUsable: Bool, pedometerKm: Double) -> Double {
-        gpsUsable ? gpsKm : pedometerKm
+/// iPhone workout distance, fused incrementally. Each update adds the increment of the source trusted right
+/// now: GPS while it is usable and its last fix is younger than `freshSec`, else the pedometer. Switching
+/// sources never jumps, the total never goes down, and the two are never summed. Recomputed on EVERY update
+/// of either source (GPS with no pedometer data still counts). Start a workout with a fresh value.
+public struct DistanceFusion: Sendable, Equatable {
+    public static let freshSec: TimeInterval = 10
+
+    public private(set) var totalKm: Double = 0
+    private var lastGpsKm: Double = 0
+    private var lastPedKm: Double = 0
+
+    public init() {}
+
+    /// `gpsKm` / `pedometerKm` are the sources' running totals; `gpsFixAge` is seconds since the last good fix.
+    @discardableResult
+    public mutating func update(gpsKm: Double, pedometerKm: Double, gpsUsable: Bool, gpsFixAge: TimeInterval?) -> Double {
+        let dGps = max(0, gpsKm - lastGpsKm)
+        let dPed = max(0, pedometerKm - lastPedKm)
+        lastGpsKm = gpsKm
+        lastPedKm = pedometerKm
+        let fresh = gpsUsable && (gpsFixAge.map { $0 <= Self.freshSec } ?? false)
+        totalKm += fresh ? dGps : dPed
+        return totalKm
     }
 }

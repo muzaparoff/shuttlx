@@ -605,10 +605,19 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             var coordinatorError: NSError?
             NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
                 do {
-                    var sessions = try JSONDecoder().decode([TrainingSession].self, from: Data(contentsOf: writeURL))
-                    guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
-                    sessions[i].effortRPE = effortRPE
-                    try JSONEncoder().encode(sessions).write(to: writeURL, options: [.atomic, .completeFileProtection])
+                    // Per record (StoreRewrite, Shared): one bad record must not block the effort.
+                    guard let plan: (elements: [TrainingSession], backupFirst: Bool) = StoreRewrite.update(
+                        existing: try Data(contentsOf: writeURL), { sessions in
+                            guard let i = sessions.firstIndex(where: { $0.id == id }) else { return false }
+                            sessions[i].effortRPE = effortRPE
+                            return true
+                        }) else {
+                        logger.info("Effort \(effortRPE)/10: session \(id) not in sessions.json (or file unreadable)")
+                        return
+                    }
+                    // No backup, no write: the unreadable records would be gone for good.
+                    if plan.backupFirst { try StoreFile.backupCorrupt(writeURL) }
+                    try JSONEncoder().encode(plan.elements).write(to: writeURL, options: [.atomic, .completeFileProtection])
                     logger.info("Effort \(effortRPE)/10 saved for session \(id)")
                 } catch {
                     logger.error("Failed to save effort: \(error.localizedDescription)")
@@ -1355,15 +1364,20 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
             NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
                 guard FileManager.default.fileExists(atPath: writeURL.path) else { return }
                 do {
-                    let sessions = try JSONDecoder().decode([TrainingSession].self, from: Data(contentsOf: writeURL))
-                    let kept = sessions.filter { !endedBefore($0) }
-                    storeIDs = Set(sessions.filter(endedBefore).map(\.id))
-                    try JSONEncoder().encode(kept).write(to: writeURL, options: [.atomic, .completeFileProtection])
-                    logger.info("purgeSessions: removed \(storeIDs.count) of \(sessions.count) stored session(s)")
+                    // Per record (StoreRewrite, Shared): one bad record never costs the sessions to keep.
+                    switch StoreRewrite.purge(existing: try Data(contentsOf: writeURL), removing: endedBefore) {
+                    case .write(let kept, let removed):
+                        storeIDs = Set(removed.map(\.id))
+                        try JSONEncoder().encode(kept).write(to: writeURL, options: [.atomic, .completeFileProtection])
+                        logger.info("purgeSessions: removed \(removed.count), kept \(kept.count) stored session(s)")
+                    case .removeFile:
+                        // Nothing readable: nothing to keep apart by date.
+                        try FileManager.default.removeItem(at: writeURL)
+                        logger.error("purgeSessions: sessions.json wholly unreadable — removed")
+                    }
                 } catch {
-                    // Unreadable store holds nothing we can keep apart by date: remove it.
-                    try? FileManager.default.removeItem(at: writeURL)
-                    logger.error("purgeSessions: sessions.json unreadable (\(error.localizedDescription)) — removed")
+                    // Read or write failed: the file is unchanged (never deleted for an I/O error).
+                    logger.error("purgeSessions: sessions.json not changed (\(error.localizedDescription))")
                 }
             }
             if let coordinatorError { logger.error("purgeSessions coordination error: \(coordinatorError.localizedDescription)") }

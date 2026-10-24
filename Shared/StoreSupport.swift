@@ -82,6 +82,38 @@ public enum StoreAppend {
     }
 }
 
+/// Rewrites of an existing JSON array store (watch `sessions.json`: effort update, purge). Per-record
+/// decode, like `StoreAppend`, so one bad record never blocks the change or costs the whole file.
+public enum StoreRewrite {
+    /// Effort-style edit: `change` returns false when nothing changed. nil = leave the file alone
+    /// (wholly unreadable, or no change). `backupFirst`: unreadable records are dropped by this write,
+    /// so copy the file (`StoreFile.backupCorrupt`) before it.
+    public static func update<T: Codable>(existing: Data, decoder: JSONDecoder = JSONDecoder(),
+                                          _ change: (inout [T]) -> Bool) -> (elements: [T], backupFirst: Bool)? {
+        let decoded = LenientJSON.decodeArray(T.self, from: existing, decoder: decoder)
+        guard !decoded.wholeFileUndecodable else { return nil }
+        var elements = decoded.elements
+        guard change(&elements) else { return nil }
+        return (elements, decoded.skipped > 0)
+    }
+
+    public enum PurgePlan<T> {
+        /// Write `kept`. Unreadable records cannot be dated and are not kept: the purge is the user's own
+        /// "delete my history", and the readable sessions it must keep are all in `kept`.
+        case write(kept: [T], removed: [T])
+        /// Nothing in the file could be read: remove it (there is nothing to keep apart by date).
+        case removeFile
+    }
+
+    public static func purge<T: Codable>(existing: Data, decoder: JSONDecoder = JSONDecoder(),
+                                         removing shouldRemove: (T) -> Bool) -> PurgePlan<T> {
+        let decoded = LenientJSON.decodeArray(T.self, from: existing, decoder: decoder)
+        if decoded.wholeFileUndecodable { return .removeFile }
+        return .write(kept: decoded.elements.filter { !shouldRemove($0) },
+                      removed: decoded.elements.filter(shouldRemove))
+    }
+}
+
 public enum StoreFile {
     /// Files written by background wakes or read by widgets must stay readable while the phone is locked
     /// after the first unlock; `.completeFileProtection` makes those writes fail and widgets read nothing.

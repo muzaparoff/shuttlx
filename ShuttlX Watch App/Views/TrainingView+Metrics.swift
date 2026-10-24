@@ -286,34 +286,30 @@ extension TrainingView {
         isHighHR(workoutManager.heartRate)
     }
 
-    /// Heart-limit mode: with a synced limit (own or estimated, resolved on the phone)
-    /// the banner fires above THAT limit — the same number the heart alerts use — so
-    /// the screen and the alert never disagree. No limit: 90% of the estimated
-    /// max HR — the exact HARD cut-off of `heartZoneWord`, so the banner never
-    /// shows next to STEADY.
+    /// The limit every free-run heart element is measured against (zone word, bar,
+    /// "Ease off", heart-limit page) and the same one the heart alerts use: the synced
+    /// limit (own or estimated, resolved on the phone), else the estimate from the
+    /// watch's Health age. nil in effort-only mode, or with no limit and no age: then
+    /// no zone word, no bar and no banner (never the old 190 bpm fallback).
+    var resolvedHeartLimit: Int? {
+        WatchSyncCoordinator.shared.heartSafety.effectiveUpperLimit(age: hrCalculator.age)
+    }
+
+    /// "Ease off — HR high": above the resolved limit, the alert's own threshold.
     func isHighHR(_ hr: Int) -> Bool {
-        guard hr > 0 else { return false }
-        if let limit = WatchSyncCoordinator.shared.heartSafety.upperLimit {
-            return hr > limit
-        }
-        let maxHR = Int(hrCalculator.estimatedMaxHR.rounded())
-        return HeartSafetySettings(upperLimit: maxHR).zoneWord(hr: hr) == "HARD"
+        guard hr > 0, let limit = resolvedHeartLimit else { return false }
+        return hr > limit
     }
 
-    /// HR the zone word is measured against: the synced heart limit, else the
-    /// max-HR calculator. nil in effort-only mode (no word, no bar).
-    var zoneReferenceHR: Double? {
-        let safety = WatchSyncCoordinator.shared.heartSafety
-        guard !safety.effortOnly else { return nil }
-        return safety.upperLimit.map(Double.init) ?? hrCalculator.estimatedMaxHR
-    }
+    /// HR the zone word and bar are measured against. nil: no word, no bar.
+    var zoneReferenceHR: Double? { resolvedHeartLimit.map(Double.init) }
 
-    /// EASY < 70% / STEADY < 90% / HARD of `zoneReferenceHR` — the same split
-    /// as `HeartSafetySettings.zoneWord`. nil without HR.
+    /// EASY < 70% / STEADY < 90% / HARD of `resolvedHeartLimit`
+    /// (`HeartSafetySettings.zoneWord`). nil without HR or without a limit.
     var heartZoneWord: String? {
         let hr = workoutManager.heartRate
-        guard hr > 0, let ref = zoneReferenceHR, ref > 0 else { return nil }
-        return HeartSafetySettings(upperLimit: Int(ref.rounded())).zoneWord(hr: hr)
+        guard hr > 0, let limit = resolvedHeartLimit else { return nil }
+        return HeartSafetySettings(upperLimit: limit).zoneWord(hr: hr)
     }
 
     func zoneWordColor(_ word: String) -> Color {
@@ -351,7 +347,7 @@ extension TrainingView {
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
         .animation(.easeInOut(duration: 0.4), value: isHighIntensityWarning)
-        .accessibilityLabel(WatchSyncCoordinator.shared.heartSafety.upperLimit.map { "Heart rate high — ease off. Heart rate above your limit of \($0)." } ?? "Heart rate high — ease off. Heart rate above 90 percent of maximum.")
+        .accessibilityLabel("Heart rate high — ease off. Heart rate above your limit of \(resolvedHeartLimit ?? 0).")
         .accessibilityAddTraits(.updatesFrequently)
     }
 

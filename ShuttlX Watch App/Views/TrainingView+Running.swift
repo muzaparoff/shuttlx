@@ -19,11 +19,10 @@ extension TrainingView {
         }
     }
 
-    /// Heart-limit mode: a synced limit and HR within 10% of it (or above).
+    /// Heart-limit mode: on at 90 % of the resolved limit, off below 85 %
+    /// (`HeartLimitMode`, updated per HR sample in TrainingView).
     var heartLimitModeLimit: Int? {
-        guard let limit = WatchSyncCoordinator.shared.heartSafety.upperLimit, limit > 0 else { return nil }
-        let hr = workoutManager.heartRate
-        return hr > 0 && Double(hr) >= Double(limit) * 0.9 ? limit : nil
+        heartLimitModeOn ? resolvedHeartLimit : nil
     }
 
     private var oneWordPage: some View {
@@ -116,49 +115,89 @@ extension TrainingView {
         .frame(height: pageHeight)
     }
 
+    /// Audit W3 / 3A: the activity or PAUSED tag stays, BPM is white up to the limit
+    /// and amber above it, the pill warns "Near your limit" from 90 % and says
+    /// "Ease off" only above the limit (the alert's threshold), and a small timer +
+    /// the limit sit at the bottom.
     private func heartLimitPage(limit: Int) -> some View {
         let hr = workoutManager.heartRate
-        return VStack(spacing: 0) {
-            Text("HEART LIMIT \(limit)")
-                .font(.system(size: WatchScale.pt(12), weight: .bold))
-                .tracking(WatchScale.pt(12) * 0.08)
-                .foregroundStyle(ShuttlXColor.textPrimary)
+        let over = hr > limit
+        let paused = workoutManager.isPaused
+        let activity = workoutManager.currentActivity
+        let pill = over ? Self.easeOffText : "Near your limit"
+        let pillSize = min(WatchScale.pt(13), (screenWidth - 16 - 2 * WatchScale.pt(12)) / (CGFloat(pill.count) * 0.62))
+        let small = WatchScale.text(11)
+        return VStack(alignment: .leading, spacing: 0) {
+            Text(paused ? "\u{23F8}\u{FE0E} PAUSED" : "\u{25CF} \(activity.watchTag)")
+                .font(.system(size: small, weight: .bold))
+                .tracking(small * 0.08)
+                .foregroundStyle(paused ? ShuttlXColor.ctaWarning
+                                 : activity == .unknown ? ShuttlXColor.textSecondary : activity.themeColor)
+                .accessibilityLabel(paused ? "Paused" : activity == .unknown ? workoutManager.workoutName : activity.displayName)
             Text("\(hr)")
-                .font(.system(size: WatchScale.pt(62), weight: .semibold, design: .monospaced))
+                .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
                 .monospacedDigit()
-                .foregroundStyle(ShuttlXColor.ctaWarning)
+                .foregroundStyle(over ? ShuttlXColor.ctaWarning : ShuttlXColor.textPrimary)
                 .fixedSize()
-                .padding(.top, WatchScale.pt(6))
+                .padding(.top, WatchScale.pt(4))
+                .accessibilityLabel("Heart rate \(hr), limit \(limit)")
+                .accessibilityAddTraits(.updatesFrequently)
             WatchFillBar(fraction: Double(hr) / Double(limit),
                          fill: LinearGradient(colors: [ShuttlXColor.running, ShuttlXColor.ctaWarning],
                                               startPoint: .leading, endPoint: .trailing),
                          height: WatchScale.pt(9))
-                .padding(.top, WatchScale.pt(10))
-            Text("Ease off — HR high")
-                .font(.system(size: WatchScale.pt(13), weight: .heavy))
-                .foregroundStyle(ShuttlXColor.ctaWarning)
+                .padding(.top, WatchScale.pt(6))
+            Text(pill)
+                .font(.system(size: pillSize, weight: .heavy))
+                .foregroundStyle(over ? ShuttlXColor.iconOnCTA : ShuttlXColor.ctaWarning)
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.vertical, WatchScale.pt(6))
                 .padding(.horizontal, WatchScale.pt(12))
-                .background(ShuttlXColor.ctaWarning.opacity(0.16), in: RoundedRectangle(cornerRadius: 12))
-                .padding(.top, WatchScale.pt(12))
+                .background {
+                    // Filled above the limit; outline only while near it (warn before error).
+                    RoundedRectangle(cornerRadius: 12).fill(ShuttlXColor.ctaWarning.opacity(over ? 1 : 0))
+                    RoundedRectangle(cornerRadius: 12).stroke(ShuttlXColor.ctaWarning, lineWidth: 1)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.top, WatchScale.pt(10))
+                .accessibilityLabel(over ? "Ease off, heart rate above your limit of \(limit)" : "Near your limit of \(limit)")
+            Spacer(minLength: 0)
+            HStack(alignment: .firstTextBaseline) {
+                ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
+                                 clock: workoutManager.clock,
+                                 baseSize: WatchScale.pt(16),
+                                 availableWidth: (screenWidth - 16) * 0.55,
+                                 weight: .semibold,
+                                 color: paused ? ShuttlXColor.ctaWarning : ShuttlXColor.textSecondary)
+                Spacer(minLength: 4)
+                Text("LIMIT \(limit)")
+                    .font(.system(size: small, weight: .bold))
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                    .fixedSize()
+                    .accessibilityHidden(true)
+            }
         }
-        .padding(.horizontal, 10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Heart rate \(hr), limit \(limit). Ease off, heart rate high.")
-        .accessibilityAddTraits(.updatesFrequently)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(.horizontal, 8)
+        .padding(.bottom, max(10, screenHeight * 0.055))
+        .frame(height: pageHeight)
     }
 
     // MARK: - Page 1 (swipe left)
 
+    /// Distance, pace, BPM, then calories. HR and the safety banner never leave the
+    /// screen (watchos.md): while a banner shows it takes the CAL row (audit W1 / 1E).
     var freeRunMetricsPage: some View {
         let h = screenHeight
         let rowWidth = screenWidth - 16
         let unitSize = max(11, h * 0.062)
-        let cap = h * 0.17
+        // Four rows: 0.15h each (was 0.17h for three) keeps the stack inside the page on 40mm.
+        let cap = h * 0.15
+        let hr = workoutManager.heartRate
+        let hrText = hr > 0 ? "\(hr)" : "\u{2014}"
         let calText = workoutManager.calories > 0 ? "\(workoutManager.calories)" : "\u{2014}"
+        let labelSize = max(10, h * 0.08)
         func size(_ value: String, _ unit: String) -> CGFloat {
             fittedMetricSize(glyphs: max(3, value.count), unit: unit, unitSize: unitSize,
                              accessoryWidth: 0, available: rowWidth, cap: cap)
@@ -177,14 +216,26 @@ extension TrainingView {
                 .accessibilityElement(children: .combine)
                 .accessibilityLabel(accessiblePace)
             Spacer(minLength: 0)
-            unitNumber(calText, "CAL", ShuttlXColor.calories, size(calText, "CAL"), unitSize) { EmptyView() }
+            unitNumber(hrText, "BPM", ShuttlXColor.heartRate, size(hrText, "BPM"), unitSize) { EmptyView() }
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel(workoutManager.calories > 0 ? "\(workoutManager.calories) calories, estimate" : "Calories no data")
+                .accessibilityLabel(hr > 0 ? "Heart rate \(hr) beats per minute" : "Heart rate no data")
+                .accessibilityAddTraits(.updatesFrequently)
+            Spacer(minLength: 0)
+            if isHighIntensityWarning {
+                highIntensityWarningView(labelSize: labelSize)
+            } else if workoutManager.noHeartRateDetected {
+                noHeartRateBanner(labelSize: labelSize)
+            } else {
+                unitNumber(calText, "CAL", ShuttlXColor.calories, size(calText, "CAL"), unitSize) { EmptyView() }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityLabel(workoutManager.calories > 0 ? "\(workoutManager.calories) calories, estimate" : "Calories no data")
+            }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.bottom, max(10, h * 0.055))
+        .frame(height: pageHeight)
     }
 
     // MARK: - Overlays

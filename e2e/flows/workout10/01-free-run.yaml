@@ -35,7 +35,7 @@ appId: ${APP_ID}
       - evalScript: ${output.lat = output.lat + 0.00015}
       - setLocation: { latitude: "${output.lat}", longitude: 13.4050 }
       - extendedWaitUntil: { visible: "NO SUCH TEXT", timeout: 5000, optional: true }
-- tapOn: "Finish workout"
+- tapOn: "End and save workout"
 - tapOn: "Save & Finish"
 - runFlow: ../common/motion-prompt.yaml
 - assertNotVisible: "ELAPSED"

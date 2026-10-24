@@ -7,10 +7,11 @@ import ShuttlXShared
 struct TrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @State var selectedTab = 0
-    @State var showingStopConfirmation = false
+    /// END tapped: the confirm card, then (Discard) its second confirmation.
+    @State var endPrompt: EndPromptStage?
     @State var showingAuthDeniedAlert = false
-    /// Tracks whether the high-intensity warning haptic has already fired this threshold crossing.
-    @State var highIntensityHapticFired = false
+    /// Heart-limit page on/off with hysteresis (`HeartLimitMode`, Shared): updated per HR sample.
+    @State var heartLimitModeOn = false
     @Environment(\.dismiss) var dismiss
     @Environment(\.isLuminanceReduced) var isLuminanceReduced
     @Environment(\.accessibilityReduceMotion) var reduceMotion
@@ -96,6 +97,25 @@ struct TrainingView: View {
                         workoutManager.dismissUnusualHeartRate()
                     }
                 )
+            } else if let stage = endPrompt {
+                EndWorkoutPrompt(stage: stage, summaryLine: endSummaryLine,
+                                 onEndAndSave: {
+                                     endPrompt = nil
+                                     workoutManager.finishAndSave()
+                                     // After the action, not on the END tap: nothing had stopped yet.
+                                     #if os(watchOS)
+                                     WKInterfaceDevice.current().play(.stop)
+                                     #endif
+                                 },
+                                 onKeepGoing: { endPrompt = nil },
+                                 onAskDiscard: { endPrompt = .discard },
+                                 onDiscard: {
+                                     endPrompt = nil
+                                     workoutManager.stopWorkout()
+                                     #if os(watchOS)
+                                     WKInterfaceDevice.current().play(.stop)
+                                     #endif
+                                 })
             } else if workoutManager.isPaused, workoutManager.autoPauseReason != nil {
                 AutoPausedView(
                     seconds: WatchSyncCoordinator.shared.heartSafety.noMotionSeconds,
@@ -104,17 +124,10 @@ struct TrainingView: View {
                 )
             }
         }
-        // HR haptic for the "Ease off" banner — on the root so every layout gets it.
-        .onChange(of: workoutManager.heartRate) { _, newHR in
-            let isHigh = isHighHR(newHR)
-            if isHigh && !highIntensityHapticFired {
-                highIntensityHapticFired = true
-                #if os(watchOS)
-                WKInterfaceDevice.current().play(.notification)
-                #endif
-            } else if !isHigh {
-                highIntensityHapticFired = false
-            }
+        // No haptic here: the above-limit buzz comes only from HeartAlertEvaluator
+        // (two samples, 10 s, cooldown), so one event buzzes once.
+        .onChange(of: workoutManager.heartRate, initial: true) { _, newHR in
+            heartLimitModeOn = HeartLimitMode.isOn(hr: newHR, limit: resolvedHeartLimit, wasOn: heartLimitModeOn)
         }
         .onChange(of: workoutManager.lastCompletedKm) { _, _ in
             guard !reduceMotion else { return }
@@ -125,30 +138,15 @@ struct TrainingView: View {
         }
         #if DEBUG
         .onAppear {
-            if let tab = ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT_TAB"].flatMap(Int.init) {
+            let env = ProcessInfo.processInfo.environment
+            if let tab = env["SHUTTLX_SNAPSHOT_TAB"].flatMap(Int.init) {
                 selectedTab = tab
             }
+            if env["SHUTTLX_SNAPSHOT_OVERLAY"] == "end" { endPrompt = .confirm }
+            if env["SHUTTLX_SNAPSHOT_OVERLAY"] == "discard" { endPrompt = .discard }
         }
         #endif
         .navigationBarHidden(true)
-        .alert("Finish Workout", isPresented: $showingStopConfirmation) {
-            Button("Save & Finish") {
-                // S-1 fix: build summary and set pendingSummary BEFORE stopWorkout().
-                // stopWorkout() zeros all @Published state (elapsedTime, HR, distance…)
-                // and sets isWorkoutActive = false, which causes ContentView to swap out
-                // TrainingView. pendingSummary being non-nil tells ContentView to show
-                // WorkoutSummaryView instead of StartTrainingView.
-                workoutManager.saveWorkoutData()
-                workoutManager.pendingSummary = workoutManager.buildCurrentSummary()
-                workoutManager.stopWorkout()
-            }
-            Button("Discard", role: .destructive) {
-                workoutManager.stopWorkout()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("Save this training session?")
-        }
         // A Health save failure is shown on WorkoutSummaryView ("Not saved to
         // Health"): it is reported after the summary has replaced this view.
         .alert("Health Access Required", isPresented: Binding(
@@ -186,7 +184,7 @@ struct TrainingView: View {
 
     /// Same conditions as the `.overlay` above.
     private var overlayShowing: Bool {
-        workoutManager.safetyPromptVisible || workoutManager.unusualHeartRate != nil
+        workoutManager.safetyPromptVisible || workoutManager.unusualHeartRate != nil || endPrompt != nil
             || (workoutManager.isPaused && workoutManager.autoPauseReason != nil)
     }
 

@@ -1,4 +1,5 @@
 import Foundation
+import ShuttlXShared
 #if os(watchOS)
 import WatchKit
 #endif
@@ -77,10 +78,11 @@ class IntervalEngine: ObservableObject {
         // integer behavior (formatTimer truncates fractions).
         let newRemaining = max(0, (step.duration - elapsedInStep).rounded())
 
-        // 5-second countdown haptic — fire once when crossing the 5s boundary
+        // 3-2-1 clicks before the step changes. Not `.notification`: that one is
+        // reserved for safety (heart alerts, safety prompt; watchos.md, haptics).
         #if os(watchOS)
-        if currentStepTimeRemaining > 5, newRemaining <= 5, newRemaining > 0 {
-            WKInterfaceDevice.current().play(.notification)
+        if StepCountdownCue.shouldClick(previous: currentStepTimeRemaining, remaining: newRemaining) {
+            WKInterfaceDevice.current().play(.click)
         }
         #endif
 

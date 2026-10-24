@@ -1132,7 +1132,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         if !hasMotionSensing { flags.noMotion = false }
         let alerts = heartAlerts.tick(now: now, hr: heartRate, lastHRDate: lastHRSampleDate,
                                       lastMotionDate: lastMotionDate,
-                                      limits: HeartAlertLimits(settings), flags: flags, paused: paused)
+                                      limits: HeartAlertLimits(settings, age: HeartRateZoneCalculator.fromSharedDefaults().age),
+                                      flags: flags, paused: paused)
         guard !alerts.isEmpty else { return false }
         let hrAge = lastHRSampleDate.map { Int(now.timeIntervalSince($0)) } ?? -1
         let motionAge = lastMotionDate.map { Int(now.timeIntervalSince($0)) } ?? -1
@@ -1452,7 +1453,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Haptic feedback on activity change (not on a re-open of the same activity)
         #if os(watchOS)
         if !decision.isReconfirmation {
-            WKInterfaceDevice.current().play(.start)
+            WKInterfaceDevice.current().play(.directionUp)
         }
         #endif
 
@@ -1857,6 +1858,11 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Km split detection
         let completedKm = Int(floor(distanceKm))
+        // One buzz per update even if a late distance batch crosses two km at once.
+        // `.success`, not `.notification`: that one is reserved for safety (watchos.md, haptics).
+        #if os(watchOS)
+        if completedKm > lastCompletedKm { WKInterfaceDevice.current().play(.success) }
+        #endif
         while completedKm > lastCompletedKm {
             lastCompletedKm += 1
             let splitTime = elapsedTime - timeAtLastKm
@@ -1867,11 +1873,6 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             )
             completedKmSplits.append(split)
             timeAtLastKm = elapsedTime
-
-            // Haptic feedback at each km milestone
-            #if os(watchOS)
-            WKInterfaceDevice.current().play(.notification)
-            #endif
             logger.info("Km split \(self.lastCompletedKm): \(Int(splitTime))s")
         }
     }

@@ -102,13 +102,47 @@ final class HeartAlertEvaluatorTests: XCTestCase {
         XCTAssertEqual(fired.map(\.0), [630, 660])
     }
 
-    func testStaleHRDoesNotTriggerAbove() {
+    /// One sample above the limit, then no samples: held on screen for its whole 30 s life. It used to
+    /// fire at 10 s; above limit now needs two real samples (algorithms §5 pick A).
+    func testSingleStaleSampleAboveLimitNeverFires() {
         var e = HeartAlertEvaluator()
         _ = run(&e, from: 0, to: 0, hr: 160)
         let fired = run(&e, from: 1, to: 59, hr: 160, hrFresh: false, lastHR: t0,
                         flags: HeartAlertFlags(signalLost: false))
-        // Fires at 10 while sample is fresh, then stale after 30 s re-arms.
-        XCTAssertEqual(fired.map(\.0), [10])
+        XCTAssertTrue(fired.isEmpty)
+    }
+
+    /// Samples every 5 s above the limit: fires 10 s after the first sample (hard rule: <= 15 s).
+    func testSamplesEvery5sAboveLimitFireWithin15s() {
+        var e = HeartAlertEvaluator()
+        var hrDate: Date?
+        var fired: [Int] = []
+        for s in 0...40 {
+            let now = t0.addingTimeInterval(TimeInterval(s))
+            if s % 5 == 0 { hrDate = now }
+            if e.tick(now: now, hr: 170, lastHRDate: hrDate, lastMotionDate: now,
+                      limits: HeartAlertLimits(upper: 130, low: nil), flags: flags).contains(where: { $0.kind == .aboveLimit }) {
+                fired.append(s)
+            }
+        }
+        XCTAssertEqual(fired, [10])
+    }
+
+    /// A sample at or below the limit between two high ones restarts the count.
+    func testLowerSampleBetweenRestartsTheRun() {
+        var e = HeartAlertEvaluator()
+        var fired: [Int] = []
+        let samples: [Int: Int] = [0: 170, 5: 120, 10: 170, 15: 170]
+        var hr = 0, hrDate: Date?
+        for s in 0...30 {
+            let now = t0.addingTimeInterval(TimeInterval(s))
+            if let v = samples[s] { hr = v; hrDate = now }
+            if e.tick(now: now, hr: hr, lastHRDate: hrDate, lastMotionDate: now,
+                      limits: HeartAlertLimits(upper: 130, low: nil), flags: flags).contains(where: { $0.kind == .aboveLimit }) {
+                fired.append(s)
+            }
+        }
+        XCTAssertEqual(fired, [20])   // run starts at 10, second sample at 15, window ends 20
     }
 
     // MARK: Sudden jump / configurable no-motion window

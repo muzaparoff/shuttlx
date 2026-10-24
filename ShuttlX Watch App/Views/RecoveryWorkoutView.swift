@@ -233,7 +233,7 @@ struct RecoveryWorkoutView: View {
         .overlay(RoundedRectangle(cornerRadius: 4)
             .stroke(reached ? ShuttlXColor.positive.opacity(0.6) : ShuttlXColor.surfaceBorder, lineWidth: 1))
         .accessibilityLabel(reached
-                            ? (value != nil ? "\(label) mark: \(value!) BPM drop" : "\(label) reached")
+                            ? (value.map { "\(label) mark: \($0) BPM drop" } ?? "\(label) reached")
                             : "\(label) mark not yet reached")
     }
 }
