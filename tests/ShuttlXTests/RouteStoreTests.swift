@@ -43,3 +43,19 @@ final class RouteStoreTests: XCTestCase {
         XCTAssertEqual(RouteStore(directory: dir.appendingPathComponent("absent")).storedIDs(), [])
     }
 }
+
+extension RouteStoreTests {
+    func testOrphansAreOldFilesOfUnknownSessions() throws {
+        let dir = FileManager.default.temporaryDirectory.appendingPathComponent("orphans-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let store = RouteStore(directory: dir)
+        let kept = UUID(), oldOrphan = UUID(), newOrphan = UUID()
+        let p = [RoutePoint(latitude: 1, longitude: 2, timestamp: Date(timeIntervalSinceReferenceDate: 0))]
+        for id in [kept, oldOrphan, newOrphan] { try store.write(p, id: id) }
+        let old = Date().addingTimeInterval(-3 * 86_400)
+        for id in [kept, oldOrphan] {
+            try FileManager.default.setAttributes([.modificationDate: old], ofItemAtPath: dir.appendingPathComponent("\(id.uuidString).json").path)
+        }
+        XCTAssertEqual(store.orphans(keeping: [kept], writtenBefore: Date().addingTimeInterval(-86_400)), [oldOrphan])
+    }
+}

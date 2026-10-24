@@ -68,6 +68,9 @@ struct SyncDebugView: View {
                     Button("Clear Logs") {
                         syncMonitor.clearLogs()
                     }
+                    // Fix-forward before installing a build older than the routes/ folder (plan 2026-10, section 6).
+                    Button("Put routes back into history") { dataManager.putRoutesBackIntoHistory() }
+                        .accessibilityHint("Writes every route into sessions.json until the app quits")
                 }
 
                 Section(header: Text("Logs")) {

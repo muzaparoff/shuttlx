@@ -47,6 +47,10 @@ class DataManager: ObservableObject {
     // MARK: - App Group Properties
     private let sessionsKey = "sessions.json"
     private let archiveKey = "sessions_archive.json"
+    /// `routes/<id>.json`: one route per stored session (plan 2026-10 part B). This class is its only writer.
+    private nonisolated static let routesDirectory = "routes"
+    /// Copy of sessions.json taken once before the first save that moved routes out (kept one release).
+    private let preRoutesBackupKey = "sessions_pre_routes_backup.json"
     /// Active-history cap. Overflow is archived oldest-first — newest workouts are never dropped.
     private let sessionCap = 500
     /// Eviction waits until the list is this far over the cap, then trims back to the cap: the archive file is
@@ -68,25 +72,73 @@ class DataManager: ObservableObject {
     private func rebuildEffective(_ given: SegmentEdits? = nil) {
         let edits = given ?? SegmentOverrideStore.shared.edits
         effectiveVersion &+= 1
-        let noEdits = edits.types.isEmpty && edits.partitions.isEmpty
+        // Most users have no edits: share the array instead of mapping every session.
+        guard !(edits.types.isEmpty && edits.partitions.isEmpty) else {
+            effectiveSessions = sessions
+            return
+        }
         effectiveSessions = sessions.map { session in
+            guard let e = edits.effective(segments: session.segments, calories: session.caloriesBurned, sessionID: session.id)
+            else { return session }
             var s = session
-            // ponytail: summaries recomputed from the inline route on every rebuild (memory only, never saved);
-            // B3 stores them with the session and drops this.
-            if s.routeSummary == nil, let route = s.inlineRoute { s.routeSummary = RouteSummary(points: route) }
-            guard !noEdits,
-                  let e = edits.effective(segments: session.segments, calories: session.caloriesBurned, sessionID: session.id)
-            else { return s }
             s.segments = e.segments
             s.caloriesBurned = e.calories
             return s
         }
     }
 
-    /// The stored route of a session. Screens read points only through this (list screens use `routeSummary`).
-    /// For now it is the inline route held in memory; part B3 moves stored routes to `routes/<id>.json`.
+    // MARK: - Routes (plan 2026-10 part B)
+
+    /// Routes taken out of `sessions` (ingest, load, demo) that are not in their file yet. Sessions in memory never
+    /// carry `inlineRoute`; readers get the points through `route(for:)`.
+    private var pendingRouteWrites: [UUID: [RoutePoint]] = [:]
+    private final class RouteBox { let points: [RoutePoint]; init(_ p: [RoutePoint]) { points = p } }
+    private let routeCache: NSCache<NSUUID, RouteBox> = { let c = NSCache<NSUUID, RouteBox>(); c.countLimit = 30; return c }()
+    /// Set by Sync Debug "Put routes back into history": every save of this process writes the routes inline.
+    private var keepRoutesInline = false
+
+    nonisolated static func routeStore() -> RouteStore? {
+        workingContainer().map { RouteStore(directory: $0.appendingPathComponent(routesDirectory, isDirectory: true)) }
+    }
+
+    /// Moves the inline route into `pendingRouteWrites` (written by the next save) and fills the summary.
+    private func externalize(_ session: TrainingSession) -> TrainingSession {
+        var s = session
+        if let points = RouteExternalize.strip(&s) {
+            pendingRouteWrites[s.id] = points
+            routeCache.removeObject(forKey: s.id as NSUUID)
+        }
+        return s
+    }
+
+    /// Forgets a session's route: pending points, cache and file.
+    private func dropRoute(_ id: UUID) {
+        pendingRouteWrites[id] = nil
+        routeCache.removeObject(forKey: id as NSUUID)
+        guard let store = Self.routeStore() else { return }
+        Self.storeQueue.async { store.remove(ids: [id]) }
+    }
+
+    /// Route of a stored session: not-yet-written points, then the cache, then `routes/<id>.json` (read on the store
+    /// queue, so it waits for a save that is writing it). List screens use `routeSummary` and never call this.
     func route(for id: UUID) async -> [RoutePoint]? {
-        sessions.first { $0.id == id }?.inlineRoute
+        if let pending = pendingRouteWrites[id] { return pending }
+        if let hit = routeCache.object(forKey: id as NSUUID) { return hit.points }
+        guard sessions.first(where: { $0.id == id })?.routeSummary != nil, let store = Self.routeStore() else { return nil }
+        let points = await withCheckedContinuation { (c: CheckedContinuation<[RoutePoint]?, Never>) in
+            Self.storeQueue.async { c.resume(returning: store.read(id: id)) }
+        }
+        if let points { routeCache.setObject(RouteBox(points), forKey: id as NSUUID) }
+        else { logger.error("Route file missing or unreadable for session \(id)") }
+        return points
+    }
+
+    /// Sync Debug action (plan section 6 fix-forward): writes sessions.json with every route inline, as builds
+    /// before part B expect, and keeps doing so until the app quits. Route files are left alone.
+    func putRoutesBackIntoHistory() {
+        keepRoutesInline = true
+        saveSessionsToAppGroup()
+        logger.notice("Routes will be written inline into sessions.json for the rest of this run")
     }
 
     #if DEBUG
@@ -104,7 +156,7 @@ class DataManager: ObservableObject {
     /// main actor, so its result is discarded once demo mode is active.
     func activateDemoMode(sessions demoSessions: [TrainingSession]) {
         isDemoDataMode = true
-        sessions = demoSessions
+        sessions = demoSessions.map(externalize)   // saves are off: the routes stay in `pendingRouteWrites`
         processedSessionIds = Set(demoSessions.map { $0.id })
         logger.info("Demo mode active: seeded \(demoSessions.count) in-memory sessions; disk persistence disabled")
     }
@@ -145,6 +197,8 @@ class DataManager: ObservableObject {
                 let victims = sessions.filter { SessionMerge.replaces(incoming: incoming, existing: Self.mergeItem($0, placeholder: isPhonePlaceholder($0.id))) }
                 if !victims.isEmpty {
                     session.effortRPE = SessionMerge.carriedEffort(incoming: session.effortRPE, replaced: victims.map(\.effortRPE))
+                    adoptRoute(into: &session, from: victims)
+                    for v in victims where v.id != session.id { dropRoute(v.id) }
                     let ids = Set(victims.map(\.id))
                     supersededPlaceholder = victims.contains { isPhonePlaceholder($0.id) }
                     sessions.removeAll { ids.contains($0.id) }
@@ -169,7 +223,7 @@ class DataManager: ObservableObject {
                 session.effortRPE = rpe
                 savePendingEffort()
             }
-            fresh.append(session)
+            fresh.append(externalize(session))
             // Sessions imported from Apple Health are history, not a workout just finished:
             // only watch/phone-originated sessions send telemetry or count toward the rating prompt.
             // A watch session that replaced the phone's placeholder is the same workout: counted once.
@@ -197,6 +251,21 @@ class DataManager: ObservableObject {
             logger.warning("Session cap \(self.sessionCap) exceeded — archived \(evicted.count) oldest session(s)")
         }
         saveSessionsToAppGroup()
+    }
+
+    /// A watch session without a route keeps the route of what it replaces (owner pick, plan decision 4): a Health
+    /// copy with the same id keeps its file (only the summary is carried), the phone's own placeholder hands its
+    /// points over. A watch session that brings its route overwrites the file of the same id on the next save.
+    private func adoptRoute(into session: inout TrainingSession, from victims: [TrainingSession]) {
+        guard session.inlineRoute?.isEmpty ?? true else { return }
+        if let same = victims.first(where: { $0.id == session.id && $0.routeSummary != nil }) {
+            session.routeSummary = same.routeSummary
+        } else if let placeholder = victims.first(where: { $0.id != session.id && $0.routeSummary != nil }),
+                  let points = pendingRouteWrites[placeholder.id] ?? Self.routeStore()?.read(id: placeholder.id) {
+            session.inlineRoute = points   // externalized under the watch session's id below
+            let id = session.id
+            logger.info("Watch session \(id) has no route; kept the iPhone's GPS route")
+        }
     }
 
     // MARK: - Phone placeholders (iPhone workout that the watch recorded too)
@@ -288,6 +357,16 @@ class DataManager: ObservableObject {
 
     private func appendToArchive(_ evicted: [TrainingSession]) {
         guard !evicted.isEmpty, let containerURL = getWorkingContainer() else { return }
+        // The archive keeps routes inline (nothing reads it back); their files go once it is written, so
+        // `routes/` only holds the active list.
+        let store = Self.routeStore()
+        let evicted = evicted.map { s -> TrainingSession in
+            guard s.inlineRoute == nil, s.routeSummary != nil else { return s }
+            var s = s
+            s.inlineRoute = pendingRouteWrites[s.id] ?? store?.read(id: s.id)
+            return s
+        }
+        var didArchive = false
 
         let url = containerURL.appendingPathComponent(archiveKey)
         let coordinator = NSFileCoordinator()
@@ -308,12 +387,18 @@ class DataManager: ObservableObject {
                 archived.append(contentsOf: evicted)
                 let data = try JSONEncoder().encode(archived)
                 try data.write(to: writeURL, options: StoreFile.writeOptions)
+                didArchive = true
             } catch {
                 self.logger.error("Failed to archive \(evicted.count) session(s): \(error.localizedDescription)")
             }
         }
         if let coordinatorError {
             logger.error("File coordination error archiving sessions: \(coordinatorError.localizedDescription)")
+        }
+        if didArchive {
+            let ids = Set(evicted.map(\.id))
+            for id in ids { pendingRouteWrites[id] = nil; routeCache.removeObject(forKey: id as NSUUID) }
+            if let store { Self.storeQueue.async { store.remove(ids: ids) } }
         }
     }
 
@@ -434,34 +519,68 @@ class DataManager: ObservableObject {
 
     private func startSave() {
         guard savePending, canSave, !isWriting else { return }
-        guard let url = Self.workingContainer()?.appendingPathComponent(sessionsKey) else { return }
+        guard let container = Self.workingContainer(), let store = Self.routeStore() else { return }
+        let url = container.appendingPathComponent(sessionsKey)
+        let backupURL = container.appendingPathComponent(preRoutesBackupKey)
         savePending = false
         isWriting = true
         let snapshot = sessions
+        let routes = pendingRouteWrites
+        let inlineAll = keepRoutesInline
         let handled = processedSessionIds   // inbox entries for these ids are in the snapshot or archived
         let inbox = Self.pendingInbox()
+        #if DEBUG
+        // Simulator checkpoint for the migration crash case: stop after the route files, before sessions.json.
+        let hold = ProcessInfo.processInfo.environment["SHUTTLX_HOLD_BEFORE_SESSIONS_WRITE"] == "1" && !routes.isEmpty
+        #else
+        let hold = false
+        #endif
         Self.storeQueue.async { [logger] in
+            var result = RouteExternalize.SaveResult()
             var ok = false
-            var coordinatorError: NSError?
-            NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
-                do {
-                    let data = try JSONEncoder().encode(snapshot)
-                    try data.write(to: writeURL, options: StoreFile.writeOptions)
-                    ok = true
-                } catch {
-                    logger.error("Failed to save sessions: \(error.localizedDescription)")
-                }
+            do {
+                // Route files first, then sessions.json (atomic replace): a kill in between loses nothing.
+                result = try RouteExternalize.save(snapshot, pendingRoutes: routes, store: store, sessionsURL: url,
+                                                   backupURL: backupURL, inlineEverything: inlineAll,
+                                                   writeSessions: Self.coordinatedWrite,
+                                                   beforeSessionsWrite: {
+                    guard hold else { return }
+                    logger.notice("DEBUG hold: route files written, sessions.json not yet")
+                    Thread.sleep(forTimeInterval: 3600)
+                })
+                ok = true
+            } catch {
+                logger.error("Failed to save sessions: \(error.localizedDescription)")
             }
-            if let coordinatorError {
-                logger.error("File coordination error saving sessions: \(coordinatorError.localizedDescription)")
+            if result.backupMade { logger.notice("Copied sessions.json to the pre-routes backup before moving routes out") }
+            if !result.keptInline.isEmpty {
+                logger.error("\(result.keptInline.count) route file write(s) failed; those routes stay in sessions.json")
             }
+            if !result.written.isEmpty { logger.info("Wrote \(result.written.count) route file(s)") }
             if ok { inbox?.remove(ids: handled) }
-            Task { @MainActor [weak self] in self?.finishSave(success: ok) }
+            Task { @MainActor [weak self] in self?.finishSave(success: ok, written: ok ? result.written : [], routes: routes) }
         }
     }
 
-    private func finishSave(success: Bool) {
+    /// sessions.json write under file coordination (widgets read it coordinated).
+    private nonisolated static func coordinatedWrite(_ data: Data, to url: URL) throws {
+        var coordinatorError: NSError?
+        var writeError: Error?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: .forReplacing, error: &coordinatorError) { writeURL in
+            do { try data.write(to: writeURL, options: StoreFile.writeOptions) } catch { writeError = error }
+        }
+        if let error = coordinatorError ?? writeError { throw error }
+    }
+
+    private func finishSave(success: Bool, written: Set<UUID> = [], routes: [UUID: [RoutePoint]] = [:]) {
         isWriting = false
+        // Written routes leave memory unless a newer route for the same id arrived meanwhile. Pending routes of
+        // sessions that are gone (replaced, archived, wiped) are dropped too.
+        for id in written where pendingRouteWrites[id] == routes[id] { pendingRouteWrites[id] = nil }
+        if !pendingRouteWrites.isEmpty {
+            let ids = Set(sessions.map(\.id))
+            pendingRouteWrites = pendingRouteWrites.filter { ids.contains($0.key) }
+        }
         if success {
             WidgetCenter.shared.reloadAllTimelines()
             debouncedCloudSync()
@@ -510,6 +629,7 @@ class DataManager: ObservableObject {
                     NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
                         do {
                             file = LenientJSON.decodeArray(TrainingSession.self, from: try Data(contentsOf: readURL))
+                            Self.restoreMissingSummaries(&file.elements)
                             if file.wholeFileUndecodable || file.skipped > 0 {
                                 backupName = try StoreFile.backupCorrupt(readURL).lastPathComponent
                             }
@@ -549,6 +669,7 @@ class DataManager: ObservableObject {
             }
             mergeLoadedSessions(file.elements)
             hasLoadedOnce = true
+            if !file.wholeFileUndecodable, file.skipped == 0 { sweepOrphanRoutes() }
         }
         if pending.skipped > 0 { logger.error("Pending inbox: \(pending.skipped) unreadable entr(ies) set aside") }
         if !pending.elements.isEmpty {
@@ -575,8 +696,34 @@ class DataManager: ObservableObject {
             missing.removeAll { victims.contains($0.id) }
             logger.info("Dropped \(victims.count) loaded placeholder(s) already replaced by a watch session")
         }
-        sessions = existingIds.isEmpty ? loaded : sessions + missing
+        // Migration is the normal path: inline routes (older builds, a kill before the last save) move out on the next save.
+        let moved = missing.map(externalize)
+        if !pendingRouteWrites.isEmpty { savePending = true }
+        sessions = existingIds.isEmpty ? moved : sessions + moved
         logger.info("Loaded \(missing.count) session(s) from disk")
+    }
+
+    /// A stripped record without a summary (saved by a build that drops unknown keys) gets it back from its file.
+    private nonisolated static func restoreMissingSummaries(_ sessions: inout [TrainingSession]) {
+        guard let store = routeStore() else { return }
+        let stored = store.storedIDs()
+        for i in sessions.indices where sessions[i].routeSummary == nil && sessions[i].inlineRoute == nil && stored.contains(sessions[i].id) {
+            sessions[i].routeSummary = store.read(id: sessions[i].id).flatMap { RouteSummary(points: $0) }
+        }
+    }
+
+    /// Deletes route files of sessions that are not in the list (e.g. after a debug clear), once they are a day old,
+    /// so a session still on its way in keeps its file. Skipped when records were unreadable: their files stay.
+    private func sweepOrphanRoutes() {
+        guard let store = Self.routeStore() else { return }
+        let keep = Set(sessions.map(\.id)).union(pendingRouteWrites.keys)
+        let cutoff = Date().addingTimeInterval(-24 * 3600)
+        Self.storeQueue.async { [logger] in
+            let orphans = store.orphans(keeping: keep, writtenBefore: cutoff)
+            guard !orphans.isEmpty else { return }
+            store.remove(ids: orphans)
+            logger.info("Removed \(orphans.count) orphan route file(s)")
+        }
     }
 
     /// Settings banner action: the user accepts starting a new sessions.json. The unreadable original stays
@@ -609,6 +756,9 @@ class DataManager: ObservableObject {
         PhoneSyncCoordinator.shared.clearRelay()
         savePending = false
         sessions = []
+        pendingRouteWrites = [:]
+        routeCache.removeAllObjects()
+        keepRoutesInline = false
         savesBlockedByCorruption = false
         storageNotice = nil
         pendingEffort = PendingSessionEffort()
@@ -618,7 +768,8 @@ class DataManager: ObservableObject {
         for key in ["pendingSessionEffort", "healthImport.anchor", "healthImport.deferredUUIDs",
                     "healthImport.lastDate", "healthImport.lastCount", "phonePlaceholderSessionIDs"] { std.removeObject(forKey: key) }
 
-        var names = [sessionsKey, archiveKey, "segment_overrides.json", PhoneWorkoutCheckpoint.fileName, "rejected_sessions"]
+        var names = [sessionsKey, archiveKey, "segment_overrides.json", PhoneWorkoutCheckpoint.fileName, "rejected_sessions",
+                     Self.routesDirectory, preRoutesBackupKey]
         var corruptPrefixes = ["sessions_corrupt_", "sessions_archive_corrupt_", "segment_overrides_corrupt_"]
         if scope == .everything {
             names += ["workout_templates.json", "exercise_devices.json", "training_plans.json", "plan_progress.json"]

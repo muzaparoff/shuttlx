@@ -244,7 +244,13 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             do { try inbox?.add(session) } catch {
                 log("Could not write session \(session.id) to the pending inbox: \(error.localizedDescription)")
             }
-            if !syncedSessions.contains(where: { $0.id == session.id }) { syncedSessions.append(session) }
+            if !syncedSessions.contains(where: { $0.id == session.id }) {
+                // The relay only backs up the hand-over to DataManager. Once that has the session (and its route,
+                // which it writes to routes/), the relay copy drops the points; the inbox still has the full copy.
+                var relayCopy = session
+                if dataManager != nil { relayCopy.inlineRoute = nil }
+                syncedSessions.append(relayCopy)
+            }
         }
         if let dataManager {
             dataManager.handleReceivedSessions(fresh)

@@ -20,6 +20,7 @@ globs:
 
 ## JSON Persistence
 
+- `sessions.json` and `routes/`: only `DataManager` writes them (route files first, then sessions.json; `RouteExternalize.save`). Never read `session.inlineRoute` of a stored session on the iPhone: use `DataManager.route(for:)` or `routeSummary`.
 - `sessions.json`: only `DataManager` writes it. Other code hands sessions to `DataManager.handleReceivedSessions` (PhoneSyncCoordinator also drops them in the `pending_sessions/` inbox first). Never add a second writer
 - Decode arrays with `LenientJSON.decodeArray`, back up with `StoreFile.backupCorrupt`, write with `StoreFile.writeOptions` (`Shared/StoreSupport.swift`)
 - Local wipes go through `DataManager.wipeLocalUserData`; it sets the `sessionsClearedAt` cutoff and purges the watch

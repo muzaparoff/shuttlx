@@ -91,7 +91,7 @@ class CloudKitSyncManager: ObservableObject {
                 let remoteIDs = Set(remoteSessions.map { $0.id })
                 let localOnly = localSessions.filter { !remoteIDs.contains($0.id) }
                 if !localOnly.isEmpty {
-                    try await pushSessions(localOnly)
+                    try await pushSessions(localOnly, dataManager: dataManager)
                 }
 
                 lastSyncDate = Date()
@@ -112,7 +112,7 @@ class CloudKitSyncManager: ObservableObject {
 
         Task {
             do {
-                try await pushSessions(dataManager.sessions)
+                try await pushSessions(dataManager.sessions, dataManager: dataManager)
                 lastSyncDate = Date()
             } catch {
                 logger.error("CloudKit migration failed: \(error.localizedDescription)")
@@ -122,18 +122,27 @@ class CloudKitSyncManager: ObservableObject {
 
     // MARK: - Push (H8: fetch-before-write via ifServerRecordUnchanged + conflict retry)
 
-    private func pushSessions(_ sessions: [TrainingSession]) async throws {
+    /// Stored iPhone sessions keep their route in `routes/<id>.json`; the record carries it inline (other devices and
+    /// older builds read it there), so each session gets its route back before it is encoded. A session whose route
+    /// cannot be read is skipped this sync and retried on the next one, never pushed without it.
+    private func pushSessions(_ sessions: [TrainingSession], dataManager: DataManager) async throws {
         guard !sessions.isEmpty else { return }
-
-        let records = sessions.compactMap { makeRecord(from: $0) }
-
-        // CloudKit batch limit is 400 records per operation
-        for batch in records.chunked(into: 400) {
-            try await pushRecordBatch(batch, sessions: sessions)
+        var skipped = 0
+        // ponytail: 20 sessions per operation keeps at most 20 routes in memory (CloudKit allows 400); raise it if
+        // a first sync of a long history is too slow.
+        for chunk in sessions.chunked(into: 20) {
+            var ready: [TrainingSession] = []
+            for session in chunk {
+                let needsRoute = session.inlineRoute == nil && session.routeSummary != nil
+                let route = needsRoute ? await dataManager.route(for: session.id) : nil
+                if let upload = RouteExternalize.forUpload(session, route: route) { ready.append(upload) } else { skipped += 1 }
+            }
+            let records = ready.compactMap { makeRecord(from: $0) }
+            if !records.isEmpty { try await pushRecordBatch(records, sessions: ready) }
+            // Clean up temp files created for CKAsset encoding
+            cleanupTempFiles(for: ready.map { $0.id })
         }
-
-        // Clean up temp files created for CKAsset encoding
-        cleanupTempFiles(for: sessions.map { $0.id })
+        if skipped > 0 { logger.error("CloudKit push skipped \(skipped) session(s) whose route could not be read") }
     }
 
     /// Push a batch of records using `.ifServerRecordUnchanged` policy.
