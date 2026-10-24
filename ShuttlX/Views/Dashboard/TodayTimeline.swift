@@ -23,6 +23,9 @@ extension TrainingSession {
         let part = h < 5 ? "Night" : h < 12 ? "Morning" : h < 17 ? "Afternoon" : h < 22 ? "Evening" : "Night"
         return sportType == .cycling ? part + " ride" : part
     }
+
+    /// At least two GPS points to draw, from the summary (filled in `DataManager.effectiveSessions`).
+    var hasDrawableRoute: Bool { (routeSummary?.pointCount ?? 0) >= 2 }
 }
 
 enum TodayFormat {
@@ -201,7 +204,7 @@ struct TimelineSessionRow: View {
     private func card(_ segs: [ActivitySegment]) -> some View {
         let meta = TodayFormat.meta(session, segs)
         return VStack(spacing: 0) {
-            if let route = session.inlineRoute, route.count >= 2 {
+            if session.hasDrawableRoute {
                 RouteThumbnail(session: session, segments: segs)
                     .frame(height: 82)
                     .frame(maxWidth: .infinity)
@@ -239,6 +242,7 @@ struct RouteThumbnail: View {
     let segments: [ActivitySegment]
     var size: CGSize = RouteSnapshotCache.wide
     @Environment(\.colorScheme) private var scheme
+    @EnvironmentObject private var dataManager: DataManager
     @State private var image: UIImage?
 
     var body: some View {
@@ -249,7 +253,9 @@ struct RouteThumbnail: View {
             }
         }
         .task(id: "\(session.id)-\(scheme == .dark)-\(size.width)-\(segments.map(\.activityType.rawValue))") {
-            image = await RouteSnapshotCache.image(for: session, segments: segments, dark: scheme == .dark, size: size)
+            image = await RouteSnapshotCache.image(for: session, segments: segments, dark: scheme == .dark, size: size) {
+                await dataManager.route(for: session.id)
+            }
         }
         .accessibilityHidden(true)
     }
@@ -263,10 +269,10 @@ enum RouteSnapshotCache {
     static let square = CGSize(width: 92, height: 92)
 
     static func image(for session: TrainingSession, segments: [ActivitySegment], dark: Bool,
-                      size: CGSize = wide) async -> UIImage? {
+                      size: CGSize = wide, loadRoute: () async -> [RoutePoint]?) async -> UIImage? {
         let key = "\(session.id)-\(dark)-\(size.width)-\(segments.map(\.activityType.rawValue))" as NSString
         if let hit = cache.object(forKey: key) { return hit }
-        guard let route = session.inlineRoute, route.count >= 2 else { return nil }
+        guard let route = await loadRoute(), route.count >= 2 else { return nil }
         // Thumbnails don't need more than ~150 points.
         let step = max(1, route.count / 150)
         let pts = route.enumerated().filter { $0.offset % step == 0 || $0.offset == route.count - 1 }.map(\.element)

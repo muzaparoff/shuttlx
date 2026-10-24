@@ -1,6 +1,6 @@
 # Model unification and route files (October 2026)
 
-Status: Part A (A0-A3) and step W implemented on 2026-10-24 (uncommitted at the time of writing); Part B (B0-B6) not started. Owner picked option 1 of Phase 3 in
+Status (2026-10-24): Part A (A0-A3) and W done (e0749c8); B0 and B1 done (bb13e22); B2 done, uncommitted; B3-B6 not started. Owner picked option 1 of Phase 3 in
 `docs/plans/2026-10-open-dev-items.md`: first unify `TrainingSession` and `WorkoutTemplate`
 into `Shared/` (part A), then move `route` out of `sessions.json` into `routes/<uuid>.json`
 (part B).

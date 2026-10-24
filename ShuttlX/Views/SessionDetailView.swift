@@ -15,6 +15,7 @@ struct SessionDetailView: View {
     @EnvironmentObject private var dataManager: DataManager
     @State private var fixing: FixTarget?
     @State private var heartRate: HeartRateSeries?
+    @State private var route: [RoutePoint]?
     @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
 
     private var current: TrainingSession {
@@ -27,7 +28,7 @@ struct SessionDetailView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: 20) {
-                if let route = session.inlineRoute, !route.isEmpty {
+                if let route, !route.isEmpty {
                     RouteMapView(route: route, segments: segments, kmSplits: session.kmSplits,
                                  showsHeader: false, height: 320)
                 }
@@ -83,6 +84,8 @@ struct SessionDetailView: View {
         #endif
         }
         .task(id: session.id) { heartRate = await SessionHeartRateLoader.load(for: session) }
+        // Keyed on the point count too, so a copy that arrives later with its route replaces the map.
+        .task(id: "\(session.id)-\(session.routeSummary?.pointCount ?? 0)") { route = await dataManager.route(for: session.id) }
         .sheet(item: $fixing) { target in
             FixPartSheet(sessionID: target.sessionID, partID: target.partID, parts: segments)
         }

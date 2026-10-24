@@ -297,23 +297,13 @@ enum AnalyticsEngine {
         var highestPoint = -Double.greatestFiniteMagnitude
         var sessionCount = 0
 
+        // Summaries only (`DataManager.effectiveSessions` fills them); a route counts from 2 altitudes.
         for session in sessions {
-            guard let route = session.inlineRoute else { continue }
-            let altitudes = route.compactMap(\.altitude)
-            guard altitudes.count >= 2 else { continue }
-
+            guard let summary = session.routeSummary, summary.altitudeCount >= 2 else { continue }
             sessionCount += 1
-            var ascent = 0.0
-            var descent = 0.0
-
-            for i in 1..<altitudes.count {
-                let diff = altitudes[i] - altitudes[i - 1]
-                if diff > 0 { ascent += diff } else { descent += abs(diff) }
-            }
-
-            totalAscent += ascent
-            totalDescent += descent
-            if let maxAlt = altitudes.max(), maxAlt > highestPoint {
+            totalAscent += summary.ascent
+            totalDescent += summary.descent
+            if let maxAlt = summary.maxAltitude, maxAlt > highestPoint {
                 highestPoint = maxAlt
             }
         }
@@ -328,15 +318,12 @@ enum AnalyticsEngine {
         )
     }
 
-    /// Most recent session's route that has elevation data, for chart display.
-    static func latestElevationRoute(sessions: [TrainingSession]) -> [RoutePoint]? {
+    /// Most recent session whose route has elevation data (from the summaries); load its route for the chart.
+    static func latestElevationSessionID(sessions: [TrainingSession]) -> UUID? {
         sessions
-            .sorted { $0.startDate > $1.startDate }
-            .first { session in
-                guard let route = session.inlineRoute else { return false }
-                return route.contains { $0.altitude != nil }
-            }?
-            .inlineRoute
+            .filter { ($0.routeSummary?.altitudeCount ?? 0) >= 1 }
+            .max { $0.startDate < $1.startDate }?
+            .id
     }
 
     // MARK: - Private Helpers

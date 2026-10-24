@@ -15,6 +15,7 @@ struct AnalyticsView: View {
     @State private var healthVO2: VO2MaxReading? = nil
     @State private var paceZones: [PaceZoneDistribution] = []
     @State private var elevationSummary: AnalyticsEngine.ElevationSummary? = nil
+    @State private var latestElevationID: UUID? = nil
     @State private var latestElevationRoute: [RoutePoint]? = nil
     @State private var fitnessScore: Double = 0
     @State private var fatigueScore: Double = 0
@@ -162,7 +163,7 @@ struct AnalyticsView: View {
         previousVO2max = estimatePreviousVO2Max(sessions: currentSessions)
         paceZones = AnalyticsEngine.paceZones(sessions: currentSessions)
         elevationSummary = AnalyticsEngine.elevationSummary(sessions: currentSessions)
-        latestElevationRoute = AnalyticsEngine.latestElevationRoute(sessions: currentSessions)
+        latestElevationID = AnalyticsEngine.latestElevationSessionID(sessions: currentSessions)
         fitnessScore = AnalyticsEngine.fitnessScore(sessions: currentSessions)
         fatigueScore = AnalyticsEngine.fatigue(sessions: currentSessions)
         formScore = AnalyticsEngine.form(sessions: currentSessions)
@@ -665,6 +666,10 @@ struct AnalyticsView: View {
             .padding(16)
             .timelineCard()
             .accessibilityElement(children: .contain)
+            .task(id: latestElevationID) {
+                latestElevationRoute = nil
+                if let id = latestElevationID { latestElevationRoute = await dataManager.route(for: id) }
+            }
         }
     }
 

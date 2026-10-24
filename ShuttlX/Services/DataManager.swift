@@ -68,19 +68,25 @@ class DataManager: ObservableObject {
     private func rebuildEffective(_ given: SegmentEdits? = nil) {
         let edits = given ?? SegmentOverrideStore.shared.edits
         effectiveVersion &+= 1
-        // Most users have no edits: share the array instead of mapping every session.
-        guard !(edits.types.isEmpty && edits.partitions.isEmpty) else {
-            effectiveSessions = sessions
-            return
-        }
+        let noEdits = edits.types.isEmpty && edits.partitions.isEmpty
         effectiveSessions = sessions.map { session in
-            guard let e = edits.effective(segments: session.segments, calories: session.caloriesBurned, sessionID: session.id)
-            else { return session }
             var s = session
+            // ponytail: summaries recomputed from the inline route on every rebuild (memory only, never saved);
+            // B3 stores them with the session and drops this.
+            if s.routeSummary == nil, let route = s.inlineRoute { s.routeSummary = RouteSummary(points: route) }
+            guard !noEdits,
+                  let e = edits.effective(segments: session.segments, calories: session.caloriesBurned, sessionID: session.id)
+            else { return s }
             s.segments = e.segments
             s.caloriesBurned = e.calories
             return s
         }
+    }
+
+    /// The stored route of a session. Screens read points only through this (list screens use `routeSummary`).
+    /// For now it is the inline route held in memory; part B3 moves stored routes to `routes/<id>.json`.
+    func route(for id: UUID) async -> [RoutePoint]? {
+        sessions.first { $0.id == id }?.inlineRoute
     }
 
     #if DEBUG

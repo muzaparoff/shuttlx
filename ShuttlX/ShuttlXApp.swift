@@ -561,6 +561,7 @@ enum ShuttlXDemoData {
             let ang = f * 2 * .pi
             return RoutePoint(latitude: 52.2053 + 0.006 * sin(ang) + 0.001 * sin(3 * ang),
                               longitude: 0.1218 + 0.011 * (cos(ang) - 1) / 2 * 2,
+                              altitude: 14 + 9 * sin(2 * ang) + 3 * sin(5 * ang),
                               timestamp: start.addingTimeInterval(total * f))
         }
         var morning = TrainingSession(startDate: start, endDate: cursor, duration: total, averageHeartRate: 138,
@@ -598,7 +599,8 @@ enum ShuttlXDemoData {
                 case .walk:  lat = 52.2000 + 0.0022 * sin(a); lon = 0.1300 + 0.0032 * (cos(a) - 1)
                 case .line:  lat = 52.2250 + 0.020 * f + 0.001 * sin(8 * a); lon = 0.1350 + 0.004 * sin(a)
                 }
-                return RoutePoint(latitude: lat, longitude: lon, timestamp: start.addingTimeInterval(duration * f))
+                return RoutePoint(latitude: lat, longitude: lon, altitude: 14 + 9 * sin(2 * a) + 3 * sin(5 * a),
+                                  timestamp: start.addingTimeInterval(duration * f))
             }
         }
         var out: [TrainingSession] = []
