@@ -1189,7 +1189,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.watchkitapp;
@@ -1278,7 +1278,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1489,7 +1489,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX;
@@ -1581,7 +1581,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1610,7 +1610,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
@@ -1694,7 +1694,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXLiveActivity;
 				PROVISIONING_PROFILE_SPECIFIER = "ShuttlX LiveActivity AppStore";
@@ -1835,7 +1835,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
@@ -1920,7 +1920,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.ShuttlXWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -2005,7 +2005,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = ShuttlXWatchWidget;
@@ -2087,7 +2087,7 @@
 					"@executable_path/Frameworks",
 					"@executable_path/../../Frameworks",
 				);
-				MARKETING_VERSION = 1.10.2;
+				MARKETING_VERSION = 1.11.0;
 				CODE_SIGN_IDENTITY = "Apple Distribution";
 				PRODUCT_BUNDLE_IDENTIFIER = com.shuttlx.ShuttlX.watchkitapp.ShuttlXWatchWidgets;
 				PRODUCT_NAME = "$(TARGET_NAME)";
