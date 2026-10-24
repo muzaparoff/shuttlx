@@ -29,7 +29,7 @@ final class WorkoutPersistence: Sendable {
     /// written route file stays.
     func checkpoint(_ session: TrainingSession, route: [RoutePoint]?, autoPauseReason: String? = nil, phoneSessionID: String? = nil) {
         var session = session
-        session.route = nil
+        session.inlineRoute = nil
         queue.async { [logger] in
             // Sidecars (not TrainingSession fields): the model is duplicated per
             // target and these only matter for resuming after a crash.
@@ -64,11 +64,11 @@ final class WorkoutPersistence: Sendable {
             let data = try Data(contentsOf: backupURL)
             var session = try JSONDecoder().decode(TrainingSession.self, from: data)
             // Backups from older builds carry the route inline.
-            if session.route == nil, let routeURL = Self.routeURL(),
+            if session.inlineRoute == nil, let routeURL = Self.routeURL(),
                let routeData = try? Data(contentsOf: routeURL),
                let route = try? JSONDecoder().decode(RouteBackup.self, from: routeData),
                route.sessionID == session.id, !route.points.isEmpty {
-                session.route = route.points
+                session.inlineRoute = route.points
             }
             logger.info("Recovered crashed workout backup: \(Int(session.duration))s")
             return session

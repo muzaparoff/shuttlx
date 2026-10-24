@@ -364,7 +364,7 @@ final class iPhoneWorkoutController: ObservableObject {
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: [],
-            route: routePoints.isEmpty ? nil : routePoints,
+            inlineRoute: routePoints.isEmpty ? nil : routePoints,
             kmSplits: nil
         )
         if mode == .interval {

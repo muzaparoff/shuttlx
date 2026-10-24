@@ -298,7 +298,7 @@ enum AnalyticsEngine {
         var sessionCount = 0
 
         for session in sessions {
-            guard let route = session.route else { continue }
+            guard let route = session.inlineRoute else { continue }
             let altitudes = route.compactMap(\.altitude)
             guard altitudes.count >= 2 else { continue }
 
@@ -333,10 +333,10 @@ enum AnalyticsEngine {
         sessions
             .sorted { $0.startDate > $1.startDate }
             .first { session in
-                guard let route = session.route else { return false }
+                guard let route = session.inlineRoute else { return false }
                 return route.contains { $0.altitude != nil }
             }?
-            .route
+            .inlineRoute
     }
 
     // MARK: - Private Helpers

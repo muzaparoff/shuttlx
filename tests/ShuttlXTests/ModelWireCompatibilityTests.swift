@@ -45,7 +45,7 @@ final class ModelWireCompatibilityTests: XCTestCase {
 
     func testSessionFixtureIsFullyPopulated() throws {
         let s = try JSONDecoder().decode(TrainingSession.self, from: Self.fixture("session_v1"))
-        XCTAssertEqual(s.route?.count, 2)
+        XCTAssertEqual(s.inlineRoute?.count, 2)
         XCTAssertEqual(s.completedIntervalResults?.map(\.intervalType), [.work, .rest])
         XCTAssertEqual(s.recoveryReport?.averageHRR1, 22)
         XCTAssertEqual(s.kmSplits?.count, 1)
@@ -55,6 +55,37 @@ final class ModelWireCompatibilityTests: XCTestCase {
         XCTAssertEqual(s.pausedPeakHeartRate, 125)
         XCTAssertEqual(s.segments.count, 2)
         XCTAssertEqual(s.displayName, "Run/Walk 6x")
+    }
+
+    func testInlineRouteIsEncodedAsRoute() throws {
+        let s = try JSONDecoder().decode(TrainingSession.self, from: Self.fixture("session_v1"))
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(s)) as? [String: Any])
+        XCTAssertEqual((json["route"] as? [Any])?.count, 2)
+        XCTAssertNil(json["inlineRoute"])
+    }
+
+    /// TrainingSession has explicit CodingKeys: a stored property missing from them is silently not stored.
+    /// Every stored property must be in the fixture (all set) or be `routeSummary` (added after it).
+    func testEveryStoredPropertyHasAJSONKey() throws {
+        let s = try JSONDecoder().decode(TrainingSession.self, from: Self.fixture("session_v1"))
+        let fixtureKeys = try XCTUnwrap(JSONSerialization.jsonObject(with: Self.fixture("session_v1")) as? [String: Any]).keys
+        let properties = Mirror(reflecting: s).children.compactMap(\.label).map { $0 == "inlineRoute" ? "route" : $0 }
+        XCTAssertEqual(Set(properties), Set(fixtureKeys).union(["routeSummary"]))
+    }
+
+    func testNilRouteSummaryIsNotEncoded() throws {
+        let s = try JSONDecoder().decode(TrainingSession.self, from: Self.fixture("session_v1"))
+        XCTAssertNil(s.routeSummary)
+        let json = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(s)) as? [String: Any])
+        XCTAssertFalse(json.keys.contains("routeSummary"))
+    }
+
+    func testRouteSummaryRoundTrips() throws {
+        var s = try JSONDecoder().decode(TrainingSession.self, from: Self.fixture("session_v1"))
+        s.routeSummary = RouteSummary(points: s.inlineRoute ?? [])
+        XCTAssertNotNil(s.routeSummary)
+        let back = try JSONDecoder().decode(TrainingSession.self, from: JSONEncoder().encode(s))
+        XCTAssertEqual(back.routeSummary, s.routeSummary)
     }
 
     func testIntervalTypeRawValuesArePinned() {

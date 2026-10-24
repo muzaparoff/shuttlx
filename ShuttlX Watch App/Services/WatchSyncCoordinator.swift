@@ -311,7 +311,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                     guard let self = self else { return }
                     // Field-evidence hook: this line identifies the payload size and the
                     // channel actually chosen. Grep "Session payload:" in a watch sysdiagnose.
-                    self.logger.info("Session payload: \(payloadSize) bytes base64 (\(sessionData.count) B raw, \(session.route?.count ?? 0) route points) → \(channel == .fileTransfer ? "transferFile" : "userInfo+message")")
+                    self.logger.info("Session payload: \(payloadSize) bytes base64 (\(sessionData.count) B raw, \(session.inlineRoute?.count ?? 0) route points) → \(channel == .fileTransfer ? "transferFile" : "userInfo+message")")
                     switch channel {
                     case .fileTransfer:
                         self.sendSessionViaFileTransfer(session, sessionData: sessionData)

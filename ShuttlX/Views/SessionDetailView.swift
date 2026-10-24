@@ -27,7 +27,7 @@ struct SessionDetailView: View {
         ScrollViewReader { proxy in
         ScrollView {
             VStack(spacing: 20) {
-                if let route = session.route, !route.isEmpty {
+                if let route = session.inlineRoute, !route.isEmpty {
                     RouteMapView(route: route, segments: segments, kmSplits: session.kmSplits,
                                  showsHeader: false, height: 320)
                 }
@@ -259,7 +259,7 @@ struct SessionDetailView: View {
                 ActivitySegment(activityType: .running, startDate: Date().addingTimeInterval(-1500), endDate: Date().addingTimeInterval(-900), averageHeartRate: 158, estimatedCalories: 165, activeEnergyCalories: 172),
                 ActivitySegment(activityType: .walking, startDate: Date().addingTimeInterval(-900), endDate: Date(), averageHeartRate: 121, estimatedCalories: 55, activeEnergyCalories: 68)
             ],
-            route: [
+            inlineRoute: [
                 RoutePoint(latitude: 55.7558, longitude: 37.6173, timestamp: Date().addingTimeInterval(-1800)),
                 RoutePoint(latitude: 55.7562, longitude: 37.6183, timestamp: Date().addingTimeInterval(-1600)),
                 RoutePoint(latitude: 55.7570, longitude: 37.6200, timestamp: Date().addingTimeInterval(-1400)),

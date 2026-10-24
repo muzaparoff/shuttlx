@@ -2087,7 +2087,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
-            route: nil,
+            inlineRoute: nil,
             kmSplits: backupSplits,
             averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
             maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil
@@ -2321,7 +2321,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         pedometerDistanceKm = backup?.distance ?? 0
         totalDistance = pedometerDistanceKm
         hkDistanceKm = 0
-        routePoints = backup?.route ?? []
+        routePoints = backup?.inlineRoute ?? []
         // Re-seed both counters from the saved km crossings (miles are interpolated
         // between them); the first update after the kill gap records but does not tap.
         resetSplits()
@@ -2492,7 +2492,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             distance: totalDistance > 0 ? totalDistance : nil,
             totalSteps: totalSteps > 0 ? totalSteps : nil,
             segments: segmentsCopy,
-            route: routePoints.isEmpty ? nil : routePoints,
+            inlineRoute: routePoints.isEmpty ? nil : routePoints,
             kmSplits: splits,
             averageCadence: cadenceSampleCount > 0 ? cadenceSampleSum / Double(cadenceSampleCount) : nil,
             maxCadence: maxCadenceValue > 0 ? maxCadenceValue : nil

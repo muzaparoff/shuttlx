@@ -260,7 +260,7 @@ struct ShuttlXApp: App {
                         deepLinkRouter.pendingSessionID = m.id
                     }
                     if env["SHUTTLX_DEMO_OPEN"] == "1",
-                       let m = demo.first(where: { $0.route != nil && Calendar.current.isDateInToday($0.startDate) }) {
+                       let m = demo.first(where: { $0.inlineRoute != nil && Calendar.current.isDateInToday($0.startDate) }) {
                         deepLinkRouter.pendingSessionID = m.id
                     }
                 }
@@ -564,7 +564,7 @@ enum ShuttlXDemoData {
                               timestamp: start.addingTimeInterval(total * f))
         }
         var morning = TrainingSession(startDate: start, endDate: cursor, duration: total, averageHeartRate: 138,
-                                      maxHeartRate: 171, caloriesBurned: 640, distance: 9.8, segments: segs, route: route)
+                                      maxHeartRate: 171, caloriesBurned: 640, distance: 9.8, segments: segs, inlineRoute: route)
         morning.sportType = .running
         let rideStart = at(17, 40)
         var ride = TrainingSession(startDate: rideStart, endDate: rideStart.addingTimeInterval(45 * 60), duration: 45 * 60,
@@ -630,7 +630,7 @@ enum ShuttlXDemoData {
             }
             var s = TrainingSession(startDate: start, endDate: cursor, duration: total, averageHeartRate: 138,
                                     maxHeartRate: 171, caloriesBurned: total / 60 * 9, distance: km, segments: segs,
-                                    route: route(sp.kind, start: start, duration: total))
+                                    inlineRoute: route(sp.kind, start: start, duration: total))
             s.sportType = sp.kind == .ride ? .cycling : sp.kind == .walk ? .walking : .running
             out.append(s)
         }

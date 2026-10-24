@@ -226,7 +226,7 @@ class PhoneSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate, UNUse
             guard WCPayloadValidation.isSaneSession(startDate: s.startDate, duration: s.duration, distanceKm: s.distance,
                                                     calories: s.caloriesBurned, averageHR: s.averageHeartRate,
                                                     maxHR: s.maxHeartRate, segmentCount: s.segments.count,
-                                                    routeCount: s.route?.count ?? 0) else {
+                                                    routeCount: s.inlineRoute?.count ?? 0) else {
                 log("Session \(s.id) rejected — values out of range (copy kept in rejected_sessions)")
                 logger.error("Rejected watch session \(s.id): duration \(s.duration), distance \(s.distance ?? -1), start \(s.startDate)")
                 quarantine(s)

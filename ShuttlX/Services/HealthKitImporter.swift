@@ -194,7 +194,7 @@ final class HealthKitImporter: ObservableObject {
         session.sportType = sport
         session.importedFromHealth = true
         let route = await loadRoute(for: w)
-        session.route = route.isEmpty ? nil : route
+        session.inlineRoute = route.isEmpty ? nil : route
         return session
     }
 

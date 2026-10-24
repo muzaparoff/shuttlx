@@ -201,7 +201,7 @@ struct TimelineSessionRow: View {
     private func card(_ segs: [ActivitySegment]) -> some View {
         let meta = TodayFormat.meta(session, segs)
         return VStack(spacing: 0) {
-            if let route = session.route, route.count >= 2 {
+            if let route = session.inlineRoute, route.count >= 2 {
                 RouteThumbnail(session: session, segments: segs)
                     .frame(height: 82)
                     .frame(maxWidth: .infinity)
@@ -266,7 +266,7 @@ enum RouteSnapshotCache {
                       size: CGSize = wide) async -> UIImage? {
         let key = "\(session.id)-\(dark)-\(size.width)-\(segments.map(\.activityType.rawValue))" as NSString
         if let hit = cache.object(forKey: key) { return hit }
-        guard let route = session.route, route.count >= 2 else { return nil }
+        guard let route = session.inlineRoute, route.count >= 2 else { return nil }
         // Thumbnails don't need more than ~150 points.
         let step = max(1, route.count / 150)
         let pts = route.enumerated().filter { $0.offset % step == 0 || $0.offset == route.count - 1 }.map(\.element)

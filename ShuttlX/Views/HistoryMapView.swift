@@ -53,7 +53,7 @@ struct HistoryMapView: View {
         return sessions.filter { effectiveActivities($0).contains(filter) }
     }
 
-    private func hasRoute(_ s: TrainingSession) -> Bool { (s.route?.count ?? 0) >= 2 }
+    private func hasRoute(_ s: TrainingSession) -> Bool { (s.inlineRoute?.count ?? 0) >= 2 }
 
     private var routed: [TrainingSession] { visible.filter(hasRoute) }
 
@@ -65,7 +65,7 @@ struct HistoryMapView: View {
 
     /// Splits the (decimated) route by the effective activity at each point's timestamp.
     private func pieces(for s: TrainingSession) -> [RoutePiece] {
-        guard let route = s.route, route.count >= 2 else { return [] }
+        guard let route = s.inlineRoute, route.count >= 2 else { return [] }
         let segs = s.displaySegments()
         let step = max(1, route.count / 200)
         var idx = Array(stride(from: 0, to: route.count, by: step))
@@ -101,10 +101,10 @@ struct HistoryMapView: View {
     private var sameRouteGroups: [[TrainingSession]] {
         var groups: [[TrainingSession]] = []
         for s in routed {
-            guard let start = s.route?.first, let d = s.distance, d > 0 else { continue }
+            guard let start = s.inlineRoute?.first, let d = s.distance, d > 0 else { continue }
             let here = CLLocation(latitude: start.latitude, longitude: start.longitude)
             if let i = groups.firstIndex(where: { g in
-                guard let ref = g.first, let rs = ref.route?.first, let rd = ref.distance else { return false }
+                guard let ref = g.first, let rs = ref.inlineRoute?.first, let rd = ref.distance else { return false }
                 return here.distance(from: CLLocation(latitude: rs.latitude, longitude: rs.longitude)) <= 150
                     && abs(d - rd) <= 0.15 * rd
             }) {
@@ -121,7 +121,7 @@ struct HistoryMapView: View {
     /// A label every km (every 2nd, 5th... on long routes, so at most ~10 show), built from the GPS points' timestamps.
     /// Pace is the time since the previous label, shown unless the whole session is cycling.
     private func kmMarks(_ s: TrainingSession) -> [KmMark] {
-        guard let route = s.route, route.count >= 2 else { return [] }
+        guard let route = s.inlineRoute, route.count >= 2 else { return [] }
         let unit = DistanceUnit.current
         let total = unit.value(fromKm: s.distance ?? 0)
         let stepKm = max(1, Int((total / 10).rounded(.up)))
@@ -200,7 +200,7 @@ struct HistoryMapView: View {
                     }
                 }
             }
-            if let start = selected?.route?.first {
+            if let start = selected?.inlineRoute?.first {
                 Annotation("Start", coordinate: CLLocationCoordinate2D(latitude: start.latitude, longitude: start.longitude), anchor: .center) {
                     Circle().fill(ShuttlXColor.running).frame(width: 12, height: 12)
                         .overlay(Circle().stroke(.white, lineWidth: 2))
@@ -323,7 +323,7 @@ struct HistoryMapView: View {
         let list = selected.map { [$0] } ?? routed
         var rect = MKMapRect.null
         for s in list {
-            for p in s.route ?? [] {
+            for p in s.inlineRoute ?? [] {
                 let pt = MKMapPoint(CLLocationCoordinate2D(latitude: p.latitude, longitude: p.longitude))
                 rect = rect.union(MKMapRect(origin: pt, size: MKMapSize(width: 0, height: 0)))
             }

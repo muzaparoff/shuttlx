@@ -66,7 +66,10 @@ public struct TrainingSession: Identifiable, Codable, Hashable, Sendable {
     public var distance: Double?
     public var totalSteps: Int?
     public var segments: [ActivitySegment]
-    public var route: [RoutePoint]?
+    /// The route when it travels inside this value (WatchConnectivity, CloudKit, inbox, checkpoints, the
+    /// watch store). JSON key stays "route". On the iPhone, stored sessions will drop it once routes live
+    /// in `routes/<id>.json` (plan 2026-10 part B); read stored routes through DataManager, not this.
+    public var inlineRoute: [RoutePoint]?
     public var kmSplits: [KmSplitData]?
 
     // Interval workout fields
@@ -110,10 +113,52 @@ public struct TrainingSession: Identifiable, Codable, Hashable, Sendable {
     // (it never arrived over WatchConnectivity). Nil for everything else.
     public var importedFromHealth: Bool?
 
+    // Point count, start point and elevation of the route (plan 2026-10 part B). Nil = legacy or not computed
+    // yet; nil is not encoded, so the JSON of a session without it is unchanged.
+    public var routeSummary: RouteSummary?
+
     // Legacy fields for backward compatibility with old data
     public var programID: UUID?
     public var programName: String?
     public var completedIntervals: [LegacyCompletedInterval]?
+
+    // Every stored property, by its JSON key (pinned by ModelWireCompatibilityTests). A new property must be
+    // added here too, or it is silently not stored.
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case startDate
+        case endDate
+        case duration
+        case averageHeartRate
+        case maxHeartRate
+        case caloriesBurned
+        case distance
+        case totalSteps
+        case segments
+        case inlineRoute = "route"
+        case kmSplits
+        case templateID
+        case completedIntervalResults
+        case modifiedDate
+        case sportType
+        case planID
+        case planDayIndex
+        case deviceID
+        case deviceName
+        case estimatedCalories
+        case averageCadence
+        case maxCadence
+        case sessionMode
+        case recoveryReport
+        case autoEnded
+        case effortRPE
+        case pausedPeakHeartRate
+        case importedFromHealth
+        case routeSummary
+        case programID
+        case programName
+        case completedIntervals
+    }
 
     public var displayName: String {
         sessionDisplayName(programName: programName, sessionMode: sessionMode, sportType: sportType)
@@ -158,7 +203,7 @@ public struct TrainingSession: Identifiable, Codable, Hashable, Sendable {
         distance: Double? = nil,
         totalSteps: Int? = nil,
         segments: [ActivitySegment] = [],
-        route: [RoutePoint]? = nil,
+        inlineRoute: [RoutePoint]? = nil,
         kmSplits: [KmSplitData]? = nil,
         averageCadence: Double? = nil,
         maxCadence: Int? = nil
@@ -173,7 +218,7 @@ public struct TrainingSession: Identifiable, Codable, Hashable, Sendable {
         self.distance = distance
         self.totalSteps = totalSteps
         self.segments = segments
-        self.route = route
+        self.inlineRoute = inlineRoute
         self.kmSplits = kmSplits
         self.averageCadence = averageCadence
         self.maxCadence = maxCadence

@@ -44,8 +44,9 @@ The watch still runs its own `Services/IntervalEngine.swift` and `RecoverySegmen
 | ThemeID | `Shared/ThemeID.swift` | `valid` = `["clean"]`; unknown saved or synced ids fall back to clean |
 | SpeedActivityClassifier (+ `Hysteresis`) | `Shared/ActivityClassifier.swift` | GPS speed + cadence → running / walking / cycling. 30 s min window; 60 s hold into or out of cycling, 30 s otherwise. Named apart from the watch-only `ActivityClassifier` |
 | FormattingUtils | `Shared/FormattingUtils.swift` | |
-| TrainingSession (+HRRCapture/RecoveryReport/CompletedInterval/LegacyCompletedInterval/KmSplitData) | `Shared/TrainingSession.swift` | Optional `effortRPE` (watch effort; iOS dedups by id), `autoEnded` (safety-prompt timeout), `pausedPeakHeartRate` (highest HR read while paused; `maxHeartRate` and `averageHeartRate` count active time only), `importedFromHealth` |
+| TrainingSession (+HRRCapture/RecoveryReport/CompletedInterval/LegacyCompletedInterval/KmSplitData) | `Shared/TrainingSession.swift` | Explicit `CodingKeys` (a new stored property must be added there, `testEveryStoredPropertyHasAJSONKey` checks it). `inlineRoute` is encoded as `"route"` (renamed in part B1; stored iPhone routes move to `routes/<id>.json` in B3). Optional `routeSummary` (`Shared/RouteSummary.swift`, nil is not encoded). Optional `effortRPE` (watch effort; iOS dedups by id), `autoEnded` (safety-prompt timeout), `pausedPeakHeartRate` (highest HR read while paused; `maxHeartRate` and `averageHeartRate` count active time only), `importedFromHealth` |
 | WorkoutTemplate (+IntervalStep) | `Shared/WorkoutTemplate.swift` | Steps use the package `IntervalType` (`displayName` lives on it; the app enum is gone) |
+| RouteStore | `Shared/RouteStore.swift` | One `[RoutePoint]` file per session id in a directory; missing or corrupt reads as nil. Not wired yet (B3) |
 | SessionHeadline | `Shared/SessionHeadline.swift` | Decodable slim view of a session for widgets (no route); decode with `LenientJSON.decodeArray`, apply Fix a part with `SegmentEdits.effective` |
 
 **Wire format is pinned**: `ModelWireCompatibilityTests` decodes `tests/ShuttlXTests/Fixtures/session_v1.json`
