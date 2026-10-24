@@ -59,7 +59,7 @@ struct iPhoneWorkoutTimerView: View {
                  ? "Save this workout to your history? Your Apple Watch stops too, and its recording is the one kept."
                  : "Save this workout to your history?")
         }
-        .alert("Discard workout?", isPresented: $showingCancelConfirmation) {
+        .confirmationDialog("Discard workout?", isPresented: $showingCancelConfirmation, titleVisibility: .visible) {
             Button("Discard", role: .destructive) {
                 controller.cancel()
                 dismiss()
@@ -67,8 +67,8 @@ struct iPhoneWorkoutTimerView: View {
             Button("Keep going", role: .cancel) {}
         } message: {
             Text(controller.watchLinked
-                 ? "This ends the workout without saving. Your Apple Watch discards its recording too."
-                 : "This will end the workout without saving.")
+                 ? "This workout will not be saved. Your Apple Watch discards its recording too."
+                 : "This workout will not be saved.")
         }
     }
 
@@ -101,20 +101,15 @@ struct iPhoneWorkoutTimerView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
             Spacer()
-            Menu {
-                Button(role: .destructive) {
-                    showingCancelConfirmation = true
-                } label: {
-                    Label("Discard workout", systemImage: "trash")
-                }
+            Button {
+                showingCancelConfirmation = true
             } label: {
-                Image(systemName: "ellipsis.circle")
-                    .font(.title2)
-                    .frame(width: 44, height: 44)
-                    .foregroundStyle(ShuttlXColor.textSecondary)
+                Label("Discard workout", systemImage: "trash")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(ShuttlXColor.ctaDestructive)
+                    .frame(minHeight: 44)
             }
-            .accessibilityLabel("More")
-            .accessibilityHint("Discard workout without saving")
+            .accessibilityLabel("Discard workout")
         }
     }
 

@@ -70,7 +70,7 @@ enum HelpContent {
                 HelpStep(icon: "iphone.and.arrow.right.inward",
                          text: "The completed session appears on your iPhone in the History tab within moments."),
                 HelpStep(icon: "iphone",
-                         text: "If you start a workout on the iPhone, the Watch starts too. Pause, resume and End & Save on the iPhone reach the Watch (Discard is in the … menu at the top of the timer), and the Watch recording is the one kept in History. If the Watch recording never arrives, the iPhone recording stays."),
+                         text: "If you start a workout on the iPhone, the Watch starts too. Pause, resume and End & Save on the iPhone reach the Watch (Discard is the red Discard workout button at the top of the timer), and the Watch recording is the one kept in History. If the Watch recording never arrives, the iPhone recording stays."),
                 HelpStep(icon: "location",
                          text: "Outdoor workouts started on the iPhone keep tracking your route when the screen is off. The iPhone shows a blue location indicator while it does."),
             ]),

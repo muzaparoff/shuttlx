@@ -6,9 +6,8 @@ appId: ${APP_ID}
 - runFlow: ../common/motion-prompt.yaml
 - assertVisible: "ELAPSED"
 - extendedWaitUntil: { visible: "Pause workout", timeout: 10000 }
-- tapOn: "More"
 - tapOn: "Discard workout"
-- extendedWaitUntil: { visible: "Discard workout?", timeout: 5000 }
+- extendedWaitUntil: { visible: "Discard workout\\?", timeout: 5000 }
 - tapOn: "Discard"
 - runFlow: ../common/motion-prompt.yaml
 - assertNotVisible: "ELAPSED"
