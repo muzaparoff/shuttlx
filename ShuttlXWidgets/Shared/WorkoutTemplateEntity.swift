@@ -1,4 +1,5 @@
 import AppIntents
+import ShuttlXShared
 
 /// `AppEntity` wrapper around `WorkoutTemplate` for W1's `AppIntentConfiguration`
 /// picker. Snapshotted (name/summary/icon) at query time rather than holding

@@ -1,6 +1,7 @@
 import Foundation
 import HealthKit
 import os.log
+import ShuttlXShared
 
 /// Heart-rate line for the session detail. `TrainingSession` stores no samples (no model or payload
 /// growth), so the line is read from Health for the session's time range and bucketed to ~150 points.

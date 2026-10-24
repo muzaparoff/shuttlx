@@ -1,6 +1,7 @@
 import Foundation
 import CloudKit
 import os.log
+import ShuttlXShared
 
 @MainActor
 class CloudKitSyncManager: ObservableObject {

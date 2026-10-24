@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import ShuttlXShared
 
 struct LastWorkoutComplicationProvider: TimelineProvider {
     func placeholder(in context: Context) -> LastWorkoutEntry {
@@ -19,7 +20,7 @@ struct LastWorkoutComplicationProvider: TimelineProvider {
     private func makeEntry() -> LastWorkoutEntry {
         // Prefer today's session, fall back to last session
         let todaySession = WatchWidgetDataProvider.todaySession()
-        let session: TrainingSession
+        let session: SessionHeadline
         let isToday: Bool
 
         if let today = todaySession {

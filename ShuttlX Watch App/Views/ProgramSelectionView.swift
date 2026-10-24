@@ -1,6 +1,7 @@
 import SwiftUI
 import os.log
 import WatchConnectivity
+import ShuttlXShared
 
 /// Watch home: the two programs. Run/Walk = the big Start (free run, finds run and
 /// walk itself); Mixed = the interval programs list. Gym Recovery stays started

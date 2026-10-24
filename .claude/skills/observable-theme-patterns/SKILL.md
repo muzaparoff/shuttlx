@@ -25,7 +25,6 @@ iPhone `selectTheme(id)` → App Group UserDefaults `selectedThemeID` → `sendT
 
 - [ ] `ShuttlX/Theme/` and `ShuttlX Watch App/Theme/` are hand-mirrored — every theme change must update BOTH. When reviewing, diff the counterpart file for drift.
 - [ ] Theme dispatch switches (e.g. `ThemedCompletionBadge`) must cover every id in `ThemeID.valid` (`Shared/ThemeID.swift`; currently only `clean`). A missing case silently falls back to Clean — when adding a theme, grep for every `switch` on theme id in BOTH targets.
-- [ ] TrainingSession/WorkoutTemplate are also duplicated per target — keep byte-identical (watch-parity guard test in `swift test`).
 
 ## Design-system compliance on themed surfaces
 

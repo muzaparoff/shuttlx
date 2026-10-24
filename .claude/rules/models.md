@@ -6,12 +6,14 @@ globs:
 
 # Model Rules
 
-## Where models live (post-consolidation, July 2026)
+## Where models live (October 2026)
 
-Most models are single-sourced in the **ShuttlXShared** package (`Shared/`) and
-imported by all targets via `import ShuttlXShared`. Only two models remain
-duplicated per target until the Phase 4 engine unification
-(see `docs/plans/2026-07-codebase-refactor-plan.md`).
+Every model is single-sourced in the **ShuttlXShared** package (`Shared/`) and
+imported by all targets via `import ShuttlXShared` (no `@_exported import`).
+`TrainingSession` and `WorkoutTemplate` were the last per-target copies; they moved
+in Wave 4 Part A (`docs/plans/2026-10-model-unification-and-route-files.md`).
+The watch still runs its own `Services/IntervalEngine.swift` and `RecoverySegmenter.swift`
+(rest of Phase 4, not done).
 
 ## Package models (single source of truth — edit `Shared/`, add `public` to new API)
 
@@ -42,19 +44,16 @@ duplicated per target until the Phase 4 engine unification
 | ThemeID | `Shared/ThemeID.swift` | `valid` = `["clean"]`; unknown saved or synced ids fall back to clean |
 | SpeedActivityClassifier (+ `Hysteresis`) | `Shared/ActivityClassifier.swift` | GPS speed + cadence → running / walking / cycling. 30 s min window; 60 s hold into or out of cycling, 30 s otherwise. Named apart from the watch-only `ActivityClassifier` |
 | FormattingUtils | `Shared/FormattingUtils.swift` | |
+| TrainingSession (+HRRCapture/RecoveryReport/CompletedInterval/LegacyCompletedInterval/KmSplitData) | `Shared/TrainingSession.swift` | Optional `effortRPE` (watch effort; iOS dedups by id), `autoEnded` (safety-prompt timeout), `pausedPeakHeartRate` (highest HR read while paused; `maxHeartRate` and `averageHeartRate` count active time only), `importedFromHealth` |
+| WorkoutTemplate (+IntervalStep) | `Shared/WorkoutTemplate.swift` | Steps use the package `IntervalType` (`displayName` lives on it; the app enum is gone) |
+| SessionHeadline | `Shared/SessionHeadline.swift` | Decodable slim view of a session for widgets (no route); decode with `LenientJSON.decodeArray`, apply Fix a part with `SegmentEdits.effective` |
+
+**Wire format is pinned**: `ModelWireCompatibilityTests` decodes `tests/ShuttlXTests/Fixtures/session_v1.json`
+and `template_v1.json` (written by the pre-move models) and requires a byte-equal JSON object on re-encode.
+Renaming a stored property changes the JSON key: add an explicit `CodingKeys` entry instead.
 
 Also in the package: `IntervalEngine` (canonical, consumed by iOS only for now),
 `RecoverySegmenter`, `HapticPlayer`.
-
-## Still duplicated per target (update BOTH copies; Phase 4 will unify)
-
-| Model | Why blocked |
-|-------|------------|
-| TrainingSession | references `IntervalType`/`CompletedInterval` which collide with the package engine's types |
-| WorkoutTemplate | defines the app-side `IntervalType` — collides with `ShuttlXShared.IntervalType` |
-
-`TrainingSession` also carries `effortRPE: Int?` (watch post-workout effort, both copies). It usually stays on the watch copy; iOS dedups by id. Also optional in both copies: `autoEnded` (safety-prompt timeout) and `pausedPeakHeartRate` (peak HR read while paused, kept out of the active peak).
-`TrainingSession.pausedPeakHeartRate: Double?` (both copies): the highest HR read while paused; `maxHeartRate` and `averageHeartRate` count active time only.
 
 ## Per-target theme extensions (intentionally different per platform)
 

@@ -2,7 +2,8 @@
 
 ## Code Quality
 - [x] ~~Package.swift declares `ShuttlXShared` but `Shared/` dir doesn't exist~~ — fixed: `Shared/` exists (31 files)
-- [ ] Models still duplicated: `TrainingSession` and `WorkoutTemplate` per target (IntervalType name collision); watch still has its own IntervalEngine (Phase 4)
+- [x] Models unified: `TrainingSession` and `WorkoutTemplate` live in `Shared/` (Wave 4 Part A, Oct 2026)
+- [ ] Watch still has its own IntervalEngine and RecoverySegmenter (rest of Phase 4)
 - [ ] Debug views (SyncDebugView, DebugView): SyncDebugView is reached through a hidden 1 s long-press on Settings → About, not `#if DEBUG`
 - [ ] `print()` statements should use `os.log` / `Logger`
 - [ ] CloudKit sync: no push-triggered sync, no conflict resolution UI (just newest-wins)

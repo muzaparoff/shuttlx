@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct TemplateListView: View {
     @EnvironmentObject var templateManager: TemplateManager

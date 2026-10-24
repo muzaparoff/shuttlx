@@ -2,6 +2,7 @@ import Foundation
 import StoreKit
 import UIKit
 import os.log
+import ShuttlXShared
 
 /// Guarded App Store rating prompt.
 ///

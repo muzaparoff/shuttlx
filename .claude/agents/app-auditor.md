@@ -17,7 +17,7 @@ You are a senior iOS/watchOS product engineer doing a pre-release audit of Shutt
 - Targets: iOS app (59 files), watchOS app (36 files), Live Activity extension (3 files), Widgets extension (3 files)
 - Storage: JSON in App Group container, WatchConnectivity sync, HealthKit, CloudKit
 - Theme system: 1 theme (Clean) — reduced from 7 in July 2026, Mixtape deleted Oct 2026
-- Models duplicated between iOS (`ShuttlX/Models/`) and watchOS (`ShuttlX Watch App/Models/`)
+- Models single-sourced in the ShuttlXShared package (`Shared/`)
 
 ## Your Job
 

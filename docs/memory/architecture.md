@@ -6,31 +6,31 @@ type: project
 
 # ShuttlX Architecture
 
-## File Map (175 Swift files, ~27,700 non-blank lines, tests excluded)
+## File Map (178 Swift files, ~27,700 non-blank lines, tests excluded)
 
 Counts from ripgrep, October 2026 (v1.10.1 file counts; line counts not re-measured since v1.10.0). Per-file line counts were dropped: the old table was stale. Key file sizes: WatchWorkoutManager ~2,290, PhoneSyncCoordinator ~1,115, WatchSyncCoordinator ~1,220, TrainingView ~166 (+Metrics ~700, +Controls, +Running).
 
-### iOS target (84 files, ~15,200 lines)
+### iOS target (83 files, ~15,200 lines)
 
 - **App**: ShuttlXApp.swift (DeepLinkRouter, onOpenURL), ContentView.swift (tabs Today · History · Trends · Settings)
 - **Services/**: DataManager (sessions + `effectiveSessions`), PhoneSyncCoordinator (WCSession), iPhoneWorkoutController, iOSHeartRateMonitor, AnalyticsEngine, CloudKitSyncManager, AuthenticationManager, LiveActivityManager, TemplateManager, PlanManager, DeviceManager, WidgetDataProvider (reads sessions.json + segment_overrides.json), SegmentOverrideStore, SessionHeartRateLoader, HealthKitImporter, CalorieEstimationEngine (iOS overloads), FeedbackPrompt, iPhoneHapticPlayer
-- **Models/**: TrainingSession, WorkoutTemplate, WorkoutSport+Theme, DetectedActivity+Theme, ChartData, WorkoutActivityAttributes, WorkoutControlIntents (Live Activity intents)
+- **Models/**: WorkoutSport+Theme, DetectedActivity+Theme, ChartData, WorkoutActivityAttributes, WorkoutControlIntents (Live Activity intents)
 - **Theme/**: ShuttlXTheme, ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, ThemeChartStyle, TimelineStyle, IntervalTypeThemeHelpers, Themes/CleanTheme
 - **Components/**: DayRibbon (ActivityRibbon, SessionPartRow), MetricCard, ActivityBadge, PressScaleButtonStyle
 - **Views/**: DashboardView (Today), Dashboard/TodayTimeline, Dashboard/LiveWorkoutCard, Workout/iPhoneWorkoutTimerView, HistoryView (calendar / list / map), HistoryMapView, SessionDetailView (FixPartSheet, HR chart), AnalyticsView, Charts/ (TrendsOverview, WeekStripView, CalendarHeatmapCard, ScrubTimelineHeroCard, WeeklyCarouselCard, ComparisonSplitCard, HRZoneChart, PaceTrendChart, WeeklyDistanceChart, ThemedLineChart, ThemedBarChart), SettingsView, HeartAlertsView ("Heart & alerts"), OnboardingView, HelpView, ProgramsTabView (pushed from Today), ProgramListView, TemplateListView, TemplateEditorView, PlanListView, PlanDetailView, PlanEditorView, RouteMapView, LiveRouteView, ElevationProfileView, IntervalResultsView, DeviceListView (no entry point in code), DevicePickerView, SignInView (unreferenced), DebugView, SyncDebugView
 
-### watchOS target (40 files, ~8,900 lines)
+### watchOS target (38 files, ~8,900 lines)
 
 - **App**: ShuttlXWatchApp.swift (WatchAppDelegate, launch recovery), ContentView.swift
 - **Services/**: WatchWorkoutManager (+LocationDelegate, +HealthKitDelegates), WatchSyncCoordinator, IntervalEngine (watch copy), ActivityClassifier (watch-only), RecoverySegmenter, HealthKitAuthService, WorkoutPersistence, LiveMetricsBroadcaster, SegmentMetricsLedger, WorkoutPhaseHealthKitWriter, SegmentHygiene
-- **Models/**: TrainingSession, WorkoutTemplate, WorkoutSport+Theme, DetectedActivity+Theme
+- **Models/**: WorkoutSport+Theme, DetectedActivity+Theme (TrainingSession and WorkoutTemplate live in `Shared/` since Wave 4)
 - **Theme/**: ShuttlXTheme, ThemeManager, AppTheme, ThemeColors, ThemeFonts, ThemeEffects, ThemeModifiers, ThemeAssets, Themes/CleanTheme
 - **Components/**: MetricCard, WatchScreenParts
 - **Views/**: TrainingView (+Controls, +Metrics, +Running), SafetyPromptView (SafetyPromptView, UnusualHeartRateView, WatchPromptCard), WorkoutSummaryView (EffortView), ProgramSelectionView (ProgramsListView), RecoveryWorkoutView, IntervalStepWash, DebugView
 
-### Shared (SPM `ShuttlXShared`, 31 files, ~2,000 lines)
+### Shared (SPM `ShuttlXShared`, 37 files, ~2,000 lines)
 
-- **Models**: ActivitySegment, DetectedActivity, RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport, SessionMode, HeartRateZoneCalculator, HeartSafetySettings, HeartAlertEvaluator, ActivityClassifier (SpeedActivityClassifier), SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, ThemeID, FormattingUtils, CalorieEstimationEngine, DistanceFusion, MedicineVault, PausedSample, PhoneDiscardRule, WCPayloadValidation, WatchLinkRules
+- **Models**: TrainingSession, WorkoutTemplate, SessionHeadline (widget slim decode), ActivitySegment, DetectedActivity, RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport, SessionMode, HeartRateZoneCalculator, HeartSafetySettings, HeartAlertEvaluator, ActivityClassifier (SpeedActivityClassifier), SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, ThemeID, FormattingUtils, CalorieEstimationEngine, DistanceFusion, MedicineVault, PausedSample, PhoneDiscardRule, WCPayloadValidation, WatchLinkRules
 - **Engines**: IntervalEngine (canonical, iOS consumes it), RecoverySegmenter, HapticPlayer
 
 ### Live Activity (3 files) and widgets

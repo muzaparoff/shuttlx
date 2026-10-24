@@ -1,6 +1,7 @@
 import WidgetKit
 import SwiftUI
 import AppIntents
+import ShuttlXShared
 
 // MARK: - W1: Start Training (configurable)
 //

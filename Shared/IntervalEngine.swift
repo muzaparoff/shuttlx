@@ -175,6 +175,15 @@ public enum IntervalType: String, Sendable, Codable, CaseIterable {
     case work
     case rest
     case cooldown
+
+    public var displayName: String {
+        switch self {
+        case .warmup: return "Warm Up"
+        case .work: return "Work"
+        case .rest: return "Rest"
+        case .cooldown: return "Cool Down"
+        }
+    }
 }
 
 /// Mirror of the app's `CompletedInterval` — produced by `IntervalEngine.stop()`.

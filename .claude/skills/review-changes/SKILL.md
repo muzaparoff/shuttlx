@@ -32,7 +32,7 @@ Review current `git diff` against ShuttlX project conventions.
 - [ ] WatchConnectivity calls check `isReachable`
 
 ### Models
-- [ ] If a model was changed, BOTH copies updated (iOS + watchOS)
+- [ ] If a model was changed: edited in `Shared/` only, new properties optional/defaulted, `ModelWireCompatibilityTests` still green
 - [ ] New properties have default values
 - [ ] Models are `Codable` + `Identifiable`
 

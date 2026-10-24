@@ -1,33 +1,13 @@
 import Foundation
-import ShuttlXShared
-
-// MARK: - Interval Types
-
-enum IntervalType: String, Codable, CaseIterable {
-    case warmup
-    case work
-    case rest
-    case cooldown
-
-    var displayName: String {
-        switch self {
-        case .warmup: return "Warm Up"
-        case .work: return "Work"
-        case .rest: return "Rest"
-        case .cooldown: return "Cool Down"
-        }
-    }
-}
-
 // MARK: - Interval Step
 
-struct IntervalStep: Identifiable, Codable, Hashable {
-    let id: UUID
-    var type: IntervalType
-    var duration: TimeInterval
-    var label: String?
+public struct IntervalStep: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public var type: IntervalType
+    public var duration: TimeInterval
+    public var label: String?
 
-    init(id: UUID = UUID(), type: IntervalType, duration: TimeInterval, label: String? = nil) {
+    public init(id: UUID = UUID(), type: IntervalType, duration: TimeInterval, label: String? = nil) {
         self.id = id
         self.type = type
         self.duration = duration
@@ -37,20 +17,20 @@ struct IntervalStep: Identifiable, Codable, Hashable {
 
 // MARK: - Workout Template
 
-struct WorkoutTemplate: Identifiable, Codable, Hashable {
-    let id: UUID
-    var name: String
-    var intervals: [IntervalStep]
-    var repeatCount: Int
-    var warmup: IntervalStep?
-    var cooldown: IntervalStep?
-    var createdDate: Date
-    var modifiedDate: Date?
-    var sportType: WorkoutSport?
-    var deviceID: UUID?
-    var deviceName: String?
+public struct WorkoutTemplate: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public var name: String
+    public var intervals: [IntervalStep]
+    public var repeatCount: Int
+    public var warmup: IntervalStep?
+    public var cooldown: IntervalStep?
+    public var createdDate: Date
+    public var modifiedDate: Date?
+    public var sportType: WorkoutSport?
+    public var deviceID: UUID?
+    public var deviceName: String?
 
-    init(
+    public init(
         id: UUID = UUID(),
         name: String,
         intervals: [IntervalStep],
@@ -71,7 +51,7 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
     }
 
     /// Flattened list of all steps in execution order
-    var allSteps: [IntervalStep] {
+    public var allSteps: [IntervalStep] {
         var steps: [IntervalStep] = []
         if let w = warmup { steps.append(w) }
         for _ in 0..<repeatCount {
@@ -82,12 +62,12 @@ struct WorkoutTemplate: Identifiable, Codable, Hashable {
     }
 
     /// Total workout duration in seconds
-    var totalDuration: TimeInterval {
+    public var totalDuration: TimeInterval {
         allSteps.reduce(0) { $0 + $1.duration }
     }
 
     /// Summary text like "8× Work/Rest · 12m"
-    var summaryText: String {
+    public var summaryText: String {
         let minutes = Int(totalDuration) / 60
         let workCount = intervals.filter { $0.type == .work }.count * repeatCount
         if workCount > 0 {

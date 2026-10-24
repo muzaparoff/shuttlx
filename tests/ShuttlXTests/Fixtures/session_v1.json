@@ -1,0 +1,122 @@
+{
+  "autoEnded" : false,
+  "averageCadence" : 128.5,
+  "averageHeartRate" : 112,
+  "caloriesBurned" : 210,
+  "completedIntervalResults" : [
+    {
+      "actualDuration" : 61,
+      "averageHeartRate" : 131,
+      "distance" : 0.18,
+      "id" : "77E0CAF2-6D02-479F-941A-E999747377B3",
+      "intervalType" : "work",
+      "label" : "Run",
+      "targetDuration" : 60
+    },
+    {
+      "actualDuration" : 90,
+      "averageHeartRate" : 104,
+      "distance" : 0.1,
+      "id" : "F8BAB709-2F93-477E-96D9-7AF498B0320B",
+      "intervalType" : "rest",
+      "targetDuration" : 90
+    }
+  ],
+  "completedIntervals" : [
+    {
+      "actualDuration" : 60,
+      "averageHeartRate" : 130,
+      "id" : "154232C4-8897-428C-9384-B7F2727DA8E2",
+      "intervalID" : "00000000-0000-4000-8000-000000000102",
+      "maxHeartRate" : 139
+    }
+  ],
+  "deviceID" : "00000000-0000-4000-8000-000000000105",
+  "deviceName" : "Treadmill",
+  "distance" : 3.2,
+  "duration" : 1750,
+  "effortRPE" : 5,
+  "endDate" : 783001800,
+  "estimatedCalories" : 205,
+  "id" : "00000000-0000-4000-8000-000000000200",
+  "importedFromHealth" : false,
+  "kmSplits" : [
+    {
+      "cumulativeTime" : 540,
+      "id" : "C166E0CB-DC7A-4245-B612-A1A30F617F60",
+      "kmNumber" : 1,
+      "splitTime" : 540
+    }
+  ],
+  "maxCadence" : 162,
+  "maxHeartRate" : 141,
+  "modifiedDate" : 783002000,
+  "pausedPeakHeartRate" : 125,
+  "planDayIndex" : 4,
+  "planID" : "00000000-0000-4000-8000-000000000300",
+  "programID" : "00000000-0000-4000-8000-000000000400",
+  "programName" : "Run\/Walk 6x",
+  "recoveryReport" : {
+    "avgRestHR" : 108,
+    "avgWorkHR" : 130,
+    "captures" : [
+      {
+        "hrAt120s" : 104,
+        "hrAt60s" : 118,
+        "id" : "88AFEBD6-388F-4840-98E6-C2DF3CDC47AC",
+        "peakHR" : 140,
+        "restDuration" : 120,
+        "restEntryTime" : 783000360,
+        "setNumber" : 1
+      }
+    ],
+    "sets" : 1
+  },
+  "route" : [
+    {
+      "altitude" : 1.5,
+      "horizontalAccuracy" : 5,
+      "latitude" : 52.37,
+      "longitude" : 4.89,
+      "speed" : 1.4,
+      "timestamp" : 783000000
+    },
+    {
+      "altitude" : 2,
+      "horizontalAccuracy" : 4,
+      "latitude" : 52.3702,
+      "longitude" : 4.8903,
+      "speed" : 2.9,
+      "timestamp" : 783000005
+    }
+  ],
+  "segments" : [
+    {
+      "activeEnergyCalories" : 19.25,
+      "activityType" : "walking",
+      "averageHeartRate" : 98,
+      "distance" : 0.4,
+      "endDate" : 783000300,
+      "estimatedCalories" : 21.5,
+      "id" : "00000000-0000-4000-8000-000000000201",
+      "startDate" : 783000000,
+      "steps" : 520
+    },
+    {
+      "activeEnergyCalories" : 11.5,
+      "activityType" : "running",
+      "averageHeartRate" : 131,
+      "distance" : 0.18,
+      "endDate" : 783000360,
+      "estimatedCalories" : 12,
+      "id" : "00000000-0000-4000-8000-000000000202",
+      "startDate" : 783000300,
+      "steps" : 170
+    }
+  ],
+  "sessionMode" : "gymRecovery",
+  "sportType" : "running",
+  "startDate" : 783000000,
+  "templateID" : "00000000-0000-4000-8000-000000000100",
+  "totalSteps" : 4100
+}

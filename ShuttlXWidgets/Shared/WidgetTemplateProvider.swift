@@ -1,5 +1,6 @@
 import Foundation
 import os.log
+import ShuttlXShared
 
 /// Reads `workout_templates.json` from the App Group container for widget
 /// use (W1 Start Training configuration picker + tap-to-start resolution).

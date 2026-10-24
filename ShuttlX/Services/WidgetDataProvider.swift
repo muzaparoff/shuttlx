@@ -8,10 +8,10 @@ enum WidgetDataProvider {
     private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX", category: "WidgetDataProvider")
 
     /// Cached sessions — stored pre-sorted descending by startDate to avoid re-sorting on every call
-    private static var cachedSessions: [TrainingSession]?
+    private static var cachedSessions: [SessionHeadline]?
     private static var cacheTimestamp: Date?
 
-    static func loadSessions() -> [TrainingSession] {
+    static func loadSessions() -> [SessionHeadline] {
         // Return cache if fresh (within 5 seconds — covers a single timeline build)
         if let cached = cachedSessions, let ts = cacheTimestamp, Date().timeIntervalSince(ts) < 5 {
             return cached
@@ -27,15 +27,21 @@ enum WidgetDataProvider {
             return []
         }
 
-        var decoded: [TrainingSession] = []
+        var decoded: [SessionHeadline] = []
         let coordinator = NSFileCoordinator()
         var coordinatorError: NSError?
         coordinator.coordinate(readingItemAt: url, options: [], error: &coordinatorError) { readURL in
             do {
                 let data = try Data(contentsOf: readURL)
-                decoded = try JSONDecoder().decode([TrainingSession].self, from: data)
+                let result = LenientJSON.decodeArray(SessionHeadline.self, from: data)
+                if result.wholeFileUndecodable {
+                    logger.error("Widget: sessions.json is unreadable")
+                } else if result.skipped > 0 {
+                    logger.error("Widget: skipped \(result.skipped) unreadable sessions")
+                }
+                decoded = result.elements
             } catch {
-                logger.error("Widget: Failed to decode sessions: \(error.localizedDescription)")
+                logger.error("Widget: Failed to read sessions: \(error.localizedDescription)")
             }
         }
         if let coordinatorError {
@@ -70,15 +76,15 @@ enum WidgetDataProvider {
 
     /// Returns sessions sorted descending by startDate (most recent first).
     /// Prefer this over `loadSessions()` when you need ordering.
-    static func sortedSessions() -> [TrainingSession] {
+    static func sortedSessions() -> [SessionHeadline] {
         loadSessions() // already sorted at cache time
     }
 
-    static func lastSession() -> TrainingSession? {
+    static func lastSession() -> SessionHeadline? {
         sortedSessions().first
     }
 
-    static func todaySession() -> TrainingSession? {
+    static func todaySession() -> SessionHeadline? {
         let cal = Calendar.current
         return sortedSessions()
             .first { cal.isDateInToday($0.startDate) }

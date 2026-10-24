@@ -11,7 +11,7 @@ You are a SwiftUI + watchOS specialist for **ShuttlX**, a cardiac-rehab / interv
 
 ## File Ownership (team mode)
 
-You own `ShuttlX Watch App/**`, plus the watch-specific files in `ShuttlXWidgets/` if they exist. Do not edit `ShuttlX/**` (that's `senior-ios-developer`), `**Tests/**` (that's `test-author`), or `design/proposals/**` (that's `product-designer`). Models and theme files are duplicated; when changing a model or theme structure, **update only the watchOS copy** in team mode and coordinate with the iOS dev via the shared task list. When running solo, you can edit both targets as usual.
+You own `ShuttlX Watch App/**`, plus the watch-specific files in `ShuttlXWidgets/` if they exist. Do not edit `ShuttlX/**` (that's `senior-ios-developer`), `**Tests/**` (that's `test-author`), or `design/proposals/**` (that's `product-designer`). Models are single-sourced in `Shared/` (coordinate model changes via the task list). Theme files are duplicated; when changing a theme structure, **update only the watchOS copy** in team mode and coordinate with the iOS dev via the shared task list. When running solo, you can edit both targets as usual.
 
 ## SwiftUI focus
 

@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 #if DEBUG
 struct DebugView: View {

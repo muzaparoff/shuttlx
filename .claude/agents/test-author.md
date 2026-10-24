@@ -67,7 +67,7 @@ Reply with: number of test files added, number of tests, and `xcodebuild test` e
 
 ## ShuttlX-Specific Notes
 
-- Models are duplicated between iOS and watchOS — write tests for BOTH copies if testing a model
+- Models live in `Shared/`, so `swift test` covers them; the JSON wire format is pinned by `ModelWireCompatibilityTests` + `Fixtures/`
 - Themes: test `ShuttlXColor.forHRZone(bpm)` returns the expected color band
 - `@Observable ThemeManager` — test `selectTheme(id)` updates `current` and the bridge enums
 - `@MainActor` services — annotate tests `@MainActor` or use `MainActor.run { ... }`

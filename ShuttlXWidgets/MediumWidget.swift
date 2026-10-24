@@ -46,7 +46,7 @@ struct MediumWidgetProvider: TimelineProvider {
 
         // Prefer today's session, fall back to last session
         let todaySession = WidgetDataProvider.todaySession()
-        let session: TrainingSession
+        let session: SessionHeadline
         let isToday: Bool
 
         if let today = todaySession {

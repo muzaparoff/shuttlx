@@ -33,7 +33,9 @@ let package = Package(
             // (e.g., build_and_test_both_platforms.sh) — we nest the SPM tests
             // under `tests/ShuttlXTests/` so they coexist. Using the existing
             // casing keeps the path stable across case-sensitive filesystems.
-            path: "tests/ShuttlXTests"
+            path: "tests/ShuttlXTests",
+            // Golden JSON written by the pre-unification models (wire-format pins).
+            resources: [.copy("Fixtures")]
         ),
     ]
 )

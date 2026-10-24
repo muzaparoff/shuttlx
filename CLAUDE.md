@@ -12,18 +12,18 @@ The watchOS target remains Apple-frameworks-only.
 - **Team**: `83HPSY452Y`
 - **App Group**: `group.com.shuttlx.shared`
 - **CloudKit**: `iCloud.com.shuttlx.app`
-- **Codebase**: ~27,700 non-blank lines across 175 Swift files (app targets + Shared, tests excluded)
+- **Codebase**: ~27,700 non-blank lines across 178 Swift files (app targets + Shared, tests excluded)
 - **CI**: thin GitHub Actions callers of the shared `muzaparoff/appstore-kit@v1` reusable workflows (`.github/workflows/`): `test.yml` runs CI on push to main and auto-bumps the semver tag from conventional commits; the `v*` tag triggers `deploy.yml` → archive, sign, upload to TestFlight. `store-release.yml` (manual) stages the App Store listing from `fastlane/metadata` + `marketing/appstore/final`. Fastlane the tool is NOT part of CI; `scripts/bump_version.sh` no longer exists — versioning is fully automatic
 
 ## Targets
 
 | Target | Scheme | Files | Key Files |
 |--------|--------|-------|-----------|
-| iOS | `ShuttlX` | 84 | PhoneSyncCoordinator (~1,115), DashboardView + TodayTimeline (Today), HistoryView + HistoryMapView, SessionDetailView (FixPartSheet), DayRibbon (`Components/`), AnalyticsView + Charts/ (TrendsOverview), DataManager (effectiveSessions), SettingsView + HeartAlertsView, DeviceManager, CalorieEstimationEngine (MET math in Shared), ThemeManager + theme files, HelpView |
-| watchOS | `ShuttlX Watch App` | 40 | WatchWorkoutManager (~2,290, being decomposed — extracted: HealthKitAuthService, WorkoutPersistence, LiveMetricsBroadcaster, SegmentMetricsLedger, WorkoutPhaseHealthKitWriter, SegmentHygiene, +LocationDelegate, +HealthKitDelegates), WatchSyncCoordinator (~1,220), TrainingView (166 + 3 extension files: +Controls, +Metrics, +Running), WorkoutSummaryView (EffortView), ThemeManager + theme files |
-| Shared (SPM) | `ShuttlXShared` | 31 | models (see `.claude/rules/models.md`), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer, SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, HeartAlertEvaluator, HeartSafetySettings, SpeedActivityClassifier, ThemeID, DistanceFusion, MedicineVault, PausedSample, PhoneDiscardRule, WCPayloadValidation, WatchLinkRules |
+| iOS | `ShuttlX` | 83 | PhoneSyncCoordinator (~1,115), DashboardView + TodayTimeline (Today), HistoryView + HistoryMapView, SessionDetailView (FixPartSheet), DayRibbon (`Components/`), AnalyticsView + Charts/ (TrendsOverview), DataManager (effectiveSessions), SettingsView + HeartAlertsView, DeviceManager, CalorieEstimationEngine (MET math in Shared), ThemeManager + theme files, HelpView |
+| watchOS | `ShuttlX Watch App` | 38 | WatchWorkoutManager (~2,290, being decomposed — extracted: HealthKitAuthService, WorkoutPersistence, LiveMetricsBroadcaster, SegmentMetricsLedger, WorkoutPhaseHealthKitWriter, SegmentHygiene, +LocationDelegate, +HealthKitDelegates), WatchSyncCoordinator (~1,220), TrainingView (166 + 3 extension files: +Controls, +Metrics, +Running), WorkoutSummaryView (EffortView), ThemeManager + theme files |
+| Shared (SPM) | `ShuttlXShared` | 37 | models incl. TrainingSession + WorkoutTemplate (see `.claude/rules/models.md`), SessionHeadline (slim widget decode), IntervalEngine (canonical), RecoverySegmenter, HapticPlayer, SegmentEdits, PendingSessionEffort, HealthImportRules, SafetyPromptSchedule, HeartAlertEvaluator, HeartSafetySettings, SpeedActivityClassifier, ThemeID, DistanceFusion, MedicineVault, PausedSample, PhoneDiscardRule, WCPayloadValidation, WatchLinkRules |
 | Live Activity | `ShuttlXLiveActivity` | 3 | ShuttlXLiveActivity (Dynamic Island + lock screen regions), LockScreenView |
-| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget (read `sessions.json` + `segment_overrides.json` via WidgetDataProvider; Fix a part applied through `SegmentEdits.effective`) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
+| iOS Widgets | `ShuttlXWidgets` | 11 | StartTrainingWidget (W1, configurable), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget (read `sessions.json` as `SessionHeadline` + `segment_overrides.json` via WidgetDataProvider; Fix a part applied through `SegmentEdits.effective`) + Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents) |
 | watchOS Widgets | `ShuttlXWatchWidgets` | 6 | QuickStartComplication (now with accessoryCorner), LastWorkoutComplication, WeeklyProgressComplication, TodayWorkoutComplication, WatchWidgetDataProvider |
 
 ## Build Commands
@@ -144,7 +144,7 @@ Theme sync:
 - **Plan before implementing**: analyze codebase, identify affected files, create a plan, then implement
 - **Multi-theme-ready UI**: only Clean ships (Mixtape deleted Oct 2026), so Settings has no theme picker; the theme system still supports adding more
 - **In-app Help**: `ShuttlX/Views/HelpView.swift`, reachable from Settings → Help — update it when user-facing flows change
-- **Most models live in the ShuttlXShared package** (`Shared/`) — single source of truth, `import ShuttlXShared`. Only `TrainingSession` and `WorkoutTemplate` remain duplicated per target (update BOTH copies) until the Phase 4 engine unification — see `.claude/rules/models.md`
+- **All models live in the ShuttlXShared package** (`Shared/`) — single source of truth, `import ShuttlXShared` (no `@_exported import`). `TrainingSession` and `WorkoutTemplate` moved there in October 2026 (Wave 4 Part A); their JSON is pinned by `ModelWireCompatibilityTests` against `tests/ShuttlXTests/Fixtures/` — see `.claude/rules/models.md`
 - **Theme files are duplicated** between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — update BOTH when changing
 - **Always update docs**: when adding/changing features, update CLAUDE.md, relevant `.claude/rules/`, `.claude/agents/`, `.claude/skills/`, and memory files to reflect the current architecture and status
 

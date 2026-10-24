@@ -17,7 +17,7 @@ You are a senior software architect specializing in iOS/watchOS apps built by so
 - Solo developer — no team, no backend, no external services beyond Apple APIs
 - Storage: JSON in App Group container, WatchConnectivity sync, HealthKit, CloudKit
 - Theme system: 1 theme (Clean) via `@Observable ThemeManager`, bridge enums
-- Models duplicated between iOS and watchOS targets
+- Models single-sourced in the ShuttlXShared package (`Shared/`); theme files still mirrored per target
 - CI: GitHub Actions → App Store Connect → TestFlight (auto on push to main)
 
 ## Your Responsibilities

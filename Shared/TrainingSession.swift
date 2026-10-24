@@ -1,25 +1,22 @@
 import Foundation
-import ShuttlXShared
-
-// MARK: - Session Mode
 
 // MARK: - Heart-Rate Recovery Capture (one rest period in a gym recovery session)
 
-struct HRRCapture: Identifiable, Codable, Hashable {
-    let id: UUID
-    var setNumber: Int
-    var peakHR: Int            // highest HR recorded during the preceding work set
-    var hrAt60s: Int?          // HR at +60s after rest entry (used to compute HRR-1)
-    var hrAt120s: Int?         // HR at +120s after rest entry (used to compute HRR-2)
-    var restDuration: TimeInterval
-    var restEntryTime: Date
+public struct HRRCapture: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public var setNumber: Int
+    public var peakHR: Int            // highest HR recorded during the preceding work set
+    public var hrAt60s: Int?          // HR at +60s after rest entry (used to compute HRR-1)
+    public var hrAt120s: Int?         // HR at +120s after rest entry (used to compute HRR-2)
+    public var restDuration: TimeInterval
+    public var restEntryTime: Date
 
     /// HRR-1: drop from peak to HR at 1 minute into rest. Higher = better fitness.
-    var hrr1: Int? { hrAt60s.map { max(0, peakHR - $0) } }
+    public var hrr1: Int? { hrAt60s.map { max(0, peakHR - $0) } }
     /// HRR-2: drop from peak to HR at 2 minutes into rest.
-    var hrr2: Int? { hrAt120s.map { max(0, peakHR - $0) } }
+    public var hrr2: Int? { hrAt120s.map { max(0, peakHR - $0) } }
 
-    init(setNumber: Int, peakHR: Int, restEntryTime: Date) {
+    public init(setNumber: Int, peakHR: Int, restEntryTime: Date) {
         self.id = UUID()
         self.setNumber = setNumber
         self.peakHR = peakHR
@@ -30,19 +27,26 @@ struct HRRCapture: Identifiable, Codable, Hashable {
 
 // MARK: - Recovery Report (attached to a completed gym recovery session)
 
-struct RecoveryReport: Codable, Hashable {
-    var sets: Int
-    var captures: [HRRCapture]
-    var avgWorkHR: Double?
-    var avgRestHR: Double?
+public struct RecoveryReport: Codable, Hashable, Sendable {
+    public var sets: Int
+    public var captures: [HRRCapture]
+    public var avgWorkHR: Double?
+    public var avgRestHR: Double?
 
-    var averageHRR1: Double? {
+    public init(sets: Int, captures: [HRRCapture], avgWorkHR: Double? = nil, avgRestHR: Double? = nil) {
+        self.sets = sets
+        self.captures = captures
+        self.avgWorkHR = avgWorkHR
+        self.avgRestHR = avgRestHR
+    }
+
+    public var averageHRR1: Double? {
         let values = captures.compactMap { $0.hrr1 }
         guard !values.isEmpty else { return nil }
         return Double(values.reduce(0, +)) / Double(values.count)
     }
 
-    var averageHRR2: Double? {
+    public var averageHRR2: Double? {
         let values = captures.compactMap { $0.hrr2 }
         guard !values.isEmpty else { return nil }
         return Double(values.reduce(0, +)) / Double(values.count)
@@ -51,77 +55,75 @@ struct RecoveryReport: Codable, Hashable {
 
 // MARK: - Training Session
 
-struct TrainingSession: Identifiable, Codable, Hashable {
-    let id: UUID
-    var startDate: Date
-    var endDate: Date?
-    var duration: TimeInterval
-    var averageHeartRate: Double?
-    var maxHeartRate: Double?
-    var caloriesBurned: Double?
-    var distance: Double?
-    var totalSteps: Int?
-    var segments: [ActivitySegment]
-    var route: [RoutePoint]?
-    var kmSplits: [KmSplitData]?
+public struct TrainingSession: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public var startDate: Date
+    public var endDate: Date?
+    public var duration: TimeInterval
+    public var averageHeartRate: Double?
+    public var maxHeartRate: Double?
+    public var caloriesBurned: Double?
+    public var distance: Double?
+    public var totalSteps: Int?
+    public var segments: [ActivitySegment]
+    public var route: [RoutePoint]?
+    public var kmSplits: [KmSplitData]?
 
     // Interval workout fields
-    var templateID: UUID?
-    var completedIntervalResults: [CompletedInterval]?
+    public var templateID: UUID?
+    public var completedIntervalResults: [CompletedInterval]?
 
     // CloudKit sync
-    var modifiedDate: Date?
+    public var modifiedDate: Date?
 
     // Multi-sport & training plan
-    var sportType: WorkoutSport?
-    var planID: UUID?
-    var planDayIndex: Int?
+    public var sportType: WorkoutSport?
+    public var planID: UUID?
+    public var planDayIndex: Int?
 
     // Exercise device & calorie estimation
-    var deviceID: UUID?
-    var deviceName: String?
-    var estimatedCalories: Double?
+    public var deviceID: UUID?
+    public var deviceName: String?
+    public var estimatedCalories: Double?
 
     // Cadence (steps per minute); paused time excluded from average. Nil for legacy sessions.
-    var averageCadence: Double?
-    var maxCadence: Int?
+    public var averageCadence: Double?
+    public var maxCadence: Int?
 
     // Gym heart-recovery monitoring
-    var sessionMode: SessionMode?
-    var recoveryReport: RecoveryReport?
+    public var sessionMode: SessionMode?
+    public var recoveryReport: RecoveryReport?
 
     // True when the watch ended the workout because the long-workout safety
     // prompt went unanswered. Nil for every user-ended and legacy session.
-    var autoEnded: Bool?
+    public var autoEnded: Bool?
 
     // Post-workout effort 0-10 (watch summary prompt). Nil = skipped / legacy.
     // App-only: never written to Health metadata.
-    var effortRPE: Int?
+    public var effortRPE: Int?
 
     // Highest heart rate read while the workout was paused. Kept apart from
     // maxHeartRate (which, like the average, counts active time only). Nil = legacy.
-    var pausedPeakHeartRate: Double?
+    public var pausedPeakHeartRate: Double?
 
     // True when the iPhone built this session from an Apple Health workout
     // (it never arrived over WatchConnectivity). Nil for everything else.
-    var importedFromHealth: Bool?
+    public var importedFromHealth: Bool?
 
     // Legacy fields for backward compatibility with old data
-    var programID: UUID?
-    var programName: String?
-    var completedIntervals: [LegacyCompletedInterval]?
+    public var programID: UUID?
+    public var programName: String?
+    public var completedIntervals: [LegacyCompletedInterval]?
 
-    var displayName: String {
-        if let name = programName { return name }
-        if sessionMode == .gymRecovery { return "Gym Recovery" }
-        return sportType?.displayName ?? "Run+Walk"
+    public var displayName: String {
+        sessionDisplayName(programName: programName, sessionMode: sessionMode, sportType: sportType)
     }
 
-    var totalRunningDuration: TimeInterval {
+    public var totalRunningDuration: TimeInterval {
         segments.filter { $0.activityType == .running }.reduce(0) { $0 + $1.duration }
     }
 
-    var totalWalkingDuration: TimeInterval {
+    public var totalWalkingDuration: TimeInterval {
         segments.filter { $0.activityType == .walking }.reduce(0) { $0 + $1.duration }
     }
 
@@ -137,15 +139,15 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     }
 
     /// ShuttlX's MET estimate for the run phases.
-    var totalRunningCalories: Double? { segmentCalories(.running) { $0.estimatedCalories } }
+    public var totalRunningCalories: Double? { segmentCalories(.running) { $0.estimatedCalories } }
     /// ShuttlX's MET estimate for the walk phases.
-    var totalWalkingCalories: Double? { segmentCalories(.walking) { $0.estimatedCalories } }
+    public var totalWalkingCalories: Double? { segmentCalories(.walking) { $0.estimatedCalories } }
     /// Apple's `activeEnergyBurned` attributed to the run phases.
-    var totalRunningActiveEnergy: Double? { segmentCalories(.running) { $0.activeEnergyCalories } }
+    public var totalRunningActiveEnergy: Double? { segmentCalories(.running) { $0.activeEnergyCalories } }
     /// Apple's `activeEnergyBurned` attributed to the walk phases.
-    var totalWalkingActiveEnergy: Double? { segmentCalories(.walking) { $0.activeEnergyCalories } }
+    public var totalWalkingActiveEnergy: Double? { segmentCalories(.walking) { $0.activeEnergyCalories } }
 
-    init(
+    public init(
         id: UUID = UUID(),
         startDate: Date,
         endDate: Date? = nil,
@@ -183,28 +185,28 @@ struct TrainingSession: Identifiable, Codable, Hashable {
     }
 
     // Hashable
-    func hash(into hasher: inout Hasher) {
+    public func hash(into hasher: inout Hasher) {
         hasher.combine(id)
         hasher.combine(startDate)
     }
 
     // Identity plus the fields "Fix a part" can change. SwiftUI skips re-rendering a view whose Equatable
     // input compares equal, so an id-only `==` froze every card after an edit. Hash stays id+start (still consistent).
-    static func == (lhs: TrainingSession, rhs: TrainingSession) -> Bool {
+    public static func == (lhs: TrainingSession, rhs: TrainingSession) -> Bool {
         lhs.id == rhs.id && lhs.startDate == rhs.startDate
             && lhs.segments == rhs.segments && lhs.caloriesBurned == rhs.caloriesBurned
     }
 }
 
 // Keep for backward compatibility with old session data
-struct LegacyCompletedInterval: Identifiable, Codable, Hashable {
-    let id: UUID
-    var intervalID: UUID
-    var actualDuration: TimeInterval
-    var averageHeartRate: Double?
-    var maxHeartRate: Double?
+public struct LegacyCompletedInterval: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public var intervalID: UUID
+    public var actualDuration: TimeInterval
+    public var averageHeartRate: Double?
+    public var maxHeartRate: Double?
 
-    init(intervalID: UUID, actualDuration: TimeInterval, averageHeartRate: Double? = nil, maxHeartRate: Double? = nil) {
+    public init(intervalID: UUID, actualDuration: TimeInterval, averageHeartRate: Double? = nil, maxHeartRate: Double? = nil) {
         self.id = UUID()
         self.intervalID = intervalID
         self.actualDuration = actualDuration
@@ -214,16 +216,16 @@ struct LegacyCompletedInterval: Identifiable, Codable, Hashable {
 }
 
 // Per-interval result from an interval workout
-struct CompletedInterval: Identifiable, Codable, Hashable {
-    let id: UUID
-    var intervalType: IntervalType
-    var label: String?
-    var targetDuration: TimeInterval
-    var actualDuration: TimeInterval
-    var averageHeartRate: Double?
-    var distance: Double?
+public struct CompletedInterval: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public var intervalType: IntervalType
+    public var label: String?
+    public var targetDuration: TimeInterval
+    public var actualDuration: TimeInterval
+    public var averageHeartRate: Double?
+    public var distance: Double?
 
-    init(
+    public init(
         intervalType: IntervalType,
         label: String? = nil,
         targetDuration: TimeInterval,
@@ -241,13 +243,13 @@ struct CompletedInterval: Identifiable, Codable, Hashable {
     }
 }
 
-struct KmSplitData: Identifiable, Codable, Hashable {
-    let id: UUID
-    let kmNumber: Int
-    let splitTime: TimeInterval
-    let cumulativeTime: TimeInterval
+public struct KmSplitData: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
+    public let kmNumber: Int
+    public let splitTime: TimeInterval
+    public let cumulativeTime: TimeInterval
 
-    init(kmNumber: Int, splitTime: TimeInterval, cumulativeTime: TimeInterval) {
+    public init(kmNumber: Int, splitTime: TimeInterval, cumulativeTime: TimeInterval) {
         self.id = UUID()
         self.kmNumber = kmNumber
         self.splitTime = splitTime

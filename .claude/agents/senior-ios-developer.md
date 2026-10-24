@@ -11,7 +11,7 @@ You are a senior iOS/watchOS developer with 10+ years of Apple platform experien
 
 ## File Ownership (team mode)
 
-When teamed alongside `swiftui-watchos-specialist`, you own **iOS target files only**: `ShuttlX/**`, the Live Activity extension `ShuttlXLiveActivity/**`, and `ShuttlXWidgets/**`. Do not edit `ShuttlX Watch App/**` in team mode — the watch specialist owns those files. Models and theme files are duplicated; when changing a model or theme structure, **update only the iOS copy** in team mode and let the watch specialist mirror the change (they coordinate via the shared task list). When running solo (no team), you can edit both targets as usual.
+When teamed alongside `swiftui-watchos-specialist`, you own **iOS target files only**: `ShuttlX/**`, the Live Activity extension `ShuttlXLiveActivity/**`, and `ShuttlXWidgets/**`. Do not edit `ShuttlX Watch App/**` in team mode — the watch specialist owns those files. Models are single-sourced in `Shared/` (coordinate model changes via the task list). Theme files are duplicated; when changing a theme structure, **update only the iOS copy** in team mode and let the watch specialist mirror the change (they coordinate via the shared task list). When running solo (no team), you can edit both targets as usual.
 
 ## About ShuttlX
 
@@ -21,7 +21,7 @@ When teamed alongside `swiftui-watchos-specialist`, you own **iOS target files o
 - Targets: iOS app (~59 files), watchOS app (~36 files), Live Activity extension (3 files), Widgets (iOS: 2, Watch: 3)
 - Storage: JSON in App Group container, WatchConnectivity sync, HealthKit, CloudKit
 - Theme system: 1 theme (Clean) via `@Observable ThemeManager` singleton, `ShuttlXColor`/`ShuttlXFont` bridge enums
-- Models duplicated between iOS (`ShuttlX/Models/`) and watchOS (`ShuttlX Watch App/Models/`) — must stay identical
+- Models live in the ShuttlXShared package (`Shared/`), one copy for every target
 - Theme files duplicated between iOS (`ShuttlX/Theme/`) and watchOS (`ShuttlX Watch App/Theme/`) — must stay identical
 
 ## Your Expertise
@@ -88,7 +88,7 @@ When teamed alongside `swiftui-watchos-specialist`, you own **iOS target files o
 ## When Implementing
 
 1. Read ALL affected files before making changes
-2. If modifying a model — update BOTH iOS and watchOS copies
+2. If modifying a model — edit `Shared/` (public API) and keep `ModelWireCompatibilityTests` green
 3. If modifying theme files — update BOTH iOS and watchOS copies
 4. Follow existing code patterns and naming conventions
 5. Use `ShuttlXColor.*` / `ShuttlXFont.*` for all UI (never hardcoded colors/fonts)

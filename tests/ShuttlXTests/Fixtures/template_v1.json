@@ -1,0 +1,35 @@
+{
+  "cooldown" : {
+    "duration" : 300,
+    "id" : "00000000-0000-4000-8000-000000000104",
+    "label" : "Cool down",
+    "type" : "cooldown"
+  },
+  "createdDate" : 783000000,
+  "deviceID" : "00000000-0000-4000-8000-000000000105",
+  "deviceName" : "Treadmill",
+  "id" : "00000000-0000-4000-8000-000000000100",
+  "intervals" : [
+    {
+      "duration" : 60,
+      "id" : "00000000-0000-4000-8000-000000000102",
+      "label" : "Run",
+      "type" : "work"
+    },
+    {
+      "duration" : 90,
+      "id" : "00000000-0000-4000-8000-000000000103",
+      "type" : "rest"
+    }
+  ],
+  "modifiedDate" : 783003600,
+  "name" : "Run\/Walk 6x",
+  "repeatCount" : 6,
+  "sportType" : "running",
+  "warmup" : {
+    "duration" : 300,
+    "id" : "00000000-0000-4000-8000-000000000101",
+    "label" : "Easy walk",
+    "type" : "warmup"
+  }
+}

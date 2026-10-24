@@ -1,4 +1,5 @@
 import SwiftUI
+import ShuttlXShared
 
 struct WeekStripView: View {
     @Binding var selectedDate: Date

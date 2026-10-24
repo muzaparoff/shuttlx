@@ -2,7 +2,7 @@
 
 ## Quick Reference
 - **App**: Interval training iOS + watchOS companion app (SwiftUI; iOS has TelemetryDeck via SPM only, no RevenueCat/StoreKit code; watch is Apple-frameworks-only)
-- **ShuttlXShared package** (`Shared/`, July 2026): single source for most models (RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport core, SessionMode, ActivitySegment, DetectedActivity, HRZC, FormattingUtils) + canonical IntervalEngine (iOS consumes; watch still on its own engine until Phase 4). TrainingSession + WorkoutTemplate still duplicated per target (IntervalType name collision blocks the move)
+- **ShuttlXShared package** (`Shared/`, July 2026): single source for most models (RoutePoint, TrainingPlan, BuiltInPlans, ExerciseDevice, WorkoutSport core, SessionMode, ActivitySegment, DetectedActivity, HRZC, FormattingUtils) + canonical IntervalEngine (iOS consumes; watch still on its own engine until Phase 4). TrainingSession + WorkoutTemplate moved into `Shared/` in Oct 2026 (Wave 4 Part A; app IntervalType deleted, package one has `displayName`; wire pinned by `ModelWireCompatibilityTests`)
 - **Sync coordinators renamed** (July 2026): iOS `PhoneSyncCoordinator` / watch `WatchSyncCoordinator` (formerly both `SharedDataManager`)
 - **pbxproj quirk**: `ShuttlX/` files need explicit pbxproj refs; `ShuttlX Watch App/` is a synchronized folder (file adds/renames free); `Shared/` is SPM. Filenames with `+` must be quoted in pbxproj paths
 - **Bundle**: `com.shuttlx.ShuttlX` / `com.shuttlx.ShuttlX.watchkitapp`
