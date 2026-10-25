@@ -19,7 +19,7 @@ Apply when writing or reviewing any code touching `WCSession`, `PhoneSyncCoordin
 - [ ] Retrying an operation that failed due to **size** must not retry the same oversized payload — split or reroute first.
 - [ ] Check `isReachable` before `sendMessage`; fall back to `transferUserInfo`.
 - [ ] Retry loops over N pending items must not trigger O(N) full-file re-encodes per tick; batch instead.
-- [ ] Pending queues (`pending_sync_sessions.json`) must be bounded by age or count — never unbounded growth during offline stretches.
+- [ ] Pending queues (watch `pending_sync/`, iOS `pending_sessions/`) must be bounded by age or count — never unbounded growth during offline stretches.
 
 ## Session/data integrity
 

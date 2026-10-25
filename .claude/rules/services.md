@@ -24,6 +24,7 @@ globs:
 - `sessions.json`: only `DataManager` writes it. Other code hands sessions to `DataManager.handleReceivedSessions` (PhoneSyncCoordinator also drops them in the `pending_sessions/` inbox first). Never add a second writer
 - Decode arrays with `LenientJSON.decodeArray`, back up with `StoreFile.backupCorrupt`, write with `StoreFile.writeOptions` (`Shared/StoreSupport.swift`)
 - Local wipes go through `DataManager.wipeLocalUserData`; it sets the `sessionsClearedAt` cutoff and purges the watch
+- Watch unsynced sessions: one file per session in `pending_sync/` (`SessionInbox`, `put` / `add` / `remove`), all on `sessionStoreQueue`; the legacy `pending_sync_sessions.json` is migrated on launch, never replaced by a save (`WatchSyncCoordinator`)
 
 - Never silently fail: use `do/catch` with `os.log` for encode/decode errors
 - Always encode/decode inside `do { try } catch { Logger.error(...) }`

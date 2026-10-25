@@ -92,7 +92,7 @@ bash tests/build_and_test_both_platforms.sh --clean --build
 xcodebuild -project ShuttlX.xcodeproj -scheme ShuttlX -destination 'generic/platform=iOS Simulator' build
 # watchOS only (same rule: destination only, no -sdk)
 xcodebuild -project ShuttlX.xcodeproj -scheme "ShuttlX Watch App" -destination 'generic/platform=watchOS Simulator' build
-# SPM unit tests (188 tests) — also runs in CI test.yml
+# SPM unit tests (261 tests); CI does not run them (run_tests: false)
 swift test
 # E2E Maestro suites (e2e/app.yml: smoke, workout10, discard) via appstore-kit e2e-v2 bin/e2e; JAVA_HOME=/opt/homebrew/opt/openjdk@17
 ```

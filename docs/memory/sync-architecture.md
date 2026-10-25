@@ -47,7 +47,7 @@
   - `broadcastLiveMetricsIfNeeded()` line 396-432 (live metrics, separate channel)
 
 ## Retry & Fallback
-- Watch queues unsent sessions in `pendingSessions` → `pending_sync_sessions.json`
+- Watch queues unsent sessions in `pendingSessions`, one file per session in `pending_sync/` (SessionInbox; the old `pending_sync_sessions.json` migrates on launch)
 - Retries every 15s and on reachability change
 - Local backup: `active_workout_backup.json` saved on pause/crash
 - App Group `sessions.json` readable by both targets

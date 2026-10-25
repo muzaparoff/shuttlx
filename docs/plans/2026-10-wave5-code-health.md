@@ -239,6 +239,10 @@ The watch agent owns steps 2-5 and 7 in sequence. The iOS agent owns 8, 10 and 1
 
 ## 5. Decisions the owner must make
 
+**Answered 2026-10-25: all picks.** C2 option 3 (`@Observable`, then split, gym fix first); 3-2-1 taps on the iPhone too; hosted iOS test target after Part B, CI left as is (`run_tests: false`, no `warnings_gate` for now); Swift 6 mode for Shared only, complete checking for the apps per target; C6 folded into C7; C8 option 2 (per-session files with migration); `HKWorkoutSession` mirroring is a separate future project; four TestFlight builds as in section 3.
+
+**Accepted 2026-10-25 (owner: leave it):** a purge that lands between the watch launch load reading `pending_sync/` and the merge into memory can bring a purged session back in memory and send it once more. The phone's `sessionsClearedAt` cutoff drops it on ingest, so nothing reappears in history.
+
 1. **C2:** move the watch manager to `@Observable` and then split the pages (my pick), or split the pages only and keep `ObservableObject`?
 2. **C4 haptics on the iPhone:** once both platforms share one engine, should the iPhone get the watch's 3-2-1 taps before each step change, or keep its single tap at 5 s? Pick: 3-2-1 on both (one rule). The iPhone also gets the wall-clock countdown; I recommend yes.
 3. **C4 test target and CI:** add the hosted iOS test target after Part B (pick)? Should CI run it and `swift test` (flip `run_tests` in `test.yml`, which costs CI simulator time)?
