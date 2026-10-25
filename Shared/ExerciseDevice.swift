@@ -3,7 +3,7 @@ import ShuttlXShared
 
 // MARK: - Device Category
 
-public enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
+public enum DeviceCategory: String, Codable, CaseIterable, Identifiable, Sendable {
     case treadmill
     case stationaryBike
     case rowingMachine
@@ -47,7 +47,7 @@ public enum DeviceCategory: String, Codable, CaseIterable, Identifiable {
 
 // MARK: - Exercise Device
 
-public struct ExerciseDevice: Identifiable, Codable, Hashable {
+public struct ExerciseDevice: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var name: String
     public var category: DeviceCategory

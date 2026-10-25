@@ -28,8 +28,7 @@ final class WorkoutPersistence: Sendable {
     /// caller passes it at most every 60 s and on pause); otherwise the last
     /// written route file stays.
     func checkpoint(_ session: TrainingSession, route: [RoutePoint]?, autoPauseReason: String? = nil, phoneSessionID: String? = nil) {
-        var session = session
-        session.inlineRoute = nil
+        let session = { var s = session; s.inlineRoute = nil; return s }()
         queue.async { [logger] in
             // Sidecars (not TrainingSession fields): the model is duplicated per
             // target and these only matter for resuming after a crash.

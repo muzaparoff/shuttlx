@@ -3,7 +3,7 @@ import ShuttlXShared
 
 // MARK: - Plan Day
 
-public struct PlanDay: Identifiable, Codable, Hashable {
+public struct PlanDay: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var dayNumber: Int
     public var templateID: UUID?
@@ -26,7 +26,7 @@ public struct PlanDay: Identifiable, Codable, Hashable {
 
 // MARK: - Plan Week
 
-public struct PlanWeek: Identifiable, Codable, Hashable {
+public struct PlanWeek: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var weekNumber: Int
     public var days: [PlanDay]
@@ -42,7 +42,7 @@ public struct PlanWeek: Identifiable, Codable, Hashable {
 
 // MARK: - Training Plan
 
-public struct TrainingPlan: Identifiable, Codable, Hashable {
+public struct TrainingPlan: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var name: String
     public var planDescription: String?
@@ -83,7 +83,7 @@ public struct TrainingPlan: Identifiable, Codable, Hashable {
 
 // MARK: - Plan Progress
 
-public struct PlanProgress: Identifiable, Codable, Hashable {
+public struct PlanProgress: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var planID: UUID
     public var startDate: Date
@@ -99,7 +99,7 @@ public struct PlanProgress: Identifiable, Codable, Hashable {
     }
 }
 
-public struct CompletedPlanDay: Identifiable, Codable, Hashable {
+public struct CompletedPlanDay: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID
     public var weekNumber: Int
     public var dayNumber: Int

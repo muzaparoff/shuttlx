@@ -5,13 +5,11 @@ import ShuttlXShared
 /// `HapticKind` to a UIKit haptic generator. Reuses prepared generators so
 /// the first tap doesn't pay the engine-startup cost.
 @MainActor
-final class iPhoneHapticPlayer: HapticPlayer, @unchecked Sendable {
+final class iPhoneHapticPlayer: HapticPlayer {
     private let lightImpact = UIImpactFeedbackGenerator(style: .light)
     private let mediumImpact = UIImpactFeedbackGenerator(style: .medium)
     private let heavyImpact = UIImpactFeedbackGenerator(style: .heavy)
     private let notification = UINotificationFeedbackGenerator()
-
-    nonisolated init() {}
 
     /// Prepare all generators ahead of an active workout so the first beat
     /// fires with minimal latency. Call once on workout start.

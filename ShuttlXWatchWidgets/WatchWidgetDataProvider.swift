@@ -1,4 +1,5 @@
 import Foundation
+import os
 import os.log
 import ShuttlXShared
 
@@ -8,13 +9,12 @@ enum WatchWidgetDataProvider {
     private static let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchWidgetDataProvider")
 
     /// Cached sessions to avoid re-decoding JSON multiple times per timeline update
-    private static var cachedSessions: [SessionHeadline]?
-    private static var cacheTimestamp: Date?
+    private static let cache = OSAllocatedUnfairLock<(sessions: [SessionHeadline], at: Date)?>(initialState: nil)
 
     static func loadSessions() -> [SessionHeadline] {
         // Return cache if fresh (within 5 seconds — covers a single timeline build)
-        if let cached = cachedSessions, let ts = cacheTimestamp, Date().timeIntervalSince(ts) < 5 {
-            return cached
+        if let hit = cache.withLock({ $0 }), Date().timeIntervalSince(hit.at) < 5 {
+            return hit.sessions
         }
 
         guard let containerURL = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupIdentifier) else {
@@ -49,9 +49,9 @@ enum WatchWidgetDataProvider {
         }
 
         // Sort descending by startDate once at cache time — all callers benefit
-        cachedSessions = decoded.sorted { $0.startDate > $1.startDate }
-        cacheTimestamp = Date()
-        return cachedSessions ?? []
+        let sorted = decoded.sorted { $0.startDate > $1.startDate }
+        cache.withLock { $0 = (sorted, Date()) }
+        return sorted
     }
 
     static func lastSession() -> SessionHeadline? {
