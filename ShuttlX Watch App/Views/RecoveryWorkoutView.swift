@@ -29,6 +29,10 @@ struct RecoveryWorkoutView: View {
         let labelSize    = max(10, h * 0.075)
         let pillSize     = max(11, h * 0.085)
         let buttonHeight = max(36, h * 0.21)
+        #if DEBUG
+        let _ = BodyCounter.hit("RecoveryWorkoutView")
+        let _ = BodyCounter.enabled ? Self._printChanges() : ()
+        #endif
 
         return VStack(spacing: h * 0.018) {
             // Top row — total elapsed left, state pill right.
@@ -78,13 +82,12 @@ struct RecoveryWorkoutView: View {
 
             // Rest state inserts the HRR milestone pills directly under HR.
             if workoutManager.recoveryState == .rest {
-                HStack(spacing: 6) {
-                    milestoneBadge(label: "1:00",
-                                   reached: workoutManager.restElapsedTime >= 60,
-                                   value: workoutManager.latestHRR1)
-                    milestoneBadge(label: "2:00",
-                                   reached: workoutManager.restElapsedTime >= 120,
-                                   value: workoutManager.latestHRR2)
+                WorkoutClockReader(clock: workoutManager.clock) { _ in
+                    let rest = restElapsed
+                    HStack(spacing: 6) {
+                        milestoneBadge(label: "1:00", reached: rest >= 60, value: workoutManager.latestHRR1)
+                        milestoneBadge(label: "2:00", reached: rest >= 120, value: workoutManager.latestHRR2)
+                    }
                 }
             }
 
@@ -116,12 +119,20 @@ struct RecoveryWorkoutView: View {
                 pillSize: pillSize
             )
         case .rest:
-            pillContent(
-                text: "REST · \(FormattingUtils.formatTimer(workoutManager.restElapsedTime))",
-                color: ShuttlXColor.ctaWarning,
-                pillSize: pillSize
-            )
+            WorkoutClockReader(clock: workoutManager.clock) { _ in
+                pillContent(
+                    text: "REST · \(FormattingUtils.formatTimer(restElapsed))",
+                    color: ShuttlXColor.ctaWarning,
+                    pillSize: pillSize
+                )
+            }
         }
+    }
+
+    /// Wall-clock rest time, read inside a 1 Hz `WorkoutClockReader` so only these
+    /// subtrees re-render each second (the manager publishes `restStartTime` once per rest).
+    private var restElapsed: TimeInterval {
+        workoutManager.restStartTime.map { Date().timeIntervalSince($0) } ?? 0
     }
 
     private func pillContent(text: String, color: Color, pillSize: CGFloat) -> some View {

@@ -101,10 +101,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private var activeTemplate: WorkoutTemplate?
 
     // MARK: - Gym Recovery Mode State
+    // Written only when the value changes (`publishRecoveryState`): every @Published write
+    // re-renders every page. The rest clock is computed in the view from `restStartTime`.
     @Published var recoveryState: SegmentState = .idle
-    @Published var restElapsedTime: TimeInterval = 0
-    @Published var stationElapsedTime: TimeInterval = 0
+    @Published private(set) var restStartTime: Date?
     @Published var recoverySetNumber: Int = 0
+    /// Max HR for the segmenter, read once per workout (not from UserDefaults every tick).
+    private var gymMaxHR: Double?
     @Published var currentCapturePeakHR: Int = 0
     @Published var latestHRR1: Int? = nil
     @Published var latestHRR2: Int? = nil
@@ -580,9 +583,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         workoutName = "Gym Recovery"
         recoverySegmenter = RecoverySegmenter(config: SegmenterConfig(profile: .cardiacRehab))
         recoveryState = .idle
-        restElapsedTime = 0
-        stationElapsedTime = 0
+        restStartTime = nil
         recoverySetNumber = 0
+        gymMaxHR = nil
         currentCapturePeakHR = 0
         latestHRR1 = nil
         latestHRR2 = nil
@@ -614,16 +617,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         publishRecoveryState()
     }
 
-    /// Mirror segmenter state into the @Published surface views observe.
-    /// Same shape as the inline block in `updateElapsedTime`, factored out
-    /// so the manual paths can reuse it.
+    /// Mirror segmenter state into the @Published surface views observe
+    /// (per tick and from the manual station buttons). Unchanged values are not written.
     private func publishRecoveryState() {
         guard let segmenter = recoverySegmenter else { return }
-        let now = Date()
-        restElapsedTime = segmenter.restStartTime.map { now.timeIntervalSince($0) } ?? 0
-        stationElapsedTime = segmenter.workStartTime.map { now.timeIntervalSince($0) } ?? 0
-        recoveryState = segmenter.state
-        recoverySetNumber = segmenter.setNumber
+        if restStartTime != segmenter.restStartTime { restStartTime = segmenter.restStartTime }
+        if recoveryState != segmenter.state { recoveryState = segmenter.state }
+        if recoverySetNumber != segmenter.setNumber { recoverySetNumber = segmenter.setNumber }
     }
 
     func pauseWorkout() {
@@ -826,9 +826,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         // Reset gym recovery mode
         recoverySegmenter = nil
         recoveryState = .idle
-        restElapsedTime = 0
-        stationElapsedTime = 0
+        restStartTime = nil
         recoverySetNumber = 0
+        gymMaxHR = nil
         currentCapturePeakHR = 0
         latestHRR1 = nil
         latestHRR2 = nil
@@ -1053,23 +1053,12 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
         // Tick recovery segmenter if in gym recovery mode
         if workoutMode == .gymRecovery, var segmenter = recoverySegmenter {
-            let maxHR = HeartRateZoneCalculator.fromSharedDefaults().estimatedMaxHR
+            let maxHR = gymMaxHR ?? HeartRateZoneCalculator.fromSharedDefaults().estimatedMaxHR
+            gymMaxHR = maxHR
             let events = segmenter.tick(hr: heartRate, activity: currentActivity, maxHR: maxHR, now: Date())
             recoverySegmenter = segmenter
             processRecoveryEvents(events)
-            let now = Date()
-            if let restStart = segmenter.restStartTime {
-                restElapsedTime = now.timeIntervalSince(restStart)
-            } else {
-                restElapsedTime = 0
-            }
-            if let workStart = segmenter.workStartTime {
-                stationElapsedTime = now.timeIntervalSince(workStart)
-            } else {
-                stationElapsedTime = 0
-            }
-            recoveryState = segmenter.state
-            recoverySetNumber = segmenter.setNumber
+            publishRecoveryState()
         }
 
         // Broadcast live metrics to iOS every 3 seconds
@@ -1189,6 +1178,10 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     }
 
     nonisolated private static func requestNotificationPermission() {
+        #if DEBUG
+        // Simulator automation (SHUTTLX_DEBUG_START): no one can answer the prompt, which covers the workout.
+        if ProcessInfo.processInfo.environment["SHUTTLX_DEBUG_START"] != nil { return }
+        #endif
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in }
     }
 
@@ -2415,7 +2408,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
             // The HK callback and the timeout can race; the lock guarantees exactly
             // one resume (a double resume traps).
             let hasResumed = OSAllocatedUnfairLock(initialState: false)
-            let resumeOnce: (HKWorkoutSession?) -> Bool = { session in
+            let resumeOnce: @Sendable (HKWorkoutSession?) -> Bool = { session in
                 let already = hasResumed.withLock { done -> Bool in
                     if done { return true }
                     done = true

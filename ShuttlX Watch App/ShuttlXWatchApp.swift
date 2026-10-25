@@ -171,6 +171,32 @@ struct ShuttlXWatchApp: App {
                     // racing it (which left two live HK sessions and auto-stopped the
                     // new workout ~1 minute in).
                     workoutManager.beginLaunchRecovery()
+                    #if DEBUG
+                    // Simulator automation: SHUTTLX_DEBUG_START=freeRun|gymRecovery starts that
+                    // workout at launch (gym recovery otherwise starts only from the iPhone);
+                    // SHUTTLX_DEBUG_STOP_AFTER=<sec> ends it (Discard path, nothing saved).
+                    let env = ProcessInfo.processInfo.environment
+                    switch env["SHUTTLX_DEBUG_START"] {
+                    case "freeRun": workoutManager.startWorkout()
+                    case "gymRecovery": workoutManager.startGymRecoveryWorkout()
+                    default: break
+                    }
+                    // SHUTTLX_DEBUG_GYM_REST=1: Start Station at 3 s, End Station at 6 s (gym rest state).
+                    if env["SHUTTLX_DEBUG_GYM_REST"] == "1" {
+                        Task {
+                            try? await Task.sleep(for: .seconds(3))
+                            workoutManager.manualStartStation()
+                            try? await Task.sleep(for: .seconds(3))
+                            workoutManager.manualEndStation()
+                        }
+                    }
+                    if let secs = env["SHUTTLX_DEBUG_STOP_AFTER"].flatMap(Double.init) {
+                        Task {
+                            try? await Task.sleep(for: .seconds(secs))
+                            workoutManager.stopWorkout()
+                        }
+                    }
+                    #endif
                 }
     }
 }

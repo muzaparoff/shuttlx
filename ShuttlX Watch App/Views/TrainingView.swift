@@ -34,6 +34,10 @@ struct TrainingView: View {
         // Summary is now shown by ContentView when workoutManager.pendingSummary != nil,
         // which is set BEFORE stopWorkout() (so isWorkoutActive is already false when
         // ContentView reads it — S-1 fix). TrainingView only ever shows the workout UI.
+        #if DEBUG
+        let _ = BodyCounter.hit("TrainingView")
+        let _ = BodyCounter.enabled ? Self._printChanges() : ()
+        #endif
         workoutTabView
     }
 
@@ -56,11 +60,18 @@ struct TrainingView: View {
                     .tag(0)
 
                 if isFreeRunLayout {
+                    #if DEBUG
+                    let _ = BodyCounter.hit("freeRunMetricsPage")
+                    let _ = BodyCounter.hit("controlsTab")
+                    #endif
                     freeRunMetricsPage
                         .tag(1)
                     controlsTab
                         .tag(2)
                 } else {
+                    #if DEBUG
+                    let _ = BodyCounter.hit("controlsTab")
+                    #endif
                     controlsTab
                         .tag(1)
                 }
@@ -165,8 +176,14 @@ struct TrainingView: View {
             RecoveryWorkoutView()
                 .environmentObject(workoutManager)
         } else if isFreeRunLayout {
+            #if DEBUG
+            let _ = BodyCounter.hit("runningPage")
+            #endif
             runningPage
         } else {
+            #if DEBUG
+            let _ = BodyCounter.hit("fullWorkoutDisplayTab")
+            #endif
             fullWorkoutDisplayTab
         }
     }
