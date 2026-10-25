@@ -153,7 +153,7 @@ public enum StoreFile {
 /// Sessions that reached the phone but are not yet in `sessions.json`. One file per session id
 /// (`<uuid>.json`), so adding never reads or rewrites other entries and a duplicate id is a no-op.
 /// `PhoneSyncCoordinator` adds, `DataManager` (the only `sessions.json` writer) drains and acknowledges.
-public struct SessionInbox<T: Codable & Identifiable> where T.ID == UUID {
+public struct SessionInbox<T: Codable & Identifiable>: Sendable where T.ID == UUID {
     public let directory: URL
     public init(directory: URL) { self.directory = directory }
 
@@ -164,6 +164,34 @@ public struct SessionInbox<T: Codable & Identifiable> where T.ID == UUID {
         guard !FileManager.default.fileExists(atPath: url.path) else { return }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try JSONEncoder().encode(item).write(to: url, options: StoreFile.writeOptions)
+    }
+
+    /// Like `add`, but replaces an existing entry (an edit of a queued item, e.g. a late effort answer).
+    public func put(_ item: T) throws {
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        try JSONEncoder().encode(item).write(to: file(item.id), options: StoreFile.writeOptions)
+    }
+
+    public enum Migration: Equatable {
+        case noLegacyFile
+        /// `backup`: some records were unreadable; the old file was copied there before it was deleted.
+        case migrated(count: Int, backup: URL?)
+        /// Nothing in the old file could be read: it was backed up and left where it is.
+        case fileKept(backup: URL)
+    }
+
+    /// One-time move of a legacy JSON array file into the inbox, per record (`LenientJSON`). The old file is
+    /// deleted only after every readable record is in the inbox. `add`, not `put`: an entry already in the
+    /// inbox is newer than the legacy copy (and a retried half-done migration writes nothing twice).
+    public func migrate(from legacy: URL) throws -> Migration {
+        guard FileManager.default.fileExists(atPath: legacy.path) else { return .noLegacyFile }
+        let decoded = LenientJSON.decodeArray(T.self, from: try Data(contentsOf: legacy))
+        if decoded.wholeFileUndecodable { return .fileKept(backup: try StoreFile.backupCorrupt(legacy)) }
+        // No backup, no delete: the unreadable records would be gone for good.
+        let backup = decoded.skipped > 0 ? try StoreFile.backupCorrupt(legacy) : nil
+        for item in decoded.elements { try add(item) }
+        try FileManager.default.removeItem(at: legacy)
+        return .migrated(count: decoded.elements.count, backup: backup)
     }
 
     /// Every readable entry. An unreadable file is renamed to `.bad` (kept, never read again).

@@ -38,10 +38,15 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     }
     private nonisolated static let appGroupIdentifier = "group.com.shuttlx.shared"
 
+    /// Unsynced sessions. Mirrored one file per session in `pending_sync/` (`pendingInbox`); every
+    /// add / put / remove runs on `sessionStoreQueue`, so the operations for one id stay in order.
     private var pendingSessions: [TrainingSession] = []
     private var consecutiveFailures = 0
     private var backgroundSyncTimer: Timer?
-    private let pendingSessionsFileName = "pending_sync_sessions.json"
+    private let pendingInbox = WatchSyncCoordinator.getWorkingContainer()
+        .map { SessionInbox<TrainingSession>(directory: $0.appendingPathComponent("pending_sync", isDirectory: true)) }
+    /// The single-file queue of older builds; migrated into `pendingInbox` at launch.
+    private nonisolated static let legacyPendingFileName = "pending_sync_sessions.json"
     private var lastFullResendTime: Date?
     /// Sessions with a WatchConnectivity transfer the daemon has NOT reported as
     /// finished yet. Without this, every retry tick (15s) plus every 1/3/8s burst
@@ -75,6 +80,12 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         Task { @MainActor [weak self] in
             await self?.loadPendingSessionsAndTemplates()
         }
+        #if DEBUG
+        // Wave 5 C8 reproduction: a session queued before the launch load has finished.
+        if ProcessInfo.processInfo.environment["SHUTTLX_DEBUG_EARLY_QUEUE"] == "1" {
+            queuePendingSession(TrainingSession(startDate: Date().addingTimeInterval(-600), endDate: Date(), duration: 600))
+        }
+        #endif
         setupBackgroundTasks()
     }
 
@@ -500,7 +511,9 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     private func queuePendingSession(_ session: TrainingSession) {
         if !pendingSessions.contains(where: { $0.id == session.id }) {
             pendingSessions.append(session)
-            savePendingSessionsToDisk()
+            onPendingStore { inbox, logger in
+                do { try inbox.add(session) } catch { logger.error("Failed to queue pending session: \(error.localizedDescription)") }
+            }
             logger.warning("Session queued to disk for retry")
             updateSyncStatus("Session queued for sync")
         }
@@ -510,60 +523,79 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     private func removePendingSession(_ id: UUID) {
         pendingSessions.removeAll { $0.id == id }
-        savePendingSessionsToDisk()
+        onPendingStore { inbox, _ in inbox.remove(ids: [id]) }
     }
 
-    private func savePendingSessionsToDisk() {
-        guard let containerURL = Self.getWorkingContainer() else { return }
-        // Capture value types on @MainActor; encode + write on background.
-        let sessions = pendingSessions
-        let url = containerURL.appendingPathComponent(pendingSessionsFileName)
+    /// Runs a `pending_sync/` change on `sessionStoreQueue` (ordered with every other one).
+    private func onPendingStore(_ work: @escaping @Sendable (SessionInbox<TrainingSession>, Logger) -> Void) {
+        guard let inbox = pendingInbox else { return }
         let logger = self.logger
-        Task.detached(priority: .utility) {
-            do {
-                if sessions.isEmpty {
-                    try? FileManager.default.removeItem(at: url)
-                } else {
-                    let data = try JSONEncoder().encode(sessions)
-                    try data.write(to: url, options: [.atomic, .completeFileProtection])
-                }
-            } catch {
-                logger.error("Failed to save pending sessions: \(error.localizedDescription)")
+        Self.sessionStoreQueue.async { work(inbox, logger) }
+    }
+
+    /// Migrates the legacy single-file queue, then reads `pending_sync/`. Unreadable entries
+    /// are set aside as `.bad`; an unreadable legacy file is backed up and kept.
+    private nonisolated static func loadPendingInbox(_ inbox: SessionInbox<TrainingSession>, legacy: URL, logger: Logger) -> [TrainingSession] {
+        do {
+            switch try inbox.migrate(from: legacy) {
+            case .noLegacyFile: break
+            case .migrated(let count, let backup):
+                logger.info("Migrated \(count) pending session(s) to pending_sync/\(backup == nil ? "" : " (unreadable records backed up)")")
+            case .fileKept(let backup):
+                logger.error("pending_sync_sessions.json unreadable — kept, copy at \(backup.lastPathComponent, privacy: .public)")
             }
+        } catch {
+            // The legacy file stays; the next launch tries again.
+            logger.error("Pending queue migration failed: \(error.localizedDescription)")
         }
+        let contents = inbox.contents()
+        if contents.skipped > 0 { logger.error("Set aside \(contents.skipped) unreadable pending session(s) as .bad") }
+        return contents.elements.sorted { $0.startDate < $1.startDate }
     }
 
     /// Loads pending sessions + templates off the main thread. Called once at startup.
-    /// Both files are read concurrently on a background task; results are assigned
-    /// on @MainActor after the await.
+    /// Pending sessions are read on `sessionStoreQueue` (after any add queued before it),
+    /// templates on a background task; results are assigned on @MainActor after the await.
     private func loadPendingSessionsAndTemplates() async {
         guard let containerURL = Self.getWorkingContainer() else {
             loadFallbackTemplates()
             return
         }
-        let pendingURL = containerURL.appendingPathComponent(pendingSessionsFileName)
+        let legacyURL = containerURL.appendingPathComponent(Self.legacyPendingFileName)
         let templatesURL = containerURL.appendingPathComponent("workout_templates.json")
 
-        let (pending, templates) = await Task.detached(priority: .utility) {
-            var pending: [TrainingSession] = []
-            var templates: [WorkoutTemplate] = []
-            if FileManager.default.fileExists(atPath: pendingURL.path),
-               let data = try? Data(contentsOf: pendingURL),
-               let loaded = try? JSONDecoder().decode([TrainingSession].self, from: data) {
-                pending = loaded
+        let pending: [TrainingSession]
+        if let inbox = pendingInbox {
+            let logger = self.logger
+            pending = await withCheckedContinuation { continuation in
+                Self.sessionStoreQueue.async {
+                    continuation.resume(returning: Self.loadPendingInbox(inbox, legacy: legacyURL, logger: logger))
+                }
             }
+        } else {
+            pending = []
+        }
+        let templates = await Task.detached(priority: .utility) {
+            var templates: [WorkoutTemplate] = []
             if FileManager.default.fileExists(atPath: templatesURL.path),
                let data = try? Data(contentsOf: templatesURL),
                let loaded = try? JSONDecoder().decode([WorkoutTemplate].self, from: data) {
                 templates = loaded
             }
-            return (pending, templates)
+            return templates
         }.value
 
-        if !pending.isEmpty {
-            pendingSessions = pending
-            logger.info("Loaded \(pending.count) pending session(s) from disk")
+        // Merge, never replace: a session queued while the load ran is already in memory. (One
+        // delivered meanwhile comes back here and is sent once more; the phone dedups by id.)
+        let known = Set(pendingSessions.map(\.id))
+        let loaded = pending.filter { !known.contains($0.id) }
+        if !loaded.isEmpty {
+            pendingSessions = loaded + pendingSessions
+            logger.info("Loaded \(loaded.count) pending session(s) from disk")
         }
+        #if DEBUG
+        logger.info("[C8] pending after load: \(self.pendingSessions.map(\.id.uuidString).joined(separator: ","), privacy: .public)")
+        #endif
         if templates.isEmpty {
             loadFallbackTemplates()
         } else {
@@ -601,7 +633,10 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     func updateSessionEffort(id: UUID, effortRPE: Int) {
         if let i = pendingSessions.firstIndex(where: { $0.id == id }) {
             pendingSessions[i].effortRPE = effortRPE
-            savePendingSessionsToDisk()
+            let updated = pendingSessions[i]
+            onPendingStore { inbox, logger in
+                do { try inbox.put(updated) } catch { logger.error("Failed to save effort on pending session: \(error.localizedDescription)") }
+            }
         }
         sendSessionEffort(id: id, effortRPE: effortRPE)
         guard let containerURL = Self.getWorkingContainer() else { return }
@@ -1349,7 +1384,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
         let pendingIDs = Set(pendingSessions.filter(endedBefore).map(\.id))
         pendingSessions.removeAll(where: endedBefore)
-        savePendingSessionsToDisk()
+        let inbox = pendingInbox
 
         if scope == "all" {
             workoutTemplates = []
@@ -1388,13 +1423,20 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
                 }
             }
             if let coordinatorError { logger.error("purgeSessions coordination error: \(coordinatorError.localizedDescription)") }
-            // Old corrupt-store copies are stored sessions too.
+            // The pending queue on disk, read here so entries the launch load has not handed over yet count too.
+            let inboxIDs = Set(inbox?.contents().elements.filter(endedBefore).map(\.id) ?? [])
+            inbox?.remove(ids: inboxIDs)
+            // Old corrupt-store copies are stored sessions too (the pending queue's `.bad` entries as well).
             let dir = containerURL
             for file in (try? FileManager.default.contentsOfDirectory(at: dir, includingPropertiesForKeys: nil)) ?? []
-            where file.lastPathComponent.hasPrefix("sessions_corrupt_") {
+            where file.lastPathComponent.hasPrefix("sessions_corrupt_") || file.lastPathComponent.hasPrefix("pending_sync_sessions_corrupt_") {
                 try? FileManager.default.removeItem(at: file)
             }
-            let removedIDs = pendingIDs.union(storeIDs)
+            for file in (inbox.flatMap { try? FileManager.default.contentsOfDirectory(at: $0.directory, includingPropertiesForKeys: nil) } ?? [])
+            where file.pathExtension == "bad" {
+                try? FileManager.default.removeItem(at: file)
+            }
+            let removedIDs = pendingIDs.union(storeIDs).union(inboxIDs)
             Task { @MainActor [weak self] in
                 guard let self else { return }
                 // Queued sends of purged sessions would put them back on the phone.

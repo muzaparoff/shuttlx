@@ -128,6 +128,80 @@ final class StoreSupportTests: XCTestCase {
         XCTAssertEqual(first.elements.count, 1)
         XCTAssertEqual(first.skipped, 1)
         XCTAssertEqual(inbox.contents().skipped, 0) // renamed to .bad, not re-read
+        let files = try FileManager.default.contentsOfDirectory(atPath: pending.path)
+        XCTAssertEqual(files.filter { $0.hasSuffix(".json.bad") }.count, 1) // set aside, not deleted
+    }
+
+    // MARK: watch pending queue (Wave 5 C8)
+
+    func testPutOverwritesWhereAddDoesNot() throws {
+        let inbox = SessionInbox<Rec>(directory: dir.appendingPathComponent("pending_sync"))
+        let id = UUID()
+        try inbox.put(Rec(id: id, n: 1))
+        try inbox.add(Rec(id: id, n: 2))
+        XCTAssertEqual(inbox.contents().elements, [Rec(id: id, n: 1)])
+        try inbox.put(Rec(id: id, n: 3))
+        XCTAssertEqual(inbox.contents().elements, [Rec(id: id, n: 3)])
+    }
+
+    /// The watch runs add / put / remove for one id on one serial queue; the last one wins.
+    func testAddThenRemoveInOrderOnASerialQueue() throws {
+        let inbox = SessionInbox<Rec>(directory: dir.appendingPathComponent("pending_sync"))
+        let queue = DispatchQueue(label: "test.pending")
+        let a = Rec(id: UUID(), n: 1), b = Rec(id: UUID(), n: 2)
+        queue.async { try? inbox.add(a) }
+        queue.async { try? inbox.add(b) }
+        queue.async { try? inbox.put(Rec(id: b.id, n: 7)) }
+        queue.async { inbox.remove(ids: [a.id]) }
+        queue.sync {}
+        XCTAssertEqual(inbox.contents().elements, [Rec(id: b.id, n: 7)])
+    }
+
+    func testMigrationMovesEveryRecordAndDeletesTheOldFile() throws {
+        let legacy = dir.appendingPathComponent("pending_sync_sessions.json")
+        let recs = (1...3).map { Rec(id: UUID(), n: $0) }
+        try JSONEncoder().encode(recs).write(to: legacy)
+        let inbox = SessionInbox<Rec>(directory: dir.appendingPathComponent("pending_sync"))
+        XCTAssertEqual(try inbox.migrate(from: legacy), .migrated(count: 3, backup: nil))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
+        XCTAssertEqual(Set(inbox.contents().elements.map(\.id)), Set(recs.map(\.id)))
+        XCTAssertEqual(try inbox.migrate(from: legacy), .noLegacyFile)
+    }
+
+    func testMigrationOfAHalfCorruptFileBacksUpTheOriginal() throws {
+        let legacy = dir.appendingPathComponent("pending_sync_sessions.json")
+        let good = Rec(id: UUID(), n: 1)
+        var json = String(data: try JSONEncoder().encode([good]), encoding: .utf8)!
+        json.removeLast()
+        json += ",{\"id\":\"not-a-uuid\",\"n\":0}]"
+        let original = Data(json.utf8)
+        try original.write(to: legacy)
+        let inbox = SessionInbox<Rec>(directory: dir.appendingPathComponent("pending_sync"))
+        // A session queued before the migration ran is newer than its legacy copy and is kept.
+        let early = Rec(id: good.id, n: 5)
+        try inbox.add(early)
+
+        guard case .migrated(1, let backup?) = try inbox.migrate(from: legacy) else {
+            return XCTFail("expected a migration with a backup")
+        }
+        XCTAssertEqual(try Data(contentsOf: backup), original)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: legacy.path))
+        XCTAssertEqual(inbox.contents().elements, [early])
+    }
+
+    func testMigrationNeverDeletesAWhollyUnreadableFile() throws {
+        let legacy = dir.appendingPathComponent("pending_sync_sessions.json")
+        let garbage = Data("not json".utf8)
+        try garbage.write(to: legacy)
+        let inbox = SessionInbox<Rec>(directory: dir.appendingPathComponent("pending_sync"))
+        guard case .fileKept(let backup) = try inbox.migrate(from: legacy) else {
+            return XCTFail("expected the file to be kept")
+        }
+        XCTAssertEqual(try Data(contentsOf: legacy), garbage)
+        XCTAssertEqual(try Data(contentsOf: backup), garbage)
+        XCTAssertTrue(backup.lastPathComponent.hasPrefix("pending_sync_sessions_corrupt_"))
+        try inbox.add(Rec(id: UUID(), n: 1)) // the queue keeps working
+        XCTAssertEqual(inbox.contents().elements.count, 1)
     }
 
     // MARK: cutoff
