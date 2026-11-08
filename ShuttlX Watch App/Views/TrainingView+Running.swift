@@ -123,7 +123,10 @@ extension TrainingView {
     /// and amber above it, the pill warns "Near your limit" from 90 % and says
     /// "Ease off" only above the limit (the alert's threshold), and a small timer +
     /// the limit sit at the bottom.
-    private func heartLimitPage(limit: Int) -> some View {
+    /// `gym`: the gym state tag replaces the activity tag and the set button replaces
+    /// the timer + limit row (both do not fit with the button on 40mm), so End Set /
+    /// Start Set stays one tap away.
+    func heartLimitPage(limit: Int, gym: Bool = false) -> some View {
         let hr = workoutManager.heartRate
         let over = hr > limit
         let paused = workoutManager.isPaused
@@ -132,12 +135,16 @@ extension TrainingView {
         let pillSize = min(WatchScale.pt(13), (screenWidth - 16 - 2 * WatchScale.pt(12)) / (CGFloat(pill.count) * 0.62))
         let small = WatchScale.text(11)
         return VStack(alignment: .leading, spacing: 0) {
-            Text(paused ? "\u{23F8}\u{FE0E} PAUSED" : "\u{25CF} \(activity.watchTag)")
-                .font(.system(size: small, weight: .bold))
-                .tracking(small * 0.08)
-                .foregroundStyle(paused ? ShuttlXColor.ctaWarning
-                                 : activity == .unknown ? ShuttlXColor.textSecondary : activity.themeColor)
-                .accessibilityLabel(paused ? "Paused" : activity == .unknown ? workoutManager.workoutName : activity.displayName)
+            if gym {
+                GymStateTag()
+            } else {
+                Text(paused ? "\u{23F8}\u{FE0E} PAUSED" : "\u{25CF} \(activity.watchTag)")
+                    .font(.system(size: small, weight: .bold))
+                    .tracking(small * 0.08)
+                    .foregroundStyle(paused ? ShuttlXColor.ctaWarning
+                                     : activity == .unknown ? ShuttlXColor.textSecondary : activity.themeColor)
+                    .accessibilityLabel(paused ? "Paused" : activity == .unknown ? workoutManager.workoutName : activity.displayName)
+            }
             Text("\(hr)")
                 .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
                 .monospacedDigit()
@@ -167,25 +174,40 @@ extension TrainingView {
                 .padding(.top, WatchScale.pt(10))
                 .accessibilityLabel(over ? "Ease off, heart rate above your limit of \(limit)" : "Near your limit of \(limit)")
             Spacer(minLength: 0)
-            HStack(alignment: .firstTextBaseline) {
-                ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
-                                 clock: workoutManager.clock,
-                                 baseSize: WatchScale.pt(16),
-                                 availableWidth: (screenWidth - 16) * 0.55,
-                                 weight: .semibold,
-                                 color: paused ? ShuttlXColor.ctaWarning : ShuttlXColor.textSecondary)
-                Spacer(minLength: 4)
-                Text("LIMIT \(limit)")
-                    .font(.system(size: small, weight: .bold))
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-                    .fixedSize()
-                    .accessibilityHidden(true)
+            if gym {
+                GymSetButton()
+            } else {
+                HStack(alignment: .firstTextBaseline) {
+                    ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
+                                     clock: workoutManager.clock,
+                                     baseSize: WatchScale.pt(16),
+                                     availableWidth: (screenWidth - 16) * 0.55,
+                                     weight: .semibold,
+                                     color: paused ? ShuttlXColor.ctaWarning : ShuttlXColor.textSecondary)
+                    Spacer(minLength: 4)
+                    Text("LIMIT \(limit)")
+                        .font(.system(size: small, weight: .bold))
+                        .foregroundStyle(ShuttlXColor.textSecondary)
+                        .fixedSize()
+                        .accessibilityHidden(true)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.bottom, max(10, screenHeight * 0.055))
         .frame(height: pageHeight)
+    }
+
+    /// Gym page banner: "Ease off" above the limit, else the no-HR banner, else nothing.
+    @ViewBuilder
+    var gymSafetyBanner: some View {
+        let labelSize = max(10, screenHeight * 0.08)
+        if isHighIntensityWarning {
+            highIntensityWarningView(labelSize: labelSize)
+        } else if workoutManager.noHeartRateDetected {
+            noHeartRateBanner(labelSize: labelSize)
+        }
     }
 
     // MARK: - Page 1 (swipe left)

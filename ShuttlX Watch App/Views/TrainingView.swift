@@ -173,8 +173,17 @@ struct TrainingView: View {
         if isLuminanceReduced {
             aodMinimalView
         } else if workoutManager.workoutMode == .gymRecovery {
-            RecoveryWorkoutView()
-                .environmentObject(workoutManager)
+            // Same heart cues as free run: heart-limit page at 90 % of the limit
+            // (with the set button), else the gym page with zone word + banners.
+            if let limit = heartLimitModeLimit {
+                heartLimitPage(limit: limit, gym: true)
+            } else {
+                RecoveryWorkoutView(zone: heartZoneWord.map { ($0, zoneWordColor($0)) },
+                                    bannerShown: isHighIntensityWarning || workoutManager.noHeartRateDetected,
+                                    pageHeight: pageHeight) {
+                    gymSafetyBanner
+                }
+            }
         } else if isFreeRunLayout {
             #if DEBUG
             let _ = BodyCounter.hit("runningPage")

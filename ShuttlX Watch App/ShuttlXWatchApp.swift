@@ -64,7 +64,7 @@ struct ShuttlXWatchApp: App {
                 let hrOverride = env["SHUTTLX_SNAPSHOT_HR"].flatMap(Int.init)
                 let paceOverride = env["SHUTTLX_SNAPSHOT_PACE"]
                 let pausedOverride = env["SHUTTLX_SNAPSHOT_PAUSED"] == "1"
-                // SHUTTLX_SNAPSHOT_SCREEN=home|summary|effort renders those screens
+                // SHUTTLX_SNAPSHOT_SCREEN=home|mixed|summary|effort renders those screens
                 // instead of the workout. SHUTTLX_SNAPSHOT_OVERLAY=toast|unusual|autopaused|nohr|end|discard
                 // raises a workout overlay, SHUTTLX_SNAPSHOT_LIMIT=<bpm> fakes a synced
                 // heart limit (heart-limit mode), SHUTTLX_SNAPSHOT_TAB=<n> opens a page,
@@ -75,8 +75,10 @@ struct ShuttlXWatchApp: App {
                 // comma-separated), SHUTTLX_SNAPSHOT_SCROLL=bottom scrolls the summary down.
                 let unitOverride = env["SHUTTLX_SNAPSHOT_UNIT"].flatMap(DistanceUnit.init(rawValue:))
                 let screen = env["SHUTTLX_SNAPSHOT_SCREEN"]
-                if screen == "home" {
-                    NavigationStack { StartTrainingView() }
+                if screen == "home" || screen == "mixed" {
+                    NavigationStack {
+                        if screen == "mixed" { ProgramsListView() } else { StartTrainingView() }
+                    }
                         .environment(ThemeManager.shared)
                         .environmentObject(sharedDataManager)
                         .environmentObject(workoutManager)
@@ -111,6 +113,10 @@ struct ShuttlXWatchApp: App {
                             workoutManager.applyFreeRunPreviewSnapshot(elapsed: freeRunElapsed)
                         } else {
                             workoutManager.applyPreviewSnapshot()
+                        }
+                        // SHUTTLX_SNAPSHOT_GYM=idle|work|rest: the gym recovery page in that state.
+                        if let gym = env["SHUTTLX_SNAPSHOT_GYM"] {
+                            workoutManager.applyGymPreviewSnapshot(state: gym)
                         }
                         if let hrOverride { workoutManager.heartRate = hrOverride }
                         if let paceOverride {

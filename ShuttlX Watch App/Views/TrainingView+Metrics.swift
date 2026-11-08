@@ -376,8 +376,9 @@ extension TrainingView {
     func noHeartRateBanner(labelSize: CGFloat) -> some View {
         let lines = ["No heart rate", "Check wrist & Health"]
         let size = lines.map { bannerSize($0, labelSize: labelSize) }.min() ?? labelSize
-        return HStack {
-            Spacer()
+        return HStack(spacing: 0) {
+            // minLength 0: default spacers forced the row wider than the page.
+            Spacer(minLength: 0)
             // Two fixed lines, one solved size: nothing can elide or shrink.
             VStack(spacing: 0) {
                 ForEach(lines, id: \.self) { Text($0).fixedSize() }
@@ -390,7 +391,7 @@ extension TrainingView {
                     RoundedRectangle(cornerRadius: 4)
                         .stroke(ShuttlXColor.ctaWarning, lineWidth: 1)
                 )
-            Spacer()
+            Spacer(minLength: 0)
         }
         .transition(.opacity.combined(with: .scale(scale: 0.9)))
         .animation(.easeInOut(duration: 0.4), value: workoutManager.noHeartRateDetected)
@@ -402,8 +403,11 @@ extension TrainingView {
 
     /// Banner text size: `labelSize` (floor included), lowered only if `text` would
     /// not fit the row minus the banner's 6pt side padding. Monospaced 0.62em advance.
+    /// The row is the page width minus 8pt padding per side; the TabView pages are
+    /// 2pt per side narrower than the screen (measured in 40mm and 46mm snapshots),
+    /// hence 20, not 16.
     func bannerSize(_ text: String, labelSize: CGFloat) -> CGFloat {
-        let available = screenWidth - 16 - 12
+        let available = screenWidth - 20 - 12
         return min(labelSize, available / (CGFloat(text.count) * 0.62))
     }
 

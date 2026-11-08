@@ -1218,11 +1218,13 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     private func processRecoveryEvents(_ events: [SegmenterEvent]) {
         for event in events {
             switch event {
-            case .enteredWork:
+            case .enteredWork(let setNumber):
                 // Clear previous rest's HRR display on new set start
                 latestHRR1 = nil
                 latestHRR2 = nil
                 currentCapturePeakHR = 0
+                // The only haptic for a Start Set tap (the button plays none).
+                logger.info("Gym set \(setNumber) started, haptic .click")
                 #if os(watchOS)
                 WKInterfaceDevice.current().play(.click)
                 #endif
@@ -1231,6 +1233,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
                 currentCapturePeakHR = peakHR
                 let capture = HRRCapture(setNumber: setNumber, peakHR: peakHR, restEntryTime: restEntryTime)
                 completedCaptures.append(capture)
+                // The only haptic for an End Set tap (the button plays none).
+                logger.info("Gym set \(setNumber) ended, haptic .stop")
                 #if os(watchOS)
                 WKInterfaceDevice.current().play(.stop)
                 #endif
@@ -2730,6 +2734,31 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         }
         if unit == .mi { mileSplitCounter = c } else { kmSplitCounter = c }
         if let last = c.lastSplit { splitToast = SplitToast(unit: unit, split: last) }
+    }
+
+    /// Snapshot/QA only: gym recovery in `state` ("idle" | "work" | "rest"), set 2,
+    /// 75 s into the rest with the 1:00 mark captured.
+    func applyGymPreviewSnapshot(state: String) {
+        workoutMode = .gymRecovery
+        workoutName = "Gym Recovery"
+        intervalEngine = nil
+        isWorkoutActive = true
+        isPaused = false
+        elapsedTime = 14 * 60 + 32
+        heartRate = 128
+        switch state {
+        case "work":
+            recoveryState = .work
+            recoverySetNumber = 2
+        case "rest":
+            recoveryState = .rest
+            recoverySetNumber = 2
+            restStartTime = Date().addingTimeInterval(-75)
+            latestHRR1 = 22
+        default:
+            recoveryState = .idle
+            recoverySetNumber = 0
+        }
     }
 
     func applyPreviewSnapshot() {
