@@ -4,8 +4,8 @@ import WatchConnectivity
 import ShuttlXShared
 
 /// Watch home: the two programs. Run/Walk = the big Start (free run, finds run and
-/// walk itself); Mixed = the interval programs list. Gym Recovery stays started
-/// from the iPhone (`startWatchWorkout` "gymRecovery" -> WatchSyncCoordinator).
+/// walk itself); Mixed = Heart Recovery (gym) and the interval programs list. The
+/// iPhone can still start gym recovery too (`"gymRecovery"` -> WatchSyncCoordinator).
 struct StartTrainingView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
@@ -22,7 +22,7 @@ struct StartTrainingView: View {
 
             if workoutManager.authorizationDenied {
                 ErrorBanner(icon: "heart.slash.fill",
-                            message: "HealthKit access denied. Open Settings to enable.",
+                            message: "Allow Health access in the Health app on your iPhone.",
                             color: ShuttlXColor.heartRate)
                     .padding(.top, 4)
             } else if let error = workoutManager.startupError {
@@ -93,7 +93,8 @@ struct StartTrainingView: View {
     }
 }
 
-/// "Mixed": interval programs synced from the iPhone.
+/// "Mixed": Heart Recovery (gym sets with rest checks) first, then the interval
+/// programs synced from the iPhone.
 struct ProgramsListView: View {
     @EnvironmentObject var workoutManager: WatchWorkoutManager
     @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
@@ -107,12 +108,13 @@ struct ProgramsListView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: ShuttlXSpacing.lg) {
+                heartRecoveryRow
+
                 if sharedDataManager.workoutTemplates.isEmpty {
-                    Text("No programs yet. Make one on your iPhone.")
+                    Text("Add interval programs on your iPhone.")
                         .font(ShuttlXFont.cardCaption)
                         .foregroundStyle(ShuttlXColor.textSecondary)
                         .multilineTextAlignment(.center)
-                        .padding(.top, ShuttlXSpacing.lg)
                 }
                 ForEach(sharedDataManager.workoutTemplates) { template in
                     Button(action: {
@@ -169,6 +171,54 @@ struct ProgramsListView: View {
         }
         .navigationTitle("Mixed")
         .onAppear { loadLastSession() }
+    }
+
+    /// Starts gym recovery on the watch alone (no phone needed), like the template rows.
+    /// The heart sits inline with the title (no icon column), so on 40mm the title
+    /// keeps one line and the subtitle gets the full row width (two lines at most).
+    private var heartRecoveryRow: some View {
+        let title = "Heart Recovery"
+        // Row content width: list padding (xs) and row padding (lg) on both sides.
+        let contentWidth = WatchScale.width - 2 * ShuttlXSpacing.xs - 2 * ShuttlXSpacing.lg
+        let gap: CGFloat = 4
+        // Solved, not scaled: semibold advance ~0.6em per glyph plus a 1em icon.
+        let titleSize = min(WatchScale.pt(17), (contentWidth - gap) / (CGFloat(title.count) * 0.6 + 1))
+        return Button(action: {
+            logger.info("Starting heart recovery workout")
+            #if os(watchOS)
+            WKInterfaceDevice.current().play(.start)
+            #endif
+            workoutManager.startGymRecoveryWorkout(phoneSessionID: nil)
+        }) {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: gap) {
+                    if workoutManager.isStarting && workoutManager.workoutMode == .gymRecovery {
+                        ProgressView()
+                            .frame(width: titleSize, height: titleSize)
+                    } else {
+                        Image(systemName: "heart.fill")
+                            .font(.system(size: titleSize * 0.9, weight: .semibold))
+                            .foregroundStyle(ShuttlXColor.heartRate)
+                            .frame(width: titleSize)
+                    }
+                    Text(title)
+                        .font(.system(size: titleSize, weight: .semibold, design: .rounded))
+                        .foregroundStyle(ShuttlXColor.textPrimary)
+                        .fixedSize()
+                }
+                Text("Sets with rest checks")
+                    .font(ShuttlXFont.cardCaption)
+                    .foregroundStyle(ShuttlXColor.textSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, ShuttlXSpacing.lg)
+            .padding(.vertical, ShuttlXSpacing.md)
+        }
+        .buttonStyle(ShuttlXCardButtonStyle())
+        .accessibilityLabel("Heart Recovery, sets with rest checks")
+        .accessibilityHint("Starts a gym session. You start and end each set yourself.")
     }
 
     private func lastSubtitle(_ session: TrainingSession) -> some View {
