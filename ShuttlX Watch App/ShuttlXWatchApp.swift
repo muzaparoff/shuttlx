@@ -22,8 +22,8 @@ final class WatchAppDelegate: NSObject, WKApplicationDelegate {
 @main
 struct ShuttlXWatchApp: App {
     @WKApplicationDelegateAdaptor(WatchAppDelegate.self) private var appDelegate
-    @StateObject private var sharedDataManager: WatchSyncCoordinator
-    @StateObject private var workoutManager: WatchWorkoutManager
+    @State private var sharedDataManager: WatchSyncCoordinator
+    @State private var workoutManager: WatchWorkoutManager
     
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "AppInitialization")
     
@@ -36,8 +36,8 @@ struct ShuttlXWatchApp: App {
         dataManager.setWorkoutManager(manager)
         WatchAppDelegate.workoutManager = manager
 
-        self._sharedDataManager = StateObject(wrappedValue: dataManager)
-        self._workoutManager = StateObject(wrappedValue: manager)
+        self._sharedDataManager = State(initialValue: dataManager)
+        self._workoutManager = State(initialValue: manager)
 
         logger.info("ShuttlXWatchApp initialization completed")
     }
@@ -80,8 +80,8 @@ struct ShuttlXWatchApp: App {
                         if screen == "mixed" { ProgramsListView() } else { StartTrainingView() }
                     }
                         .environment(ThemeManager.shared)
-                        .environmentObject(sharedDataManager)
-                        .environmentObject(workoutManager)
+                        .environment(sharedDataManager)
+                        .environment(workoutManager)
                 } else if screen == "summary" || screen == "effort" {
                     Group {
                         if let summary = workoutManager.pendingSummary {
@@ -91,8 +91,8 @@ struct ShuttlXWatchApp: App {
                         }
                     }
                     .environment(ThemeManager.shared)
-                    .environmentObject(sharedDataManager)
-                    .environmentObject(workoutManager)
+                    .environment(sharedDataManager)
+                    .environment(workoutManager)
                     .task {
                         if let unitOverride { sharedDataManager.applyPreviewDistanceUnit(unitOverride) }
                         workoutManager.applySummaryPreview(healthSaveFailed: env["SHUTTLX_SNAPSHOT_HEALTHFAIL"] == "1")
@@ -101,8 +101,8 @@ struct ShuttlXWatchApp: App {
                 TrainingView()
                     .environment(ThemeManager.shared)
                     .environment(\.isLuminanceReduced, env["SHUTTLX_SNAPSHOT_AOD"] == "1")
-                    .environmentObject(sharedDataManager)
-                    .environmentObject(workoutManager)
+                    .environment(sharedDataManager)
+                    .environment(workoutManager)
                     .task {
                         ThemeManager.shared.selectTheme(snapshot)
                         if let unitOverride { sharedDataManager.applyPreviewDistanceUnit(unitOverride) }
@@ -147,8 +147,8 @@ struct ShuttlXWatchApp: App {
     private var appRoot: some View {
             ContentView()
                 .environment(ThemeManager.shared)
-                .environmentObject(sharedDataManager)
-                .environmentObject(workoutManager)
+                .environment(sharedDataManager)
+                .environment(workoutManager)
                 .onOpenURL { url in
                     guard url.scheme == "shuttlx" else { return }
                     switch url.host {

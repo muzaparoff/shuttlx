@@ -251,3 +251,8 @@ The watch agent owns steps 2-5 and 7 in sequence. The iOS agent owns 8, 10 and 1
 6. **C8:** per-session pending files with a one-time migration (pick), or the single-file fix?
 7. **C7:** keep `HKWorkoutSession` mirroring (Apple's multidevice workout model, which could remove much of the live-metrics and handshake code) as a separate future project, outside Wave 5?
 8. **Release shape:** four TestFlight builds as in section 3, or merge builds 1 and 2 to save a device session (harder to bisect)?
+
+## C2c status (2026-11-09)
+
+Implemented, **uncommitted** (with deep review Wave 3). `WatchWorkoutManager` and `WatchSyncCoordinator` are `@Observable`; the TrainingView pages are structs (`WorkoutPage` protocol for the shared helpers). Gate met: snapshots unchanged on 40 mm and 46 mm (pixel diff of 26 screens before the Wave 3 layout changes; only the running clock second and the pause-pulse phase differ). Body runs per minute, 46 mm simulator, simulated HR: free run 214 → 11.5 (23.5 after the Wave 3 Workout page added distance); gym 119 → 10.5. Not run on a device.
+

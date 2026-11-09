@@ -2,10 +2,17 @@ import SwiftUI
 import WatchKit
 import ShuttlXShared
 
-extension TrainingView {
-    // MARK: - Controls Tab (two big circles: green Pause, red End)
+/// Controls page: two big circles, green Pause, red End.
+struct ControlsPage: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    let hrCalculator: HeartRateZoneCalculator
+    /// END tapped: TrainingView raises the confirm card.
+    let onEnd: () -> Void
 
-    var controlsTab: some View {
+    var body: some View {
+        #if DEBUG
+        let _ = BodyCounter.hit("ControlsPage")
+        #endif
         let d = max(56, WatchScale.pt(70))
         let hr = workoutManager.heartRate
         let headerSize = WatchScale.pt(16)
@@ -59,7 +66,7 @@ extension TrainingView {
 
                 // No haptic on the tap: nothing has stopped yet. The confirm card plays
                 // `.stop` after End & Save or Discard.
-                Button(action: { endPrompt = .confirm }) {
+                Button(action: onEnd) {
                     controlCircle("END", fill: ShuttlXColor.ctaDestructive, text: .white, diameter: d)
                 }
                 .buttonStyle(.plain)
@@ -74,13 +81,8 @@ extension TrainingView {
             } else if workoutManager.noHeartRateDetected {
                 noHeartRateBanner(labelSize: labelSize)
                     .padding(.top, WatchScale.pt(10))
-            } else {
-                Text("Swipe right: back to workout")
-                    .font(.system(size: WatchScale.text(11)))
-                    .foregroundStyle(ShuttlXColor.textSecondary)
-                    .padding(.top, WatchScale.pt(14))
-                    .accessibilityHidden(true)
             }
+            // No hint: the page dots show the pages (watch plan step 3).
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -135,7 +137,7 @@ struct EndWorkoutPrompt: View {
                     .buttonStyle(WatchPillButtonStyle.primary)
                     .accessibilityHint("Saves the workout and shows your summary")
                 Button("Keep going", action: onKeepGoing)
-                    .buttonStyle(WatchPillButtonStyle.neutral)
+                    .buttonStyle(WatchPillButtonStyle.secondary)
                     .accessibilityHint("Goes back to the workout")
                 Button("Discard", action: onAskDiscard)
                     .font(.system(size: WatchScale.text(12), weight: .semibold))

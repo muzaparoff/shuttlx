@@ -9,6 +9,7 @@ import WatchKit
 #endif
 import os
 import os.log
+import Observation
 import ShuttlXShared
 
 /// The 1 Hz active-time value, published on its own so the per-second tick
@@ -20,11 +21,12 @@ final class WorkoutClock: ObservableObject {
 }
 
 @MainActor
-class WatchWorkoutManager: NSObject, ObservableObject {
+@Observable
+class WatchWorkoutManager: NSObject {
     // MARK: - Published State
-    @Published var isWorkoutActive = false
-    @Published var isPaused = false
-    @Published var currentActivity: DetectedActivity = .unknown
+    var isWorkoutActive = false
+    var isPaused = false
+    var currentActivity: DetectedActivity = .unknown
     let clock = WorkoutClock()
     /// Pause-corrected active time. NOT published by the manager — observe `clock`.
     var elapsedTime: TimeInterval {
@@ -41,44 +43,44 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// after stop, so views fall back to static `elapsedTime` text.
     /// `elapsedTime` itself is unchanged — metrics, the interval engine and the
     /// crash checkpoints all still derive from it.
-    @Published private(set) var timerReferenceDate: Date?
+    private(set) var timerReferenceDate: Date?
     /// Written every tick; no view reads it, so it is not published.
     var currentSegmentTime: TimeInterval = 0
-    @Published var heartRate: Int = 0
-    @Published var calories: Int = 0
-    @Published var totalSteps: Int = 0
-    @Published var totalDistance: Double = 0
-    @Published var currentPace: TimeInterval? = nil   // seconds per km (average)
+    var heartRate: Int = 0
+    var calories: Int = 0
+    var totalSteps: Int = 0
+    var totalDistance: Double = 0
+    var currentPace: TimeInterval? = nil   // seconds per km (average)
     /// Km splits (stored as `kmSplits`) and mile splits (display + alerts only).
     /// Not fed in gym recovery: its pedometer distance is not a run.
-    @Published private(set) var kmSplitCounter = SplitCounter(unitMetres: SplitCounter.kmMetres)
-    @Published private(set) var mileSplitCounter = SplitCounter(unitMetres: SplitCounter.mileMetres)
+    private(set) var kmSplitCounter = SplitCounter(unitMetres: SplitCounter.kmMetres)
+    private(set) var mileSplitCounter = SplitCounter(unitMetres: SplitCounter.mileMetres)
     func splitCounter(for unit: DistanceUnit) -> SplitCounter { unit == .mi ? mileSplitCounter : kmSplitCounter }
     /// "KM 3 · 6:12" on the running page for `undoWindow` seconds. Waits while the
     /// auto-switch toast shows (that one wins), then gets its own 4 s.
     struct SplitToast: Equatable { let id = UUID(); let unit: DistanceUnit; let split: SplitCounter.Split }
-    @Published private(set) var splitToast: SplitToast?
-    @Published var healthKitAuthorized: Bool = false
-    @Published var authorizationDenied: Bool = false
-    @Published var healthKitSaveError: String? = nil
+    private(set) var splitToast: SplitToast?
+    var healthKitAuthorized: Bool = false
+    var authorizationDenied: Bool = false
+    var healthKitSaveError: String? = nil
     /// True if no HR sample has arrived within `noHRDetectedAfter` seconds of an
     /// active, unpaused workout. HealthKit never tells an app whether READ access
     /// was granted, so this is the only signal we have that HR is silently
     /// missing (denied permission, sensor off-wrist, etc.). Drives a non-blocking
     /// banner in TrainingView. Cleared as soon as the first sample lands.
-    @Published private(set) var noHeartRateDetected: Bool = false
+    private(set) var noHeartRateDetected: Bool = false
     /// True while a workout start is in progress (auth + session setup). Used for immediate UI feedback.
-    @Published var isStarting: Bool = false
+    var isStarting: Bool = false
 
     /// Non-nil while the post-workout summary is pending user dismissal (S-1 fix).
     /// Set BEFORE stopWorkout() so ContentView can show WorkoutSummaryView while
     /// TrainingView is still mounted; cleared by the user dismissing the summary.
-    @Published var pendingSummary: WorkoutSummary? = nil
+    var pendingSummary: WorkoutSummary? = nil
 
     /// Start-phase error visible to ProgramSelectionView (before any workout is active).
     /// Distinct from healthKitSaveError (which is a mid/post-workout save failure shown
     /// by TrainingView's alert). Cleared on the next successful workout start.
-    @Published var startupError: String? = nil
+    var startupError: String? = nil
 
     /// True average heart rate across all collected samples (excludes paused periods)
     var averageHeartRate: Int {
@@ -88,31 +90,31 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - Workout Mode
     enum WorkoutMode { case freeRun, interval, gymRecovery }
-    @Published var workoutMode: WorkoutMode = .freeRun
-    @Published var workoutName: String = "Run/Walk"
+    var workoutMode: WorkoutMode = .freeRun
+    var workoutName: String = "Run/Walk"
 
-    // `intervalEngine` is @Published so swapping in a new engine triggers a
+    // `intervalEngine` is observed so swapping in a new engine triggers a
     // re-render. For per-tick UI updates, views observe the engine DIRECTLY
     // via @ObservedObject (see IntervalStepWash in TrainingView). We do NOT
     // forward `engine.objectWillChange` through this manager — that doubled
     // the invalidation count per tick (manager + engine both firing) and
     // caused noticeable UI sluggishness during workouts.
-    @Published var intervalEngine: IntervalEngine?
+    var intervalEngine: IntervalEngine?
     private var activeTemplate: WorkoutTemplate?
 
     // MARK: - Gym Recovery Mode State
-    // Written only when the value changes (`publishRecoveryState`): every @Published write
+    // Written only when the value changes (`publishRecoveryState`): every observed write
     // re-renders every page. The rest clock is computed in the view from `restStartTime`.
-    @Published var recoveryState: SegmentState = .idle
-    @Published private(set) var restStartTime: Date?
-    @Published var recoverySetNumber: Int = 0
+    var recoveryState: SegmentState = .idle
+    private(set) var restStartTime: Date?
+    var recoverySetNumber: Int = 0
     /// Max HR for the segmenter, read once per workout (not from UserDefaults every tick).
     private var gymMaxHR: Double?
-    @Published var currentCapturePeakHR: Int = 0
-    @Published var latestHRR1: Int? = nil
-    @Published var latestHRR2: Int? = nil
-    @Published var completedCaptures: [HRRCapture] = []
-    @Published var currentCadence: Int = 0
+    var currentCapturePeakHR: Int = 0
+    var latestHRR1: Int? = nil
+    var latestHRR2: Int? = nil
+    var completedCaptures: [HRRCapture] = []
+    var currentCadence: Int = 0
     private var recoverySegmenter: RecoverySegmenter?
 
     var stationCandidateProgress: Double { recoverySegmenter?.candidateProgress ?? 0 }
@@ -129,7 +131,9 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// and the final save — recovery dedup compares ids, so both saves MUST
     /// agree or a surviving backup re-imports as a duplicate session.
     private(set) var currentSessionID = UUID()
-    private var currentSegmentStartTime: Date?
+    /// Start of the open part (run/walk switch, resume, step change). Read by the
+    /// Workout page's part timer, which the render server advances (no 1 Hz state).
+    private(set) var currentSegmentStartTime: Date?
     private var segments: [ActivitySegment] = []
     private var sharedDataManager: WatchSyncCoordinator?
 
@@ -188,7 +192,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: Long-workout safety prompt
     /// True while the full-screen "Still training?" prompt is up.
-    @Published private(set) var safetyPromptVisible = false
+    private(set) var safetyPromptVisible = false
     private var safetySchedule = SafetyPromptSchedule()
 
     // MARK: Heart alerts + no-motion auto-pause (timeline step 5)
@@ -207,17 +211,17 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// when started on the watch. A phone Discard only applies when its id matches.
     private(set) var phoneSessionID: String?
     /// "noMotion" while the workout is auto-paused by the presence heuristic; nil otherwise.
-    @Published private(set) var autoPauseReason: String?
+    private(set) var autoPauseReason: String?
     /// Full-screen amber "Check your heart rate" card (suddenJump). Stays until dismissed.
     struct UnusualHeartRate: Equatable { let bpm: Int; let rise: Int }
-    @Published private(set) var unusualHeartRate: UnusualHeartRate?
+    private(set) var unusualHeartRate: UnusualHeartRate?
     /// True once the HKWorkout of the last finished workout was written to Health.
-    @Published private(set) var healthKitSaved = false
+    private(set) var healthKitSaved = false
 
     // MARK: Auto-switch toast + Undo
     struct ActivitySwitch: Equatable { let id = UUID(); let from: DetectedActivity; let to: DetectedActivity }
     /// Non-nil for `undoWindow` seconds after an auto run/walk/cycle switch.
-    @Published private(set) var activitySwitch: ActivitySwitch?
+    private(set) var activitySwitch: ActivitySwitch?
     private var undoState: (segStart: Date?, steps: Int, distance: Double)?
     /// After Undo, no auto-switch commits until this date.
     private var autoSwitchSuppressedUntil: Date?
@@ -258,7 +262,8 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // Pause time tracking
     private var accumulatedPauseTime: TimeInterval = 0
-    private var pauseStartDate: Date?
+    /// Read by the Workout page ("PAUSED 0:42").
+    private(set) var pauseStartDate: Date?
 
     // Debounce: pending activity must persist for this duration before committing.
     // The debounce itself is unchanged; ActivityClassifier layers the confidence
@@ -308,7 +313,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     /// True when body mass is unknown, so no ShuttlX MET estimate can be produced.
     /// Drives the "add your weight in Health" hint on the summary screen — we do
     /// not substitute a 70 kg placeholder (plan item 5).
-    @Published private(set) var bodyMassUnavailable: Bool = false
+    private(set) var bodyMassUnavailable: Bool = false
 
     let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "WatchWorkoutManager")
 
@@ -326,7 +331,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
 
     // MARK: - HealthKit Permissions
 
-    private lazy var authService = HealthKitAuthService(healthStore: healthStore)
+    @ObservationIgnored private lazy var authService = HealthKitAuthService(healthStore: healthStore)
 
     /// Fire-and-forget pre-warm: called from onAppear to prompt the user early.
     /// Does NOT await result — use requestHealthAuthorizationAsync() when a result is needed.
@@ -617,7 +622,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         publishRecoveryState()
     }
 
-    /// Mirror segmenter state into the @Published surface views observe
+    /// Mirror segmenter state into the observed surface views observe
     /// (per tick and from the manual station buttons). Unchanged values are not written.
     private func publishRecoveryState() {
         guard let segmenter = recoverySegmenter else { return }
@@ -2660,6 +2665,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
         heartRate = 138
         calories = 812
         currentActivity = .running
+        currentSegmentStartTime = Date().addingTimeInterval(-252)
     }
 
     /// Freezes an already-seeded snapshot the way `pauseWorkout()` does, without
@@ -2670,6 +2676,7 @@ class WatchWorkoutManager: NSObject, ObservableObject {
     func applyPausedPreviewState() {
         isPaused = true
         timerReferenceDate = nil
+        pauseStartDate = Date().addingTimeInterval(-42)
     }
 
     /// Snapshot/QA only: raise the overlays that production publishes from

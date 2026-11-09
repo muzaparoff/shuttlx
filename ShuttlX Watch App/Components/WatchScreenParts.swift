@@ -21,11 +21,15 @@ enum WatchScale {
 struct WatchPillButtonStyle: ButtonStyle {
     let fill: Color
     let text: Color
+    /// Liquid Glass on watchOS 26+ (`secondaryGlass`); secondary actions only.
+    var glass = false
 
     static var primary: WatchPillButtonStyle { .init(fill: ShuttlXColor.ctaPrimary, text: ShuttlXColor.iconOnCTA) }
     /// Dark-red fill + red text: destructive but calm (mockup #3a1512 / #FF6961).
     static var endAndSave: WatchPillButtonStyle { .init(fill: ShuttlXColor.ctaDestructive.opacity(0.24), text: ShuttlXColor.ctaDestructive) }
     static var neutral: WatchPillButtonStyle { .init(fill: ShuttlXColor.watchCardBackground, text: ShuttlXColor.textPrimary) }
+    /// D5: "Keep going", "Skip". Safety actions keep the solid styles above.
+    static var secondary: WatchPillButtonStyle { .init(fill: ShuttlXColor.watchCardBackground, text: ShuttlXColor.textPrimary, glass: true) }
     static var warning: WatchPillButtonStyle { .init(fill: ShuttlXColor.ctaWarning, text: ShuttlXColor.iconOnCTA) }
 
     func makeBody(configuration: Configuration) -> some View {
@@ -34,8 +38,40 @@ struct WatchPillButtonStyle: ButtonStyle {
             .foregroundStyle(text)
             .lineLimit(1)
             .frame(maxWidth: .infinity, minHeight: 44)
-            .background(fill, in: RoundedRectangle(cornerRadius: 12))
+            .secondaryGlass(fill, in: RoundedRectangle(cornerRadius: 12), enabled: glass)
             .opacity(configuration.isPressed ? 0.75 : 1)
+    }
+}
+
+/// D5: list rows in Home ("Mixed") and Mixed (Heart Recovery, programs). Same shape
+/// and press feedback as `ShuttlXCardButtonStyle`, with Liquid Glass on watchOS 26+.
+struct WatchGlassRowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .secondaryGlass(ShuttlXColor.watchCardBackground,
+                            in: RoundedRectangle(cornerRadius: ShuttlXSize.cardCornerRadius))
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .opacity(configuration.isPressed ? 0.8 : 1.0)
+            .animation(.easeInOut(duration: 0.15), value: configuration.isPressed)
+    }
+}
+
+extension View {
+    /// D5: Liquid Glass on secondary controls on watchOS 26+, the solid `fill` before
+    /// (the look they had). Never on safety cards' primary or End & Save actions.
+    @ViewBuilder
+    func secondaryGlass<S: Shape>(_ fill: Color, in shape: S, enabled: Bool = true) -> some View {
+        #if compiler(>=6.2)
+        if enabled, #available(watchOS 26, *) {
+            // Glass on an empty layer behind the label: on the label itself the system
+            // tinted the grey subtitles to about 3:1 (Mixed rows, simulator 2026-11-09).
+            self.background { Color.clear.glassEffect(.regular, in: shape) }
+        } else {
+            self.background(fill, in: shape)
+        }
+        #else
+        self.background(fill, in: shape)
+        #endif
     }
 }
 

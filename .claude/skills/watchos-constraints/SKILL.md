@@ -11,7 +11,7 @@ Apply when writing or reviewing any code in `ShuttlX Watch App/`, especially the
 
 - [ ] Every `TimelineView(.animation(minimumInterval:))` MUST pass `paused:` tied to workout pause state. (Mixtape's hero was the old reference and is gone.) A hero redrawing a static frame at 24 Hz while paused is a defect.
 - [ ] Redraw rate budget on watch: ≤12 Hz for decorative animation, 1 Hz for data-driven updates. 24 Hz needs written justification.
-- [ ] AOD / wrist-down: `isLuminanceReduced` must tear down heroes and swap to the minimal AOD view (pattern: `aodMinimalView`, TrainingView.swift). No decorative animation may run in AOD.
+- [ ] AOD / wrist-down: `isLuminanceReduced` must tear down heroes and swap to the minimal AOD view (pattern: `AODPage` swapped into every TabView page by `TrainingView.page(_:)`; countdowns as system timer text). No decorative animation may run in AOD.
 - [ ] No idle animations outside an active workout screen (design-system anti-goal).
 - [ ] All overlay chrome uses `.allowsHitTesting(false)`.
 

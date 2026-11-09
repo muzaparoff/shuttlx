@@ -3,12 +3,41 @@ import HealthKit
 import WatchKit
 import ShuttlXShared
 
-extension TrainingView {
-    // MARK: - Always-On Display (Reduced Luminance)
+/// Shared reads for the workout pages. Each page is its own struct that reads the
+/// `@Observable` manager from the environment, so it re-renders only when what it
+/// reads changes; the helpers below live here so every page uses one heart reference.
+@MainActor
+protocol WorkoutPage {
+    var workoutManager: WatchWorkoutManager { get }
+    /// Read once per workout by TrainingView (age for the estimated limit).
+    var hrCalculator: HeartRateZoneCalculator { get }
+}
 
-    var aodMinimalView: some View {
+extension WorkoutPage {
+    var screenHeight: CGFloat { WatchScale.height }
+    var screenWidth: CGFloat { WatchScale.width }
+}
+
+// MARK: - Always-On Display (Reduced Luminance)
+
+/// Wrist down (any page): the cue that matters (R8), then time and BPM. Static text
+/// only, no animation; the countdowns are system timer text, so they keep counting
+/// while dimmed without per-second state.
+struct AODPage: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    let hrCalculator: HeartRateZoneCalculator
+
+    var body: some View {
+        #if DEBUG
+        let _ = BodyCounter.hit("AODPage")
+        #endif
         VStack(spacing: 12) {
             Spacer()
+            cue
+                .monospacedDigit()
+                .lineLimit(1)
+                .fixedSize()
+                .opacity(0.75)
             // AOD: full screen width minus a small margin. At 1h+ the h:mm:ss form
             // is 7 glyphs — on a 40mm screen that overflows 36pt, so the component
             // shrinks it to fit rather than truncating.
@@ -23,29 +52,83 @@ extension TrainingView {
                     .monospacedDigit()
                     .foregroundColor(ShuttlXColor.heartRate.opacity(0.7))
             }
-            if workoutManager.workoutMode == .interval, let engine = workoutManager.intervalEngine {
-                IntervalStepName(engine: engine)
-            }
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.black)
     }
 
-    // MARK: - Interval Workout Display
-    //
-    // Interval mode only. Free run renders `runningPage` + `freeRunMetricsPage`
-    // (TrainingView+Running.swift) — the one-word layout from the timeline mockup.
+    /// Gym: READY / SET n / REST m:ss. Intervals: step name + countdown. Free run: the
+    /// zone word. Paused (every mode): PAUSED.
+    @ViewBuilder private var cue: some View {
+        let size = WatchScale.pt(20)
+        if workoutManager.isPaused {
+            Text("\u{23F8}\u{FE0E} PAUSED")
+                .font(.system(size: size, weight: .heavy))
+                .foregroundColor(ShuttlXColor.ctaWarning)
+        } else {
+            switch workoutManager.workoutMode {
+            case .freeRun:
+                if let word = heartZoneWord {
+                    Text(word)
+                        .font(.system(size: size, weight: .heavy))
+                        .foregroundColor(zoneWordColor(word))
+                        .accessibilityLabel("Effort \(word.lowercased())")
+                }
+            case .interval:
+                if let engine = workoutManager.intervalEngine {
+                    IntervalStepName(engine: engine, referenceDate: workoutManager.timerReferenceDate,
+                                     maxSize: size, width: screenWidth - 16)
+                }
+            case .gymRecovery:
+                switch workoutManager.recoveryState {
+                case .idle:
+                    Text("READY")
+                        .font(.system(size: size, weight: .heavy))
+                        .foregroundColor(ShuttlXColor.textSecondary)
+                case .work:
+                    Text("SET \(workoutManager.recoverySetNumber)")
+                        .font(.system(size: size, weight: .heavy))
+                        .foregroundColor(ShuttlXColor.ctaPrimary)
+                case .rest:
+                    if let start = workoutManager.restStartTime {
+                        HStack(spacing: 5) {
+                            Text("REST")
+                            Text(timerInterval: start...Date.distantFuture, countsDown: false)
+                        }
+                        .font(.system(size: size, weight: .heavy))
+                        .foregroundColor(ShuttlXColor.ctaWarning)
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+            }
+        }
+    }
 
-    var fullWorkoutDisplayTab: some View {
+}
+
+// MARK: - Interval Workout Display
+//
+// Interval mode only. Free run renders `RunningPage` + `FreeRunMorePage`
+// (TrainingView+Running.swift) — the one-word layout from the timeline mockup.
+
+/// R7: five elements (program name, countdown + phase, step bar / NEXT, banners,
+/// HR + zone word at the bottom). Distance, pace, time and calories are on `MorePage`.
+struct IntervalPage: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    let hrCalculator: HeartRateZoneCalculator
+    let pageHeight: CGFloat?
+
+    var body: some View {
+        #if DEBUG
+        let _ = BodyCounter.hit("IntervalPage")
+        #endif
         // Every size is mockup px via `WatchScale.pt`, then SOLVED against the row
         // width — never scale-to-fit (see .claude/rules/watchos.md). Measured
         // 2026-10-20 on 40mm: the old 0.08h header ran into the system clock and the
         // TIME row sat on the page dots.
         let rowWidth = screenWidth - 16                 // .padding(.horizontal, 8)
         let labelSize = WatchScale.text(11)
-        let bannerShown = isHighIntensityWarning || workoutManager.noHeartRateDetected
-
         return ZStack {
             // Step-type wash, hosted in its own view that observes the engine
             // so it does not re-evaluate on every manager publish.
@@ -67,7 +150,7 @@ extension TrainingView {
 
                 if let engine = workoutManager.intervalEngine {
                     IntervalCountdownHero(engine: engine, rowWidth: rowWidth, labelSize: labelSize,
-                                          showNext: !bannerShown)
+                                          showNext: true)
                         .padding(.top, WatchScale.pt(4))
                 } else {
                     ElapsedTimerText(referenceDate: workoutManager.timerReferenceDate,
@@ -77,44 +160,23 @@ extension TrainingView {
                         .padding(.top, WatchScale.pt(4))
                 }
 
-                intervalHeartRateRow(labelSize: labelSize)
-                    .padding(.top, WatchScale.pt(5))
-
-                if isHighIntensityWarning {
-                    highIntensityWarningView(labelSize: labelSize).padding(.top, 3)
-                }
-                if workoutManager.noHeartRateDetected {
-                    noHeartRateBanner(labelSize: labelSize).padding(.top, 3)
-                }
-
                 Spacer(minLength: 0)
 
-                // DIST / PACE + elapsed TIME / CAL (the hero is the step countdown,
-                // so elapsed time is demoted here). One solved size per row.
-                let dist = compactDistanceText, pace = paceText
-                let cal = workoutManager.calories > 0 ? "\(workoutManager.calories)" : "\u{2014}"
-                let topSize = twoUpValueSize(dist, pace, rowWidth: rowWidth, labelSize: labelSize)
-                HStack(spacing: 8) {
-                    compactMetric("DIST", dist, topSize, labelSize, a11y: "Distance \(accessibleDistance)")
-                    compactMetric("PACE", pace, topSize, labelSize, a11y: accessiblePace)
+                if isHighIntensityWarning {
+                    highIntensityWarningView(labelSize: labelSize).padding(.bottom, 4)
                 }
-                // Only this row follows the 1 Hz clock.
-                WorkoutClockReader(clock: workoutManager.clock) { elapsed in
-                    let time = FormattingUtils.formatTimer(elapsed)
-                    let bottomSize = twoUpValueSize(time, cal, rowWidth: rowWidth, labelSize: labelSize)
-                    HStack(spacing: 8) {
-                        compactMetric("TIME", time, bottomSize, labelSize,
-                                      a11y: "Elapsed \(FormattingUtils.formatTimeAccessible(elapsed))")
-                        compactMetric("CAL", cal, bottomSize, labelSize,
-                                      a11y: workoutManager.calories > 0 ? "\(workoutManager.calories) calories" : "Calories no data")
-                    }
+                if workoutManager.noHeartRateDetected {
+                    noHeartRateBanner(labelSize: labelSize).padding(.bottom, 4)
                 }
-                .padding(.top, WatchScale.pt(3))
+
+                intervalHeartRateRow(labelSize: labelSize)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(.horizontal, 8)
             // Keep the last line clear of the TabView page dots.
             .padding(.bottom, max(10, screenHeight * 0.055))
+            // Same pinning as the free-run pages: HR sits at the screen bottom.
+            .frame(height: pageHeight)
         }
         .overlay(alignment: .top) {
             if let engine = workoutManager.intervalEngine {
@@ -124,7 +186,7 @@ extension TrainingView {
         }
     }
 
-    /// `[digits][BPM] ... [zone word]` — digits solved for 3 glyphs, never scaled.
+    /// `[digits][BPM] ... [zone word]` at the bottom, as on the run/walk Workout page.
     /// HR is red like the other pages; the word is the running page's EASY / STEADY /
     /// HARD from `resolvedHeartLimit` (no limit and no age: no word).
     private func intervalHeartRateRow(labelSize: CGFloat) -> some View {
@@ -132,7 +194,7 @@ extension TrainingView {
         let word = heartZoneWord
         return HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(hr > 0 ? "\(hr)" : "\u{2014}")
-                .font(.system(size: WatchScale.pt(26), weight: .bold))
+                .font(.system(size: WatchScale.pt(30), weight: .semibold))
                 .monospacedDigit()
                 .foregroundColor(hr > 0 ? ShuttlXColor.heartRate : ShuttlXColor.textSecondary)
                 .fixedSize()
@@ -142,10 +204,9 @@ extension TrainingView {
                 .fixedSize()
             Spacer(minLength: 4)
             if let word {
-                // Same size as the gym page's word. "STEADY" next to "172 BPM" fits
-                // on 40 mm with room to spare (snapshot 2026-11-09).
+                // Same size as the run/walk Workout page's word.
                 Text(word)
-                    .font(.system(size: WatchScale.pt(16), weight: .heavy))
+                    .font(.system(size: WatchScale.pt(15), weight: .heavy))
                     .foregroundColor(zoneWordColor(word))
                     .fixedSize()
             }
@@ -155,36 +216,11 @@ extension TrainingView {
         .accessibilityAddTraits(.updatesFrequently)
     }
 
-    /// Shared value size for one two-up row: both `[LABEL value]` halves fit at
-    /// the size of the longer value (min 4 glyphs so a row doesn't jump while
-    /// values grow). Cap pt(20).
-    func twoUpValueSize(_ a: String, _ b: String, rowWidth: CGFloat, labelSize: CGFloat) -> CGFloat {
-        let advance: CGFloat = 0.62
-        let half = (rowWidth - 8) / 2
-        let labelWidth = 4 * advance * labelSize + 4
-        let glyphs = CGFloat(max(4, a.count, b.count))
-        return max(8, min(WatchScale.pt(20), (half - labelWidth - 2) / (glyphs * advance)))
-    }
+}
 
+extension WorkoutPage {
     /// Synced from the phone ("km" / "mi" / region). Data stays in km.
     var distanceUnit: DistanceUnit { WatchSyncCoordinator.shared.distanceUnit }
-
-    /// Split time "6:12" (h:mm:ss past an hour).
-    static func splitClock(_ t: TimeInterval) -> String {
-        let s = Int(t.rounded())
-        return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
-                         : String(format: "%d:%02d", s / 60, s % 60)
-    }
-
-    /// "KM 3" / "MI 2"
-    static func splitLabel(_ unit: DistanceUnit, _ number: Int) -> String {
-        "\(unit.symbol.uppercased()) \(number)"
-    }
-
-    /// "Kilometre 3, 6 minutes 12 seconds"
-    static func splitAccessible(_ unit: DistanceUnit, _ split: SplitCounter.Split) -> String {
-        "\(unit.name.capitalized) \(split.number), \(FormattingUtils.formatTimeAccessible(split.splitTime.rounded()))"
-    }
 
     /// Speed replaces pace while a cycling segment runs (min/km is unreadable on a bike).
     var showsSpeed: Bool { workoutManager.currentActivity == .cycling }
@@ -264,34 +300,13 @@ extension TrainingView {
         return max(10, min(cap, budget / (CGFloat(glyphs) * advance)))
     }
 
-    /// `[LABEL value]` half of an interval two-up row. `valueSize` comes from
-    /// `twoUpValueSize`, so both Texts render as asked (`fixedSize`, no scale factor).
-    func compactMetric(_ label: String, _ value: String,
-                       _ valueSize: CGFloat, _ labelSize: CGFloat,
-                       a11y: String? = nil) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: 4) {
-            Text(label)
-                .font(.system(size: labelSize, weight: .bold))
-                .foregroundColor(ShuttlXColor.textSecondary)
-                .fixedSize()
-            Text(value)
-                .font(.system(size: valueSize, weight: .bold))
-                .monospacedDigit()
-                .foregroundColor(ShuttlXColor.textPrimary)
-                .fixedSize()
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel(a11y ?? "\(label) \(value)")
-    }
-
     // MARK: - Metric Row
     //
     // The `[LABEL][spacer][value]` two-column row is GONE. Its only remaining
     // caller was the free-run PACE line, which now uses `unitNumber` — the label
     // column cost `labelWidth` (0.20h) of row width for a word the unit suffix says
     // in a third of the space. Interval mode never used it (it composes its rows
-    // inline and via `compactMetric`). Do not reintroduce it on the free-run stack.
+    // inline). Do not reintroduce it on the free-run stack.
 
     // MARK: - Computed Properties
 
@@ -352,8 +367,8 @@ extension TrainingView {
             // Tight copy on ONE line (two lines pushed the interval page's bottom row
             // off a 40mm screen). The size is SOLVED against the row, never
             // scale-to-fit; action first, the full sentence is the a11y label.
-            Text(Self.easeOffText)
-                .font(.system(size: bannerSize(Self.easeOffText, labelSize: labelSize), weight: .bold))
+            Text(TrainingView.easeOffText)
+                .font(.system(size: bannerSize(TrainingView.easeOffText, labelSize: labelSize), weight: .bold))
                 // Amber, not red: an instruction, not an alarm (timeline mockup).
                 .foregroundColor(ShuttlXColor.ctaWarning)
                 .lineLimit(1)
@@ -400,8 +415,6 @@ extension TrainingView {
         .accessibilityLabel("No heart rate detected. Check that the watch is snug on your wrist and that ShuttlX has heart rate access in the Health app.")
     }
 
-    static let easeOffText = "Ease off \u{2014} HR high"
-
     /// Banner text size: `labelSize` (floor included), lowered only if `text` would
     /// not fit the row minus the banner's 6pt side padding. Monospaced 0.62em advance.
     /// The row is the page width minus 8pt padding per side; the TabView pages are
@@ -413,22 +426,10 @@ extension TrainingView {
     }
 
     /// Full "12.84 km" form. No longer used by the live timer (both modes now show
-    /// distance in the compact slot, see `compactDistanceText`) — kept as the
+    /// distance in the compact slot, see `compactDistanceValue`) — kept as the
     /// unit-bearing formatting entry point for any full-width distance surface.
     var distanceText: String {
         FormattingUtils.formatDistance(workoutManager.totalDistance)
-    }
-
-    /// Distance for the compact two-up slot, which is roughly half the width of a
-    /// full-width row. "12.84 km" cannot fit there on 40mm — even at
-    /// the 0.4 scale floor it elided to "3.42…". The unit is dropped in the km form
-    /// exactly as `paceText` drops "/KM" for the same reason; the "DIST" label and
-    /// the VoiceOver string (which keeps full units) carry the meaning. The sub-km
-    /// form keeps its "m" because "450" alone would be ambiguous.
-    var compactDistanceText: String {
-        let km = workoutManager.totalDistance
-        if distanceUnit == .km, km < 1.0 { return "\(Int(km * 1000))m" }
-        return String(format: "%.2f", distanceUnit.value(fromKm: km))
     }
 
     /// Free-run distance split into number and unit so the unit can be rendered as a
@@ -473,6 +474,27 @@ extension TrainingView {
         let minutes = Int(perUnit) / 60
         let seconds = Int(perUnit) % 60
         return "Average pace \(minutes) minutes \(seconds) seconds per \(distanceUnit == .mi ? "mile" : "kilometer")"
+    }
+}
+
+extension TrainingView {
+    static let easeOffText = "Ease off \u{2014} HR high"
+
+    /// Split time "6:12" (h:mm:ss past an hour).
+    static func splitClock(_ t: TimeInterval) -> String {
+        let s = Int(t.rounded())
+        return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60)
+                         : String(format: "%d:%02d", s / 60, s % 60)
+    }
+
+    /// "KM 3" / "MI 2"
+    static func splitLabel(_ unit: DistanceUnit, _ number: Int) -> String {
+        "\(unit.symbol.uppercased()) \(number)"
+    }
+
+    /// "Kilometre 3, 6 minutes 12 seconds"
+    static func splitAccessible(_ unit: DistanceUnit, _ split: SplitCounter.Split) -> String {
+        "\(unit.name.capitalized) \(split.number), \(FormattingUtils.formatTimeAccessible(split.splitTime.rounded()))"
     }
 }
 
@@ -607,15 +629,31 @@ struct PausePulse: ViewModifier {
     }
 }
 
-/// AOD step name; observes the engine so it changes with the step.
+/// AOD step name + countdown ("WORK 1:24"); observes the engine so it changes with
+/// the step. While running the countdown is system timer text to the step's
+/// wall-clock end; paused (`referenceDate` nil) it is static.
 struct IntervalStepName: View {
     @ObservedObject var engine: IntervalEngine
+    let referenceDate: Date?
+    let maxSize: CGFloat
+    let width: CGFloat
 
     var body: some View {
         if let step = engine.currentStep {
-            Text(step.type.displayName.uppercased())
-                .font(.system(size: 14, weight: .bold))
-                .foregroundColor(ShuttlXColor.forStepType(step.type))
+            let name = step.type.displayName.uppercased()
+            // Name + space + "m:ss" (5); capitals ~0.72em in SF Compact heavy. Solved, never scaled.
+            let size = min(maxSize, width / (CGFloat(name.count + 6) * 0.72))
+            HStack(spacing: 5) {
+                Text(name)
+                if let referenceDate, let end = engine.currentStepEndElapsed {
+                    Text(timerInterval: referenceDate...referenceDate.addingTimeInterval(end), countsDown: true)
+                } else {
+                    Text(FormattingUtils.formatTimer(max(0, engine.currentStepTimeRemaining)))
+                }
+            }
+            .font(.system(size: size, weight: .heavy))
+            .foregroundColor(ShuttlXColor.forStepType(step.type))
+            .accessibilityElement(children: .combine)
         }
     }
 }

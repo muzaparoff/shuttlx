@@ -38,3 +38,12 @@ Blood oxygen: not built (no third-party live API; see the review page).
 - Banner-width bug (found 2026-11-08, owner picked option 1): `noHeartRateBanner` (`Views/TrainingView+Metrics.swift`) used `HStack { Spacer(); ...; Spacer() }`; the default spacer minimum widened the page on 40 mm and 46 mm (side margins about 4 pt instead of 10). Fixed with `Spacer(minLength: 0)`.
 
 Rules that bind every step: part timer never `@Published` per second (1 Hz isolation); sizes solved, never scaled; HR and safety banners never leave the screen (snapshot 40 mm + 46 mm); wording describes, never diagnoses (no "good", "recovered", "abnormal", no green/red grading of the drop).
+
+## Status (2026-11-09)
+
+- Step 3 implemented with Wave 5 C2c (deep review Wave 3), **uncommitted**. Watch and iOS build; snapshot-checked on 40 mm and 46 mm.
+  - Page order Controls | Workout | More in every mode, opening on Workout (tags 0 / 1 / 2; `SHUTTLX_SNAPSHOT_TAB` numbers changed).
+  - Free-run Workout page: total time (hero), part timer under it ("RUN 4:12", system timer text from `currentSegmentStartTime`; "PAUSED 0:42" while paused), distance, BPM + zone word at the bottom. Zone bar and swipe hints removed. Toasts take the part row, "Ease off" the distance row, the no-HR banner both.
+  - More page in every mode (free run: pace, last split, calories, BPM; interval: distance, pace, time, calories, BPM; gym: time, calories, BPM).
+  - Not verified on device. Open for the owner: before the first run/walk classification the part row reads "RUN/WALK" and shows the same time as the hero.
+

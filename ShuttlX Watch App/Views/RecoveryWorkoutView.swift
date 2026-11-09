@@ -11,23 +11,22 @@ import ShuttlXShared
 ///   - `.idle` / `.rest` -> "Start Set" (green ctaPrimary)
 ///   - `.work`           -> "End Set"   (red ctaDestructive)
 ///
-/// The heart cues come from TrainingView so every mode uses one heart reference
-/// (`resolvedHeartLimit`): the zone word, and the "Ease off" or no-HR banner. At 90 %
-/// of the limit TrainingView shows its heart-limit page instead, with `GymSetButton`
+/// The heart cues come from the `WorkoutPage` helpers so every mode uses one heart
+/// reference (`resolvedHeartLimit`): the zone word, and the "Ease off" or no-HR banner.
+/// At 90 % of the limit `WorkoutMainPage` shows `HeartLimitPage` instead, with `GymSetButton`
 /// at the bottom. Sizes are mockup px via `WatchScale`, solved, never scaled.
-struct RecoveryWorkoutView<Banner: View>: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
-
-    /// EASY / STEADY / HARD and its colour; nil without HR or without a limit.
-    let zone: (word: String, color: Color)?
-    /// A banner is showing: the rest badges step aside to pay for it on 40mm.
-    let bannerShown: Bool
+struct RecoveryWorkoutView: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    let hrCalculator: HeartRateZoneCalculator
     /// Same pinning as the free-run pages: the page ends at the screen bottom.
     let pageHeight: CGFloat?
-    @ViewBuilder let banner: () -> Banner
 
     var body: some View {
         let hr = workoutManager.heartRate
+        // EASY / STEADY / HARD and its colour; nil without HR or without a limit.
+        let zone = heartZoneWord.map { (word: $0, color: zoneWordColor($0)) }
+        // A banner is showing: the rest badges step aside to pay for it on 40mm.
+        let bannerShown = isHighIntensityWarning || workoutManager.noHeartRateDetected
         let zoneSize = WatchScale.pt(16)
         // Side column is as wide as its longest word ("STEADY", heavy ~0.7em).
         let sideWidth = zoneSize * 0.7 * 6
@@ -93,7 +92,7 @@ struct RecoveryWorkoutView<Banner: View>: View {
 
             Spacer(minLength: 0)
 
-            banner()
+            gymSafetyBanner
                 .padding(.bottom, bannerShown ? 4 : 0)
 
             GymSetButton()
@@ -141,7 +140,7 @@ struct RecoveryWorkoutView<Banner: View>: View {
 /// `● READY` / `● SET 2` / `● REST 00:48`, or `⏸︎ PAUSED`, in the free-run tag style.
 /// Short enough to share the top line with the system clock on 40mm.
 struct GymStateTag: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(WatchWorkoutManager.self) var workoutManager
 
     var body: some View {
         if workoutManager.isPaused {
@@ -180,7 +179,7 @@ struct GymStateTag: View {
 /// No haptic here: the set event in `WatchWorkoutManager.processRecoveryEvents`
 /// plays it (`.click` on start, `.stop` on end), so a tap buzzes once.
 struct GymSetButton: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(WatchWorkoutManager.self) var workoutManager
 
     var body: some View {
         let working = workoutManager.recoveryState == .work

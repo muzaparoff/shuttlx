@@ -2,7 +2,7 @@ import SwiftUI
 import os.log
 
 struct ContentView: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
+    @Environment(WatchWorkoutManager.self) var workoutManager
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "ContentView")
 
     var body: some View {
@@ -45,8 +45,8 @@ struct ContentView: View {
     let workoutManager = WatchWorkoutManager()
 
     ContentView()
-        .environmentObject(dataManager)
-        .environmentObject(workoutManager)
+        .environment(dataManager)
+        .environment(workoutManager)
         .onAppear {
             workoutManager.setSharedDataManager(dataManager)
         }

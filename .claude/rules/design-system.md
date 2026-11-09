@@ -129,7 +129,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 
 ## Per-theme Timer Hero
 
-No theme currently ships a custom hero: Clean is the minimal, calm accessibility baseline and both timers render the shared layout (iOS `standardTimerBody`, watch `fullWorkoutDisplayTab`). If a theme adds one later, dispatch on `themeManager.current.id` (iOS in `iPhoneWorkoutTimerView`, watch in `TrainingView+Metrics`), keep the hero in its own file under `Theme/Themes/`, reuse the same `controller` / `workoutManager` data, and mark overlays `.allowsHitTesting(false)`.
+No theme currently ships a custom hero: Clean is the minimal, calm accessibility baseline and both timers render the shared layout (iOS `standardTimerBody`, watch `IntervalPage`). If a theme adds one later, dispatch on `themeManager.current.id` (iOS in `iPhoneWorkoutTimerView`, watch in `WorkoutMainPage`), keep the hero in its own file under `Theme/Themes/`, reuse the same `controller` / `workoutManager` data, and mark overlays `.allowsHitTesting(false)`.
 
 ## iOS Timer Screen
 

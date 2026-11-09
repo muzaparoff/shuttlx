@@ -4,9 +4,10 @@ import WatchKit
 import ShuttlXShared
 #endif
 
-struct TrainingView: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
-    @State var selectedTab = 0
+struct TrainingView: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    /// 0 Controls, 1 Workout (opens here), 2 More.
+    @State var selectedTab = 1
     /// END tapped: the confirm card, then (Discard) its second confirmation.
     @State var endPrompt: EndPromptStage?
     @State var showingAuthDeniedAlert = false
@@ -22,13 +23,6 @@ struct TrainingView: View {
     /// running page pins itself to it; a stack shorter than the TabView floated to
     /// the centre (no HR: no zone word or bar).
     @State var pageHeight: CGFloat?
-    #if os(watchOS)
-    let screenHeight = WKInterfaceDevice.current().screenBounds.height
-    let screenWidth = WKInterfaceDevice.current().screenBounds.width
-    #else
-    let screenHeight: CGFloat = 224
-    let screenWidth: CGFloat = 198
-    #endif
 
     var body: some View {
         // Summary is now shown by ContentView when workoutManager.pendingSummary != nil,
@@ -53,35 +47,24 @@ struct TrainingView: View {
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
 
-            // Free run: running page -> (swipe left) distance/pace/calories -> controls.
-            // Interval + gym recovery: their own main page -> controls.
+            // Every mode: Controls | Workout | More, opening on Workout (watch plan
+            // step 3; one swipe right to pause, as in Apple Workout). Each page is its
+            // own struct: it re-renders only on what it reads.
             TabView(selection: $selectedTab) {
-                workoutDisplayTab
+                page(ControlsPage(hrCalculator: hrCalculator, onEnd: { endPrompt = .confirm }))
                     .tag(0)
-
-                if isFreeRunLayout {
-                    #if DEBUG
-                    let _ = BodyCounter.hit("freeRunMetricsPage")
-                    let _ = BodyCounter.hit("controlsTab")
-                    #endif
-                    freeRunMetricsPage
-                        .tag(1)
-                    controlsTab
-                        .tag(2)
-                } else {
-                    #if DEBUG
-                    let _ = BodyCounter.hit("controlsTab")
-                    #endif
-                    controlsTab
-                        .tag(1)
-                }
+                page(WorkoutMainPage(hrCalculator: hrCalculator, pageHeight: pageHeight,
+                                     heartLimitModeOn: heartLimitModeOn))
+                    .tag(1)
+                page(MorePage(hrCalculator: hrCalculator, pageHeight: pageHeight))
+                    .tag(2)
             }
             .tabViewStyle(PageTabViewStyle())
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // The TabView sits inside the safe area (40mm: y40-178 of 197) and centres
             // each page. A page this tall, centred there, ends at the screen bottom —
             // where the page-dot inset is measured from.
-            .onGeometryChange(for: CGFloat.self, of: { 2 * (screenHeight - $0.frame(in: .global).midY) }) {
+            .onGeometryChange(for: CGFloat.self, of: { 2 * (WatchScale.height - $0.frame(in: .global).midY) }) {
                 pageHeight = $0
             }
             // VoiceOver must not reach the workout behind a prompt card.
@@ -133,11 +116,8 @@ struct TrainingView: View {
                 )
             }
         }
-        // No haptic here: the above-limit buzz comes only from HeartAlertEvaluator
-        // (two samples, 10 s, cooldown), so one event buzzes once.
-        .onChange(of: workoutManager.heartRate, initial: true) { _, newHR in
-            heartLimitModeOn = HeartLimitMode.isOn(hr: newHR, limit: resolvedHeartLimit, wasOn: heartLimitModeOn)
-        }
+        // Reads HR in its own body, so an HR sample does not re-render this view.
+        .background(HeartLimitModeTracker(hrCalculator: hrCalculator, isOn: $heartLimitModeOn))
         #if DEBUG
         .onAppear {
             let env = ProcessInfo.processInfo.environment
@@ -166,38 +146,17 @@ struct TrainingView: View {
         }
     }
 
-    // MARK: - Workout Display Tab (Full-Screen Stacked Metrics)
-
+    /// Wrist down: every page shows the same minimal view (R8). Swapped inside the
+    /// TabView page, where the Always-On view always lived: outside it the
+    /// simulator's system timer text dropped its seconds ("12:--").
     @ViewBuilder
-    private var workoutDisplayTab: some View {
+    private func page<Page: View>(_ content: Page) -> some View {
         if isLuminanceReduced {
-            aodMinimalView
-        } else if workoutManager.workoutMode == .gymRecovery {
-            // Same heart cues as free run: heart-limit page at 90 % of the limit
-            // (with the set button), else the gym page with zone word + banners.
-            if let limit = heartLimitModeLimit {
-                heartLimitPage(limit: limit, gym: true)
-            } else {
-                RecoveryWorkoutView(zone: heartZoneWord.map { ($0, zoneWordColor($0)) },
-                                    bannerShown: isHighIntensityWarning || workoutManager.noHeartRateDetected,
-                                    pageHeight: pageHeight) {
-                    gymSafetyBanner
-                }
-            }
-        } else if isFreeRunLayout {
-            #if DEBUG
-            let _ = BodyCounter.hit("runningPage")
-            #endif
-            runningPage
+            AODPage(hrCalculator: hrCalculator)
         } else {
-            #if DEBUG
-            let _ = BodyCounter.hit("fullWorkoutDisplayTab")
-            #endif
-            fullWorkoutDisplayTab
+            content
         }
     }
-
-    var isFreeRunLayout: Bool { workoutManager.workoutMode == .freeRun }
 
     /// Same conditions as the `.overlay` above.
     private var overlayShowing: Bool {
@@ -205,4 +164,48 @@ struct TrainingView: View {
             || (workoutManager.isPaused && workoutManager.autoPauseReason != nil)
     }
 
+}
+
+/// The main (Workout) page of every mode: the heart-limit page at 90 %
+/// of the limit, else the mode's own page.
+struct WorkoutMainPage: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    let hrCalculator: HeartRateZoneCalculator
+    let pageHeight: CGFloat?
+    let heartLimitModeOn: Bool
+
+    var body: some View {
+        #if DEBUG
+        let _ = BodyCounter.hit("WorkoutMainPage")
+        #endif
+        if workoutManager.workoutMode == .interval {
+            IntervalPage(hrCalculator: hrCalculator, pageHeight: pageHeight)
+        } else if heartLimitModeOn, let limit = resolvedHeartLimit {
+            // Heart-limit mode: on at 90 % of the resolved limit, off below 85 %
+            // (`HeartLimitMode`). Gym keeps its set button at the bottom.
+            HeartLimitPage(hrCalculator: hrCalculator, pageHeight: pageHeight, limit: limit,
+                           gym: workoutManager.workoutMode == .gymRecovery)
+        } else if workoutManager.workoutMode == .gymRecovery {
+            RecoveryWorkoutView(hrCalculator: hrCalculator, pageHeight: pageHeight)
+        } else {
+            RunningPage(hrCalculator: hrCalculator, pageHeight: pageHeight)
+        }
+    }
+}
+
+/// Heart-limit mode on/off with hysteresis (`HeartLimitMode`, Shared), updated per HR
+/// sample. No haptic here: the above-limit buzz comes only from HeartAlertEvaluator
+/// (two samples, 10 s, cooldown), so one event buzzes once.
+private struct HeartLimitModeTracker: View, WorkoutPage {
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    let hrCalculator: HeartRateZoneCalculator
+    @Binding var isOn: Bool
+
+    var body: some View {
+        Color.clear
+            .accessibilityHidden(true)
+            .onChange(of: workoutManager.heartRate, initial: true) { _, hr in
+                isOn = HeartLimitMode.isOn(hr: hr, limit: resolvedHeartLimit, wasOn: isOn)
+            }
+    }
 }

@@ -32,7 +32,7 @@ struct WorkoutSummary {
 struct WorkoutSummaryView: View {
     let summary: WorkoutSummary
     let onDismiss: () -> Void
-    @EnvironmentObject private var workoutManager: WatchWorkoutManager
+    @Environment(WatchWorkoutManager.self) private var workoutManager
     /// Done -> the effort screen (when enabled), whose Save/Skip dismisses.
     @State private var showingEffort: Bool
 
@@ -308,7 +308,7 @@ struct EffortView: View {
             }
             HStack(spacing: 6) {
                 Button("Skip", action: onSkip)
-                    .buttonStyle(WatchPillButtonStyle.neutral)
+                    .buttonStyle(WatchPillButtonStyle.secondary)
                     .accessibilityHint("Closes without saving an effort")
                 Button("Save") { onSave(value) }
                     .buttonStyle(WatchPillButtonStyle.primary)
@@ -329,7 +329,7 @@ struct EffortView: View {
 #Preview {
     NavigationStack {
         TrainingView()
-            .environmentObject(WatchWorkoutManager())
+            .environment(WatchWorkoutManager())
     }
 }
 

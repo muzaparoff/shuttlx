@@ -2,23 +2,25 @@ import Foundation
 import WatchConnectivity
 import WidgetKit
 import os.log
+import Observation
 import ShuttlXShared
 
 @MainActor
-class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
+@Observable
+class WatchSyncCoordinator: NSObject, WCSessionDelegate {
     static let shared = WatchSyncCoordinator()
-    @Published var syncStatus: String = "Not synced"
-    @Published var isConnected: Bool = false
-    @Published var lastSyncTime: Date?
-    @Published var syncLog: [String] = []
-    @Published var connectivityHealth: Double = 1.0
-    @Published var workoutTemplates: [WorkoutTemplate] = []
+    var syncStatus: String = "Not synced"
+    var isConnected: Bool = false
+    var lastSyncTime: Date?
+    var syncLog: [String] = []
+    var connectivityHealth: Double = 1.0
+    var workoutTemplates: [WorkoutTemplate] = []
     /// Resolved heart limits + alert flags from the iPhone (no medication field). No UI yet.
-    @Published private(set) var heartSafety = HeartSafetySettings.load()
+    private(set) var heartSafety = HeartSafetySettings.load()
     /// Phone "Distance units" (App Group `distanceUnit`: "km" | "mi" | absent = region).
-    @Published private(set) var distanceUnit = DistanceUnit.current
+    private(set) var distanceUnit = DistanceUnit.current
     /// Phone "Split alerts" switch (App Group `splitAlerts`, absent = on): the km/mile tap + toast.
-    @Published private(set) var splitAlertsOn = UserDefaults(suiteName: "group.com.shuttlx.shared")?
+    private(set) var splitAlertsOn = UserDefaults(suiteName: "group.com.shuttlx.shared")?
         .object(forKey: WatchSyncCoordinator.splitAlertsKey) as? Bool ?? true
     nonisolated static let splitAlertsKey = "splitAlerts"
     #if DEBUG
@@ -31,7 +33,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
 
     /// Back-reference to the workout manager for handling remote control commands
     /// from iPhone (pause/resume/stop). Weak to avoid a retain cycle.
-    weak var workoutManager: WatchWorkoutManager?
+    @ObservationIgnored weak var workoutManager: WatchWorkoutManager?
 
     func setWorkoutManager(_ manager: WatchWorkoutManager) {
         workoutManager = manager
@@ -42,7 +44,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
     /// add / put / remove runs on `sessionStoreQueue`, so the operations for one id stay in order.
     private var pendingSessions: [TrainingSession] = []
     private var consecutiveFailures = 0
-    private var backgroundSyncTimer: Timer?
+    @ObservationIgnored private var backgroundSyncTimer: Timer?
     private let pendingInbox = WatchSyncCoordinator.getWorkingContainer()
         .map { SessionInbox<TrainingSession>(directory: $0.appendingPathComponent("pending_sync", isDirectory: true)) }
     /// The single-file queue of older builds; migrated into `pendingInbox` at launch.
@@ -835,7 +837,7 @@ class WatchSyncCoordinator: NSObject, ObservableObject, WCSessionDelegate {
         // reading sessions.json and JSON-encoding every session (GPS routes
         // included) costs hundreds of ms and used to run inside a @MainActor Task,
         // stalling the 1 Hz display tick. WCSession's reply/transfer APIs are
-        // thread-safe, so only the @Published status mutations hop back to main.
+        // thread-safe, so only the observed status mutations hop back to main.
         if let action = message["action"] as? String, action == "requestAllSessions" {
             Task.detached(priority: .utility) { [weak self] in
                 guard let self = self else {

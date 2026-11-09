@@ -25,6 +25,13 @@ class IntervalEngine: ObservableObject {
     private var templateName: String = ""
     private var templateID: UUID?
 
+    /// Workout-elapsed time at which the current step ends. With the manager's
+    /// `timerReferenceDate` it gives the step's wall-clock end, so the Always-On
+    /// countdown can be system timer text (no per-second state).
+    var currentStepEndElapsed: TimeInterval? {
+        currentStep.map { stepStartElapsed + $0.duration }
+    }
+
     // MARK: - Setup
 
     func configure(template: WorkoutTemplate) {

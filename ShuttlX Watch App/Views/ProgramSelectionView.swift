@@ -7,8 +7,8 @@ import ShuttlXShared
 /// walk itself); Mixed = Heart Recovery (gym) and the interval programs list. The
 /// iPhone can still start gym recovery too (`"gymRecovery"` -> WatchSyncCoordinator).
 struct StartTrainingView: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
-    @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    @Environment(WatchSyncCoordinator.self) var sharedDataManager
 
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "StartTrainingView")
 
@@ -80,7 +80,7 @@ struct StartTrainingView: View {
                 .foregroundStyle(ShuttlXColor.textPrimary)
                 .padding(.horizontal, 12)
                 .frame(maxWidth: .infinity, minHeight: 44)
-                .background(ShuttlXColor.watchCardBackground, in: RoundedRectangle(cornerRadius: 12))
+                .secondaryGlass(ShuttlXColor.watchCardBackground, in: RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Mixed")
@@ -96,8 +96,8 @@ struct StartTrainingView: View {
 /// "Mixed": Heart Recovery (gym sets with rest checks) first, then the interval
 /// programs synced from the iPhone.
 struct ProgramsListView: View {
-    @EnvironmentObject var workoutManager: WatchWorkoutManager
-    @EnvironmentObject var sharedDataManager: WatchSyncCoordinator
+    @Environment(WatchWorkoutManager.self) var workoutManager
+    @Environment(WatchSyncCoordinator.self) var sharedDataManager
     @State private var lastSession: TrainingSession?
     #if DEBUG
     @State private var showingDebugView = false
@@ -151,7 +151,7 @@ struct ProgramsListView: View {
                         .padding(.horizontal, ShuttlXSpacing.lg)
                         .padding(.vertical, ShuttlXSpacing.md)
                     }
-                    .buttonStyle(ShuttlXCardButtonStyle())
+                    .buttonStyle(WatchGlassRowButtonStyle())
                     .accessibilityLabel("\(template.name), \(template.summaryText)")
                     .accessibilityHint("Start this interval workout")
                 }
@@ -216,7 +216,7 @@ struct ProgramsListView: View {
             .padding(.horizontal, ShuttlXSpacing.lg)
             .padding(.vertical, ShuttlXSpacing.md)
         }
-        .buttonStyle(ShuttlXCardButtonStyle())
+        .buttonStyle(WatchGlassRowButtonStyle())
         .accessibilityLabel("Heart Recovery, sets with rest checks")
         .accessibilityHint("Starts a gym session. You start and end each set yourself.")
     }
@@ -286,7 +286,7 @@ private struct ErrorBanner: View {
 #Preview {
     NavigationStack {
         StartTrainingView()
-            .environmentObject(WatchWorkoutManager())
-            .environmentObject(WatchSyncCoordinator.shared)
+            .environment(WatchWorkoutManager())
+            .environment(WatchSyncCoordinator.shared)
     }
 }
