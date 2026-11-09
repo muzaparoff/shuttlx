@@ -7,6 +7,8 @@ struct ContentView: View {
     @State private var selectedTab = 0
     /// Distance unit change: rebuild the tabs so every distance/pace text re-reads it.
     @AppStorage(DistanceUnit.storageKey, store: UserDefaults(suiteName: "group.com.shuttlx.shared")) private var distanceUnitRaw = ""
+    /// Simple mode sets a Dynamic Type floor (xLarge); a larger system size still wins.
+    @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
     @State private var showingDeepLinkSession: TrainingSession?
 
     var body: some View {
@@ -46,6 +48,7 @@ struct ContentView: View {
             .accessibilityHint("Adjust app preferences")
         }
         .modifier(TabBarMinimizeModifier())
+        .dynamicTypeSize(simpleMode ? .xLarge ... .accessibility5 : .xSmall ... .accessibility5)
         .id(distanceUnitRaw)
         .sheet(item: $showingDeepLinkSession) { session in
             NavigationStack {

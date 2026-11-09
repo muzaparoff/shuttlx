@@ -32,6 +32,7 @@ struct SettingsView: View {
     @AppStorage(DistanceUnit.storageKey, store: UserDefaults(suiteName: "group.com.shuttlx.shared")) private var distanceUnitRaw = ""
     #if DEBUG
     @State private var seamHeartAlerts = false   // SHUTTLX_SHOW_HEART=1 screenshot seam
+    @State private var seamHelp = false          // SHUTTLX_SHOW_HELP=1 screenshot seam
     #endif
 
     private static var seamSkipTop: Bool {
@@ -377,10 +378,12 @@ struct SettingsView: View {
         .scrollDismissesKeyboard(.interactively)
         #if DEBUG
         .navigationDestination(isPresented: $seamHeartAlerts) { HeartAlertsView() }
+        .navigationDestination(isPresented: $seamHelp) { HelpView() }
         #endif
         .onAppear {
             #if DEBUG
             if ProcessInfo.processInfo.environment["SHUTTLX_SHOW_HEART"] == "1" { seamHeartAlerts = true }
+            if ProcessInfo.processInfo.environment["SHUTTLX_SHOW_HELP"] == "1" { seamHelp = true }
             #endif
             if let weight = deviceManager.userWeightKg {
                 weightText = String(format: "%.1f", weight)

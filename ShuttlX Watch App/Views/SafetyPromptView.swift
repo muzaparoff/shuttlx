@@ -78,7 +78,7 @@ struct UnusualHeartRateView: View {
                 .lineLimit(1)
                 .fixedSize()
             Text("\(bpm)")
-                .font(.system(size: WatchScale.pt(52), weight: .semibold, design: .monospaced))
+                .font(.system(size: WatchScale.pt(52), weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(ShuttlXColor.ctaWarning)
                 .fixedSize()

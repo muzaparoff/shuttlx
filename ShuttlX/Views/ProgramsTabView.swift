@@ -39,7 +39,7 @@ struct ProgramsTabView: View {
                 if !sharedData.isWorkoutActiveOnWatch {
                     startRow(
                         title: "Gym Recovery",
-                        subtitle: "HR recovery between sets · cardiac rehab",
+                        subtitle: "Heart recovery checks between sets",
                         systemImage: "heart.circle.fill",
                         color: ShuttlXColor.heartRate,
                         action: { workoutController.presentGymRecovery() }

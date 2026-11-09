@@ -406,22 +406,38 @@ struct SimpleTile: View {
 
 struct TodayEmptyState: View {
     @ObservedObject var importer: HealthKitImporter
+    let onStart: () -> Void
 
     var body: some View {
         VStack(spacing: 14) {
-            Circle()
-                .fill(ShuttlXColor.ctaPrimary.opacity(0.14))
-                .frame(width: 84, height: 84)
-                .overlay(Image(systemName: "clock").font(ShuttlXFont.metricLarge).foregroundStyle(ShuttlXColor.accentText))
-                .accessibilityHidden(true)
-            Text("Start a workout on your watch")
+            // Progress ring at 0 (the weekly ring fills once there are workouts).
+            ZStack {
+                Circle().stroke(ShuttlXColor.ctaPrimary.opacity(0.18), lineWidth: 12)
+                VStack(spacing: 0) {
+                    Text("0").font(ShuttlXFont.metricLarge.monospacedDigit()).foregroundStyle(ShuttlXColor.textSecondary)
+                    Text("workouts").font(ShuttlXFont.cardCaption).foregroundStyle(ShuttlXColor.textSecondary)
+                }
+            }
+            .frame(width: 110, height: 110)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("No workouts yet")
+            Text("Your first walk")
                 .font(ShuttlXFont.metricMedium)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(ShuttlXColor.textPrimary)
-            Text("It appears here with the route and the Run / Walk parts. Your past ShuttlX workouts come from Apple Health.")
+            Text("It appears here with the route and the Run / Walk parts. Past ShuttlX workouts come from Apple Health.")
                 .font(ShuttlXFont.cardSubtitle)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(ShuttlXColor.textSecondary)
+            Button(action: onStart) {
+                Label("Start on Apple Watch", systemImage: "play.fill")
+                    .font(ShuttlXFont.cardTitle.weight(.bold))
+                    .foregroundStyle(ShuttlXColor.iconOnCTA)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(ShuttlXColor.ctaPrimary, in: Capsule())
+            }
+            .buttonStyle(PressScaleButtonStyle())
+            .accessibilityHint("Asks to confirm, then starts a Run/Walk workout on your Apple Watch")
             if let p = importer.progress {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack {

@@ -146,7 +146,7 @@ enum HelpContent {
             rate. Without one, ShuttlX can estimate it from your age: 85% of \
             the predicted maximum (220 minus your age), lowered further if you \
             take a beta-blocker. It is an estimate, not a prescription. Your \
-            doctor's limit always wins. Your medication answer stays on this iPhone; only the \
+            doctor's limit always wins. Talk to your doctor before starting a new exercise plan. Your medication answer stays on this iPhone; only the \
             resulting limits are sent to your Watch. You can also choose \
             "Use effort only": a 0–10 effort scale and no heart-rate limit.
             """,
@@ -159,6 +159,8 @@ enum HelpContent {
                          text: "If no limit is set and effort only is off, Today and Settings show “No heart limit set”: the watch cannot warn you until you set one."),
                 HelpStep(icon: "bell.badge",
                          text: "Choose which alerts you want: above limit, below low limit, signal lost, and the sudden rise alert (+40 bpm in 10 s, off by default because it can false alarm). Pause when no heart rate has its own switch and delay (30, 60 or 120 s)."),
+                HelpStep(icon: "waveform.path.ecg",
+                         text: "For a steadier heart rate, pair a Bluetooth chest strap with your Apple Watch (Watch Settings → Bluetooth)."),
                 HelpStep(icon: "applewatch",
                          text: "Settings → Workout sets Distance units (Auto follows your region, Kilometres or Miles; the watch follows too) and Split alerts, the wrist tap at each kilometre or mile in Run/Walk."),
                 HelpStep(icon: "heart.text.square",
@@ -235,11 +237,63 @@ enum HelpContent {
     ]
 }
 
+// MARK: - Zone words preview
+
+/// A drawn watch screen that teaches EASY / STEADY / HARD (70 % and 90 % of the limit, like
+/// `HeartSafetySettings.zoneWord`). Without a limit it explains in words and shows no bpm numbers.
+struct ZoneWordsPreview: View {
+    let limit: Int?
+
+    private var rows: [(word: String, color: Color, range: String, words: String)] {
+        let easy = ShuttlXColor.running.mix(with: .white, by: 0.45)
+        let lo = limit.map { Int((Double($0) * 0.7).rounded(.up)) }
+        let hi = limit.map { Int((Double($0) * 0.9).rounded(.up)) }
+        return [
+            ("EASY", easy, lo.map { "under \($0)" } ?? "", "well under your limit"),
+            ("STEADY", ShuttlXColor.running, lo.flatMap { l in hi.map { "\(l)\u{2013}\($0 - 1)" } } ?? "", "comfortably below it"),
+            ("HARD", ShuttlXColor.ctaWarning, hi.map { "\($0)+" } ?? "", "close to or at your limit"),
+        ]
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
+                ForEach(rows, id: \.word) { r in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(r.word).font(ShuttlXFont.cardTitle.weight(.heavy)).foregroundStyle(r.color)
+                        Spacer(minLength: 8)
+                        Text(limit == nil ? r.words : "\(r.range) bpm")
+                            .font(ShuttlXFont.cardCaption.monospacedDigit())
+                            .foregroundStyle(.white.opacity(0.8))
+                            .multilineTextAlignment(.trailing)
+                    }
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity)
+            .background(Color.black, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .accessibilityHidden(true)
+            Text(limit.map { "The watch shows one of these words while you move. Your limit is \($0) bpm." }
+                 ?? "The watch shows one of these words while you move, based on your heart limit. Set a limit to see the numbers.")
+                .font(ShuttlXFont.cardCaption)
+                .foregroundStyle(ShuttlXColor.textSecondary)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(limit.map {
+            "On the watch: EASY under \(Int((Double($0) * 0.7).rounded(.up))) beats per minute, STEADY up to \(Int((Double($0) * 0.9).rounded(.up)) - 1), HARD from \(Int((Double($0) * 0.9).rounded(.up))). Your limit is \($0)."
+        } ?? "On the watch: EASY is well under your limit, STEADY is comfortably below it, HARD is close to or at it.")
+    }
+}
+
 // MARK: - Help View
 
 struct HelpView: View {
     @Environment(ThemeManager.self) var themeManager
+    #if DEBUG
+    @State private var expanded: String? = ProcessInfo.processInfo.environment["SHUTTLX_SHOW_HELP"] == "1" ? "heart-limits" : nil
+    #else
     @State private var expanded: String?
+    #endif
 
     var body: some View {
         ScrollView {
@@ -294,6 +348,11 @@ struct HelpView: View {
                     .padding(.horizontal, 16)
                     .padding(.bottom, topic.steps.isEmpty ? 16 : 10)
 
+                if topic.id == "heart-limits" {
+                    ZoneWordsPreview(limit: HeartSafetySettings.load().effectiveUpperLimit(age: DeviceManager.shared.userAge))
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 12)
+                }
                 if !topic.steps.isEmpty {
                     VStack(alignment: .leading, spacing: 10) {
                         ForEach(Array(topic.steps.enumerated()), id: \.element) { index, step in

@@ -205,9 +205,8 @@ struct DashboardView: View {
                 VStack(alignment: .leading, spacing: 14) {
                     if noHeartLimit { limitWarning }
                     if showEmpty {
-                        TodayEmptyState(importer: importer)
-                            .containerRelativeFrame(.vertical) { h, _ in h * 0.5 }
-                        startCard(showOthers: false)
+                        TodayEmptyState(importer: importer, onStart: { confirmStart = true })
+                            .padding(.top, 24)
                     } else {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Today")

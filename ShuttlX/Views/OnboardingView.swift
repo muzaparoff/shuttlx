@@ -37,6 +37,11 @@ struct OnboardingView: View {
         if let raw = ProcessInfo.processInfo.environment["SHUTTLX_ONBOARDING_STEP"], let step = Int(raw) {
             _currentPage = State(initialValue: step <= 1 ? 0 : min(step, 3))
         }
+        // Screenshot seam: SHUTTLX_DEMO_LIMIT=<bpm> pre-fills the doctor limit.
+        if let raw = ProcessInfo.processInfo.environment["SHUTTLX_DEMO_LIMIT"], let v = Int(raw) {
+            _doctorLimit = State(initialValue: v)
+            _limitChoice = State(initialValue: .doctor)
+        }
         #endif
     }
 
@@ -345,6 +350,9 @@ struct OnboardingView: View {
                 limitRow(.effortOnly, title: "Use effort only") {
                     Text("0–10 scale, no heart-rate limit.")
                         .font(ShuttlXFont.cardSubtitle).foregroundStyle(.secondary)
+                }
+                introRows {
+                    ZoneWordsPreview(limit: limitChoice == .effortOnly ? nil : chosenLimit)
                 }
                 introRows {
                     Text("Effort 0–10 is always on with a beta-blocker. Heart rate and effort are used together.")

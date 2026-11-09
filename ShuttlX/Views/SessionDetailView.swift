@@ -16,6 +16,7 @@ struct SessionDetailView: View {
     @State private var fixing: FixTarget?
     @State private var heartRate: HeartRateSeries?
     @State private var route: [RoutePoint]?
+    @State private var editingEffort = false
     @AppStorage(SimpleMode.key, store: SimpleMode.store) private var simpleMode = false
 
     private var current: TrainingSession {
@@ -67,8 +68,7 @@ struct SessionDetailView: View {
                     IntervalResultsView(intervals: results)
                 }
 
-                // Metric cards grid
-                metricGrid(session)
+                metricGroups(session).id("groups")
 
             }
             .padding()
@@ -80,12 +80,19 @@ struct SessionDetailView: View {
                 try? await Task.sleep(for: .seconds(1))
                 proxy.scrollTo("splitsCard", anchor: .top)
             }
+            if ProcessInfo.processInfo.environment["SHUTTLX_SCROLL_BOTTOM"] == "1" {
+                try? await Task.sleep(for: .seconds(1))
+                proxy.scrollTo("groups", anchor: .bottom)
+            }
         }
         #endif
         }
         .task(id: session.id) { heartRate = await SessionHeartRateLoader.load(for: session) }
         // Keyed on the point count too, so a copy that arrives later with its route replaces the map.
         .task(id: "\(session.id)-\(session.routeSummary?.pointCount ?? 0)") { route = await dataManager.route(for: session.id) }
+        .sheet(isPresented: $editingEffort) {
+            EffortEditSheet(sessionID: session.id, value: session.effortRPE ?? 5)
+        }
         .sheet(item: $fixing) { target in
             FixPartSheet(sessionID: target.sessionID, partID: target.partID, parts: segments)
         }
@@ -156,94 +163,164 @@ struct SessionDetailView: View {
         .accessibilityLabel("\(label) \(value)")
     }
 
-    // MARK: - Metric Grid
+    // MARK: - Grouped rows (Heart / Movement / How it felt)
 
-    private func metricGrid(_ session: TrainingSession) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-            if let maxHR = session.maxHeartRate {
-                MetricCard(
-                    icon: "heart.fill",
-                    value: "\(Int(maxHR)) BPM",
-                    label: "Max Heart Rate",
-                    color: ShuttlXColor.heartRate
-                )
+    private struct Row: Identifiable {
+        let label: String
+        let value: String
+        var spoken: String?
+        var id: String { label }
+    }
+
+    private func metricGroups(_ session: TrainingSession) -> some View {
+        var heart: [Row] = []
+        if let maxHR = session.maxHeartRate { heart.append(Row(label: "Max heart rate", value: "\(Int(maxHR)) bpm")) }
+        if let paused = session.pausedPeakHeartRate, paused > 0 {
+            heart.append(Row(label: "Peak while paused", value: "\(Int(paused)) bpm",
+                             spoken: "Peak heart rate while paused, \(Int(paused)) beats per minute"))
+        }
+        var move: [Row] = []
+        if let distance = session.distance, distance > 0 {
+            move.append(Row(label: "Avg pace (\(DistanceUnit.current.paceSuffix))",
+                            value: FormattingUtils.formatPace(session.duration / distance, unit: .current)))
+        }
+        if let cal = session.caloriesBurned { move.append(Row(label: "Calories", value: "\(Int(cal)) kcal")) }
+        if let steps = session.totalSteps { move.append(Row(label: "Steps", value: "\(steps)")) }
+        if let cad = session.averageCadence, cad > 0 {
+            move.append(Row(label: "Avg cadence", value: "\(Int(cad.rounded())) spm"))
+            // Max only when it materially differs from the average.
+            if let maxCad = session.maxCadence, maxCad > 0, abs(Double(maxCad) - cad) >= 2 {
+                move.append(Row(label: "Max cadence", value: "\(maxCad) spm"))
             }
-
-            if let paused = session.pausedPeakHeartRate, paused > 0 {
-                MetricCard(
-                    icon: "pause.circle.fill",
-                    value: "\(Int(paused)) BPM",
-                    label: "Peak while paused",
-                    color: ShuttlXColor.heartRate
-                )
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Peak heart rate while paused, \(Int(paused)) beats per minute")
-            }
-
-            if let cal = session.caloriesBurned {
-                MetricCard(
-                    icon: "flame.fill",
-                    value: "\(Int(cal))",
-                    label: "Calories",
-                    color: ShuttlXColor.calories
-                )
-            }
-
-            if let steps = session.totalSteps {
-                MetricCard(
-                    icon: "shoeprints.fill",
-                    value: "\(steps)",
-                    label: "Steps",
-                    color: ShuttlXColor.steps
-                )
-            }
-
-            if let cad = session.averageCadence, cad > 0 {
-                MetricCard(
-                    icon: "figure.run.motion",
-                    value: "\(Int(cad.rounded())) spm",
-                    label: "Avg Cadence",
-                    color: ShuttlXColor.steps
-                )
-                // Show max only when it materially differs from average — keeps the grid clean.
-                if let maxCad = session.maxCadence, maxCad > 0, abs(Double(maxCad) - cad) >= 2 {
-                    MetricCard(
-                        icon: "figure.run.motion",
-                        value: "\(maxCad) spm",
-                        label: "Max Cadence",
-                        color: ShuttlXColor.steps
-                    )
-                }
-            } else if let maxCad = session.maxCadence, maxCad > 0 {
-                // Edge case: very short session with a max but no average.
-                MetricCard(
-                    icon: "figure.run.motion",
-                    value: "\(maxCad) spm",
-                    label: "Max Cadence",
-                    color: ShuttlXColor.steps
-                )
-            }
-
-            if let distance = session.distance, distance > 0 {
-                MetricCard(
-                    icon: "gauge.with.dots.needle.bottom.50percent",
-                    value: FormattingUtils.formatPace(session.duration / distance, unit: .current),
-                    label: "Avg Pace (\(DistanceUnit.current.paceSuffix))",
-                    color: ShuttlXColor.pace
-                )
-            }
-
+        } else if let maxCad = session.maxCadence, maxCad > 0 {
+            move.append(Row(label: "Max cadence", value: "\(maxCad) spm"))
+        }
+        return VStack(spacing: 20) {
+            group("Heart", heart)
+            group("Movement", move)
             if let effort = session.effortRPE {
-                MetricCard(
-                    icon: "gauge.with.needle",
-                    value: "Effort \(effort)/10",
-                    label: "How hard",
-                    color: ShuttlXColor.accentText
-                )
+                VStack(alignment: .leading, spacing: 8) {
+                    groupHeader("How it felt")
+                    EffortRow(value: effort) { editingEffort = true }
+                        .timelineCard()
+                }
             }
         }
     }
 
+    private func groupHeader(_ title: String) -> some View {
+        Text(title).font(ShuttlXFont.microLabel).textCase(.uppercase)
+            .foregroundStyle(ShuttlXColor.textSecondary)
+            .padding(.horizontal, 4)
+            .accessibilityAddTraits(.isHeader)
+    }
+
+    @ViewBuilder
+    private func group(_ title: String, _ rows: [Row]) -> some View {
+        if !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                groupHeader(title)
+                VStack(spacing: 0) {
+                    ForEach(rows) { r in
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(r.label).font(ShuttlXFont.cardSubtitle).foregroundStyle(ShuttlXColor.textPrimary)
+                            Spacer(minLength: 12)
+                            Text(r.value).font(ShuttlXFont.cardTitle.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(ShuttlXColor.textPrimary)
+                        }
+                        .padding(.horizontal, 16).padding(.vertical, 12)
+                        .frame(minHeight: 44)
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(r.spoken ?? "\(r.label): \(r.value)")
+                    }
+                }
+                .timelineCard()
+            }
+        }
+    }
+
+}
+
+/// Borg CR10 words, same as the watch's effort screen (the watch keeps its own copy: separate target).
+private enum EffortScale {
+    static func word(_ n: Int) -> String {
+        switch n {
+        case 0: return "Rest"
+        case 1: return "Very easy"
+        case 2: return "Easy"
+        case 3: return "Moderate"
+        case 4: return "Somewhat hard"
+        case 5, 6: return "Hard"
+        case 7, 8, 9: return "Very hard"
+        default: return "Max"
+        }
+    }
+}
+
+/// 11-segment bar like the watch's, tappable to change the answer. Never goes to Health or telemetry.
+private struct EffortRow: View {
+    let value: Int
+    let onEdit: () -> Void
+
+    var body: some View {
+        Button(action: onEdit) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Effort").font(ShuttlXFont.cardSubtitle).foregroundStyle(ShuttlXColor.textPrimary)
+                    Spacer()
+                    Text("\(value)/10 \u{00B7} \(EffortScale.word(value))")
+                        .font(ShuttlXFont.cardTitle.weight(.semibold).monospacedDigit())
+                        .foregroundStyle(ShuttlXColor.warningText)
+                    Image(systemName: "chevron.right").font(ShuttlXFont.cardCaption)
+                        .foregroundStyle(ShuttlXColor.textSecondary).accessibilityHidden(true)
+                }
+                HStack(spacing: 3) {
+                    ForEach(0...10, id: \.self) { i in
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(i <= value ? ShuttlXColor.ctaWarning : ShuttlXColor.textSecondary.opacity(0.18))
+                            .frame(height: 8)
+                    }
+                }
+                .accessibilityHidden(true)
+            }
+            .padding(16)
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Effort: \(value) of 10, \(EffortScale.word(value))")
+        .accessibilityHint("Opens a picker to change how hard it felt")
+    }
+}
+
+/// Sheet to change the effort answer; Save writes it through `DataManager.applyEffort`.
+private struct EffortEditSheet: View {
+    let sessionID: UUID
+    @State var value: Int
+    @EnvironmentObject private var dataManager: DataManager
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        VStack(spacing: 12) {
+            Text("How hard was it?").font(ShuttlXFont.cardTitle.weight(.bold)).accessibilityAddTraits(.isHeader)
+            Text(EffortScale.word(value)).font(ShuttlXFont.cardSubtitle).foregroundStyle(ShuttlXColor.warningText)
+            Picker("Effort", selection: $value) {
+                ForEach(0...10, id: \.self) { Text("\($0)").monospacedDigit().tag($0) }
+            }
+            .pickerStyle(.wheel)
+            .frame(height: 120)
+            .accessibilityLabel("Effort from 0 to 10")
+            Button {
+                dataManager.applyEffort(sessionId: sessionID.uuidString, rpe: value)
+                dismiss()
+            } label: { Text("Save") }
+            .buttonStyle(ShuttlXPrimaryCTAStyle(maxWidth: .infinity))
+            Button("Cancel") { dismiss() }.frame(minHeight: 44)
+        }
+        .padding()
+        .presentationDetents([.height(380)])
+    }
 }
 
 #Preview {

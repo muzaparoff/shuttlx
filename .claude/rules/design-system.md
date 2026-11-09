@@ -80,6 +80,14 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. O
 - `SimpleMode` (`ShuttlX/Models/SimpleMode.swift`): App Group Bool `simpleMode`, default OFF. Views read it with `@AppStorage(SimpleMode.key, store: SimpleMode.store)`. It hides, never deletes; heart-safety items (limit banner, alerts, live card) are never hidden. Watch unchanged.
 - Today: Start card + three `SimpleTile`s (time, distance, heart; label left / number right, stacks at large text); other cards, week strip, Fix a part banner and the Programs row are hidden (Programs via "Other workouts"). History hides Map. Settings hides Sync Debug. Toggle: Settings first row, last onboarding page.
 
+## Session detail, zone words, empty state (Nov 2026)
+
+- Session detail groups the metrics as rows (label left, number right) under Heart / Movement / How it felt. Effort is an 11-segment bar with the Borg CR10 word, tappable to change (`DataManager.applyEffort`); hidden without an effort; never to Health or telemetry.
+- `ZoneWordsPreview` (HelpView.swift) is a drawn watch screen teaching EASY / STEADY / HARD (70 % / 90 % of the limit) on onboarding step 4 and in Help > Heart limits. No limit: words only, no bpm numbers.
+- Simple mode sets a Dynamic Type floor (`.xLarge`) in `ContentView`; larger system sizes still win.
+- Today empty state: ring at 0, "Your first walk", one Start button (the same start-on-watch confirmation).
+- Copy rules: `.claude/rules/wording.md`.
+
 ## Typography
 
 - Always use `ShuttlXFont.*` constants or `theme.fonts.*` — never raw `.font(.system(size:))`

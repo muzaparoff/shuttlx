@@ -15,7 +15,7 @@ struct WatchPromptView: View {
                     .font(ShuttlXFont.cardTitle)
                     .multilineTextAlignment(.center)
 
-                Text("ShuttlX auto-detects running and walking.\nJust press Start on your Watch.")
+                Text("ShuttlX finds running and walking by itself.\nJust press Start on your Watch.")
                     .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -33,7 +33,7 @@ struct WatchPromptView: View {
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Auto-detects running")
+                    .accessibilityLabel("Finds running by itself")
 
                     VStack {
                         Image(systemName: "figure.walk")
@@ -44,7 +44,7 @@ struct WatchPromptView: View {
                             .foregroundStyle(.secondary)
                     }
                     .accessibilityElement(children: .combine)
-                    .accessibilityLabel("Auto-detects walking")
+                    .accessibilityLabel("Finds walking by itself")
                 }
 
                 Spacer()

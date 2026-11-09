@@ -86,7 +86,7 @@ extension TrainingView {
 
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(hr > 0 ? "\(hr)" : "\u{2014}")
-                    .font(.system(size: WatchScale.pt(30), weight: .semibold, design: .monospaced))
+                    .font(.system(size: WatchScale.pt(30), weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(ShuttlXColor.heartRate)
                     .fixedSize()
@@ -146,7 +146,7 @@ extension TrainingView {
                     .accessibilityLabel(paused ? "Paused" : activity == .unknown ? workoutManager.workoutName : activity.displayName)
             }
             Text("\(hr)")
-                .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
+                .font(.system(size: WatchScale.pt(58), weight: .semibold))
                 .monospacedDigit()
                 .foregroundStyle(over ? ShuttlXColor.ctaWarning : ShuttlXColor.textPrimary)
                 .fixedSize()
@@ -265,11 +265,12 @@ extension TrainingView {
                 let value = Self.splitClock(split.splitTime)
                 HStack(alignment: .firstTextBaseline, spacing: max(1, unitSize * 0.18)) {
                     Text(label)
-                        .font(.system(size: unitSize, weight: .bold, design: .monospaced))
+                        .font(.system(size: unitSize, weight: .bold))
+                        .monospacedDigit()
                         .foregroundColor(ShuttlXColor.textSecondary)
                         .fixedSize()
                     Text(value)
-                        .font(.system(size: size(value, label), weight: .bold, design: .monospaced))
+                        .font(.system(size: size(value, label), weight: .bold))
                         .monospacedDigit()
                         .foregroundColor(ShuttlXColor.textPrimary)
                         .fixedSize()

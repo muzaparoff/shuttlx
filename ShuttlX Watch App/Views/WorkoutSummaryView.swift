@@ -70,7 +70,7 @@ struct WorkoutSummaryView: View {
                     .tracking(WatchScale.text(11) * 0.08)
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
                 Text(FormattingUtils.formatTimer(summary.duration))
-                    .font(.system(size: WatchScale.pt(38), weight: .semibold, design: .monospaced))
+                    .font(.system(size: WatchScale.pt(38), weight: .semibold))
                     .monospacedDigit()
                     .fixedSize()
                     .padding(.top, WatchScale.pt(6))
@@ -202,7 +202,8 @@ struct WorkoutSummaryView: View {
             ForEach(summary.splits, id: \.number) { split in
                 HStack(alignment: .firstTextBaseline) {
                     Text(TrainingView.splitLabel(summary.splitUnit, split.number))
-                        .font(.system(size: WatchScale.text(12), weight: .bold, design: .monospaced))
+                        .font(.system(size: WatchScale.text(12), weight: .bold))
+                        .monospacedDigit()
                         .foregroundStyle(ShuttlXColor.textSecondary)
                     Spacer(minLength: 4)
                     if split.estimated {
@@ -270,7 +271,7 @@ struct EffortView: View {
                 Text("How hard was it?")
                     .font(.system(size: WatchScale.pt(15), weight: .heavy))
                 Text("\(value)")
-                    .font(.system(size: WatchScale.pt(58), weight: .semibold, design: .monospaced))
+                    .font(.system(size: WatchScale.pt(58), weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(ShuttlXColor.ctaWarning)
                     .fixedSize()

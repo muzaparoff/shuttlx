@@ -19,7 +19,7 @@ extension TrainingView {
                              color: ShuttlXColor.textPrimary.opacity(0.7))
             if workoutManager.heartRate > 0 {
                 Text("\(workoutManager.heartRate) BPM")
-                    .font(.system(size: 22, weight: .semibold, design: .monospaced))
+                    .font(.system(size: 22, weight: .semibold))
                     .monospacedDigit()
                     .foregroundColor(ShuttlXColor.heartRate.opacity(0.7))
             }
@@ -124,25 +124,34 @@ extension TrainingView {
         }
     }
 
-    /// `[digits][BPM] ... [zone arc]` — digits solved for 3 glyphs, never scaled.
+    /// `[digits][BPM] ... [zone word]` — digits solved for 3 glyphs, never scaled.
+    /// HR is red like the other pages; the word is the running page's EASY / STEADY /
+    /// HARD from `resolvedHeartLimit` (no limit and no age: no word).
     private func intervalHeartRateRow(labelSize: CGFloat) -> some View {
         let hr = workoutManager.heartRate
+        let word = heartZoneWord
         return HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(hr > 0 ? "\(hr)" : "\u{2014}")
-                .font(.system(size: WatchScale.pt(26), weight: .bold, design: .monospaced))
+                .font(.system(size: WatchScale.pt(26), weight: .bold))
                 .monospacedDigit()
-                .foregroundColor(ShuttlXColor.forHRZone(hr))
+                .foregroundColor(hr > 0 ? ShuttlXColor.heartRate : ShuttlXColor.textSecondary)
                 .fixedSize()
             Text("BPM")
                 .font(.system(size: labelSize, weight: .bold))
                 .foregroundColor(ShuttlXColor.textSecondary)
                 .fixedSize()
             Spacer(minLength: 4)
-            HRZoneArc(zone: heartRateZoneNumber)
-                .frame(width: 34, height: 17)
+            if let word {
+                // Same size as the gym page's word. "STEADY" next to "172 BPM" fits
+                // on 40 mm with room to spare (snapshot 2026-11-09).
+                Text(word)
+                    .font(.system(size: WatchScale.pt(16), weight: .heavy))
+                    .foregroundColor(zoneWordColor(word))
+                    .fixedSize()
+            }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel(hr > 0 ? "\(hr) beats per minute, Zone \(heartRateZoneNumber)" : "Heart rate no data")
+        .accessibilityLabel(hr > 0 ? "\(hr) beats per minute" + (word.map { ", effort \($0.lowercased())" } ?? "") : "Heart rate no data")
         .accessibilityAddTraits(.updatesFrequently)
     }
 
@@ -189,7 +198,7 @@ extension TrainingView {
 
     // MARK: - Apple-style Metric Line (free run)
 
-    /// One free-run metric line: a big monospaced number with a SMALL unit suffix
+    /// One free-run metric line: a big tabular-digit number with a SMALL unit suffix
     /// riding the same baseline, plus an optional trailing accessory.
     ///
     /// This replaces the `[LABEL][spacer][value]` two-column `metricRow` on the
@@ -208,7 +217,7 @@ extension TrainingView {
                                      @ViewBuilder accessory: () -> Accessory) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: max(1, unitSize * 0.18)) {
             Text(value)
-                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                .font(.system(size: valueSize, weight: .bold))
                 .monospacedDigit()
                 .foregroundColor(color)
                 .lineLimit(1)
@@ -224,7 +233,7 @@ extension TrainingView {
                 .fixedSize()
                 .layoutPriority(1)
             Text(unit)
-                .font(.system(size: unitSize, weight: .bold, design: .monospaced))
+                .font(.system(size: unitSize, weight: .bold))
                 .foregroundColor(ShuttlXColor.textSecondary)
                 .lineLimit(1)
                 .fixedSize()
@@ -232,7 +241,7 @@ extension TrainingView {
         }
     }
 
-    /// Largest point size at which `glyphs` monospaced characters, a fixed-size unit
+    /// Largest point size at which `glyphs` characters, a fixed-size unit
     /// suffix and an optional accessory all fit `available` points of row width.
     ///
     /// Solving the size up front is the whole trick: SwiftUI does NOT report an
@@ -241,7 +250,9 @@ extension TrainingView {
     /// PACE at 21pt on a 40mm screen while the source still said "0.26h" and
     /// "0.155h". Every free-run number is now sized, not scaled.
     ///
-    /// `advance` is SF's monospaced per-glyph advance (0.6em) with ~3% safety margin.
+    /// `advance` 0.62em is an upper bound for numbers in the system font with
+    /// `.monospacedDigit()` (SF Compact bold: digits 0.57em, `:` and `.` narrower;
+    /// measured with CoreText 2026-11-09).
     func fittedMetricSize(glyphs: Int, unit: String, unitSize: CGFloat,
                           accessoryWidth: CGFloat, available: CGFloat,
                           cap: CGFloat) -> CGFloat {
@@ -260,11 +271,11 @@ extension TrainingView {
                        a11y: String? = nil) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(label)
-                .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                .font(.system(size: labelSize, weight: .bold))
                 .foregroundColor(ShuttlXColor.textSecondary)
                 .fixedSize()
             Text(value)
-                .font(.system(size: valueSize, weight: .bold, design: .monospaced))
+                .font(.system(size: valueSize, weight: .bold))
                 .monospacedDigit()
                 .foregroundColor(ShuttlXColor.textPrimary)
                 .fixedSize()
@@ -287,16 +298,6 @@ extension TrainingView {
     var heartRateText: String {
         guard workoutManager.heartRate > 0 else { return "\u{2014} BPM" }
         return "\(workoutManager.heartRate) BPM"
-    }
-
-    var heartRateZoneName: String {
-        let hr = workoutManager.heartRate
-        guard hr > 0 else { return "" }
-        return hrCalculator.zoneName(for: Double(hr))
-    }
-
-    var heartRateZoneNumber: Int {
-        hrCalculator.zone(for: Double(workoutManager.heartRate))
     }
 
     var isHighIntensityWarning: Bool {
@@ -352,7 +353,7 @@ extension TrainingView {
             // off a 40mm screen). The size is SOLVED against the row, never
             // scale-to-fit; action first, the full sentence is the a11y label.
             Text(Self.easeOffText)
-                .font(.system(size: bannerSize(Self.easeOffText, labelSize: labelSize), weight: .bold, design: .monospaced))
+                .font(.system(size: bannerSize(Self.easeOffText, labelSize: labelSize), weight: .bold))
                 // Amber, not red: an instruction, not an alarm (timeline mockup).
                 .foregroundColor(ShuttlXColor.ctaWarning)
                 .lineLimit(1)
@@ -383,7 +384,7 @@ extension TrainingView {
             VStack(spacing: 0) {
                 ForEach(lines, id: \.self) { Text($0).fixedSize() }
             }
-                .font(.system(size: size, weight: .bold, design: .monospaced))
+                .font(.system(size: size, weight: .bold))
                 .foregroundColor(ShuttlXColor.ctaWarning)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -511,8 +512,8 @@ struct ElapsedTimerText: View {
     var weight: Font.Weight = .bold
     var color: Color = ShuttlXColor.textPrimary
 
-    /// Per-glyph advance of SF's monospaced design as a fraction of point size
-    /// (~0.6em) plus a small safety margin.
+    /// Upper bound per glyph for the system font with `.monospacedDigit()`: h:mm:ss
+    /// in SF Compact bold is 3.34em for 7 glyphs (0.48em each), so 0.62 leaves room.
     private static let advanceRatio: CGFloat = 0.62
 
     /// Prefer the wall clock over the published `elapsed`: the whole point of this
@@ -546,7 +547,7 @@ struct ElapsedTimerText: View {
                 Text(FormattingUtils.formatTimer(elapsed))
             }
         }
-        .font(.system(size: fittedSize, weight: weight, design: .monospaced))
+        .font(.system(size: fittedSize, weight: weight))
         .monospacedDigit()
         .foregroundColor(color)
         .lineLimit(1)
@@ -613,7 +614,7 @@ struct IntervalStepName: View {
     var body: some View {
         if let step = engine.currentStep {
             Text(step.type.displayName.uppercased())
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(.system(size: 14, weight: .bold))
                 .foregroundColor(ShuttlXColor.forStepType(step.type))
         }
     }
@@ -651,14 +652,16 @@ struct IntervalCountdownHero: View {
         let phaseWords = engine.currentStep.map { $0.type.displayName.uppercased().split(separator: " ").map(String.init) } ?? []
         let counter = "\(engine.currentStepIndex + 1)/\(engine.totalStepsCount)"
         let phaseGlyphs = max(4, counter.count, phaseWords.map(\.count).max() ?? 0)
-        let phaseWidth = CGFloat(phaseGlyphs) * advance * phaseSize
+        // Capital words are wider than digits in the system font ("DOWN", "WARM":
+        // ~0.7em per letter in SF Compact bold), so the column uses 0.72.
+        let phaseWidth = CGFloat(phaseGlyphs) * 0.72 * phaseSize
         let heroSize = max(16, min(WatchScale.pt(44),
                                    (rowWidth - phaseWidth - 6) / (CGFloat(countdown.count) * advance)))
 
         return VStack(alignment: .leading, spacing: 0) {
             HStack(alignment: .center, spacing: 6) {
                 Text(countdown)
-                    .font(.system(size: heroSize, weight: .bold, design: .monospaced))
+                    .font(.system(size: heroSize, weight: .bold))
                     .monospacedDigit()
                     .foregroundColor(stepColor)
                     .contentTransition(.numericText())
@@ -666,12 +669,12 @@ struct IntervalCountdownHero: View {
                 VStack(alignment: .leading, spacing: 0) {
                     ForEach(phaseWords, id: \.self) { word in
                         Text(word)
-                            .font(.system(size: phaseSize, weight: .bold, design: .monospaced))
+                            .font(.system(size: phaseSize, weight: .bold))
                             .foregroundColor(stepColor)
                             .fixedSize()
                     }
                     Text(counter)
-                        .font(.system(size: phaseSize, weight: .regular, design: .monospaced))
+                        .font(.system(size: phaseSize, weight: .regular))
                         .foregroundColor(ShuttlXColor.textSecondary)
                         .monospacedDigit()
                         .fixedSize()
@@ -695,16 +698,16 @@ struct IntervalCountdownHero: View {
             if showNext, let next = engine.nextStep {
                 HStack(spacing: 4) {
                     Text("NEXT")
-                        .font(.system(size: labelSize, weight: .bold, design: .monospaced))
+                        .font(.system(size: labelSize, weight: .bold))
                         .foregroundColor(ShuttlXColor.textSecondary.opacity(0.6))
                     Image(systemName: "chevron.right")
                         .font(.system(size: labelSize * 0.8, weight: .semibold))
                         .foregroundColor(ShuttlXColor.textSecondary.opacity(0.5))
                     Text(next.type.displayName.uppercased())
-                        .font(.system(size: labelSize, weight: .semibold, design: .monospaced))
+                        .font(.system(size: labelSize, weight: .semibold))
                         .foregroundColor(ShuttlXColor.forStepType(next.type).opacity(0.75))
                     Text(formatStepDuration(next.duration))
-                        .font(.system(size: labelSize, weight: .regular, design: .monospaced))
+                        .font(.system(size: labelSize, weight: .regular))
                         .foregroundColor(ShuttlXColor.textSecondary.opacity(0.6))
                         .monospacedDigit()
                 }
@@ -729,69 +732,6 @@ struct IntervalCountdownHero: View {
         let s = Int(seconds)
         if s < 60 { return "\(s)s" }
         return String(format: "%d:%02d", s / 60, s % 60)
-    }
-}
-
-// MARK: - HR Zone Arc
-
-/// Gauge-style arc showing the current HR zone (1–5).
-/// Segments fill from left to right — segments at or below the current zone
-/// are colored with the zone's palette color; segments above are dimmed.
-///
-/// Geometry: 5 segments of 24° each, 5° gap between them, totalling 140° sweep.
-/// Arc center sits at the bottom edge of the view so it reads as an upward gauge.
-struct HRZoneArc: View {
-    let zone: Int   // 0 = no data, 1–5 = zone
-
-    private static let zoneColors: [Color] = [
-        ShuttlXColor.hrZone1,
-        ShuttlXColor.hrZone2,
-        ShuttlXColor.hrZone3,
-        ShuttlXColor.hrZone4,
-        ShuttlXColor.hrZone5,
-    ]
-
-    var body: some View {
-        Canvas { ctx, size in
-            let cx = size.width / 2
-            let cy = size.height + 1   // center just below the view bottom
-            let radius = size.height - 1
-            let lineWidth: CGFloat = 3.5
-
-            // 5 segments: each 24°, with 5° gaps — total 5×24+4×5 = 140°
-            // Centred symmetrically: startAngle = 180 + (360-140)/2 = 180+110 = 290 … wait
-            // We want it centred at 270° (top of circle). So:
-            //   midAngle = 270°, halfSweep = 70°
-            //   start = 270 - 70 = 200°, end = 270 + 70 = 340°
-            let startDeg = 200.0
-            let segDeg = 24.0
-            let gapDeg = 5.0
-
-            for i in 0..<5 {
-                let segStart = startDeg + Double(i) * (segDeg + gapDeg)
-                let segEnd = segStart + segDeg
-                let isFilled = zone > 0 && (i + 1) <= zone
-
-                var path = Path()
-                path.addArc(
-                    center: CGPoint(x: cx, y: cy),
-                    radius: radius,
-                    startAngle: .degrees(segStart),
-                    endAngle: .degrees(segEnd),
-                    clockwise: false
-                )
-
-                ctx.stroke(
-                    path,
-                    with: .color(isFilled
-                        ? HRZoneArc.zoneColors[i]
-                        : Color.white.opacity(0.12)),
-                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
-                )
-            }
-        }
-        .accessibilityLabel(zone > 0 ? "Zone \(zone)" : "Heart rate zone unknown")
-        .accessibilityAddTraits(.updatesFrequently)
     }
 }
 

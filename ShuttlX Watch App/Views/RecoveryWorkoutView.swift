@@ -32,7 +32,7 @@ struct RecoveryWorkoutView<Banner: View>: View {
         // Side column is as wide as its longest word ("STEADY", heavy ~0.7em).
         let sideWidth = zoneSize * 0.7 * 6
         let gap = WatchScale.pt(6)
-        // Three monospaced digits (0.62em) must fit next to the side column.
+        // Three tabular digits (0.62em upper bound) must fit next to the side column.
         let hrSize = min(WatchScale.pt(52), (WatchScale.width - 16 - sideWidth - gap) / (3 * 0.62))
         #if DEBUG
         let _ = BodyCounter.hit("RecoveryWorkoutView")
@@ -44,7 +44,7 @@ struct RecoveryWorkoutView<Banner: View>: View {
 
             WorkoutClockReader(clock: workoutManager.clock) { elapsed in
                 Text(FormattingUtils.formatTimer(elapsed))
-                    .font(.system(size: WatchScale.pt(16), weight: .semibold, design: .monospaced))
+                    .font(.system(size: WatchScale.pt(16), weight: .semibold))
                     .monospacedDigit()
                     .foregroundStyle(ShuttlXColor.textSecondary)
                     .fixedSize()
@@ -55,7 +55,7 @@ struct RecoveryWorkoutView<Banner: View>: View {
             // HR hero; the colour is the HR colour, the word carries the zone.
             HStack(alignment: .center, spacing: gap) {
                 Text(hr > 0 ? "\(hr)" : "\u{2014}")
-                    .font(.system(size: hrSize, weight: .bold, design: .monospaced))
+                    .font(.system(size: hrSize, weight: .bold))
                     .monospacedDigit()
                     .foregroundStyle(hr > 0 ? ShuttlXColor.heartRate : ShuttlXColor.textSecondary)
                     .contentTransition(.numericText())
@@ -115,10 +115,12 @@ struct RecoveryWorkoutView<Banner: View>: View {
         let size = WatchScale.text(10)
         return HStack(spacing: 2) {
             Text(label)
-                .font(.system(size: size, weight: .bold, design: .monospaced))
+                .font(.system(size: size, weight: .bold))
+                .monospacedDigit()
             if reached, let v = value {
                 Text("-\(v)")
-                    .font(.system(size: size, weight: .bold, design: .monospaced))
+                    .font(.system(size: size, weight: .bold))
+                    .monospacedDigit()
                     .foregroundColor(ShuttlXColor.ctaPrimary)
             }
         }

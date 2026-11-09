@@ -95,7 +95,7 @@ struct TemplateListView: View {
             }
 
             HStack(spacing: 12) {
-                Text("Auto-detects run & walk")
+                Text("Finds run & walk by itself")
                     .font(ShuttlXFont.cardSubtitle)
                     .foregroundStyle(.secondary)
             }
@@ -110,7 +110,7 @@ struct TemplateListView: View {
         }
         .padding(.vertical, 4)
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("Run/Walk, auto-detects run and walk")
+        .accessibilityLabel("Run/Walk, finds run and walk by itself")
     }
 
     // MARK: - Template List

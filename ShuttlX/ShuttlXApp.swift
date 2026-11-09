@@ -567,6 +567,7 @@ enum ShuttlXDemoData {
         var morning = TrainingSession(startDate: start, endDate: cursor, duration: total, averageHeartRate: 138,
                                       maxHeartRate: 171, caloriesBurned: 640, distance: 9.8, segments: segs, inlineRoute: route)
         morning.sportType = .running
+        morning.effortRPE = 7   // screenshot data: shows the effort row
         let rideStart = at(17, 40)
         var ride = TrainingSession(startDate: rideStart, endDate: rideStart.addingTimeInterval(45 * 60), duration: 45 * 60,
                                    averageHeartRate: 126, caloriesBurned: 140, distance: 14.2,

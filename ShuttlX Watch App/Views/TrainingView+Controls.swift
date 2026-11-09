@@ -22,7 +22,7 @@ extension TrainingView {
                 Spacer(minLength: 4)
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
                     Text(hr > 0 ? "\(hr)" : "\u{2014}")
-                        .font(.system(size: headerSize, weight: .semibold, design: .monospaced))
+                        .font(.system(size: headerSize, weight: .semibold))
                         .monospacedDigit()
                         .foregroundStyle(ShuttlXColor.heartRate)
                         .fixedSize()
