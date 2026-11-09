@@ -8,7 +8,7 @@ import ShuttlXShared
 
 @MainActor
 class DataManager: ObservableObject {
-    /// Recorded sessions exactly as stored. Persistence, CloudKit and sync use this; never write `effectiveSessions` back.
+    /// Recorded sessions exactly as stored. Persistence and sync use this; never write `effectiveSessions` back.
     @Published var sessions: [TrainingSession] = [] { didSet { rebuildEffective() } }
     /// `sessions` with the user's "Fix a part" edits applied (types, split, merge, Rest calories zeroed).
     /// Every reader (Today, History, Trends, Analytics, detail) uses this; rebuilt on any change to either input.
@@ -34,7 +34,6 @@ class DataManager: ObservableObject {
     /// size and the load runs on every app resume, so it must stay off-main.
     private nonisolated static let storeQueue = DispatchQueue(label: "com.shuttlx.datamanager-store", qos: .utility)
     private let healthStore = HKHealthStore()
-    private var cloudSyncDebounceTask: Task<Void, Never>?
 
     // Save state. This class is the ONLY writer of sessions.json.
     private var hasLoadedOnce = false
@@ -176,7 +175,7 @@ class DataManager: ObservableObject {
     /// True once this session id has been ingested (active list, archive, or dropped by the clear cutoff).
     func hasSession(_ id: UUID) -> Bool { processedSessionIds.contains(id) }
 
-    /// Single entry for every new session (watch, iPhone workout, Health import, iCloud pull, inbox).
+    /// Single entry for every new session (watch, iPhone workout, Health import, inbox).
     /// One `sessions` assignment per call, so the effective list is rebuilt once per batch.
     func handleReceivedSessions(_ receivedSessions: [TrainingSession]) {
         let cutoff = SessionIngestRules.clearedAt()
@@ -583,7 +582,6 @@ class DataManager: ObservableObject {
         }
         if success {
             WidgetCenter.shared.reloadAllTimelines()
-            debouncedCloudSync()
         }
         startSave()   // no-op unless another save was requested meanwhile
     }
@@ -591,17 +589,6 @@ class DataManager: ObservableObject {
     private func acknowledgeInbox(_ ids: Set<UUID>) {
         guard !ids.isEmpty, let inbox = Self.pendingInbox() else { return }
         Self.storeQueue.async { inbox.remove(ids: ids) }
-    }
-
-    /// Debounce CloudKit sync to avoid firing on every rapid save (e.g. batch imports)
-    private func debouncedCloudSync() {
-        guard AuthenticationManager.shared.isSignedIn else { return }
-        cloudSyncDebounceTask?.cancel()
-        cloudSyncDebounceTask = Task { [weak self] in
-            try? await Task.sleep(nanoseconds: 3_000_000_000) // 3 seconds
-            guard !Task.isCancelled, let self = self else { return }
-            CloudKitSyncManager.shared.performFullSync(dataManager: self)
-        }
     }
 
     /// First call reads sessions.json (per record, off the main thread) and drains the pending inbox;
@@ -748,7 +735,6 @@ class DataManager: ObservableObject {
     /// Removes local user data. Sessions older than now never come back (clear cutoff), and the watch is
     /// asked to drop its copies. Apple Health and iCloud are not touched here.
     func wipeLocalUserData(_ scope: WipeScope) {
-        cloudSyncDebounceTask?.cancel()
         wipeEpoch += 1
         hasLoadedOnce = true
         SessionIngestRules.markCleared()

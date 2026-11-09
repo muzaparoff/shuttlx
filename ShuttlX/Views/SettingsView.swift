@@ -229,7 +229,7 @@ struct SettingsView: View {
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(authManager.userName ?? "Signed in with Apple")
-                            Text("iCloud sync is on")
+                            Text("Workouts from an earlier version may still be in your iCloud")
                                 .font(ShuttlXFont.cardCaption)
                                 .foregroundStyle(ShuttlXColor.textSecondary)
                         }
@@ -237,7 +237,7 @@ struct SettingsView: View {
                     .accessibilityElement(children: .combine)
 
                     Button("Sign Out") { showingSignOutConfirmation = true }
-                        .accessibilityHint("Stops iCloud sync. Workouts on this iPhone are kept")
+                        .accessibilityHint("Signs out. Workouts on this iPhone are kept")
 
                     Button("Delete Account", role: .destructive) { showingDeleteAccountConfirmation = true }
                         .foregroundStyle(ShuttlXColor.ctaDestructive)
@@ -343,7 +343,7 @@ struct SettingsView: View {
             Button("Cancel", role: .cancel) {}
             Button("Sign Out", role: .destructive) { authManager.signOut() }
         } message: {
-            Text("Your workouts on this iPhone are kept, but they will no longer sync to iCloud.")
+            Text("Your workouts on this iPhone are kept.")
         }
         .alert("Delete Account", isPresented: $showingDeleteAccountConfirmation) {
             Button("Cancel", role: .cancel) {}

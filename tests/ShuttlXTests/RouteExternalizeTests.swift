@@ -145,17 +145,3 @@ final class RouteExternalizeTests: XCTestCase {
         XCTAssertEqual(loaded[0].inlineRoute, original[0].inlineRoute)
     }
 }
-
-extension RouteExternalizeTests {
-    func testUploadCopyCarriesTheRouteOrIsSkipped() throws {
-        var routed = session(points: 5)
-        let points = try XCTUnwrap(RouteExternalize.strip(&routed))
-        XCTAssertEqual(RouteExternalize.forUpload(routed, route: points)?.inlineRoute, points)
-        XCTAssertNil(RouteExternalize.forUpload(routed, route: nil), "never upload a routed session without its route")
-        XCTAssertNil(RouteExternalize.forUpload(routed, route: []))
-        let plain = session(points: 0)
-        XCTAssertEqual(RouteExternalize.forUpload(plain, route: nil)?.id, plain.id)
-        let inline = session(points: 3)   // still inline (e.g. a pulled copy): sent as it is
-        XCTAssertEqual(RouteExternalize.forUpload(inline, route: nil)?.inlineRoute?.count, 3)
-    }
-}

@@ -57,7 +57,6 @@ class AuthenticationManager: ObservableObject {
     // MARK: - Sign Out
 
     func signOut() {
-        CloudKitSyncManager.shared.resetSyncState()
         deleteFromKeychain()
         deleteNameFromKeychain()
         isSignedIn = false

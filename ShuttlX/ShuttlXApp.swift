@@ -35,7 +35,6 @@ struct ShuttlXApp: App {
     @StateObject private var templateManager = TemplateManager()
     @StateObject private var planManager = PlanManager()
     @StateObject private var authManager = AuthenticationManager.shared
-    @StateObject private var cloudKitSync = CloudKitSyncManager.shared
     @StateObject private var workoutController = iPhoneWorkoutController()
     @StateObject private var deepLinkRouter = DeepLinkRouter()
     /// A workout start asked for by a URL (widget, control, any app that opens `shuttlx://`): runs only after the user confirms.
@@ -78,7 +77,7 @@ struct ShuttlXApp: App {
         .onChange(of: scenePhase) { _, newPhase in
             #if DEBUG
             // Screenshot seam runs are hermetic: no disk reloads, no sync
-            // reconciliation, no CloudKit — the seeded demo data must not be
+            // reconciliation — the seeded demo data must not be
             // disturbed and the real user data must not be touched.
             if screenshotSeamsActive { return }
             #endif
@@ -89,9 +88,6 @@ struct ShuttlXApp: App {
                 Task { await HealthKitImporter.shared.importNow() }
                 sharedDataManager.reconcileWithDataManager()
                 sharedDataManager.reconcileSessionIDs()
-                if authManager.isSignedIn {
-                    cloudKitSync.performFullSync(dataManager: dataManager)
-                }
                 // ActivityKit only allows STARTING a Live Activity while the
                 // app is foreground ("Target is not foreground" otherwise —
                 // verified 2026-07-25). If a Watch workout is running and the
@@ -196,7 +192,6 @@ struct ShuttlXApp: App {
             .environmentObject(templateManager)
             .environmentObject(planManager)
             .environmentObject(authManager)
-            .environmentObject(cloudKitSync)
             .environmentObject(workoutController)
             .environmentObject(deepLinkRouter)
             // Present the iPhone workout timer over whatever's on screen when

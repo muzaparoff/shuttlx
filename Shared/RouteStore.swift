@@ -58,17 +58,6 @@ public enum RouteExternalize {
         return route
     }
 
-    /// The copy of a stored session to upload (CloudKit keeps whole sessions, route inline): `route` is what
-    /// `DataManager.route(for:)` returned. nil = skip it this time: it has a route that could not be read, and an
-    /// upload without it would replace the route in iCloud.
-    public static func forUpload(_ session: TrainingSession, route: [RoutePoint]?) -> TrainingSession? {
-        guard session.inlineRoute == nil, session.routeSummary != nil else { return session }
-        guard let route, !route.isEmpty else { return nil }
-        var s = session
-        s.inlineRoute = route
-        return s
-    }
-
     public struct SaveResult: Equatable {
         /// Route files written by this save: their pending entries can be dropped.
         public var written: Set<UUID> = []
