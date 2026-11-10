@@ -69,26 +69,21 @@ struct WorkoutSummaryView: View {
                     .font(.system(size: WatchScale.text(11), weight: .bold))
                     .tracking(WatchScale.text(11) * 0.08)
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
-                Text(FormattingUtils.formatTimer(summary.duration))
-                    .font(.system(size: WatchScale.pt(38), weight: .semibold))
-                    .monospacedDigit()
-                    .fixedSize()
-                    .padding(.top, WatchScale.pt(6))
-                if !summary.segments.isEmpty {
-                    ActivityRibbon(segments: summary.segments, height: WatchScale.pt(8))
-                        .padding(.top, WatchScale.pt(8))
-                }
-                HStack(alignment: .firstTextBaseline) {
-                    if summary.distance > 0 {
-                        valueUnit(FormattingUtils.formatDistanceValue(summary.distance, unit: summary.splitUnit),
-                                  summary.splitUnit.symbol, ShuttlXColor.textPrimary)
+                // D1: time inside the parts ring, distance and BPM beside it. Takes the
+                // height the time + ribbon + numbers row used, so Done stays visible.
+                HStack(alignment: .center, spacing: ringGap) {
+                    partsRing
+                    VStack(alignment: .leading, spacing: WatchScale.pt(6)) {
+                        if summary.distance > 0 {
+                            valueUnit(distanceText, summary.splitUnit.symbol, ShuttlXColor.textPrimary)
+                        }
+                        if summary.avgHeartRate > 0 {
+                            valueUnit("\(summary.avgHeartRate)", "bpm", ShuttlXColor.heartRate)
+                        }
                     }
-                    Spacer(minLength: 4)
-                    if summary.avgHeartRate > 0 {
-                        valueUnit("\(summary.avgHeartRate)", "bpm", ShuttlXColor.heartRate)
-                    }
+                    Spacer(minLength: 0)
                 }
-                .padding(.top, WatchScale.pt(12))
+                .padding(.top, WatchScale.pt(8))
                 // Saved only after HealthKit confirmed finishWorkout(). The failure
                 // line replaces the old TrainingView alert, which was set after this
                 // screen had already replaced the workout and so never appeared.
@@ -137,6 +132,74 @@ struct WorkoutSummaryView: View {
         }
     }
 
+    // MARK: Parts ring (D1)
+
+    private var ringSize: CGFloat { WatchScale.pt(92) }
+    private var ringLine: CGFloat { WatchScale.pt(7) }
+    private var ringGap: CGFloat { WatchScale.pt(8) }
+    private var sideUnitSize: CGFloat { WatchScale.pt(13) }
+    private var distanceText: String { FormattingUtils.formatDistanceValue(summary.distance, unit: summary.splitUnit) }
+    private var timeText: String { FormattingUtils.formatTimer(summary.duration) }
+
+    /// The time's size, solved so the string fits the chord of the ring's inner
+    /// circle at its own height (SF Compact semibold, monospaced digits: 0.58em
+    /// per digit, 0.3em per colon, both above the CoreText measure). Capped at the old pt(38).
+    private var timeSize: CGFloat {
+        let digits = CGFloat(timeText.filter(\.isNumber).count)
+        let em = digits * 0.58 + CGFloat(timeText.count - Int(digits)) * 0.3
+        let inner = ringSize - 2 * ringLine - 4
+        // Width w = em*f and height ~0.8f must sit inside a circle of diameter `inner`.
+        let fitted = inner / (em * em + 0.64).squareRoot()
+        return min(WatchScale.pt(38), fitted.rounded(.down))
+    }
+
+    /// Distance and BPM share one size, solved for the column beside the ring.
+    private var sideValueSize: CGFloat {
+        let column = WatchScale.width - 16 - ringSize - ringGap
+        func fit(_ value: String, _ unit: String) -> CGFloat {
+            let unitWidth = CGFloat(unit.count) * 0.62 * sideUnitSize + 3
+            return (column - unitWidth) / (CGFloat(value.count) * 0.62)
+        }
+        return min(WatchScale.pt(20), fit(distanceText, summary.splitUnit.symbol), fit("\(summary.avgHeartRate)", "bpm")).rounded(.down)
+    }
+
+    private var partsTotal: TimeInterval { summary.segments.reduce(0) { $0 + max(0, $1.duration) } }
+
+    /// Static ring of the run / walk / cycle parts in order, or the bare track when
+    /// there are none (gym recovery): an empty ring states nothing.
+    private var partsRing: some View {
+        let total = partsTotal
+        let arcs = total > 0
+            ? summary.segments.map { GlassRing.Arc(fraction: max(0, $0.duration) / total, color: $0.activityType.themeColor) }
+            : []
+        return ZStack {
+            GlassRing(arcs: arcs, trackColor: ShuttlXColor.textPrimary, trackOpacity: 0.18, lineWidth: ringLine)
+                .accessibilityElement()
+                .accessibilityLabel(partsDescription)
+                .accessibilityHidden(arcs.isEmpty)
+            Text(timeText)
+                .font(.system(size: timeSize, weight: .semibold))
+                .monospacedDigit()
+                .fixedSize()
+                .accessibilityLabel("Time \(FormattingUtils.formatDuration(summary.duration))")
+        }
+        .frame(width: ringSize, height: ringSize)
+    }
+
+    /// "Walk 12 min, Run 48 min" (colour is never the only cue).
+    private var partsDescription: String {
+        summary.segments.map { segment -> String in
+            let word: String
+            switch segment.activityType {
+            case .running: word = "Run"
+            case .walking: word = "Walk"
+            case .cycling: word = "Cycle"
+            case .stationary, .unknown: word = "Still"
+            }
+            return "\(word) \(Int((max(0, segment.duration) / 60).rounded())) min"
+        }.joined(separator: ", ")
+    }
+
     /// nil until HealthKit answers; true saved, false failed.
     private var healthOutcome: Bool? {
         workoutManager.healthKitSaved ? true : workoutManager.healthKitSaveError != nil ? false : nil
@@ -145,11 +208,11 @@ struct WorkoutSummaryView: View {
     private func valueUnit(_ value: String, _ unit: String, _ color: Color) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: 3) {
             Text(value)
-                .font(.system(size: WatchScale.pt(20), weight: .bold))
+                .font(.system(size: sideValueSize, weight: .bold))
                 .monospacedDigit()
                 .foregroundStyle(color)
             Text(unit)
-                .font(.system(size: WatchScale.pt(13)))
+                .font(.system(size: sideUnitSize))
         }
         .fixedSize()
         .accessibilityElement(children: .combine)

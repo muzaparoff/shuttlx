@@ -2702,7 +2702,7 @@ class WatchWorkoutManager: NSObject {
     }
 
     /// Snapshot/QA only: the post-workout summary with a 3-part ribbon.
-    func applySummaryPreview(healthSaveFailed: Bool = false) {
+    func applySummaryPreview(healthSaveFailed: Bool = false, gym: Bool = false) {
         let start = Date().addingTimeInterval(-4212)
         let parts: [(DetectedActivity, TimeInterval)] = [(.walking, 720), (.running, 2880), (.walking, 612)]
         var t = start
@@ -2719,6 +2719,11 @@ class WatchWorkoutManager: NSObject {
                                         splitUnit: WatchSyncCoordinator.shared.distanceUnit,
                                         splits: Self.previewSplits(unit: WatchSyncCoordinator.shared.distanceUnit, km: 9.8, seconds: 4212),
                                         sessionID: UUID(), segments: segs)
+        if gym {
+            pendingSummary = WorkoutSummary(duration: 1830, distance: 0, avgHeartRate: 112, calories: 214,
+                                            steps: 0, avgPace: nil, completedSets: 6, averageHRR1: 24,
+                                            sessionID: UUID())
+        }
     }
 
     /// Snapshot/QA only: splits from an even-ish run over `km` in `seconds`.

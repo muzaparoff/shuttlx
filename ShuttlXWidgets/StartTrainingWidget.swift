@@ -122,7 +122,7 @@ struct StartTrainingWidgetView: View {
     private var cleanBody: some View {
         VStack(spacing: 8) {
             ZStack {
-                GlassRingProgress(progress: 1.0, accentColor: theme.accent, lineWidth: 5)
+                GlassRing(progress: 1.0, accentColor: theme.accent, lineWidth: 5)
                     .frame(width: ringSize, height: ringSize)
                 Image(systemName: entry.sportIcon)
                     .font(.title2)

@@ -126,7 +126,6 @@
 		WG000020B /* ShuttlXTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A5923A01 /* ShuttlXTheme.swift */; };
 		WG000033 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = WG000008 /* PrivacyInfo.xcprivacy */; };
 		WGT0001B /* WidgetTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0001F /* WidgetTheme.swift */; };
-		WGT0002B /* WidgetProgressShapes.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0002F /* WidgetProgressShapes.swift */; };
 		WGT0003B /* WidgetTemplateProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0003F /* WidgetTemplateProvider.swift */; };
 		WGT0004B /* WorkoutTemplateEntity.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0004F /* WorkoutTemplateEntity.swift */; };
 		WGT0005B /* StartIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = WGT0005F /* StartIntents.swift */; };
@@ -328,7 +327,6 @@
 		WG000007 /* WidgetDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetDataProvider.swift; sourceTree = "<group>"; };
 		WG000008 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		WGT0001F /* WidgetTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTheme.swift; sourceTree = "<group>"; };
-		WGT0002F /* WidgetProgressShapes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetProgressShapes.swift; sourceTree = "<group>"; };
 		WGT0003F /* WidgetTemplateProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WidgetTemplateProvider.swift; sourceTree = "<group>"; };
 		WGT0004F /* WorkoutTemplateEntity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutTemplateEntity.swift; sourceTree = "<group>"; };
 		WGT0005F /* StartIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartIntents.swift; sourceTree = "<group>"; };
@@ -673,7 +671,6 @@
 			isa = PBXGroup;
 			children = (
 				WGT0001F /* WidgetTheme.swift */,
-				WGT0002F /* WidgetProgressShapes.swift */,
 				WGT0003F /* WidgetTemplateProvider.swift */,
 				WGT0004F /* WorkoutTemplateEntity.swift */,
 				WGT0005F /* StartIntents.swift */,
@@ -1038,7 +1035,6 @@
 				TH000037 /* CleanTheme.swift in Sources */,
 
 				WGT0001B /* WidgetTheme.swift in Sources */,
-				WGT0002B /* WidgetProgressShapes.swift in Sources */,
 				WGT0003B /* WidgetTemplateProvider.swift in Sources */,
 				WGT0004B /* WorkoutTemplateEntity.swift in Sources */,
 				WGT0005B /* StartIntents.swift in Sources */,

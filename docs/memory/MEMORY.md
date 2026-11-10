@@ -60,7 +60,7 @@
 
 ## Widget Status & Follow-ups (Tier 1 shipped, 2026-07-25)
 
-**Tier 1 (shipped):** W1 StartTrainingWidget (configurable), W2 QuickStartControl (iOS 18), W3 WeeklyGoalRingWidget (3 families), W8 QuickStartComplication corner support. Shared: `WorkoutTemplateEntity` (AppEntity), `StartIntents`, `WidgetProgressShapes` (GlassRingProgress + CassetteSpoolProgress), `WidgetTemplateProvider`, `WidgetTheme`.
+**Tier 1 (shipped):** W1 StartTrainingWidget (configurable), W2 QuickStartControl (iOS 18), W3 WeeklyGoalRingWidget (3 families), W8 QuickStartComplication corner support. Shared: `WorkoutTemplateEntity` (AppEntity), `StartIntents`, `GlassRing` (now in `Shared/GlassRing.swift`), `WidgetTemplateProvider`, `WidgetTheme`.
 
 **Known follow-ups:**
 - `weeklyWorkoutGoal` defaults to 5; no settings UI yet (future roadmap)

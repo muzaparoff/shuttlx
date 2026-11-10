@@ -10,14 +10,27 @@ struct StartTrainingView: View {
     @Environment(WatchWorkoutManager.self) var workoutManager
     @Environment(WatchSyncCoordinator.self) var sharedDataManager
 
+    /// This week's active minutes (D1 ring); nil until the first read.
+    @State private var weekMinutes: Int?
+
     private let logger = Logger(subsystem: "com.shuttlx.ShuttlX.watchkitapp", category: "StartTrainingView")
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("SHUTTLX")
+            Group {
+                if let weekMinutes {
+                    Text("\(weekMinutes) of \(WeekMinutes.goal) min")
+                        .accessibilityLabel("This week")
+                        .accessibilityValue("\(weekMinutes) of \(WeekMinutes.goal) minutes")
+                } else {
+                    Text("SHUTTLX")
+                }
+            }
                 .font(.system(size: WatchScale.text(11), weight: .bold))
                 .tracking(WatchScale.text(11) * 0.08)
+                .monospacedDigit()
                 .foregroundStyle(ShuttlXColor.ctaPrimary)
+                .lineLimit(1)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             if workoutManager.authorizationDenied {
@@ -52,6 +65,17 @@ struct StartTrainingView: View {
                 .contentShape(Circle())
             }
             .buttonStyle(.plain)
+            // D1: thin static week ring around Start, drawn outside the layout (no
+            // added height). Dim so it never reads as a pressed or selected state.
+            .background {
+                GlassRing(progress: Double(weekMinutes ?? 0) / Double(WeekMinutes.goal),
+                          accentColor: ShuttlXColor.ctaPrimary.opacity(0.4),
+                          trackOpacity: 0.35, lineWidth: WatchScale.pt(3))
+                    .frame(width: WatchScale.pt(104) + 2 * WatchScale.pt(6),
+                           height: WatchScale.pt(104) + 2 * WatchScale.pt(6))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
             .padding(.top, WatchScale.pt(12))
             .accessibilityLabel("Start Run/Walk")
             .accessibilityHint("Begins an open-ended workout that finds running and walking by itself")
@@ -90,6 +114,15 @@ struct StartTrainingView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .toolbar(.hidden, for: .navigationBar)
         .background(Color.black.ignoresSafeArea())
+        // Home reappears after every workout (summary Done), so this also refreshes then.
+        .task { weekMinutes = await loadWeekMinutes() }
+    }
+
+    private func loadWeekMinutes() async -> Int {
+        #if DEBUG
+        if let fake = ProcessInfo.processInfo.environment["SHUTTLX_SNAPSHOT_WEEKMIN"].flatMap(Int.init) { return fake }
+        #endif
+        return await sharedDataManager.thisWeekMinutes()
     }
 }
 

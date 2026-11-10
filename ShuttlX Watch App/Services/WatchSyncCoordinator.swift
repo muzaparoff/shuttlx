@@ -1218,6 +1218,17 @@ class WatchSyncCoordinator: NSObject, WCSessionDelegate {
         }.value
     }
 
+    /// Home ring: active minutes this week (Monday-first, like the iPhone Today ring)
+    /// from the sessions stored on this watch plus any still waiting to sync.
+    /// The read runs off the main thread.
+    func thisWeekMinutes() async -> Int {
+        let stored = await loadAllLocalSessions()
+        let ids = Set(stored.map(\.id))
+        var calendar = Calendar.current
+        calendar.firstWeekday = 2
+        return WeekMinutes.total(of: stored + pendingSessions.filter { !ids.contains($0.id) }, calendar: calendar)
+    }
+
     /// Synchronous, nonisolated read of sessions.json. MUST be called off the main
     /// actor (NSFileCoordinator.coordinate blocks). Shared by the @MainActor
     /// `loadAllLocalSessions()` wrapper and the off-main WC request handlers.

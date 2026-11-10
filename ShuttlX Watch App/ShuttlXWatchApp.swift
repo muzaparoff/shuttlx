@@ -95,7 +95,8 @@ struct ShuttlXWatchApp: App {
                     .environment(workoutManager)
                     .task {
                         if let unitOverride { sharedDataManager.applyPreviewDistanceUnit(unitOverride) }
-                        workoutManager.applySummaryPreview(healthSaveFailed: env["SHUTTLX_SNAPSHOT_HEALTHFAIL"] == "1")
+                        workoutManager.applySummaryPreview(healthSaveFailed: env["SHUTTLX_SNAPSHOT_HEALTHFAIL"] == "1",
+                                                          gym: env["SHUTTLX_SNAPSHOT_GYM"] != nil)
                     }
                 } else {
                 TrainingView()

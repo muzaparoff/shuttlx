@@ -1,5 +1,6 @@
 import WidgetKit
 import SwiftUI
+import ShuttlXShared
 
 // MARK: - W3: Weekly Goal Ring
 //
@@ -98,7 +99,7 @@ struct WeeklyGoalRingView: View {
     private var cleanRingBody: some View {
         VStack(spacing: 6) {
             ZStack {
-                GlassRingProgress(progress: progress, accentColor: theme.accent, lineWidth: 8)
+                GlassRing(progress: progress, accentColor: theme.accent, lineWidth: 8)
                     .frame(width: 76, height: 76)
                 VStack(spacing: 0) {
                     Text("\(entry.count)")

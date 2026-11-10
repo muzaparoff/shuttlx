@@ -94,31 +94,6 @@ struct WatchFillBar<Fill: ShapeStyle>: View {
     }
 }
 
-/// Ribbon of the session's parts, widths by duration (watch twin of the iOS
-/// `ActivityRibbon` in ShuttlX/Components/DayRibbon.swift).
-struct ActivityRibbon: View {
-    let segments: [ActivitySegment]
-    var height: CGFloat = 8
-
-    private var total: TimeInterval { segments.reduce(0) { $0 + max(0, $1.duration) } }
-
-    var body: some View {
-        GeometryReader { geo in
-            let gaps = CGFloat(max(0, segments.count - 1)) * 2
-            HStack(spacing: 2) {
-                ForEach(segments) { segment in
-                    Capsule()
-                        .fill(segment.activityType.themeColor)
-                        .frame(width: max(4, (geo.size.width - gaps) * (total > 0 ? max(0, segment.duration) / total : 0)))
-                }
-            }
-        }
-        .frame(height: height)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Parts: " + segments.map { "\($0.activityType.displayName) \(FormattingUtils.formatDuration($0.duration))" }.joined(separator: ", "))
-    }
-}
-
 extension DetectedActivity {
     /// Tag word on the running screen ("● RUN").
     var watchTag: String {

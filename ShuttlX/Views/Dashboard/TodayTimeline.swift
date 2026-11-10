@@ -76,6 +76,46 @@ enum TodayFormat {
     }
 }
 
+// MARK: - Week ring (signature glass ring)
+
+/// The week as one glass ring: "N of 150 min". Never red, never "behind"; past the goal the ring is full
+/// and the text keeps counting. At large text sizes the words move below the ring so nothing clips.
+struct WeekRing: View {
+    let minutes: Int
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var goal: Int { WeekMinutes.goal }
+    private var below: Bool { typeSize >= .xxLarge }
+    private var ring: some View {
+        GlassRing(progress: Double(minutes) / Double(goal), accentColor: ShuttlXColor.ctaPrimary, lineWidth: 12)
+            .frame(width: 120, height: 120)
+    }
+
+    var body: some View {
+        Group {
+            if below {
+                VStack(spacing: 8) { ring; numbers(inRing: false) }
+            } else {
+                ring.overlay { numbers(inRing: true).padding(18) }
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("This week")
+        .accessibilityValue("\(minutes) of \(goal) minutes")
+    }
+
+    private func numbers(inRing: Bool) -> some View {
+        VStack(spacing: 0) {
+            Text("\(minutes)").font(ShuttlXFont.metricLarge.monospacedDigit()).foregroundStyle(ShuttlXColor.textPrimary)
+            Text("of \(goal) min").font(ShuttlXFont.cardCaption.monospacedDigit()).foregroundStyle(ShuttlXColor.textSecondary)
+        }
+        .multilineTextAlignment(.center)
+        .minimumScaleFactor(inRing ? 0.7 : 1)
+        .lineLimit(inRing ? 1 : nil)
+    }
+}
+
 // MARK: - Week strip
 
 struct TodayWeekStrip: View {
@@ -410,17 +450,7 @@ struct TodayEmptyState: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            // Progress ring at 0 (the weekly ring fills once there are workouts).
-            ZStack {
-                Circle().stroke(ShuttlXColor.ctaPrimary.opacity(0.18), lineWidth: 12)
-                VStack(spacing: 0) {
-                    Text("0").font(ShuttlXFont.metricLarge.monospacedDigit()).foregroundStyle(ShuttlXColor.textSecondary)
-                    Text("workouts").font(ShuttlXFont.cardCaption).foregroundStyle(ShuttlXColor.textSecondary)
-                }
-            }
-            .frame(width: 110, height: 110)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("No workouts yet")
+            WeekRing(minutes: 0)
             Text("Your first walk")
                 .font(ShuttlXFont.metricMedium)
                 .multilineTextAlignment(.center)

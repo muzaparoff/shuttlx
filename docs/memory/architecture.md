@@ -36,7 +36,7 @@ Counts from ripgrep, October 2026 (v1.10.1 file counts; line counts not re-measu
 ### Live Activity (3 files) and widgets
 
 - **ShuttlXLiveActivity/**: ShuttlXLiveActivity (Dynamic Island regions + lock screen), LockScreenView, bundle. Dynamic Island rendering on device is unverified.
-- **ShuttlXWidgets/** (iOS, 11): StartTrainingWidget (W1), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget; Shared/ (WidgetTheme, WidgetProgressShapes, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents)
+- **ShuttlXWidgets/** (iOS, 11): StartTrainingWidget (W1), QuickStartControl (W2), WeeklyGoalRingWidget (W3), SmallWidget, MediumWidget; Shared/ (WidgetTheme, WidgetTemplateProvider, WorkoutTemplateEntity, StartIntents)
 - **ShuttlXWatchWidgets/** (6): QuickStartComplication, LastWorkoutComplication, WeeklyProgressComplication, TodayWorkoutComplication, WatchWidgetDataProvider, bundle
 
 ## Data Flow

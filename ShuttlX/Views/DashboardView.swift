@@ -107,6 +107,13 @@ struct DashboardView: View {
         .accessibilityLabel("\(label) \(value) \(unit ?? "")")
     }
 
+    /// Same Monday-first week as the strip below the ring.
+    private var weekMinutes: Int {
+        var c = Calendar.current
+        c.firstWeekday = 2
+        return WeekMinutes.total(of: dataManager.effectiveSessions, calendar: c)
+    }
+
     private var statsRow: some View {
         let km = daySessions.compactMap(\.distance).reduce(0, +)
         let secs = daySessions.reduce(0) { $0 + $1.duration }
@@ -161,6 +168,7 @@ struct DashboardView: View {
 
     @ViewBuilder
     private var dataContent: some View {
+        WeekRing(minutes: weekMinutes)
         statsRow
         TodayWeekStrip(sessions: dataManager.effectiveSessions, selected: $selectedDay)
         if let s = bannerSession {
