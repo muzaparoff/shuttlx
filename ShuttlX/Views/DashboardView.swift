@@ -134,6 +134,7 @@ struct DashboardView: View {
         let hrs = daySessions.compactMap(\.averageHeartRate).filter { $0 > 0 }
         let hr = hrs.isEmpty ? nil : Int(hrs.reduce(0, +) / Double(hrs.count))
         return VStack(spacing: 12) {
+            WeekRing(minutes: weekMinutes)
             SimpleTile(icon: "clock", label: "Time", value: secs > 0 ? TodayFormat.short(secs) : "\u{2014}")
             SimpleTile(icon: "figure.walk", label: "Distance", value: km > 0 ? FormattingUtils.formatDistance(km, unit: .current) : "\u{2014}")
             SimpleTile(icon: "heart.fill", label: "Heart", value: hr.map { "\($0) bpm" } ?? "\u{2014}")

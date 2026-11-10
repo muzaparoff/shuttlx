@@ -17,7 +17,7 @@ Each theme owns ONE signature shape, reused across surfaces so the whole app fee
 |---|---|
 | Clean | soft glass ring |
 
-**Shared ring** (`Shared/GlassRing.swift`, Wave 4 D1): one static `Canvas` view with three uses: a progress arc (widgets W1/W3, iOS Today), coloured arcs (run/walk/cycle parts, for the watch summary), a track only. iOS Today shows the week as `WeekRing` (`TodayTimeline.swift`): "N of 150 min" from `WeekMinutes.total` (Shared, Monday-first week like the strip, imported sessions count, `duration` is active time). Never red, never "behind"; past the goal the ring is full and the number keeps counting. One a11y element ("This week", "92 of 150 minutes"); from `.xxLarge` the words sit below the ring. `TodayEmptyState` uses the same ring at 0. Hidden in Simple mode (the three tiles already show the day's time; the ring would add a card to a deliberately small screen). Widgets keep their workout-count goal.
+**Shared ring** (`Shared/GlassRing.swift`, Wave 4 D1): one static `Canvas` view with three uses: a progress arc (widgets W1/W3, iOS Today), coloured arcs (run/walk/cycle parts, for the watch summary), a track only. iOS Today shows the week as `WeekRing` (`TodayTimeline.swift`): "N of 150 min" from `WeekMinutes.total` (Shared, Monday-first week like the strip, imported sessions count, `duration` is active time). Never red, never "behind"; past the goal the ring is full and the number keeps counting. One a11y element ("This week", "92 of 150 minutes"); from `.xxLarge` the words sit below the ring. `TodayEmptyState` uses the same ring at 0. Also shown in Simple mode (owner decision, Nov 2026): between the Start card and the three tiles, same component and a11y. Widgets keep their workout-count goal.
 
 Reuse as: chart frame, progress indicator, summary medal, empty/loading state. `GlassRing` (`Shared/GlassRing.swift`, static) is used by: iOS widgets, iOS Today week ring, watch summary (parts arcs around the time), watch Home (week ring around Start). One parametric `Canvas` per theme — never N illustrations per state.
 
@@ -80,7 +80,7 @@ Reuse as: chart frame, progress indicator, summary medal, empty/loading state. `
 ## Simple mode (Oct 2026)
 
 - `SimpleMode` (`ShuttlX/Models/SimpleMode.swift`): App Group Bool `simpleMode`, default OFF. Views read it with `@AppStorage(SimpleMode.key, store: SimpleMode.store)`. It hides, never deletes; heart-safety items (limit banner, alerts, live card) are never hidden. Watch unchanged.
-- Today: Start card + three `SimpleTile`s (time, distance, heart; label left / number right, stacks at large text); other cards, week strip, Fix a part banner and the Programs row are hidden (Programs via "Other workouts"). History hides Map. Settings hides Sync Debug. Toggle: Settings first row, last onboarding page.
+- Today: Start card + `WeekRing` + three `SimpleTile`s (time, distance, heart; label left / number right, stacks at large text); other cards, week strip, Fix a part banner and the Programs row are hidden (Programs via "Other workouts"). History hides Map. Settings hides Sync Debug. Toggle: Settings first row, last onboarding page.
 
 ## Session detail, zone words, empty state (Nov 2026)
 

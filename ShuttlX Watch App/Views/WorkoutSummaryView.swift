@@ -69,11 +69,17 @@ struct WorkoutSummaryView: View {
                     .font(.system(size: WatchScale.text(11), weight: .bold))
                     .tracking(WatchScale.text(11) * 0.08)
                     .foregroundStyle(ShuttlXColor.ctaPrimary)
-                // D1: time inside the parts ring, distance and BPM beside it. Takes the
-                // height the time + ribbon + numbers row used, so Done stays visible.
+                // Wave 4b (owner decision): the time above the ring at the old size,
+                // then a small parts ring with distance and BPM beside it.
+                Text(timeText)
+                    .font(.system(size: timeSize, weight: .semibold))
+                    .monospacedDigit()
+                    .fixedSize()
+                    .padding(.top, WatchScale.pt(2))
+                    .accessibilityLabel("Time \(FormattingUtils.formatDuration(summary.duration))")
                 HStack(alignment: .center, spacing: ringGap) {
                     partsRing
-                    VStack(alignment: .leading, spacing: WatchScale.pt(6)) {
+                    VStack(alignment: .leading, spacing: 0) {
                         if summary.distance > 0 {
                             valueUnit(distanceText, summary.splitUnit.symbol, ShuttlXColor.textPrimary)
                         }
@@ -83,7 +89,7 @@ struct WorkoutSummaryView: View {
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.top, WatchScale.pt(8))
+                .padding(.top, WatchScale.pt(2))
                 // Saved only after HealthKit confirmed finishWorkout(). The failure
                 // line replaces the old TrainingView alert, which was set after this
                 // screen had already replaced the workout and so never appeared.
@@ -106,7 +112,7 @@ struct WorkoutSummaryView: View {
                     if asksEffort { showingEffort = true } else { onDismiss() }
                 }
                 .buttonStyle(WatchPillButtonStyle.primary)
-                .padding(.top, WatchScale.pt(12))
+                .padding(.top, WatchScale.pt(8))
             }
             .padding(.horizontal, 8)
 
@@ -134,23 +140,17 @@ struct WorkoutSummaryView: View {
 
     // MARK: Parts ring (D1)
 
-    private var ringSize: CGFloat { WatchScale.pt(92) }
-    private var ringLine: CGFloat { WatchScale.pt(7) }
-    private var ringGap: CGFloat { WatchScale.pt(8) }
+    private var ringSize: CGFloat { WatchScale.pt(44) }
+    private var ringLine: CGFloat { WatchScale.pt(6) }
+    private var ringGap: CGFloat { WatchScale.pt(10) }
     private var sideUnitSize: CGFloat { WatchScale.pt(13) }
     private var distanceText: String { FormattingUtils.formatDistanceValue(summary.distance, unit: summary.splitUnit) }
     private var timeText: String { FormattingUtils.formatTimer(summary.duration) }
 
-    /// The time's size, solved so the string fits the chord of the ring's inner
-    /// circle at its own height (SF Compact semibold, monospaced digits: 0.58em
-    /// per digit, 0.3em per colon, both above the CoreText measure). Capped at the old pt(38).
+    /// The old pt(38), lowered only if the string would not fit the row
+    /// (0.62em per glyph, the watch's upper bound for monospaced digits).
     private var timeSize: CGFloat {
-        let digits = CGFloat(timeText.filter(\.isNumber).count)
-        let em = digits * 0.58 + CGFloat(timeText.count - Int(digits)) * 0.3
-        let inner = ringSize - 2 * ringLine - 4
-        // Width w = em*f and height ~0.8f must sit inside a circle of diameter `inner`.
-        let fitted = inner / (em * em + 0.64).squareRoot()
-        return min(WatchScale.pt(38), fitted.rounded(.down))
+        min(WatchScale.pt(38), ((WatchScale.width - 16) / (CGFloat(timeText.count) * 0.62)).rounded(.down))
     }
 
     /// Distance and BPM share one size, solved for the column beside the ring.
@@ -160,7 +160,8 @@ struct WorkoutSummaryView: View {
             let unitWidth = CGFloat(unit.count) * 0.62 * sideUnitSize + 3
             return (column - unitWidth) / (CGFloat(value.count) * 0.62)
         }
-        return min(WatchScale.pt(20), fit(distanceText, summary.splitUnit.symbol), fit("\(summary.avgHeartRate)", "bpm")).rounded(.down)
+        // pt(18): two lines stay within the ring's height, so Done keeps its place on 40mm.
+        return min(WatchScale.pt(18), fit(distanceText, summary.splitUnit.symbol), fit("\(summary.avgHeartRate)", "bpm")).rounded(.down)
     }
 
     private var partsTotal: TimeInterval { summary.segments.reduce(0) { $0 + max(0, $1.duration) } }
@@ -172,18 +173,11 @@ struct WorkoutSummaryView: View {
         let arcs = total > 0
             ? summary.segments.map { GlassRing.Arc(fraction: max(0, $0.duration) / total, color: $0.activityType.themeColor) }
             : []
-        return ZStack {
-            GlassRing(arcs: arcs, trackColor: ShuttlXColor.textPrimary, trackOpacity: 0.18, lineWidth: ringLine)
-                .accessibilityElement()
-                .accessibilityLabel(partsDescription)
-                .accessibilityHidden(arcs.isEmpty)
-            Text(timeText)
-                .font(.system(size: timeSize, weight: .semibold))
-                .monospacedDigit()
-                .fixedSize()
-                .accessibilityLabel("Time \(FormattingUtils.formatDuration(summary.duration))")
-        }
-        .frame(width: ringSize, height: ringSize)
+        return GlassRing(arcs: arcs, trackColor: ShuttlXColor.textPrimary, trackOpacity: 0.18, lineWidth: ringLine)
+            .frame(width: ringSize, height: ringSize)
+            .accessibilityElement()
+            .accessibilityLabel(partsDescription)
+            .accessibilityHidden(arcs.isEmpty)
     }
 
     /// "Walk 12 min, Run 48 min" (colour is never the only cue).

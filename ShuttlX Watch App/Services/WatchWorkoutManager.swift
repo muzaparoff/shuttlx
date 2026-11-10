@@ -60,6 +60,8 @@ class WatchWorkoutManager: NSObject {
     /// auto-switch toast shows (that one wins), then gets its own 4 s.
     struct SplitToast: Equatable { let id = UUID(); let unit: DistanceUnit; let split: SplitCounter.Split }
     private(set) var splitToast: SplitToast?
+    /// Second tap of the split cue; cancelled by pause, stop and discard (`resetSplits`).
+    @ObservationIgnored private var splitSecondTap: Task<Void, Never>?
     var healthKitAuthorized: Bool = false
     var authorizationDenied: Bool = false
     var healthKitSaveError: String? = nil
@@ -650,6 +652,7 @@ class WatchWorkoutManager: NSObject {
         // Resume reopens a fresh segment, so an Undo offered before the pause is stale.
         clearActivitySwitch()
         splitToast = nil
+        splitSecondTap?.cancel()
 
         // Push isPaused:true to iPhone before stopping the timer so the
         // 10-second timeout on the phone side doesn't clear live state.
@@ -1856,7 +1859,8 @@ class WatchWorkoutManager: NSObject {
         }
 
         // Splits: every km is stored; the alert is free run only, in the wearer's unit,
-        // never while cycling, one tap per update (`.success`; `.notification` is for safety).
+        // never while cycling, one cue per update: `.success` twice, 0.35 s apart (Wave 4b,
+        // easier to feel while moving; `.notification` is for safety).
         guard workoutMode != .gymRecovery else { return }
         let metres = distanceKm * 1000
         let km = kmSplitCounter.update(metres: metres, activeTime: workoutAge)
@@ -1870,6 +1874,12 @@ class WatchWorkoutManager: NSObject {
               currentActivity != .cycling, WatchSyncCoordinator.shared.splitAlertsOn else { return }
         #if os(watchOS)
         WKInterfaceDevice.current().play(.success)
+        splitSecondTap?.cancel()
+        splitSecondTap = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            guard !Task.isCancelled, let self, !self.isPaused else { return }
+            WKInterfaceDevice.current().play(.success)
+        }
         #endif
         let toast = SplitToast(unit: unit, split: split)
         splitToast = toast
@@ -1888,6 +1898,7 @@ class WatchWorkoutManager: NSObject {
         kmSplitCounter = SplitCounter(unitMetres: SplitCounter.kmMetres)
         mileSplitCounter = SplitCounter(unitMetres: SplitCounter.mileMetres)
         splitToast = nil
+        splitSecondTap?.cancel()
     }
 
     private var kmSplitData: [KmSplitData]? {

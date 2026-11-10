@@ -2,7 +2,7 @@ import SwiftUI
 import WatchKit
 import ShuttlXShared
 
-/// Workout pages: `RunningPage` (free-run Workout page: time, part timer, distance,
+/// Workout pages: `RunningPage` (free-run Workout page: time, distance, pace,
 /// BPM + zone word), `HeartLimitPage` (takes over the Workout page at 90 % of the
 /// limit, free run and gym) and `MorePage` (every mode). Each page is its own
 /// struct so it re-renders only on what it reads (`@Observable` manager).
@@ -12,10 +12,11 @@ struct RunningPage: View, WorkoutPage {
     let hrCalculator: HeartRateZoneCalculator
     let pageHeight: CGFloat?
 
-    /// Workout page (watch plan decisions 2 and 3): tag, total time (hero), the part
-    /// timer under it ("RUN 4:12"), distance, then BPM with the zone word at the
-    /// bottom. The switch or split toast takes the part row for 4 s; "Ease off" takes
-    /// the distance row; the two-line no-HR banner takes both.
+    /// Workout page (Wave 4b, owner decision): tag, total time (hero), distance,
+    /// pace (speed while cycling), then BPM with the zone word at the bottom. The
+    /// switch or split toast takes the pace row for 4 s; "Ease off" takes the
+    /// distance row; the two-line no-HR banner takes distance + pace (a toast then
+    /// sits under the banner).
     var body: some View {
         #if DEBUG
         let _ = BodyCounter.hit("RunningPage")
@@ -46,16 +47,6 @@ struct RunningPage: View, WorkoutPage {
                 .modifier(PausePulse(active: paused, low: 0.35))
                 .padding(.top, WatchScale.pt(4))
 
-            // The switch toast wins; a split toast waits behind it (WatchWorkoutManager).
-            if let sw = workoutManager.activitySwitch {
-                activitySwitchToast(sw).padding(.top, WatchScale.pt(6))
-            } else if let split = workoutManager.splitToast {
-                splitToastView(split).padding(.top, WatchScale.pt(6))
-            } else if !noHR {
-                partRow(activity: activity, paused: paused)
-                    .padding(.top, WatchScale.pt(8))
-            }
-
             Group {
                 if isHighIntensityWarning {
                     highIntensityWarningView(labelSize: labelSize)
@@ -68,7 +59,16 @@ struct RunningPage: View, WorkoutPage {
                         .accessibilityLabel("Distance \(accessibleDistance)")
                 }
             }
-            .padding(.top, WatchScale.pt(6))
+            .padding(.top, WatchScale.pt(8))
+
+            // The switch toast wins; a split toast waits behind it (WatchWorkoutManager).
+            if let sw = workoutManager.activitySwitch {
+                activitySwitchToast(sw).padding(.top, WatchScale.pt(6))
+            } else if let split = workoutManager.splitToast {
+                splitToastView(split).padding(.top, WatchScale.pt(6))
+            } else if !noHR {
+                paceRow.padding(.top, WatchScale.pt(6))
+            }
 
             Spacer(minLength: 0)
 
@@ -107,28 +107,21 @@ struct RunningPage: View, WorkoutPage {
         .frame(height: pageHeight)
     }
 
-    /// "RUN 4:12": time in the open part, restarted on every run/walk switch and on
-    /// resume. While paused: "PAUSED 0:42", how long the pause has lasted. Both are
-    /// `Text(timerInterval:)`, advanced by the render server: no per-second state.
+    /// Rolling pace ("6:12 /KM"), or speed in the cycling colour while cycling
+    /// (min/km is unreadable on a bike). Same size as distance; updates with it.
     @ViewBuilder
-    private func partRow(activity: DetectedActivity, paused: Bool) -> some View {
-        let start = paused ? workoutManager.pauseStartDate : workoutManager.currentSegmentStartTime
-        if let start {
-            let color = paused ? ShuttlXColor.ctaWarning
-                : activity == .unknown ? ShuttlXColor.textSecondary : activity.themeColor
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(paused ? "PAUSED" : activity.watchTag)
-                    .font(.system(size: WatchScale.text(11), weight: .bold))
-                    .tracking(WatchScale.text(11) * 0.08)
-                    .foregroundStyle(color)
-                    .fixedSize()
-                Text(timerInterval: start...Date.distantFuture, countsDown: false)
-                    .font(.system(size: WatchScale.pt(24), weight: .semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(paused ? ShuttlXColor.ctaWarning : ShuttlXColor.textPrimary)
-                    .fixedSize()
-            }
-            .accessibilityElement(children: .combine)
+    private var paceRow: some View {
+        if showsSpeed {
+            unitNumber(speedValueText, speedUnit, ShuttlXColor.cycling,
+                       WatchScale.pt(24), WatchScale.text(11)) { EmptyView() }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(speedValueText == "\u{2014}" ? "Speed no data"
+                                    : "Speed \(speedValueText) \(distanceUnit == .mi ? "miles" : "kilometers") per hour")
+        } else {
+            unitNumber(paceValueText, distanceUnit.paceSuffix.uppercased(), ShuttlXColor.running,
+                       WatchScale.pt(24), WatchScale.text(11)) { EmptyView() }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel(accessiblePace)
         }
     }
 }
@@ -238,10 +231,10 @@ extension WorkoutPage {
 
 }
 
-/// More page (right of the Workout page) in every mode. Rows in the run/walk order:
-/// free run = pace (speed while cycling), last split, calories, BPM; intervals add
-/// distance first and time after pace (they left the interval page, R7); gym = time,
-/// calories, BPM. HR and the safety banner never leave the screen (watchos.md): while
+/// More page (right of the Workout page) in every mode. Free run = last split,
+/// calories, BPM (pace / speed moved to the Workout page, Wave 4b: no duplicates);
+/// intervals = distance, pace (speed while cycling), time, calories, BPM (they left
+/// the interval page, R7); gym = time, calories, BPM. HR and the safety banner never leave the screen (watchos.md): while
 /// a banner shows it takes the calories row.
 struct MorePage: View, WorkoutPage {
     @Environment(WatchWorkoutManager.self) var workoutManager
@@ -257,8 +250,8 @@ struct MorePage: View, WorkoutPage {
         let unitSize = max(11, h * 0.062)
         let mode = workoutManager.workoutMode
         let split = mode == .freeRun ? workoutManager.splitCounter(for: distanceUnit).lastSplit : nil
-        let rows = mode == .interval ? 5 : mode == .gymRecovery ? 3 : (split == nil ? 3 : 4)
-        // Five rows at 0.12h, four at 0.15h, three at 0.17h: the stack stays inside the page on 40mm.
+        let rows = mode == .interval ? 5 : mode == .gymRecovery ? 3 : (split == nil ? 2 : 3)
+        // Five rows at 0.12h, four at 0.15h, two or three at 0.17h: the stack stays inside the page on 40mm.
         let cap = h * (rows == 5 ? 0.12 : rows == 4 ? 0.15 : 0.17)
         let hr = workoutManager.heartRate
         let hrText = hr > 0 ? "\(hr)" : "\u{2014}"
@@ -278,7 +271,7 @@ struct MorePage: View, WorkoutPage {
                     .accessibilityLabel("Distance \(accessibleDistance)")
                 Spacer(minLength: 0)
             }
-            if mode != .gymRecovery {
+            if mode == .interval {
                 if showsSpeed {
                     unitNumber(speedValueText, speedUnit, ShuttlXColor.cycling,
                                size(speedValueText, speedUnit), unitSize) { EmptyView() }
